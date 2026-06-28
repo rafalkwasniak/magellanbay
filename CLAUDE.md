@@ -1,6 +1,8 @@
 # CLAUDE.md
 
-Specyfika projektu **shop.kwasniak.org**. Plik czytany przez asystenta na starcie każdej sesji.
+Specyfika projektu **Kramio** (`kramio.pl`). Plik czytany przez asystenta na starcie każdej sesji.
+
+> **Przeniesienie (2026-06-28):** serwis przeniesiony z tymczasowego `shop.kwasniak.org` do docelowego `kramio.pl` (ten sam katalog domeny na hostingu). **Baza bez zmian** (`host473413_shop`). Stary katalog `…/domains/shop.kwasniak.org` zostaje jako backup do czasu pełnej weryfikacji. Pamięć Claude skopiowana do klucza nowego projektu.
 
 **Relacja do `FOUNDATION.md`:** `FOUNDATION.md` = uniwersalne zasady współpracy (te same w każdym projekcie). Ten plik = specyfika tego projektu (domena, stos, decyzje produktowe, stan środowiska). W kwestiach projektowych `CLAUDE.md` ma pierwszeństwo; zasady współpracy z `FOUNDATION.md` obowiązują zawsze.
 
@@ -10,7 +12,7 @@ Specyfika projektu **shop.kwasniak.org**. Plik czytany przez asystenta na starci
 
 ## 1. Projekt
 
-- Domena: `shop.kwasniak.org`.
+- Domena: `kramio.pl` (centrala platformy). Wcześniej tymczasowo `shop.kwasniak.org`.
 - Charakter: serwis typu sklep (pełny zakres dopiero poznajemy — szczegóły produktowe dochodzą).
 - Świeża instalacja szkieletu Laravela jako punkt wyjścia; właściwy plan budujemy małymi krokami.
 
@@ -28,7 +30,7 @@ Specyfika projektu **shop.kwasniak.org**. Plik czytany przez asystenta na starci
 - **Composer** 2.9.7.
 - **Baza:** MySQL, połączenie `mysql`, baza `host473413_shop` (dostęp w `.env`). Sesje, kolejka i cache na sterowniku `database`.
 - **Node 20.20 / npm 10.8** dostępne.
-- **Document root** ustawiony na `…/shop.kwasniak.org/public` (potwierdzone przez Rafała).
+- **Document root** domeny `kramio.pl` musi wskazywać na `…/domains/kramio.pl/public` (jak wcześniej dla shop — ustawienie w panelu hostingu). Hosting tworzy domyślnie `public_html` jako docroot; my używamy `public` Laravela.
 - Repozytorium Git: jeszcze nie zainicjowane. Setup wg `FOUNDATION.md` sek. 3 (klucz SSH, remote przez SSH, tożsamość commitów per-repo na `Rafał Kwaśniak <rafal@kwasniak.org>`, bez `--global`).
 
 ---
@@ -53,7 +55,7 @@ Specyfika projektu **shop.kwasniak.org**. Plik czytany przez asystenta na starci
 
 5. **Architektura wielonajemcza (subdomena-per-sklep)** — USTALONE (2026-06-25):
    - **Centrala** = domena platformy (`config('tenancy.central_domain')` ← `APP_DOMAIN`): zarządzanie, logowanie/rejestracja, panel sprzedawcy i administratora. **Sprzedawca zarządza sklepem w centrali, NIE loguje się do swojej subdomeny, by nim zarządzać** (na subdomenie może co najwyżej zostać własnym klientem).
-   - **Storefront** = subdomena `{shop}.{central_domain}` (np. `bukiety.shop.kwasniak.org`): publiczny sklep jednego sprzedawcy. `{shop}` = slug sklepu = etykieta subdomeny; middleware rozwiązuje `Shop` i scope'uje wszystko do niego.
+   - **Storefront** = subdomena `{shop}.{central_domain}` (np. `bukiety.kramio.pl`): publiczny sklep jednego sprzedawcy. `{shop}` = slug sklepu = etykieta subdomeny; middleware rozwiązuje `Shop` i scope'uje wszystko do niego.
    - **Jedna baza + `shop_id`** na tabelach najemcy (nie baza-per-sklep — przerost na shared-hoście).
    - **Stan:** wildcard DNS już działa; serwer jeszcze nie kieruje subdomen do aplikacji (wildcard vhost + wildcard SSL — działka Rafała, na później). Działamy na domenie centrali jeszcze długo. Routing per-domena (`Route::domain`) jest przewidziany (wyłączony szkielet w `routes/web.php`), włączymy go razem z budową storefrontu — wtedy jednym ruchem, bez przepisywania.
 
@@ -83,7 +85,7 @@ Zweryfikowane pod kątem „cały serwis, nie tylko API":
 ## 5. Środowiskowe TODO (konfiguracja przed produkcją)
 
 Zrobione:
-- `APP_NAME=Kramio` (nazwa produktu; docelowa domena `kramio.pl` jeszcze nie działa — `APP_URL`/`APP_DOMAIN` zostają na `shop.kwasniak.org` do czasu jej uruchomienia), `APP_URL=https://shop.kwasniak.org`, `APP_ENV=production`, `APP_DEBUG=false`.
+- `APP_NAME=Kramio`, `APP_URL=https://kramio.pl`, `APP_DOMAIN=kramio.pl`, `APP_ENV=production`, `APP_DEBUG=false`. (Storefronty pod `*.kramio.pl` wymagają wildcard DNS+SSL — działka Rafała, na później.)
 - `MAIL_FROM_ADDRESS=noreply@shop.kwasniak.org`.
 - Parytet `.env` ↔ `.env.example` wyrównany (48 kluczy, blok DB pod MySQL z pustymi wartościami w example).
 - Logowanie (`FOUNDATION` sek. 5): logi dzienne (kanał `daily`, retencja 14 dni w `config/logging.php`).
