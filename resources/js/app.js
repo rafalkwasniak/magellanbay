@@ -35,6 +35,9 @@ import './ai.js';
 // „Pobierz dane z NIP" — auto-uzupełnienie firmy z Białej listy MF.
 import './company-lookup.js';
 
+// Pole tagów „chipsowe" z podpowiedziami, zero zależności.
+import './tags.js';
+
 // Toasty: spójne powiadomienia w prawym górnym rogu. Renderowane z flashy
 // serwera (x-toasts) i opcjonalnie z JS przez window.showToast(). ~30 s, pasek
 // odliczający, zamykane krzyżykiem. Zero zależności.

@@ -13,6 +13,8 @@ use App\Http\Controllers\LegalController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Seller\CompanyLookupController;
 use App\Http\Controllers\Seller\DashboardController as SellerDashboard;
+use App\Http\Controllers\Seller\ProductController;
+use App\Http\Controllers\Seller\ProductImageController;
 use App\Http\Controllers\Seller\ShopProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -107,6 +109,19 @@ Route::middleware(['auth', 'role:seller', 'ensure.consents'])
         Route::post('/firma/z-nip', CompanyLookupController::class)
             ->middleware('throttle:20,1')
             ->name('company.lookup');
+
+        // Produkty (edycja/usuwanie przez POST — FOUNDATION sek. 5).
+        Route::get('/produkty', [ProductController::class, 'index'])->name('products.index');
+        Route::get('/produkty/nowy', [ProductController::class, 'create'])->name('products.create');
+        Route::post('/produkty', [ProductController::class, 'store'])->name('products.store');
+        Route::get('/produkty/{product}/edycja', [ProductController::class, 'edit'])->name('products.edit');
+        Route::post('/produkty/{product}', [ProductController::class, 'update'])->name('products.update');
+        Route::post('/produkty/{product}/usun', [ProductController::class, 'destroy'])->name('products.destroy');
+
+        // Zdjęcia produktu.
+        Route::post('/produkty/{product}/zdjecia', [ProductImageController::class, 'store'])->name('products.images.store');
+        Route::post('/produkty/{product}/zdjecia/{image}/glowne', [ProductImageController::class, 'main'])->name('products.images.main');
+        Route::post('/produkty/{product}/zdjecia/{image}/usun', [ProductImageController::class, 'destroy'])->name('products.images.destroy');
     });
 
 /*

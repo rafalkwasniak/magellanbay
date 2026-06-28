@@ -59,4 +59,20 @@ return [
         'max_uses_per_field' => (int) env('AI_MAX_USES_PER_FIELD', 3),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Pakiety i limity
+    |--------------------------------------------------------------------------
+    |
+    | Limity ilościowe w konfiguracji (nie w kodzie). W MVP dostępny jest tylko
+    | pakiet Free. Mechanizm gotowy na kolejne warianty abonamentowe.
+    |
+    */
+
+    'packages' => [
+        'free' => [
+            'max_products' => 25,
+        ],
+    ],
+
 ];

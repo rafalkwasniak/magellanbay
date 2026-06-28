@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Sklep jednego sprzedawcy. `slug` = etykieta subdomeny ({slug}.{central_domain}).
@@ -39,6 +40,22 @@ class Shop extends Model
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'owner_id');
+    }
+
+    /**
+     * @return HasMany<Product, $this>
+     */
+    public function products(): HasMany
+    {
+        return $this->hasMany(Product::class);
+    }
+
+    /**
+     * @return HasMany<Tag, $this>
+     */
+    public function tags(): HasMany
+    {
+        return $this->hasMany(Tag::class);
     }
 
     /**

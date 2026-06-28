@@ -24,7 +24,7 @@
         ] : [
             ['label' => 'Pulpit', 'route' => 'seller.dashboard', 'icon' => '🏠'],
             ['label' => 'Mój sklep', 'route' => 'seller.shop.edit', 'icon' => '🛍️'],
-            ['label' => 'Produkty', 'route' => null, 'icon' => '🏷️'],
+            ['label' => 'Produkty', 'route' => 'seller.products.index', 'icon' => '🏷️'],
             ['label' => 'Zamówienia', 'route' => null, 'icon' => '📦'],
             ['label' => 'Wygląd', 'route' => null, 'icon' => '🎨'],
             ['label' => 'Ustawienia', 'route' => null, 'icon' => '⚙️'],
