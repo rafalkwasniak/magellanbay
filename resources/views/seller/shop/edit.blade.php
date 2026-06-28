@@ -110,12 +110,12 @@
                     <div class="mt-6">
                         <label for="logo" class="block text-sm font-medium text-stone-700">Logo sklepu <span class="text-stone-400">(opcjonalnie)</span></label>
                         <div class="mt-1.5 flex items-center gap-4">
-                            <div class="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-stone-200 bg-stone-100">
+                            <div class="flex h-20 shrink-0 items-center">
                                 <img id="logo-preview"
                                     src="{{ $shop->logo_path ? \Illuminate\Support\Facades\Storage::disk('public')->url($shop->logo_path) : '' }}"
                                     alt="Logo sklepu"
-                                    class="h-full w-full object-cover {{ $shop->logo_path ? '' : 'hidden' }}">
-                                <span id="logo-placeholder" class="text-2xl {{ $shop->logo_path ? 'hidden' : '' }}">🛍️</span>
+                                    class="h-20 w-auto max-w-[14rem] object-contain {{ $shop->logo_path ? '' : 'hidden' }}">
+                                <span id="logo-placeholder" class="flex h-20 w-20 items-center justify-center rounded-2xl border border-dashed border-stone-300 text-2xl text-stone-400 {{ $shop->logo_path ? 'hidden' : '' }}">🛍️</span>
                             </div>
                             <div class="min-w-0 flex-1">
                                 <input id="logo" name="logo" type="file" accept="image/png,image/jpeg,image/webp"

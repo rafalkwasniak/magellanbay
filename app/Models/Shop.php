@@ -49,4 +49,19 @@ class Shop extends Model
     {
         return $this->domain ?: $this->slug.'.'.config('tenancy.central_domain');
     }
+
+    /**
+     * Czy adres sklepu jest kompletny (wszystkie wymagane pola wypełnione).
+     * Używane m.in. na pulpicie (postęp konfiguracji) i przy publikacji.
+     */
+    public function addressComplete(): bool
+    {
+        foreach (['street', 'building_number', 'postal_code', 'city', 'province'] as $field) {
+            if (blank($this->{$field})) {
+                return false;
+            }
+        }
+
+        return true;
+    }
 }
