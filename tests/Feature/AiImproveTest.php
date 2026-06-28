@@ -31,6 +31,26 @@ class AiImproveTest extends TestCase
             ->assertJson(['text' => 'Poprawiony tekst.']);
     }
 
+    public function test_html_field_preserves_markup_and_strips_code_fences(): void
+    {
+        config(['services.deepseek.key' => 'test-key']);
+        Http::fake([
+            '*/chat/completions' => Http::response([
+                'choices' => [['message' => ['content' => "```html\n<div>Poprawiony <strong>opis</strong></div>\n```"]]],
+            ]),
+        ]);
+
+        $seller = User::factory()->consented()->create();
+
+        $this->actingAs($seller)
+            ->postJson(route('ai.improve'), [
+                'field' => 'shop_description',
+                'text' => '<div>opis</div>',
+            ])
+            ->assertOk()
+            ->assertJson(['text' => '<div>Poprawiony <strong>opis</strong></div>']);
+    }
+
     public function test_unconfigured_service_returns_503(): void
     {
         config(['services.deepseek.key' => '']);

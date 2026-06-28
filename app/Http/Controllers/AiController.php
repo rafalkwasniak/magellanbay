@@ -17,20 +17,25 @@ class AiController extends Controller
 {
     public function improve(Request $request, AiTextImprover $ai): JsonResponse
     {
-        // Pola, które AI może redagować, wraz z ich maksymalną długością.
-        $limits = [
-            'shop_description' => (int) config('shop.description_max'),
+        // Pola, które AI może redagować: maksymalna długość + tryb (html|tekst).
+        $fields = [
+            'shop_description' => ['max' => (int) config('shop.description_max'), 'html' => true],
         ];
 
         $field = (string) $request->input('field');
+        $max = $fields[$field]['max'] ?? max(array_column($fields, 'max'));
 
         $validated = $request->validate([
-            'field' => ['required', Rule::in(array_keys($limits))],
-            'text' => ['required', 'string', 'max:'.($limits[$field] ?? max($limits))],
+            'field' => ['required', Rule::in(array_keys($fields))],
+            'text' => ['required', 'string', 'max:'.$max],
         ]);
 
+        $config = $fields[$validated['field']];
+
         try {
-            $improved = $ai->improve($validated['text'], $limits[$validated['field']]);
+            $improved = $config['html']
+                ? $ai->improveHtml($validated['text'], $config['max'])
+                : $ai->improve($validated['text'], $config['max']);
         } catch (Throwable) {
             return response()->json([
                 'message' => 'Usługa AI jest chwilowo niedostępna. Spróbuj ponownie później.',

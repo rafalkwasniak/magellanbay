@@ -1,7 +1,34 @@
 // „Popraw przez AI": wysyła treść pola do endpointu redakcji i wstawia poprawiony
-// tekst z powrotem do pola. Limit użyć per pole/ładowanie strony pilnuje atrybut
+// wynik z powrotem. Limit użyć per pole/ładowanie strony pilnuje atrybut
 // data-ai-uses. Zero zależności; korzysta z window.showToast (resources/js/app.js).
+//
+// Świadome edytora Trix: gdy cel to ukryte pole spięte z <trix-editor>, wysyłamy
+// HTML (Trix synchronizuje go do inputa) i ładujemy poprawiony HTML z powrotem,
+// więc formatowanie zostaje zachowane. Serwer dobiera tryb (html/tekst) per pole.
 // Wzorzec przeniesiony z kociaczek.com.pl.
+
+function trixFor(id) {
+    return document.querySelector('trix-editor[input="' + id + '"]');
+}
+
+// Treść wysyłana do AI: dla Trix to HTML z ukrytego inputa, dla zwykłego pola jego wartość.
+function payload(target) {
+    return (target.value || '').trim();
+}
+
+// Czy pole jest puste — dla Trix liczy się widoczny tekst, nie same znaczniki.
+function isBlank(target) {
+    const trix = trixFor(target.id);
+    const visible = trix ? trix.editor.getDocument().toString() : target.value;
+    return (visible || '').trim() === '';
+}
+
+// Wstaw wynik: dla Trix ładujemy HTML (zachowuje formatowanie), dla zwykłego pola — wartość.
+function writeValue(target, text) {
+    const trix = trixFor(target.id);
+    if (trix) trix.editor.loadHTML(text);
+    else target.value = text;
+}
 
 function improveWithAi(button) {
     const target = document.getElementById(button.getAttribute('data-ai-target'));
@@ -11,8 +38,7 @@ function improveWithAi(button) {
     let used = parseInt(button.getAttribute('data-ai-uses') || '0', 10);
     if (used >= max) return;
 
-    const text = target.value.trim();
-    if (text === '') {
+    if (isBlank(target)) {
         window.showToast('Najpierw wpisz treść do poprawy.', 'error');
         return;
     }
@@ -31,11 +57,11 @@ function improveWithAi(button) {
             Accept: 'application/json',
             'X-CSRF-TOKEN': token ? token.getAttribute('content') : '',
         },
-        body: JSON.stringify({ field: button.getAttribute('data-ai-field'), text: text }),
+        body: JSON.stringify({ field: button.getAttribute('data-ai-field'), text: payload(target) }),
     })
         .then((response) => (response.ok ? response.json() : Promise.reject(response)))
         .then((data) => {
-            target.value = data.text;
+            writeValue(target, data.text);
             used += 1;
             button.setAttribute('data-ai-uses', used);
             if (used >= max) {

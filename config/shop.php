@@ -37,12 +37,13 @@ return [
     | Opis sklepu
     |--------------------------------------------------------------------------
     |
-    | Maksymalna długość opisu sklepu. Jedno źródło prawdy — używane w walidacji
-    | (ShopProfileRequest) i przy redakcji AI (limit długości wyniku).
+    | Maksymalna długość opisu sklepu (HTML z edytora Trix). Jedno źródło prawdy —
+    | używane w walidacji (ShopProfileRequest) i przy redakcji AI (limit długości
+    | wyniku). Wyższy niż widoczny tekst, bo wlicza znaczniki formatowania.
     |
     */
 
-    'description_max' => 2000,
+    'description_max' => 4000,
 
     /*
     |--------------------------------------------------------------------------

@@ -1,3 +1,31 @@
+// Edytor tekstu sformatowanego (Trix) — lekki, z ograniczonym formatowaniem.
+// Uwaga: CSS Trixa importujemy w resources/css/app.css (PRZED naszymi
+// nadpisaniami), żeby nasze style wygrywały kolejnością. Tu tylko logika.
+import Trix from 'trix';
+
+// Nagłówek z edytora ma być H2 — H1 rezerwujemy dla tytułu strony (SEO):
+// w treści opisu nie chcemy konkurencyjnych H1.
+Trix.config.blockAttributes.heading1.tagName = 'h2';
+
+// Nie obsługujemy wgrywania plików w opisie — blokujemy załączniki Trix.
+document.addEventListener('trix-file-accept', (event) => event.preventDefault());
+
+// Wklejanie do edytora zawsze jako CZYSTY TEKST — bez stylów z obcych stron.
+// Capture na document wyprzedza obsługę paste w Trix, więc wstawiamy sami.
+document.addEventListener(
+    'paste',
+    (event) => {
+        const editor = event.target instanceof Element ? event.target.closest('trix-editor') : null;
+        if (!editor || !editor.editor || !event.clipboardData) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+        const text = event.clipboardData.getData('text/plain');
+        if (text) editor.editor.insertString(text);
+    },
+    true,
+);
+
 // Walidacja formularzy po stronie klienta (warstwa UX, zero zależności).
 import './forms.js';
 

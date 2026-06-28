@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Seller;
 
+use App\Services\HtmlSanitizer;
 use App\Services\NipService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -35,6 +36,11 @@ class ShopProfileRequest extends FormRequest
 
         if ($this->has('nip')) {
             $merge['nip'] = app(NipService::class)->normalize($this->input('nip'));
+        }
+
+        // Opis to HTML z edytora Trix — sanityzujemy wąską whitelistą przed walidacją/zapisem.
+        if ($this->has('description')) {
+            $merge['description'] = app(HtmlSanitizer::class)->clean((string) $this->input('description'));
         }
 
         $this->merge($merge);
