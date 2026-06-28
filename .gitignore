@@ -15,6 +15,9 @@
 /auth.json
 /awstats
 /logs
+/public_html
+/private_html
+/public_ftp
 /node_modules
 /public/build
 /public/fonts-manifest.dev.json
