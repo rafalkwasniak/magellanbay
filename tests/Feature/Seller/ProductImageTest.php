@@ -29,14 +29,14 @@ class ProductImageTest extends TestCase
         [$seller, $product] = $this->sellerProduct();
 
         $this->actingAs($seller)
-            ->post(route('seller.products.images.store', $product), [
+            ->postJson(route('seller.products.images.store', $product), [
                 'images' => [
                     UploadedFile::fake()->image('a.jpg', 2000, 1500),
                     UploadedFile::fake()->image('b.png', 800, 800),
                 ],
             ])
-            ->assertRedirect()
-            ->assertSessionHas('success');
+            ->assertOk()
+            ->assertJsonCount(2, 'images');
 
         $this->assertSame(2, $product->images()->count());
         foreach ($product->images as $image) {
@@ -53,23 +53,37 @@ class ProductImageTest extends TestCase
         }
 
         $this->actingAs($seller)
-            ->post(route('seller.products.images.store', $product), [
+            ->postJson(route('seller.products.images.store', $product), [
                 'images' => [UploadedFile::fake()->image('x.jpg', 600, 600)],
             ])
-            ->assertSessionHas('error');
+            ->assertStatus(422);
 
         $this->assertSame(5, $product->images()->count());
     }
 
-    public function test_set_main_moves_image_to_front(): void
+    public function test_reorder_sets_positions(): void
     {
         [$seller, $product] = $this->sellerProduct();
-        $first = $product->images()->create(['path' => 'products/a.jpg', 'position' => 1]);
-        $second = $product->images()->create(['path' => 'products/b.jpg', 'position' => 2]);
+        $a = $product->images()->create(['path' => 'products/a.jpg', 'position' => 0]);
+        $b = $product->images()->create(['path' => 'products/b.jpg', 'position' => 1]);
+        $c = $product->images()->create(['path' => 'products/c.jpg', 'position' => 2]);
 
-        $this->actingAs($seller)->post(route('seller.products.images.main', [$product, $second]));
+        $this->actingAs($seller)
+            ->postJson(route('seller.products.images.reorder', $product), ['order' => [$c->id, $a->id, $b->id]])
+            ->assertOk();
 
-        $this->assertSame($second->id, $product->fresh()->mainImage()->id);
+        $this->assertSame([$c->id, $a->id, $b->id], $product->images()->pluck('id')->all());
+    }
+
+    public function test_other_shop_cannot_reorder(): void
+    {
+        [$seller] = $this->sellerProduct();
+        $foreign = \App\Models\Product::factory()->create();
+        $image = $foreign->images()->create(['path' => 'products/x.jpg', 'position' => 0]);
+
+        $this->actingAs($seller)
+            ->postJson(route('seller.products.images.reorder', $foreign), ['order' => [$image->id]])
+            ->assertForbidden();
     }
 
     public function test_delete_removes_file_and_row(): void
@@ -79,7 +93,9 @@ class ProductImageTest extends TestCase
         Storage::disk('public')->put('products/del.jpg', 'x');
         $image = $product->images()->create(['path' => 'products/del.jpg', 'position' => 1]);
 
-        $this->actingAs($seller)->post(route('seller.products.images.destroy', [$product, $image]));
+        $this->actingAs($seller)
+            ->postJson(route('seller.products.images.destroy', [$product, $image]))
+            ->assertOk();
 
         $this->assertDatabaseMissing('product_images', ['id' => $image->id]);
         Storage::disk('public')->assertMissing('products/del.jpg');
@@ -92,7 +108,7 @@ class ProductImageTest extends TestCase
         $foreign = Product::factory()->create();
 
         $this->actingAs($seller)
-            ->post(route('seller.products.images.store', $foreign), [
+            ->postJson(route('seller.products.images.store', $foreign), [
                 'images' => [UploadedFile::fake()->image('a.jpg', 600, 600)],
             ])
             ->assertForbidden();

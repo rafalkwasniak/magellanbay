@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Services\ProductImageService;
-use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -18,7 +18,7 @@ class ProductImageController extends Controller
 {
     private const MAX_IMAGES = 5;
 
-    public function store(Request $request, Product $product, ProductImageService $images): RedirectResponse
+    public function store(Request $request, Product $product, ProductImageService $images): JsonResponse
     {
         $this->authorizeProduct($request, $product);
 
@@ -35,37 +35,54 @@ class ProductImageController extends Controller
         $files = $request->file('images', []);
 
         if ($product->images()->count() + count($files) > self::MAX_IMAGES) {
-            return back()->with('error', 'Produkt może mieć maksymalnie '.self::MAX_IMAGES.' zdjęć.');
+            return response()->json(['message' => 'Produkt może mieć maksymalnie '.self::MAX_IMAGES.' zdjęć.'], 422);
         }
 
         $position = (int) $product->images()->max('position');
-        foreach ($files as $file) {
-            $product->images()->create([
+        $created = collect($files)->map(function ($file) use ($product, $images, &$position) {
+            $image = $product->images()->create([
                 'path' => $images->store($file, $product),
                 'position' => ++$position,
             ]);
+
+            return [
+                'id' => $image->id,
+                'url' => $image->url(),
+                'deleteUrl' => route('seller.products.images.destroy', [$product, $image]),
+            ];
+        });
+
+        return response()->json(['images' => $created->all()]);
+    }
+
+    public function reorder(Request $request, Product $product): JsonResponse
+    {
+        $this->authorizeProduct($request, $product);
+
+        $validated = $request->validate([
+            'order' => ['required', 'array'],
+            'order.*' => ['integer'],
+        ]);
+
+        $ownIds = $product->images()->pluck('id')->all();
+        $position = 0;
+        foreach ($validated['order'] as $id) {
+            if (in_array((int) $id, $ownIds, true)) {
+                ProductImage::where('id', $id)->where('product_id', $product->id)->update(['position' => $position++]);
+            }
         }
 
-        return back()->with('success', 'Dodano zdjęcia.');
+        return response()->json(['ok' => true]);
     }
 
-    public function main(Request $request, Product $product, ProductImage $image): RedirectResponse
-    {
-        $this->authorizeImage($request, $product, $image);
-
-        $image->update(['position' => (int) $product->images()->min('position') - 1]);
-
-        return back()->with('success', 'Ustawiono zdjęcie główne.');
-    }
-
-    public function destroy(Request $request, Product $product, ProductImage $image): RedirectResponse
+    public function destroy(Request $request, Product $product, ProductImage $image): JsonResponse
     {
         $this->authorizeImage($request, $product, $image);
 
         Storage::disk('public')->delete($image->path);
         $image->delete();
 
-        return back()->with('success', 'Zdjęcie zostało usunięte.');
+        return response()->json(['ok' => true]);
     }
 
     private function authorizeProduct(Request $request, Product $product): void

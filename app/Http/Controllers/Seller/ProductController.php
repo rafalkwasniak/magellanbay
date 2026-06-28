@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Seller;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Seller\ProductRequest;
 use App\Models\Product;
+use App\Services\ProductImageService;
 use App\Services\SlugService;
 use App\Services\TagNormalizer;
 use Illuminate\Contracts\Support\Renderable;
@@ -42,7 +43,7 @@ class ProductController extends Controller
         ]);
     }
 
-    public function store(ProductRequest $request): RedirectResponse
+    public function store(ProductRequest $request, ProductImageService $images): RedirectResponse
     {
         if ($this->limitReached($request)) {
             return redirect()->route('seller.products.index')->with('error', $this->limitMessage());
@@ -50,6 +51,14 @@ class ProductController extends Controller
 
         $product = $request->user()->shop->products()->create($this->data($request));
         $this->syncTags($product, $request);
+
+        // Zdjęcia wybrane przy tworzeniu — zapis w kolejności dodania (0,1,2,…).
+        foreach ($request->file('images', []) as $position => $file) {
+            $product->images()->create([
+                'path' => $images->store($file, $product),
+                'position' => $position,
+            ]);
+        }
 
         return redirect()->route('seller.products.index')->with('success', 'Produkt został dodany.');
     }
@@ -90,7 +99,7 @@ class ProductController extends Controller
      */
     private function data(ProductRequest $request): array
     {
-        $data = $request->safe()->except('tags');
+        $data = $request->safe()->except(['tags', 'images']);
         $data['stock'] = $data['track_stock'] ? ($data['stock'] ?? 0) : null;
 
         return $data;

@@ -41,6 +41,9 @@ import './company-lookup.js';
 // Pole tagów „chipsowe" z podpowiedziami, zero zależności.
 import './tags.js';
 
+// Galeria zdjęć produktu: kolejność przez drag & drop i strzałki.
+import './product-gallery.js';
+
 // Toasty: spójne powiadomienia w prawym górnym rogu. Renderowane z flashy
 // serwera (x-toasts) i opcjonalnie z JS przez window.showToast(). ~30 s, pasek
 // odliczający, zamykane krzyżykiem. Zero zależności.

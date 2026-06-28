@@ -120,7 +120,7 @@ Route::middleware(['auth', 'role:seller', 'ensure.consents'])
 
         // Zdjęcia produktu.
         Route::post('/produkty/{product}/zdjecia', [ProductImageController::class, 'store'])->name('products.images.store');
-        Route::post('/produkty/{product}/zdjecia/{image}/glowne', [ProductImageController::class, 'main'])->name('products.images.main');
+        Route::post('/produkty/{product}/zdjecia/kolejnosc', [ProductImageController::class, 'reorder'])->name('products.images.reorder');
         Route::post('/produkty/{product}/zdjecia/{image}/usun', [ProductImageController::class, 'destroy'])->name('products.images.destroy');
     });
 

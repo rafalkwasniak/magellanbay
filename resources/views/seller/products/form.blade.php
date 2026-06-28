@@ -5,7 +5,7 @@
         <div class="lg:col-span-8">
             <form method="POST"
                 action="{{ $product->exists ? route('seller.products.update', $product) : route('seller.products.store') }}"
-                class="space-y-6" novalidate data-validate>
+                class="space-y-6" enctype="multipart/form-data" novalidate data-validate>
                 @csrf
 
                 {{-- Dane podstawowe --}}
@@ -51,6 +51,65 @@
                         </div>
                     </div>
                 </div>
+
+                {{-- Zdjęcia produktu (akcje przez JS — bez zagnieżdżonych formularzy, więc karta jest wewnątrz formularza) --}}
+                @if ($product->exists)
+                    <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                        <div class="flex items-center justify-between">
+                            <h2 class="font-semibold text-stone-900">Zdjęcia produktu</h2>
+                            <span class="text-sm text-stone-500"><span data-gallery-count>{{ $product->images->count() }}</span> / 5</span>
+                        </div>
+                        <p class="mt-1 text-sm text-stone-500">Pierwsze zdjęcie jest główne. Przeciągnij miniatury lub użyj strzałek, aby zmienić kolejność.</p>
+
+                        <div data-gallery
+                            data-reorder-url="{{ route('seller.products.images.reorder', $product) }}"
+                            data-store-url="{{ route('seller.products.images.store', $product) }}"
+                            data-max="5"
+                            class="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-3 {{ $product->images->isEmpty() ? 'hidden' : '' }}">
+                            @foreach ($product->images as $image)
+                                <div data-gallery-item data-id="{{ $image->id }}" draggable="true" class="relative cursor-move rounded-2xl border border-stone-200 bg-stone-50 p-2">
+                                    <div class="flex h-28 items-center justify-center overflow-hidden rounded-xl bg-white">
+                                        <img src="{{ $image->url() }}" alt="Zdjęcie produktu" draggable="false" class="h-full w-auto object-contain">
+                                    </div>
+                                    <span data-main-badge class="absolute left-3 top-3 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700 {{ $loop->first ? '' : 'hidden' }}">Główne</span>
+                                    <div class="mt-2 flex items-center justify-between gap-2">
+                                        <div class="flex items-center gap-1">
+                                            <button type="button" data-move="prev" aria-label="Przesuń wcześniej" class="rounded-lg border border-stone-200 bg-white px-2 py-1 text-xs text-stone-600 transition hover:bg-stone-100 disabled:opacity-40">◀</button>
+                                            <button type="button" data-move="next" aria-label="Przesuń później" class="rounded-lg border border-stone-200 bg-white px-2 py-1 text-xs text-stone-600 transition hover:bg-stone-100 disabled:opacity-40">▶</button>
+                                        </div>
+                                        <button type="button" data-gallery-delete data-url="{{ route('seller.products.images.destroy', [$product, $image]) }}" class="text-xs font-medium text-rose-700 transition hover:text-rose-800">Usuń</button>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+
+                        <div class="mt-5" data-gallery-uploader>
+                            <input type="file" data-gallery-upload multiple accept="image/png,image/jpeg,image/webp"
+                                class="block w-full text-sm text-stone-500 file:mr-4 file:rounded-xl file:border-0 file:bg-amber-100 file:px-4 file:py-2 file:text-sm file:font-medium file:text-amber-800 file:transition hover:file:bg-amber-200">
+                            <p class="mt-2 text-xs text-stone-400">PNG, JPG lub WebP, do 4 MB. Maksymalnie 5 zdjęć — wybierz, dodamy od razu.</p>
+                        </div>
+                        <p class="mt-5 hidden text-xs text-stone-400" data-gallery-full>Osiągnięto limit 5 zdjęć — usuń jedno, aby dodać nowe.</p>
+                    </div>
+                @else
+                    {{-- Nowy produkt: zdjęcia lecą razem z formularzem (po zapisie produkt ma ID i je zapisujemy w kolejności dodania). --}}
+                    <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                        <h2 class="font-semibold text-stone-900">Zdjęcia produktu <span class="text-sm font-normal text-stone-400">(opcjonalnie)</span></h2>
+                        <p class="mt-1 text-sm text-stone-500">Wybierz do 5 zdjęć — dodamy je przy zapisie. Pierwsze będzie główne; kolejność zmienisz później w edycji.</p>
+
+                        <div class="mt-5" data-new-images>
+                            <input type="file" name="images[]" multiple accept="image/png,image/jpeg,image/webp" data-new-images-input
+                                class="block w-full text-sm text-stone-500 file:mr-4 file:rounded-xl file:border-0 file:bg-amber-100 file:px-4 file:py-2 file:text-sm file:font-medium file:text-amber-800 file:transition hover:file:bg-amber-200">
+                            <div data-new-images-preview class="mt-4 grid grid-cols-2 gap-4 hidden sm:grid-cols-3"></div>
+                            <p class="mt-2 text-xs text-stone-400">PNG, JPG lub WebP, do 4 MB. Maksymalnie 5 zdjęć.</p>
+                            @error('images')
+                                <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
+                            @enderror
+                            @error('images.*')
+                                <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </div>
+                @endif
 
                 {{-- Cena i stan --}}
                 <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
@@ -135,70 +194,6 @@
                     </button>
                 </div>
             </form>
-
-            {{-- Zdjęcia (osobno od głównego formularza — formularze się nie zagnieżdżają) --}}
-            @if ($product->exists)
-                <div class="mt-6 rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
-                    <div class="flex items-center justify-between">
-                        <h2 class="font-semibold text-stone-900">Zdjęcia produktu</h2>
-                        <span class="text-sm text-stone-500">{{ $product->images->count() }} / 5</span>
-                    </div>
-                    <p class="mt-1 text-sm text-stone-500">Pierwsze zdjęcie jest główne. Optymalizujemy je automatycznie.</p>
-
-                    @if ($product->images->isNotEmpty())
-                        <div class="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-3">
-                            @foreach ($product->images as $image)
-                                <div class="relative rounded-2xl border border-stone-200 bg-stone-50 p-2">
-                                    <div class="flex h-28 items-center justify-center overflow-hidden rounded-xl bg-white">
-                                        <img src="{{ $image->url() }}" alt="Zdjęcie produktu" class="h-full w-auto object-contain">
-                                    </div>
-                                    @if ($loop->first)
-                                        <span class="absolute left-3 top-3 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700">Główne</span>
-                                    @endif
-                                    <div class="mt-2 flex items-center justify-between gap-2">
-                                        @if (! $loop->first)
-                                            <form method="POST" action="{{ route('seller.products.images.main', [$product, $image]) }}">
-                                                @csrf
-                                                <button type="submit" class="text-xs font-medium text-amber-700 transition hover:text-amber-800">Ustaw główne</button>
-                                            </form>
-                                        @else
-                                            <span></span>
-                                        @endif
-                                        <form method="POST" action="{{ route('seller.products.images.destroy', [$product, $image]) }}" onsubmit="return confirm('Usunąć to zdjęcie?');">
-                                            @csrf
-                                            <button type="submit" class="text-xs font-medium text-rose-700 transition hover:text-rose-800">Usuń</button>
-                                        </form>
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
-                    @endif
-
-                    @if ($product->images->count() < 5)
-                        <form method="POST" action="{{ route('seller.products.images.store', $product) }}" enctype="multipart/form-data" class="mt-5">
-                            @csrf
-                            <input type="file" name="images[]" multiple accept="image/png,image/jpeg,image/webp"
-                                class="block w-full text-sm text-stone-500 file:mr-4 file:rounded-xl file:border-0 file:bg-amber-100 file:px-4 file:py-2 file:text-sm file:font-medium file:text-amber-800 file:transition hover:file:bg-amber-200">
-                            <div class="mt-2 flex flex-wrap items-center justify-between gap-2">
-                                <p class="text-xs text-stone-400">PNG, JPG lub WebP, do 4 MB. Maksymalnie 5 zdjęć.</p>
-                                <button type="submit" class="rounded-2xl border border-stone-200 bg-white/70 px-4 py-2 text-sm font-semibold text-stone-700 transition hover:bg-white">Dodaj zdjęcia</button>
-                            </div>
-                            @error('images')
-                                <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
-                            @enderror
-                            @error('images.*')
-                                <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
-                            @enderror
-                        </form>
-                    @else
-                        <p class="mt-5 text-xs text-stone-400">Osiągnięto limit 5 zdjęć — usuń jedno, aby dodać nowe.</p>
-                    @endif
-                </div>
-            @else
-                <div class="mt-6 rounded-3xl border border-dashed border-stone-300 bg-white/50 p-6 text-center">
-                    <p class="text-sm text-stone-500">Zdjęcia dodasz po zapisaniu produktu.</p>
-                </div>
-            @endif
         </div>
 
         {{-- Kolumna pomocnicza --}}

@@ -6,6 +6,8 @@ use App\Models\Product;
 use App\Models\Shop;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class ProductTest extends TestCase
@@ -60,6 +62,41 @@ class ProductTest extends TestCase
             'stock' => 10,
             'is_active' => true,
         ]);
+    }
+
+    public function test_creates_product_with_images(): void
+    {
+        Storage::fake('public');
+        [$seller, $shop] = $this->sellerWithShop();
+
+        $this->actingAs($seller)
+            ->post(route('seller.products.store'), $this->payload([
+                'images' => [
+                    UploadedFile::fake()->image('a.jpg', 800, 600),
+                    UploadedFile::fake()->image('b.jpg', 800, 600),
+                ],
+            ]))
+            ->assertRedirect(route('seller.products.index'));
+
+        $product = $shop->products()->first();
+        $this->assertSame(2, $product->images()->count());
+        foreach ($product->images as $image) {
+            Storage::disk('public')->assertExists($image->path);
+        }
+    }
+
+    public function test_create_rejects_more_than_five_images(): void
+    {
+        Storage::fake('public');
+        [$seller] = $this->sellerWithShop();
+        $images = [];
+        for ($i = 0; $i < 6; $i++) {
+            $images[] = UploadedFile::fake()->image("p{$i}.jpg", 400, 400);
+        }
+
+        $this->actingAs($seller)
+            ->post(route('seller.products.store'), $this->payload(['images' => $images]))
+            ->assertSessionHasErrors('images');
     }
 
     public function test_product_description_html_is_sanitised(): void
