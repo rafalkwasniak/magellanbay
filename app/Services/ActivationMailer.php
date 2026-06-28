@@ -23,22 +23,25 @@ class ActivationMailer
             'email' => $user->email,
         ]);
 
+        $app = config('app.name');
+
         EmailMessage::create([
             'priority' => MailPriority::High,
             'to_email' => $user->email,
             'to_name' => trim($user->name.' '.$user->surname),
-            'subject' => 'Aktywuj konto w '.config('app.name').' — ustaw hasło',
-            'preheader' => 'Dokończ zakładanie konta — ustaw hasło.',
-            'heading' => 'Witaj w '.config('app.name').'!',
+            'subject' => 'Witaj w '.$app.' — dokończ zakładanie swojego sklepu',
+            'preheader' => 'Ustaw hasło i otwórz swój sklep — to ostatni krok.',
+            'heading' => 'Witaj w '.$app.'!',
             'greeting' => 'Cześć '.$user->name.',',
             'intro_lines' => [
-                'Dziękujemy za rejestrację. Cieszymy się, że chcesz prowadzić swój sklep właśnie u nas.',
-                'Aby dokończyć zakładanie konta, ustaw hasło i potwierdź swoje dane — zajmie to chwilę.',
+                'Dziękujemy za rejestrację i gratulujemy decyzji — właśnie zrobiłeś pierwszy krok do sprzedaży własnych produktów w internecie.',
+                'W '.$app.' postawisz swój sklep w kilka minut, bez wiedzy technicznej: dostajesz własny adres, stronę gotową do sprzedaży i pełną kontrolę nad ofertą. O resztę — adres, koszyk, zamówienia — zadbamy my, żebyś Ty mógł skupić się na tym, co robisz najlepiej.',
+                'Został ostatni krok: ustaw hasło i potwierdź swoje dane. Zaraz potem dodasz pierwszy produkt i otworzysz sklep dla klientów.',
             ],
-            'action_text' => 'Dokończ rejestrację',
+            'action_text' => 'Dokończ zakładanie sklepu',
             'action_url' => $url,
             'outro_lines' => [
-                'Link jest ważny przez 24 godziny. Jeśli to nie Ty zakładałeś konto, zignoruj tę wiadomość.',
+                'Link jest ważny przez 24 godziny.',
             ],
         ]);
     }

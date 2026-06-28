@@ -83,7 +83,7 @@ Zweryfikowane pod kątem „cały serwis, nie tylko API":
 ## 5. Środowiskowe TODO (konfiguracja przed produkcją)
 
 Zrobione:
-- `APP_NAME=Shop`, `APP_URL=https://shop.kwasniak.org`, `APP_ENV=production`, `APP_DEBUG=false`.
+- `APP_NAME=Kramio` (nazwa produktu; docelowa domena `kramio.pl` jeszcze nie działa — `APP_URL`/`APP_DOMAIN` zostają na `shop.kwasniak.org` do czasu jej uruchomienia), `APP_URL=https://shop.kwasniak.org`, `APP_ENV=production`, `APP_DEBUG=false`.
 - `MAIL_FROM_ADDRESS=noreply@shop.kwasniak.org`.
 - Parytet `.env` ↔ `.env.example` wyrównany (48 kluczy, blok DB pod MySQL z pustymi wartościami w example).
 - Logowanie (`FOUNDATION` sek. 5): logi dzienne (kanał `daily`, retencja 14 dni w `config/logging.php`).
