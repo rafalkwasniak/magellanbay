@@ -8,6 +8,23 @@
             <input type="hidden" name="token" value="{{ $token }}">
             <input type="hidden" name="token_email" value="{{ $tokenEmail }}">
 
+            {{-- Sklep — wartości stałe, ustawione przy rejestracji (disabled, nie do zmiany tutaj). --}}
+            @php($shop = $user?->shop)
+            @if ($shop)
+                <div class="space-y-2">
+                    <div>
+                        <label class="block text-sm font-medium text-stone-700">Nazwa sklepu</label>
+                        <input type="text" value="{{ $shop->name }}" disabled
+                            class="mt-1.5 block w-full cursor-not-allowed rounded-2xl border border-stone-200 bg-stone-100 px-4 py-3 text-sm text-stone-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-stone-700">Adres sklepu</label>
+                        <input type="text" value="{{ $shop->host() }}" disabled
+                            class="mt-1.5 block w-full cursor-not-allowed rounded-2xl border border-stone-200 bg-stone-100 px-4 py-3 text-sm text-stone-500">
+                    </div>
+                </div>
+            @endif
+
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label for="name" class="block text-sm font-medium text-stone-700">Imię</label>
@@ -31,12 +48,9 @@
 
             <div>
                 <label for="email" class="block text-sm font-medium text-stone-700">Adres e-mail</label>
-                <input id="email" name="email" type="email" autocomplete="email" required
-                    value="{{ old('email', $user?->email ?? $tokenEmail) }}"
-                    class="mt-1.5 block w-full rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
-                @error('email')
-                    <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
-                @enderror
+                <input id="email" type="email" disabled
+                    value="{{ $user?->email ?? $tokenEmail }}"
+                    class="mt-1.5 block w-full cursor-not-allowed rounded-2xl border border-stone-200 bg-stone-100 px-4 py-3 text-sm text-stone-500">
             </div>
 
             <div>

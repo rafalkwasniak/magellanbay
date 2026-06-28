@@ -46,10 +46,10 @@ class ActivationController extends Controller
                 'token' => $request->input('token'),
             ],
             function (User $user) use ($request) {
+                // E-mail jest stały (pole disabled) — nie nadpisujemy go z formularza.
                 $user->forceFill([
                     'name' => $request->string('name'),
                     'surname' => $request->string('surname'),
-                    'email' => $request->string('email'),
                     'phone' => $request->input('phone'),
                     'password' => Hash::make($request->string('password')),
                     'email_verified_at' => $user->email_verified_at ?? now(),
@@ -65,7 +65,7 @@ class ActivationController extends Controller
         }
 
         /** @var User $user */
-        $user = User::where('email', $request->string('email'))->firstOrFail();
+        $user = User::where('email', $request->string('token_email'))->firstOrFail();
 
         // Domknięcie zgód na aktualne wersje (idempotentne — istniejące zostają).
         $documents = collect(config('legal.required_types'))
