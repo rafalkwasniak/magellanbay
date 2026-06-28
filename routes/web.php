@@ -10,6 +10,7 @@ use App\Http\Controllers\AiController;
 use App\Http\Controllers\Auth\ResendActivationController;
 use App\Http\Controllers\Consent\ConsentController;
 use App\Http\Controllers\LegalController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Seller\CompanyLookupController;
 use App\Http\Controllers\Seller\DashboardController as SellerDashboard;
 use App\Http\Controllers\Seller\ShopProfileController;
@@ -123,6 +124,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/ai/popraw', [AiController::class, 'improve'])
         ->middleware('throttle:30,1')
         ->name('ai.improve');
+
+    // Edycja własnego profilu (dane z users, awatar, hasło). Edycja przez POST.
+    Route::get('/profil', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::post('/profil', [ProfileController::class, 'update'])->name('profile.update');
 });
 
 /*

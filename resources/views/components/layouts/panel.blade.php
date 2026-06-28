@@ -30,6 +30,7 @@
             ['label' => 'Ustawienia', 'route' => null, 'icon' => '⚙️'],
         ];
         $initials = strtoupper(mb_substr($user->name ?? '?', 0, 1) . mb_substr($user->surname ?? '', 0, 1));
+        $avatar = $user?->avatar_path ? \Illuminate\Support\Facades\Storage::disk('public')->url($user->avatar_path) : null;
     @endphp
 
     <div class="relative min-h-full overflow-hidden">
@@ -49,11 +50,17 @@
 
                 <div class="px-4 pb-4 pt-6">
                 <div class="flex items-center gap-3 rounded-2xl bg-white/70 p-3 backdrop-blur">
-                    <span class="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-rose-500 text-sm font-semibold text-white">{{ $initials }}</span>
-                    <div class="min-w-0 text-sm">
-                        <p class="truncate font-medium text-stone-900">{{ $user->name }} {{ $user->surname }}</p>
-                        <p class="text-stone-500">{{ $area }}</p>
-                    </div>
+                    <a href="{{ route('profile.edit') }}" class="flex min-w-0 flex-1 items-center gap-3" title="Mój profil">
+                        @if ($avatar)
+                            <img src="{{ $avatar }}" alt="Awatar" class="h-9 w-9 shrink-0 rounded-full object-cover">
+                        @else
+                            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-rose-500 text-sm font-semibold text-white">{{ $initials }}</span>
+                        @endif
+                        <div class="min-w-0 text-sm">
+                            <p class="truncate font-medium text-stone-900">{{ $user->name }} {{ $user->surname }}</p>
+                            <p class="text-stone-500">{{ $area }}</p>
+                        </div>
+                    </a>
                     <form method="POST" action="{{ route('logout') }}" class="ml-auto">
                         @csrf
                         <button type="submit" title="Wyloguj"
