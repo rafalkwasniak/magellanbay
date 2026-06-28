@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Enums\LegalDocumentType;
+use App\Enums\ShopStatus;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\RegisterRequest;
@@ -33,7 +34,8 @@ class RegisterController extends Controller
     /**
      * Rejestracja konta sprzedawcy. Konto powstaje BEZ użytecznego hasła
      * (losowe, niemożliwe do odgadnięcia) — sprzedawca dostaje mailem link do
-     * ustawienia hasła. Zaznaczone zgody zapisujemy na aktualne wersje
+     * ustawienia hasła. Razem z kontem zakładamy szkic sklepu z zarezerwowaną
+     * subdomeną (slug). Zaznaczone zgody zapisujemy na aktualne wersje
      * dokumentów. Nie logujemy automatycznie (nie ma jeszcze hasła).
      */
     public function store(RegisterRequest $request, ConsentRecorder $consents, ActivationMailer $activation): RedirectResponse
@@ -48,6 +50,13 @@ class RegisterController extends Controller
             $user->password = Str::password(32); // placeholder; właściwe hasło ustawi sprzedawca z linku
             $user->role = UserRole::Seller; // role nie jest mass-assignable — ustawiamy jawnie
             $user->save();
+
+            // Szkic sklepu — subdomena zaklepana, dane sklepu i publikacja przyjdą przy aktywacji.
+            $user->shop()->create([
+                'name' => $request->string('shop_name'),
+                'slug' => $request->string('slug'),
+                'status' => ShopStatus::Draft,
+            ]);
 
             $consents->record($user, $documents, $request->ip());
 

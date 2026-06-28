@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Collection;
@@ -51,6 +52,17 @@ class User extends Authenticatable
     public function consents(): HasMany
     {
         return $this->hasMany(UserConsent::class);
+    }
+
+    /**
+     * Sklep sprzedawcy (jeden właściciel = jeden sklep). Powstaje przy
+     * rejestracji z zarezerwowaną subdomeną.
+     *
+     * @return HasOne<Shop, $this>
+     */
+    public function shop(): HasOne
+    {
+        return $this->hasOne(Shop::class, 'owner_id');
     }
 
     /**

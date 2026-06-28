@@ -4,9 +4,11 @@ namespace Tests\Feature\Auth;
 
 use App\Enums\LegalDocumentType;
 use App\Enums\MailPriority;
+use App\Enums\ShopStatus;
 use App\Enums\UserRole;
 use App\Models\EmailMessage;
 use App\Models\LegalDocument;
+use App\Models\Shop;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -21,6 +23,7 @@ class RegistrationTest extends TestCase
     private function validPayload(array $overrides = []): array
     {
         return array_merge([
+            'shop_name' => 'Wiązanki Małgosi',
             'name' => 'Anna',
             'surname' => 'Nowak',
             'email' => 'anna@sklep.test',
@@ -125,6 +128,48 @@ class RegistrationTest extends TestCase
             ->assertSessionHasErrors('email');
 
         $this->assertGuest();
+    }
+
+    public function test_registration_creates_draft_shop_with_slug_from_name(): void
+    {
+        $this->post(route('register.store'), $this->validPayload());
+
+        $user = User::where('email', 'anna@sklep.test')->firstOrFail();
+        $shop = $user->shop;
+
+        $this->assertNotNull($shop);
+        $this->assertSame('Wiązanki Małgosi', $shop->name);
+        $this->assertSame('wiazanki-malgosi', $shop->slug); // PL znaki transliterowane
+        $this->assertSame(ShopStatus::Draft, $shop->status);
+        $this->assertSame($user->id, $shop->owner_id);
+    }
+
+    public function test_registration_rejects_taken_shop_slug(): void
+    {
+        Shop::factory()->create(['slug' => 'wiazanki-malgosi']);
+
+        $this->post(route('register.store'), $this->validPayload(['shop_name' => 'Wiązanki Małgosi']))
+            ->assertSessionHasErrors('slug');
+
+        $this->assertDatabaseMissing('users', ['email' => 'anna@sklep.test']);
+        $this->assertDatabaseCount('email_messages', 0);
+    }
+
+    public function test_registration_rejects_reserved_subdomain(): void
+    {
+        $this->post(route('register.store'), $this->validPayload(['shop_name' => 'Admin']))
+            ->assertSessionHasErrors('slug');
+
+        $this->assertDatabaseMissing('users', ['email' => 'anna@sklep.test']);
+    }
+
+    public function test_registration_requires_shop_name(): void
+    {
+        // Nazwa złożona z samych symboli daje pusty slug — odrzucamy.
+        $this->post(route('register.store'), $this->validPayload(['shop_name' => '!!! ???']))
+            ->assertSessionHasErrors('slug');
+
+        $this->assertDatabaseMissing('users', ['email' => 'anna@sklep.test']);
     }
 
     public function test_authenticated_user_visiting_register_is_redirected_home(): void
