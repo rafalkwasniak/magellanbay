@@ -3,7 +3,7 @@
         <h1 class="text-3xl font-semibold tracking-tight text-stone-900">Dokończ rejestrację</h1>
         <p class="mt-2 text-stone-500">Sprawdź swoje dane, ustaw hasło i wejdź do panelu sprzedawcy.</p>
 
-        <form method="POST" action="{{ route('activation.store') }}" class="mt-8 space-y-5">
+        <form method="POST" action="{{ route('activation.store') }}" class="mt-8 space-y-5" novalidate data-validate>
             @csrf
             <input type="hidden" name="token" value="{{ $token }}">
             <input type="hidden" name="token_email" value="{{ $tokenEmail }}">
@@ -76,12 +76,15 @@
             <div>
                 <label for="password_confirmation" class="block text-sm font-medium text-stone-700">Powtórz hasło</label>
                 <input id="password_confirmation" name="password_confirmation" type="password" autocomplete="new-password" required
+                    data-match="password" data-msg-match="Hasła muszą być takie same."
                     class="mt-1.5 block w-full rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
             </div>
 
             <div class="space-y-3 pt-1">
                 <label class="flex items-center gap-3 text-sm text-stone-600">
-                    <input type="checkbox" name="terms" value="1" @checked(old('terms', $errors->any() ? null : '1')) class="shrink-0">
+                    <input type="checkbox" name="terms" value="1" required
+                        data-msg-required="Aby aktywować konto, zaakceptuj Regulamin."
+                        @checked(old('terms', $errors->any() ? null : '1')) class="shrink-0">
                     <span>
                         Akceptuję
                         <a href="{{ route('legal.terms') }}" target="_blank" rel="noopener"
@@ -93,7 +96,9 @@
                 @enderror
 
                 <label class="flex items-center gap-3 text-sm text-stone-600">
-                    <input type="checkbox" name="privacy" value="1" @checked(old('privacy', $errors->any() ? null : '1')) class="shrink-0">
+                    <input type="checkbox" name="privacy" value="1" required
+                        data-msg-required="Aby aktywować konto, zaakceptuj Politykę Prywatności."
+                        @checked(old('privacy', $errors->any() ? null : '1')) class="shrink-0">
                     <span>
                         Akceptuję
                         <a href="{{ route('legal.privacy') }}" target="_blank" rel="noopener"

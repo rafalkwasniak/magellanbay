@@ -23,7 +23,7 @@
             ['label' => 'Ustawienia', 'route' => null, 'icon' => '⚙️'],
         ] : [
             ['label' => 'Pulpit', 'route' => 'seller.dashboard', 'icon' => '🏠'],
-            ['label' => 'Mój sklep', 'route' => null, 'icon' => '🛍️'],
+            ['label' => 'Mój sklep', 'route' => 'seller.shop.edit', 'icon' => '🛍️'],
             ['label' => 'Produkty', 'route' => null, 'icon' => '🏷️'],
             ['label' => 'Zamówienia', 'route' => null, 'icon' => '📦'],
             ['label' => 'Wygląd', 'route' => null, 'icon' => '🎨'],
@@ -38,11 +38,27 @@
 
         <div class="relative flex min-h-full">
             {{-- Sidebar --}}
-            <aside class="hidden w-64 shrink-0 flex-col p-4 lg:flex">
-                <div class="flex items-center gap-2 px-3 py-2">
+            <aside class="hidden w-64 shrink-0 flex-col lg:flex">
+                {{-- Nagłówek marki o wysokości h-16 — zrównuje logo z nagłówkiem strony,
+                     a treść poniżej z głównym boxem po prawej. --}}
+                <div class="flex h-16 shrink-0 items-center gap-2 px-4">
                     <span class="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-rose-500 text-white">◐</span>
                     <span class="text-lg font-semibold tracking-tight text-stone-900">{{ config('app.name') }}</span>
                     <span class="ml-auto rounded-full bg-white/70 px-2 py-0.5 text-[11px] font-medium text-stone-500">{{ $area }}</span>
+                </div>
+
+                <div class="px-4 pb-4 pt-6">
+                <div class="flex items-center gap-3 rounded-2xl bg-white/70 p-3 backdrop-blur">
+                    <span class="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-rose-500 text-sm font-semibold text-white">{{ $initials }}</span>
+                    <div class="min-w-0 text-sm">
+                        <p class="truncate font-medium text-stone-900">{{ $user->name }} {{ $user->surname }}</p>
+                        <p class="text-stone-500">{{ $area }}</p>
+                    </div>
+                    <form method="POST" action="{{ route('logout') }}" class="ml-auto">
+                        @csrf
+                        <button type="submit" title="Wyloguj"
+                            class="rounded-lg px-2 py-1 text-stone-400 transition hover:bg-stone-100 hover:text-stone-700">⎋</button>
+                    </form>
                 </div>
 
                 <nav class="mt-6 space-y-1 text-sm">
@@ -59,18 +75,6 @@
                         </a>
                     @endforeach
                 </nav>
-
-                <div class="mt-auto flex items-center gap-3 rounded-2xl bg-white/70 p-3 backdrop-blur">
-                    <span class="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-rose-500 text-sm font-semibold text-white">{{ $initials }}</span>
-                    <div class="min-w-0 text-sm">
-                        <p class="truncate font-medium text-stone-900">{{ $user->name }} {{ $user->surname }}</p>
-                        <p class="text-stone-500">{{ $area }}</p>
-                    </div>
-                    <form method="POST" action="{{ route('logout') }}" class="ml-auto">
-                        @csrf
-                        <button type="submit" title="Wyloguj"
-                            class="rounded-lg px-2 py-1 text-stone-400 transition hover:bg-stone-100 hover:text-stone-700">⎋</button>
-                    </form>
                 </div>
             </aside>
 

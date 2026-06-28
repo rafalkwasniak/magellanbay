@@ -25,6 +25,24 @@
 }
 
 /*
+ * Natywny <select> (zwłaszcza w Safari) ignoruje padding/wysokość i renderuje
+ * się krótki oraz brzydki — niespójnie z naszymi polami tekstowymi. Zdejmujemy
+ * natywny wygląd i rysujemy własny chevron, żeby selecty pasowały do inputów w
+ * każdej przeglądarce. Reguła celowo POZA @layer — style nielayerowane wygrywają
+ * z utilitami Tailwinda, więc nadpisujemy prawy padding (miejsce na chevron).
+ */
+select {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='2' stroke='%23a8a29e'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='m19.5 8.25-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1.1rem;
+    padding-right: 2.5rem;
+}
+
+/*
  * Typografia treści prawnej (Regulamin, Polityka) trzymanej w bazie jako HTML.
  * Tailwind nie skanuje treści z bazy, a preflight zeruje marginesy — więc
  * stylujemy semantyczny HTML tu, scoped do .legal-content. Boutique: ciepłe

@@ -86,7 +86,7 @@ Zweryfikowane pod kątem „cały serwis, nie tylko API":
 
 Zrobione:
 - `APP_NAME=Kramio`, `APP_URL=https://kramio.pl`, `APP_DOMAIN=kramio.pl`, `APP_ENV=production`, `APP_DEBUG=false`. (Storefronty pod `*.kramio.pl` wymagają wildcard DNS+SSL — działka Rafała, na później.)
-- `MAIL_FROM_ADDRESS=noreply@shop.kwasniak.org`.
+- `MAIL_FROM_ADDRESS=sklep@kramio.pl`.
 - Parytet `.env` ↔ `.env.example` wyrównany (48 kluczy, blok DB pod MySQL z pustymi wartościami w example).
 - Logowanie (`FOUNDATION` sek. 5): logi dzienne (kanał `daily`, retencja 14 dni w `config/logging.php`).
 - Monitoring wolnych zapytań SQL: serwis `App\Services\SlowQueryLogger` wpięty w `AppServiceProvider::boot()` przez `DB::listen` (tylko gdy próg > 0). Zapytania wolniejsze niż `config('monitoring.slow_query_ms')` (domyślnie 200 ms) trafiają do osobnego dziennego kanału `slow_queries` (`storage/logs/slow-query-*.log`) z czasem, SQL, bindings i miejscem w kodzie (plik:linia, pierwszy frame aplikacji za warstwą vendor). Pokryte testem `tests/Feature/SlowQueryLoggingTest.php`.

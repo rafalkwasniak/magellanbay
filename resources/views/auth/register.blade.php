@@ -4,7 +4,7 @@
         <h1 class="text-3xl font-semibold tracking-tight text-stone-900">Załóż sklep w 5 minut</h1>
         <p class="mt-2 text-stone-500">Utwórz konto sprzedawcy i zacznij sprzedawać jeszcze dziś.</p>
 
-        <form method="POST" action="{{ route('register.store') }}" class="mt-8 space-y-5">
+        <form method="POST" action="{{ route('register.store') }}" class="mt-8 space-y-5" novalidate data-validate>
             @csrf
 
             {{-- Nazwa sklepu + jego adres (subdomena). Adres tworzymy z nazwy; pole
@@ -63,7 +63,9 @@
 
             <div class="space-y-3 pt-1">
                 <label class="flex items-center gap-3 text-sm text-stone-600">
-                    <input type="checkbox" name="terms" value="1" @checked(old('terms')) class="shrink-0">
+                    <input type="checkbox" name="terms" value="1" required
+                        data-msg-required="Aby założyć konto, zaakceptuj Regulamin."
+                        @checked(old('terms')) class="shrink-0">
                     <span>
                         Akceptuję
                         <a href="{{ route('legal.terms') }}" target="_blank" rel="noopener"
@@ -75,7 +77,9 @@
                 @enderror
 
                 <label class="flex items-center gap-3 text-sm text-stone-600">
-                    <input type="checkbox" name="privacy" value="1" @checked(old('privacy')) class="shrink-0">
+                    <input type="checkbox" name="privacy" value="1" required
+                        data-msg-required="Aby założyć konto, zaakceptuj Politykę Prywatności."
+                        @checked(old('privacy')) class="shrink-0">
                     <span>
                         Akceptuję
                         <a href="{{ route('legal.privacy') }}" target="_blank" rel="noopener"

@@ -14,7 +14,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * `domain` = opcjonalna dedykowana domena (np. mojsklep.pl). `owner_id` nie jest
  * mass-assignable — sklep tworzymy przez relację usera.
  */
-#[Fillable(['name', 'slug', 'domain', 'status'])]
+#[Fillable([
+    'name', 'slug', 'domain', 'status', 'description', 'company_name', 'nip', 'logo_path',
+    'country', 'province', 'city', 'postal_code', 'street', 'building_number', 'apartment_number',
+])]
 class Shop extends Model
 {
     /** @use HasFactory<ShopFactory> */

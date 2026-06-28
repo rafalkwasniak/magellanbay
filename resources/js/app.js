@@ -1,3 +1,12 @@
+// Walidacja formularzy po stronie klienta (warstwa UX, zero zależności).
+import './forms.js';
+
+// „Popraw przez AI" — redakcja treści pól (DeepSeek), zero zależności.
+import './ai.js';
+
+// „Pobierz dane z NIP" — auto-uzupełnienie firmy z Białej listy MF.
+import './company-lookup.js';
+
 // Toasty: spójne powiadomienia w prawym górnym rogu. Renderowane z flashy
 // serwera (x-toasts) i opcjonalnie z JS przez window.showToast(). ~30 s, pasek
 // odliczający, zamykane krzyżykiem. Zero zależności.

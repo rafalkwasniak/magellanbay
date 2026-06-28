@@ -24,8 +24,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectGuestsTo(fn () => route('login'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // Błędy w JSON dla żądań AJAX/JSON (np. „Popraw przez AI"); zwykłe
+        // formularze webowe nadal dostają redirect z błędami w sesji.
         $exceptions->shouldRenderJsonWhen(
-            fn (Request $request) => $request->is('api/*'),
+            fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
 
         // Report unhandled exceptions to Discord, in addition to the log.

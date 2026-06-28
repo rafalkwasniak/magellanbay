@@ -51,12 +51,32 @@
         {{-- Status sklepu --}}
         <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
             <h2 class="font-semibold text-stone-900">Twój sklep</h2>
-            <div class="mt-6 flex flex-col items-center justify-center text-center">
-                <span class="flex h-14 w-14 items-center justify-center rounded-2xl bg-stone-100 text-2xl">🛍️</span>
-                <p class="mt-4 font-medium text-stone-700">Sklep w przygotowaniu</p>
-                <p class="mt-1 text-sm text-stone-500">Nie jest jeszcze widoczny dla klientów.</p>
-                <span class="mt-4 rounded-full bg-stone-100 px-3 py-1 text-xs font-medium text-stone-500">Szkic</span>
-            </div>
+            @if ($shop)
+                @php($isActive = $shop->status === \App\Enums\ShopStatus::Active)
+                <div class="mt-6 flex flex-col items-center justify-center text-center">
+                    <span class="flex h-14 w-14 items-center justify-center rounded-2xl bg-stone-100 text-2xl">🛍️</span>
+                    <p class="mt-4 font-medium text-stone-900">{{ $shop->name }}</p>
+                    <a href="https://{{ $shop->host() }}" target="_blank" rel="noopener"
+                        class="mt-1 inline-flex items-center gap-1 text-sm font-medium text-amber-700 transition hover:text-amber-800">
+                        {{ $shop->host() }}
+                        <span aria-hidden="true">↗</span>
+                    </a>
+                    <p class="mt-3 text-sm text-stone-500">
+                        {{ $isActive ? 'Sklep jest widoczny dla klientów.' : 'Nie jest jeszcze widoczny dla klientów.' }}
+                    </p>
+                    <span @class([
+                        'mt-4 rounded-full px-3 py-1 text-xs font-medium',
+                        'bg-emerald-100 text-emerald-700' => $isActive,
+                        'bg-stone-100 text-stone-500' => ! $isActive,
+                    ])>{{ $shop->status->label() }}</span>
+                </div>
+            @else
+                <div class="mt-6 flex flex-col items-center justify-center text-center">
+                    <span class="flex h-14 w-14 items-center justify-center rounded-2xl bg-stone-100 text-2xl">🛍️</span>
+                    <p class="mt-4 font-medium text-stone-700">Sklep w przygotowaniu</p>
+                    <p class="mt-1 text-sm text-stone-500">Nie jest jeszcze widoczny dla klientów.</p>
+                </div>
+            @endif
         </div>
     </div>
 </x-layouts.panel>

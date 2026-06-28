@@ -40,4 +40,23 @@ return [
         'webhook' => env('DISCORD_WEBHOOK_URL'),
     ],
 
+    'deepseek' => [
+        // Redakcja/generowanie treści („Popraw przez AI"). Klucz tylko po stronie serwera.
+        'key' => env('DEEPSEEK_API_KEY'),
+        'base_url' => env('DEEPSEEK_BASE_URL', 'https://api.deepseek.com'),
+        'model' => env('DEEPSEEK_MODEL', 'deepseek-chat'),
+    ],
+
+    'mf' => [
+        // Biała lista podatników VAT (Ministerstwo Finansów) — auto-fill firmy z NIP. Bez klucza.
+        'base_url' => env('MF_WHITELIST_URL', 'https://wl-api.mf.gov.pl'),
+    ],
+
+    'gus' => [
+        // GUS REGON BIR1.1 — dokładny auto-fill firmy z NIP (pełna nazwa + adres + województwo).
+        // Wymaga darmowego klucza użytkownika BIR. Pusty klucz = pomijamy GUS (fallback: Biała lista).
+        'key' => env('GUS_REGON_KEY'),
+        'base_url' => env('GUS_REGON_URL', 'https://wyszukiwarkaregon.stat.gov.pl'),
+    ],
+
 ];

@@ -6,10 +6,13 @@ use App\Http\Controllers\Administrator\MailPreviewController;
 use App\Http\Controllers\Auth\ActivationController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\AiController;
 use App\Http\Controllers\Auth\ResendActivationController;
 use App\Http\Controllers\Consent\ConsentController;
 use App\Http\Controllers\LegalController;
+use App\Http\Controllers\Seller\CompanyLookupController;
 use App\Http\Controllers\Seller\DashboardController as SellerDashboard;
+use App\Http\Controllers\Seller\ShopProfileController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -78,7 +81,7 @@ Route::middleware(['auth', 'role:admin'])
     ->prefix('administrator')
     ->name('administrator.')
     ->group(function () {
-        Route::get('/dashboard', AdministratorDashboard::class)->name('dashboard');
+        Route::get('/panel', AdministratorDashboard::class)->name('dashboard');
 
         // Podgląd szablonów maili (na froncie, dla nas) — np. /administrator/podglad-maila/aktywacja
         Route::get('/podglad-maila/{template}', [MailPreviewController::class, 'show'])->name('mail.preview');
@@ -93,7 +96,16 @@ Route::middleware(['auth', 'role:seller', 'ensure.consents'])
     ->prefix('sprzedawca')          // URL po polsku; nazwa trasy 'seller.' (kod) po angielsku
     ->name('seller.')
     ->group(function () {
-        Route::get('/dashboard', SellerDashboard::class)->name('dashboard');
+        Route::get('/panel', SellerDashboard::class)->name('dashboard');
+
+        // Profil sklepu (nazwa, opis, adres). Edycja przez POST (FOUNDATION sek. 5).
+        Route::get('/sklep', [ShopProfileController::class, 'edit'])->name('shop.edit');
+        Route::post('/sklep', [ShopProfileController::class, 'update'])->name('shop.update');
+
+        // Auto-uzupełnienie danych firmy po NIP (Biała lista MF). Zwraca JSON.
+        Route::post('/firma/z-nip', CompanyLookupController::class)
+            ->middleware('throttle:20,1')
+            ->name('company.lookup');
     });
 
 /*
@@ -106,6 +118,11 @@ Route::middleware(['auth', 'role:seller', 'ensure.consents'])
 Route::middleware('auth')->group(function () {
     Route::get('/zgody', [ConsentController::class, 'show'])->name('consents.show');
     Route::post('/zgody', [ConsentController::class, 'store'])->name('consents.store');
+
+    // Redakcja treści przez AI („Popraw przez AI") — zwraca poprawiony tekst, nie zapisuje.
+    Route::post('/ai/popraw', [AiController::class, 'improve'])
+        ->middleware('throttle:30,1')
+        ->name('ai.improve');
 });
 
 /*
