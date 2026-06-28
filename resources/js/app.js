@@ -7,6 +7,9 @@ import Trix from 'trix';
 // w treści opisu nie chcemy konkurencyjnych H1.
 Trix.config.blockAttributes.heading1.tagName = 'h2';
 
+// Licznik znaków edytorów (komponent x-rich-editor).
+import './rich-editor.js';
+
 // Nie obsługujemy wgrywania plików w opisie — blokujemy załączniki Trix.
 document.addEventListener('trix-file-accept', (event) => event.preventDefault());
 

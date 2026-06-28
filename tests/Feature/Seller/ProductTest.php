@@ -62,6 +62,17 @@ class ProductTest extends TestCase
         ]);
     }
 
+    public function test_product_description_html_is_sanitised(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+
+        $this->actingAs($seller)->post(route('seller.products.store'), $this->payload([
+            'description' => '<strong>Solidny</strong><script>alert(1)</script>',
+        ]));
+
+        $this->assertSame('<strong>Solidny</strong>', $shop->products()->first()->description);
+    }
+
     public function test_stock_is_nulled_when_tracking_disabled(): void
     {
         [$seller, $shop] = $this->sellerWithShop();

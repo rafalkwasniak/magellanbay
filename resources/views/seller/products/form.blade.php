@@ -26,10 +26,8 @@
                         </div>
 
                         <div>
-                            <label for="description" class="block text-sm font-medium text-stone-700">Opis <span class="text-stone-400">(opcjonalnie)</span></label>
-                            <textarea id="description" name="description" rows="5"
-                                class="mt-1.5 block w-full rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">{{ old('description', $product->description) }}</textarea>
-                            <p class="mt-1.5 text-xs text-stone-400">Bogaty edytor i pomoc AI dodamy wkrótce.</p>
+                            <label class="block text-sm font-medium text-stone-700">Opis <span class="text-stone-400">(opcjonalnie)</span></label>
+                            <x-rich-editor name="description" :value="old('description', $product->description)" ai-field="product_description" :max="config('shop.product_description_max')">Opisz produkt — najważniejsze cechy, materiał, zastosowanie.</x-rich-editor>
                             @error('description')
                                 <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
                             @enderror

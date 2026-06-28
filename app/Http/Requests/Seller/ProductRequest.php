@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Seller;
 
 use App\Enums\VatRate;
+use App\Services\HtmlSanitizer;
 use App\Services\SlugService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -25,13 +26,20 @@ class ProductRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
-        $this->merge([
+        $merge = [
             'slug' => app(SlugService::class)->make((string) $this->input('name')),
             'price_gross' => str_replace([' ', "\u{a0}", ','], ['', '', '.'], trim((string) $this->input('price_gross'))),
             'track_stock' => $this->boolean('track_stock'),
             'is_active' => $this->boolean('is_active'),
             'show_on_homepage' => $this->boolean('show_on_homepage'),
-        ]);
+        ];
+
+        // Opis to HTML z edytora Trix — sanityzujemy wąską whitelistą przed walidacją/zapisem.
+        if ($this->has('description')) {
+            $merge['description'] = app(HtmlSanitizer::class)->clean((string) $this->input('description'));
+        }
+
+        $this->merge($merge);
     }
 
     /**
@@ -42,7 +50,7 @@ class ProductRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'slug' => ['required', 'string'],
-            'description' => ['nullable', 'string', 'max:5000'],
+            'description' => ['nullable', 'string', 'max:'.config('shop.product_description_max')],
             'price_gross' => ['required', 'numeric', 'min:0', 'max:9999999.99'],
             'vat_rate' => ['required', Rule::enum(VatRate::class)],
             'track_stock' => ['boolean'],

@@ -20,6 +20,7 @@ class AiController extends Controller
         // Pola, które AI może redagować: maksymalna długość + tryb (html|tekst).
         $fields = [
             'shop_description' => ['max' => (int) config('shop.description_max'), 'html' => true],
+            'product_description' => ['max' => (int) config('shop.product_description_max'), 'html' => true],
         ];
 
         $field = (string) $request->input('field');

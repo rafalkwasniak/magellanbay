@@ -51,6 +51,26 @@ class AiImproveTest extends TestCase
             ->assertJson(['text' => '<div>Poprawiony <strong>opis</strong></div>']);
     }
 
+    public function test_product_description_uses_html_mode(): void
+    {
+        config(['services.deepseek.key' => 'test-key']);
+        Http::fake([
+            '*/chat/completions' => Http::response([
+                'choices' => [['message' => ['content' => '<div>Poprawiony <strong>opis</strong></div>']]],
+            ]),
+        ]);
+
+        $seller = User::factory()->consented()->create();
+
+        $this->actingAs($seller)
+            ->postJson(route('ai.improve'), [
+                'field' => 'product_description',
+                'text' => '<div>opis</div>',
+            ])
+            ->assertOk()
+            ->assertJson(['text' => '<div>Poprawiony <strong>opis</strong></div>']);
+    }
+
     public function test_unconfigured_service_returns_503(): void
     {
         config(['services.deepseek.key' => '']);
