@@ -15,36 +15,6 @@
                     <p class="mt-1 text-sm text-stone-500">Twoje dane konta w panelu {{ config('app.name') }}.</p>
 
                     <div class="mt-6 space-y-5">
-                        {{-- Awatar --}}
-                        <div>
-                            <label for="avatar" class="block text-sm font-medium text-stone-700">Awatar <span class="text-stone-400">(opcjonalnie)</span></label>
-                            <div class="mt-1.5 flex items-center gap-4">
-                                <div class="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full border border-stone-200 bg-stone-100">
-                                    <img id="avatar-preview"
-                                        src="{{ $avatarUrl ?? '' }}"
-                                        alt="Awatar"
-                                        class="h-full w-full object-cover {{ $avatarUrl ? '' : 'hidden' }}">
-                                    <span id="avatar-placeholder" class="text-lg font-semibold text-stone-500 {{ $avatarUrl ? 'hidden' : '' }}">
-                                        {{ strtoupper(mb_substr($user->name, 0, 1).mb_substr($user->surname ?? '', 0, 1)) }}
-                                    </span>
-                                </div>
-                                <div class="min-w-0 flex-1">
-                                    <input id="avatar" name="avatar" type="file" accept="image/png,image/jpeg,image/webp"
-                                        class="block w-full text-sm text-stone-500 file:mr-4 file:rounded-xl file:border-0 file:bg-amber-100 file:px-4 file:py-2 file:text-sm file:font-medium file:text-amber-800 file:transition hover:file:bg-amber-200">
-                                    <p class="mt-1.5 text-xs text-stone-400">PNG, JPG lub WebP, do 2 MB. Najlepiej kwadratowe.</p>
-                                    @if ($user->avatar_path)
-                                        <label class="mt-2 inline-flex items-center gap-2 text-sm text-stone-600">
-                                            <input type="checkbox" name="remove_avatar" value="1" class="shrink-0">
-                                            <span>Usuń obecny awatar</span>
-                                        </label>
-                                    @endif
-                                </div>
-                            </div>
-                            @error('avatar')
-                                <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-
                         <div class="grid gap-5 sm:grid-cols-2">
                             <div>
                                 <label for="name" class="block text-sm font-medium text-stone-700">Imię</label>
@@ -92,6 +62,41 @@
                                 @enderror
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                {{-- Awatar (osobny box, analogicznie do logo sklepu) --}}
+                <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                    <h2 class="font-semibold text-stone-900">Awatar</h2>
+                    <p class="mt-1 text-sm text-stone-500">Twoje zdjęcie profilowe — pokazujemy je w panelu {{ config('app.name') }}.</p>
+
+                    <div class="mt-6">
+                        <label for="avatar" class="block text-sm font-medium text-stone-700">Zdjęcie <span class="text-stone-400">(opcjonalnie)</span></label>
+                        <div class="mt-1.5 flex items-center gap-4">
+                            <div class="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full border border-stone-200 bg-stone-100">
+                                <img id="avatar-preview"
+                                    src="{{ $avatarUrl ?? '' }}"
+                                    alt="Awatar"
+                                    class="h-full w-full object-cover {{ $avatarUrl ? '' : 'hidden' }}">
+                                <span id="avatar-placeholder" class="text-lg font-semibold text-stone-500 {{ $avatarUrl ? 'hidden' : '' }}">
+                                    {{ strtoupper(mb_substr($user->name, 0, 1).mb_substr($user->surname ?? '', 0, 1)) }}
+                                </span>
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <input id="avatar" name="avatar" type="file" accept="image/png,image/jpeg,image/webp"
+                                    class="block w-full text-sm text-stone-500 file:mr-4 file:rounded-xl file:border-0 file:bg-amber-100 file:px-4 file:py-2 file:text-sm file:font-medium file:text-amber-800 file:transition hover:file:bg-amber-200">
+                                <p class="mt-1.5 text-xs text-stone-400">PNG, JPG lub WebP, do 2 MB. Najlepiej kwadratowe.</p>
+                                @if ($user->avatar_path)
+                                    <label class="mt-2 inline-flex items-center gap-2 text-sm text-stone-600">
+                                        <input type="checkbox" name="remove_avatar" value="1" class="shrink-0">
+                                        <span>Usuń obecny awatar</span>
+                                    </label>
+                                @endif
+                            </div>
+                        </div>
+                        @error('avatar')
+                            <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
+                        @enderror
                     </div>
                 </div>
 
