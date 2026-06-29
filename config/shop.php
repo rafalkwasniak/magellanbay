@@ -101,7 +101,9 @@ return [
 
     'packages' => [
         'free' => [
-            'max_products' => 25,
+            // 24 dzieli się równo (24/12/6/4/3/2) — paginacja i siatki produktów
+            // (panel i storefront) zawsze wychodzą pełnymi rzędami.
+            'max_products' => 24,
         ],
     ],
 

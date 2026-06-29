@@ -1,69 +1,130 @@
 <x-layouts.panel title="Produkty">
     <x-slot:heading>Produkty</x-slot:heading>
 
-    <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-            <div>
-                <h2 class="font-semibold text-stone-900">Twoje produkty</h2>
-                <p class="mt-1 text-sm text-stone-500">{{ $products->count() }} / {{ $max }} w pakiecie Free</p>
+    <div class="grid gap-6 lg:grid-cols-12">
+        {{-- Główna kolumna: produkty --}}
+        <div class="lg:col-span-8">
+            <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <h2 class="font-semibold text-stone-900">Twoje produkty</h2>
+                        <p class="mt-1 text-sm text-stone-500">{{ $total }} / {{ $max }} w pakiecie Free</p>
+                    </div>
+                    @if ($total < $max)
+                        <a href="{{ route('seller.products.create') }}"
+                            class="rounded-2xl bg-gradient-to-br from-amber-500 to-rose-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-rose-500/20 transition hover:brightness-105">
+                            Dodaj produkt
+                        </a>
+                    @endif
+                </div>
+
+                @if ($total === 0)
+                    <div class="mt-8 flex flex-col items-center justify-center rounded-2xl border border-dashed border-stone-300 px-6 py-12 text-center">
+                        <span class="flex h-14 w-14 items-center justify-center rounded-2xl bg-stone-100 text-2xl">🏷️</span>
+                        <p class="mt-4 font-medium text-stone-700">Nie masz jeszcze produktów</p>
+                        <p class="mt-1 text-sm text-stone-500">Dodaj pierwszy produkt — to ostatni krok do otwarcia sklepu.</p>
+                        <a href="{{ route('seller.products.create') }}"
+                            class="mt-5 inline-flex rounded-2xl bg-gradient-to-br from-amber-500 to-rose-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-rose-500/20 transition hover:brightness-105">
+                            Dodaj pierwszy produkt
+                        </a>
+                    </div>
+                @else
+                    <div class="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-4">
+                        @foreach ($products as $product)
+                            @php($main = $product->mainImage())
+                            <div class="group flex flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white/80 shadow-sm transition hover:shadow-md">
+                                {{-- Zdjęcie + status --}}
+                                <a href="{{ route('seller.products.edit', $product) }}" class="relative block aspect-square overflow-hidden bg-stone-50">
+                                    @if ($main)
+                                        <img src="{{ $main->url() }}" alt="{{ $product->name }}" class="h-full w-full object-cover transition duration-300 group-hover:scale-105">
+                                    @else
+                                        <span class="flex h-full w-full items-center justify-center text-3xl text-stone-300">🏷️</span>
+                                    @endif
+                                    <span @class([
+                                        'absolute left-2 top-2 rounded-full px-2 py-0.5 text-[11px] font-medium backdrop-blur',
+                                        'bg-emerald-100/90 text-emerald-700' => $product->is_active,
+                                        'bg-stone-200/90 text-stone-600' => ! $product->is_active,
+                                    ])>{{ $product->is_active ? 'Aktywny' : 'Ukryty' }}</span>
+                                </a>
+
+                                {{-- Treść --}}
+                                <div class="flex flex-1 flex-col p-3">
+                                    <a href="{{ route('seller.products.edit', $product) }}" class="line-clamp-2 text-sm font-medium text-stone-900 transition hover:text-amber-700">{{ $product->name }}</a>
+
+                                    {{-- Dolny blok: cena + stan + akcje, zawsze przyklejony do spodu karty --}}
+                                    <div class="mt-auto pt-3">
+                                        <div class="flex items-baseline justify-between gap-1.5">
+                                            <span class="font-semibold text-stone-900">{{ number_format((float) $product->price_gross, 2, ',', ' ') }} zł</span>
+                                            @if ($product->track_stock)
+                                                <span @class([
+                                                    'text-[11px] font-medium',
+                                                    'text-stone-500' => $product->stock > 0,
+                                                    'text-rose-600' => $product->stock <= 0,
+                                                ])>{{ $product->stock > 0 ? 'Zostało '.$product->stock.' szt.' : 'Brak na stanie' }}</span>
+                                            @endif
+                                        </div>
+
+                                        {{-- Akcje --}}
+                                        <div class="mt-3 flex items-center gap-2 border-t border-stone-100 pt-2.5">
+                                        <a href="{{ route('seller.products.edit', $product) }}" title="Edytuj" aria-label="Edytuj produkt"
+                                            class="inline-flex items-center justify-center rounded-lg border border-stone-200 bg-white/70 p-1.5 text-stone-600 transition hover:bg-white hover:text-stone-900">
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
+                                                <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" />
+                                            </svg>
+                                        </a>
+                                        <form method="POST" action="{{ route('seller.products.destroy', $product) }}" class="ml-auto"
+                                            onsubmit="return confirm('Usunąć produkt „{{ $product->name }}”?');">
+                                            @csrf
+                                            <button type="submit" title="Usuń" aria-label="Usuń produkt"
+                                                class="inline-flex items-center justify-center rounded-lg border border-rose-200 bg-rose-50 p-1.5 text-rose-700 transition hover:bg-rose-100">
+                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
+                                                    <path d="M3 6h18" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" />
+                                                </svg>
+                                            </button>
+                                        </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+
+                    @if ($products->hasPages())
+                        <div class="mt-6">
+                            {{ $products->onEachSide(1)->links() }}
+                        </div>
+                    @endif
+                @endif
             </div>
-            @if ($products->count() < $max)
-                <a href="{{ route('seller.products.create') }}"
-                    class="rounded-2xl bg-gradient-to-br from-amber-500 to-rose-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-rose-500/20 transition hover:brightness-105">
-                    Dodaj produkt
-                </a>
-            @endif
         </div>
 
-        @if ($products->isEmpty())
-            <div class="mt-8 flex flex-col items-center justify-center rounded-2xl border border-dashed border-stone-300 px-6 py-12 text-center">
-                <span class="flex h-14 w-14 items-center justify-center rounded-2xl bg-stone-100 text-2xl">🏷️</span>
-                <p class="mt-4 font-medium text-stone-700">Nie masz jeszcze produktów</p>
-                <p class="mt-1 text-sm text-stone-500">Dodaj pierwszy produkt — to ostatni krok do otwarcia sklepu.</p>
-                <a href="{{ route('seller.products.create') }}"
-                    class="mt-5 inline-flex rounded-2xl bg-gradient-to-br from-amber-500 to-rose-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-rose-500/20 transition hover:brightness-105">
-                    Dodaj pierwszy produkt
-                </a>
-            </div>
-        @else
-            <ul class="mt-6 divide-y divide-stone-100">
-                @foreach ($products as $product)
-                    <li class="flex flex-wrap items-center gap-4 py-4">
-                        @php($main = $product->mainImage())
-                        <div class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-stone-200 bg-stone-50">
-                            @if ($main)
-                                <img src="{{ $main->url() }}" alt="" class="h-full w-full object-contain">
-                            @else
-                                <span class="text-stone-300">🏷️</span>
-                            @endif
-                        </div>
-                        <div class="min-w-0 flex-1">
-                            <p class="truncate font-medium text-stone-900">{{ $product->name }}</p>
-                            <p class="mt-0.5 text-xs text-stone-500">
-                                {{ number_format((float) $product->price_gross, 2, ',', ' ') }} zł
-                                · VAT {{ $product->vat_rate->label() }}
-                                · {{ $product->track_stock ? $product->stock.' szt.' : 'bez limitu' }}
-                            </p>
-                        </div>
-
-                        <span @class([
-                            'rounded-full px-3 py-1 text-xs font-medium',
-                            'bg-emerald-100 text-emerald-700' => $product->is_active,
-                            'bg-stone-100 text-stone-500' => ! $product->is_active,
-                        ])>{{ $product->is_active ? 'Aktywny' : 'Ukryty' }}</span>
-
-                        <div class="flex items-center gap-2">
-                            <a href="{{ route('seller.products.edit', $product) }}"
-                                class="rounded-xl border border-stone-200 bg-white/70 px-3 py-1.5 text-xs font-medium text-stone-700 transition hover:bg-white">Edytuj</a>
-                            <form method="POST" action="{{ route('seller.products.destroy', $product) }}"
-                                onsubmit="return confirm('Usunąć produkt „{{ $product->name }}”?');">
-                                @csrf
-                                <button type="submit" class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 transition hover:bg-rose-100">Usuń</button>
-                            </form>
-                        </div>
+        {{-- Kolumna pomocnicza: opisy --}}
+        <aside class="lg:col-span-4 space-y-6">
+            <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                <h2 class="font-semibold text-stone-900">O produktach</h2>
+                <ul class="mt-4 space-y-3 text-sm text-stone-500">
+                    <li class="flex gap-3">
+                        <span class="mt-0.5 shrink-0 text-amber-500">🖼️</span>
+                        <span>Pierwsze zdjęcie produktu jest jego miniaturą — zadbaj o dobre, jasne ujęcie.</span>
                     </li>
-                @endforeach
-            </ul>
-        @endif
+                    <li class="flex gap-3">
+                        <span class="mt-0.5 shrink-0 text-amber-500">📦</span>
+                        <span>Stan magazynowy pokazujemy tylko przy produktach z kontrolą stanu — po wyczerpaniu stają się niedostępne.</span>
+                    </li>
+                    <li class="flex gap-3">
+                        <span class="mt-0.5 shrink-0 text-amber-500">👁️</span>
+                        <span>Ukryte produkty nie są widoczne dla klientów — używaj tego, gdy szykujesz coś na później.</span>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="rounded-3xl border border-amber-200/70 bg-amber-50/70 p-6 backdrop-blur">
+                <h2 class="font-semibold text-stone-900">Pakiet Free</h2>
+                <p class="mt-2 text-sm text-stone-600">
+                    Wykorzystano <span class="font-medium text-amber-800">{{ $total }} z {{ $max }}</span> miejsc na produkty.
+                    Kolejne pakiety z większymi limitami pojawią się wkrótce.
+                </p>
+            </div>
+        </aside>
     </div>
 </x-layouts.panel>

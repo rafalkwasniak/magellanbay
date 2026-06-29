@@ -25,7 +25,10 @@ class ProductController extends Controller
 
         return view('seller.products.index', [
             'shop' => $shop,
-            'products' => $shop ? $shop->products()->with('images')->latest()->get() : collect(),
+            'products' => $shop
+                ? $shop->products()->with('images')->latest()->paginate(12)->withQueryString()
+                : null,
+            'total' => $shop ? $shop->products()->count() : 0,
             'max' => (int) config('shop.packages.free.max_products'),
         ]);
     }
