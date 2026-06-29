@@ -52,7 +52,7 @@
                 @php($logo = $shop->logo_path ? \Illuminate\Support\Facades\Storage::disk('public')->url($shop->logo_path) : null)
                 <div class="mt-6 flex flex-col items-center justify-center text-center">
                     @if ($logo)
-                        <img src="{{ $logo }}" alt="Logo sklepu" class="h-24 w-auto max-w-full object-contain">
+                        <img src="{{ $logo }}" alt="Logo sklepu" class="h-28 w-auto max-h-28 max-w-[16rem] object-contain">
                     @else
                         <span class="flex h-16 w-16 items-center justify-center rounded-2xl bg-stone-100 text-2xl">🛍️</span>
                     @endif
@@ -75,7 +75,7 @@
                     <p class="mt-2 text-xs text-stone-500">
                         {{ $isActive
                             ? 'Sklep jest widoczny dla klientów.'
-                            : 'Nie jest jeszcze publiczny. Opublikujemy go automatycznie po dodaniu pierwszego produktu.' }}
+                            : 'Twój sklep nie jest jeszcze publiczny. Opublikujemy go automatycznie po dodaniu pierwszego produktu.' }}
                     </p>
                     <a href="{{ route('seller.shop.edit') }}"
                         class="mt-5 inline-flex rounded-2xl border border-stone-200 bg-white/70 px-5 py-2.5 text-sm font-semibold text-stone-700 transition hover:bg-white">
