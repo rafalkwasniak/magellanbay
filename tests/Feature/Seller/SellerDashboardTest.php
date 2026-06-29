@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Seller;
 
+use App\Models\Product;
 use App\Models\Shop;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -19,13 +20,13 @@ class SellerDashboardTest extends TestCase
         $this->actingAs($seller)
             ->get(route('seller.dashboard'))
             ->assertOk()
-            ->assertSee('0 / 4');
+            ->assertSee('0 / 5');
     }
 
     public function test_completed_shop_shows_full_setup_progress(): void
     {
         $seller = User::factory()->consented()->create();
-        Shop::factory()->create([
+        $shop = Shop::factory()->create([
             'owner_id' => $seller->id,
             'street' => 'Kwiatowa',
             'building_number' => '1',
@@ -36,10 +37,11 @@ class SellerDashboardTest extends TestCase
             'logo_path' => 'shops/1/logo.png',
             'nip' => '1234563218',
         ]);
+        Product::factory()->create(['shop_id' => $shop->id]);
 
         $this->actingAs($seller)
             ->get(route('seller.dashboard'))
             ->assertOk()
-            ->assertSee('4 / 4');
+            ->assertSee('5 / 5');
     }
 }

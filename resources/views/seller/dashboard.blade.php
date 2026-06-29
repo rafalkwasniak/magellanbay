@@ -9,9 +9,9 @@
             </div>
             <p class="mt-1 text-sm text-stone-500">
                 @if ($total > 0 && $done === $total)
-                    Świetnie — profil sklepu jest kompletny.
+                    Świetnie — sklep jest gotowy do działania.
                 @else
-                    Uzupełnij profil, aby Twój sklep był wiarygodny dla klientów.
+                    Przejdź kolejne kroki, aby pokazać sklep klientom.
                 @endif
             </p>
 
@@ -22,7 +22,7 @@
             <ul class="mt-6 space-y-3">
                 @foreach ($steps as $step)
                     <li>
-                        <a href="{{ route($step['route']) }}" class="flex items-center gap-4 rounded-2xl bg-white/60 px-4 py-3 transition hover:bg-white">
+                        <a href="{{ route($step['route']).($step['anchor'] ?? '') }}" class="flex items-center gap-4 rounded-2xl bg-white/60 px-4 py-3 transition hover:bg-white">
                             @if ($step['done'])
                                 <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-semibold text-emerald-600">✓</span>
                             @else
@@ -40,7 +40,15 @@
 
             <div class="mt-6 rounded-2xl border border-stone-100 bg-stone-50/70 px-4 py-3">
                 <p class="text-sm font-medium text-stone-700">Co dalej?</p>
-                <p class="mt-0.5 text-xs text-stone-500">Wkrótce dodasz produkty i opublikujesz sklep — wtedy ruszą zamówienia i statystyki sprzedaży.</p>
+                <p class="mt-0.5 text-xs text-stone-500">
+                    @if ($productCount === 0)
+                        Dodaj pierwszy produkt — to ostatni krok, by opublikować sklep i zacząć sprzedaż.
+                    @elseif ($done < $total)
+                        Sklep ma już produkty. Uzupełnij pozostałe kroki, aby budził pełne zaufanie klientów.
+                    @else
+                        Wszystko gotowe — zadbaj o zdjęcia i opisy produktów, a wkrótce ruszą zamówienia i statystyki.
+                    @endif
+                </p>
             </div>
         </div>
 
@@ -97,7 +105,7 @@
         <h2 class="text-sm font-medium text-stone-500">Twoja sprzedaż</h2>
         <div class="mt-3 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             @foreach ([
-                ['Produkty', '0', 'Dodasz je już wkrótce', '🏷️'],
+                ['Produkty', (string) $productCount, $productCount > 0 ? 'W Twoim sklepie' : 'Dodaj pierwszy produkt', '🏷️'],
                 ['Zamówienia (30 dni)', '0', 'Czekają na pierwszych klientów', '📦'],
                 ['Przychód (30 dni)', '0 zł', 'Pierwsza sprzedaż przed Tobą', '💰'],
                 ['Wyświetlenia (30 dni)', '0', 'Statystyka ruszy po publikacji', '👁️'],

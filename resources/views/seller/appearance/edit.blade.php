@@ -8,7 +8,7 @@
                 @csrf
 
                 {{-- Logo (grafika i elementy wizualne; docelowo też kolory/szablony) --}}
-                <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                <div id="logo" class="scroll-mt-24 rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
                     <h2 class="font-semibold text-stone-900">Logo sklepu</h2>
                     <p class="mt-1 text-sm text-stone-500">Wizytówka Twojej marki — pojawi się w sklepie i przy jego prezentacji.</p>
 

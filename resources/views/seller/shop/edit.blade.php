@@ -8,7 +8,7 @@
                 @csrf
 
                 {{-- Dane podstawowe --}}
-                <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                <div id="dane-podstawowe" class="scroll-mt-24 rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
                     <h2 class="font-semibold text-stone-900">Dane podstawowe</h2>
                     <p class="mt-1 text-sm text-stone-500">Nazwa i opis prezentowane klientom w Twoim sklepie.</p>
 
@@ -45,7 +45,7 @@
                 </div>
 
                 {{-- Dane firmowe (NIP pierwszy + pobranie z rejestru; wypełnia nazwę i adres poniżej) --}}
-                <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                <div id="dane-firmowe" class="scroll-mt-24 rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
                     <h2 class="font-semibold text-stone-900">Dane firmowe <span class="text-sm font-normal text-stone-400">(opcjonalnie)</span></h2>
                     <p class="mt-1 text-sm text-stone-500">Wpisz NIP i pobierz dane z rejestru — uzupełnimy nazwę firmy oraz adres poniżej. Wynik możesz poprawić.</p>
 
@@ -81,7 +81,7 @@
                 </div>
 
                 {{-- Adres sklepu --}}
-                <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                <div id="adres" class="scroll-mt-24 rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
                     <h2 class="font-semibold text-stone-900">Adres sklepu</h2>
                     <p class="mt-1 text-sm text-stone-500">Adres prowadzenia działalności lub kontaktowy — używany w regulaminie i dokumentach.</p>
 
