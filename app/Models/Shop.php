@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ShopStatus;
+use App\Enums\VatRate;
 use Database\Factories\ShopFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -18,6 +19,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Fillable([
     'name', 'slug', 'domain', 'status', 'description', 'company_name', 'nip', 'logo_path',
     'country', 'province', 'city', 'postal_code', 'street', 'building_number', 'apartment_number',
+    'default_vat_rate',
 ])]
 class Shop extends Model
 {
@@ -31,6 +33,7 @@ class Shop extends Model
     {
         return [
             'status' => ShopStatus::class,
+            'default_vat_rate' => VatRate::class,
         ];
     }
 

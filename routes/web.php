@@ -17,6 +17,7 @@ use App\Http\Controllers\Seller\DashboardController as SellerDashboard;
 use App\Http\Controllers\Seller\ProductController;
 use App\Http\Controllers\Seller\ProductImageController;
 use App\Http\Controllers\Seller\ShopProfileController;
+use App\Http\Controllers\Seller\ShopSettingsController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -109,6 +110,10 @@ Route::middleware(['auth', 'role:seller', 'ensure.consents'])
         // Wygląd sklepu (logo; docelowo kolory/szablony). Edycja przez POST.
         Route::get('/wyglad', [AppearanceController::class, 'edit'])->name('appearance.edit');
         Route::post('/wyglad', [AppearanceController::class, 'update'])->name('appearance.update');
+
+        // Ustawienia sklepu (na razie domyślny VAT; docelowo więcej). Edycja przez POST.
+        Route::get('/ustawienia', [ShopSettingsController::class, 'edit'])->name('settings.edit');
+        Route::post('/ustawienia', [ShopSettingsController::class, 'update'])->name('settings.update');
 
         // Auto-uzupełnienie danych firmy po NIP (Biała lista MF). Zwraca JSON.
         Route::post('/firma/z-nip', CompanyLookupController::class)

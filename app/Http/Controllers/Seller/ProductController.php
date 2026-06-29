@@ -40,6 +40,7 @@ class ProductController extends Controller
         return view('seller.products.form', [
             'product' => new Product,
             'tagSuggestions' => $this->tagSuggestions($request),
+            'defaultVat' => $this->defaultVat($request),
         ]);
     }
 
@@ -70,6 +71,7 @@ class ProductController extends Controller
         return view('seller.products.form', [
             'product' => $product,
             'tagSuggestions' => $this->tagSuggestions($request),
+            'defaultVat' => $this->defaultVat($request),
         ]);
     }
 
@@ -131,6 +133,14 @@ class ProductController extends Controller
     private function tagSuggestions(Request $request): array
     {
         return $request->user()->shop?->tags()->orderBy('name')->pluck('name')->all() ?? [];
+    }
+
+    /**
+     * Domyślna stawka VAT do prefillu nowego produktu — z ustawień sklepu.
+     */
+    private function defaultVat(Request $request): string
+    {
+        return $request->user()->shop?->default_vat_rate?->value ?? '23';
     }
 
     private function authorizeProduct(Request $request, Product $product): void

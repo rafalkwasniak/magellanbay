@@ -45,6 +45,17 @@ class ProductTest extends TestCase
         $this->actingAs($seller)->get(route('seller.products.index'))->assertOk();
     }
 
+    public function test_new_product_form_prefills_shop_default_vat(): void
+    {
+        $seller = User::factory()->consented()->create();
+        Shop::factory()->create(['owner_id' => $seller->id, 'default_vat_rate' => '8']);
+
+        $this->actingAs($seller)
+            ->get(route('seller.products.create'))
+            ->assertOk()
+            ->assertSee('value="8" selected', false);
+    }
+
     public function test_seller_can_create_product_with_normalised_price(): void
     {
         [$seller, $shop] = $this->sellerWithShop();

@@ -132,7 +132,7 @@
 
                         <div class="col-span-12 sm:col-span-3">
                             <label for="vat_rate" class="block text-sm font-medium text-stone-700">Stawka VAT</label>
-                            @php($selectedVat = old('vat_rate', $product->vat_rate?->value ?? '23'))
+                            @php($selectedVat = old('vat_rate', $product->vat_rate?->value ?? $defaultVat))
                             <select id="vat_rate" name="vat_rate" required
                                 class="mt-1.5 block w-full rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
                                 @foreach (\App\Enums\VatRate::cases() as $rate)
