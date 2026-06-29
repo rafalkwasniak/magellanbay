@@ -250,3 +250,27 @@ trix-toolbar .trix-button--dialog {
 .legal-content a:hover {
     color: var(--color-amber-800);
 }
+
+/*
+ * Toast „halo, jestem" — krótkie drgnięcie po pojawieniu się komunikatu, żeby
+ * zwrócić na siebie uwagę. Dodawane klasą `.toast-attention` z JS na ~0.5 s.
+ * Respektuje prefers-reduced-motion (brak animacji dla osób wrażliwych na ruch).
+ */
+@keyframes toast-attention {
+    0%, 100% { transform: translateX(0); }
+    15% { transform: translateX(-5px); }
+    30% { transform: translateX(5px); }
+    45% { transform: translateX(-4px); }
+    60% { transform: translateX(3px); }
+    75% { transform: translateX(-2px); }
+}
+
+.toast-attention {
+    animation: toast-attention 0.5s ease-in-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .toast-attention {
+        animation: none;
+    }
+}

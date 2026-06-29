@@ -54,7 +54,7 @@ const TOAST_VARIANTS = {
     info: { border: 'border-amber-300', text: 'text-amber-800', bar: 'bg-amber-400' },
 };
 
-const TOAST_DURATION = 30000;
+const TOAST_DURATION = 15000;
 
 function dismissToast(el) {
     el.style.opacity = '0';
@@ -76,6 +76,12 @@ function initToast(el) {
         el.style.opacity = '1';
         el.style.transform = 'translateX(0)';
     });
+
+    // Po wejściu krótkie „drgnięcie" — zwraca na siebie uwagę („halo, jestem").
+    setTimeout(() => {
+        el.classList.add('toast-attention');
+        setTimeout(() => el.classList.remove('toast-attention'), 550);
+    }, 320);
 
     const duration = parseInt(el.dataset.toastDuration || String(TOAST_DURATION), 10);
 

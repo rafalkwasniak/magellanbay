@@ -18,7 +18,7 @@
 
 <div id="toast-region" class="pointer-events-none fixed right-4 top-4 z-50 flex w-80 max-w-[90vw] flex-col gap-3" aria-live="polite">
     @foreach ($toasts as $toast)
-        <div data-toast data-toast-duration="30000"
+        <div data-toast data-toast-duration="15000"
             class="toast-enter pointer-events-auto overflow-hidden rounded-2xl border bg-white shadow-lg shadow-stone-900/10 {{ $toast['style']['border'] }}">
             <div class="flex items-start gap-3 px-4 py-3">
                 <p class="flex-1 text-sm {{ $toast['style']['text'] }}">{{ $toast['message'] }}</p>
