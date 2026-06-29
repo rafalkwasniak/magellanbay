@@ -26,7 +26,7 @@
             ['label' => 'Mój sklep', 'route' => 'seller.shop.edit', 'icon' => '🛍️'],
             ['label' => 'Produkty', 'route' => 'seller.products.index', 'icon' => '🏷️'],
             ['label' => 'Zamówienia', 'route' => null, 'icon' => '📦'],
-            ['label' => 'Wygląd', 'route' => null, 'icon' => '🎨'],
+            ['label' => 'Wygląd', 'route' => 'seller.appearance.edit', 'icon' => '🎨'],
             ['label' => 'Ustawienia', 'route' => null, 'icon' => '⚙️'],
         ];
         $initials = strtoupper(mb_substr($user->name ?? '?', 0, 1) . mb_substr($user->surname ?? '', 0, 1));

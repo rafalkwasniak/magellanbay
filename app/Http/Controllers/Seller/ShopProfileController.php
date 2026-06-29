@@ -7,7 +7,6 @@ use App\Http\Requests\Seller\ShopProfileRequest;
 use Illuminate\Contracts\Support\Renderable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * Edycja profilu sklepu w centrali (nazwa, opis, adres). Sprzedawca zarządza
@@ -30,22 +29,7 @@ class ShopProfileController extends Controller
     {
         $shop = $request->user()->shop;
 
-        // Pola skalarne; plik i flaga usunięcia obsługiwane osobno poniżej.
-        $shop->fill($request->safe()->except(['logo', 'remove_logo']));
-
-        if ($request->boolean('remove_logo') && $shop->logo_path !== null) {
-            Storage::disk('public')->delete($shop->logo_path);
-            $shop->logo_path = null;
-        }
-
-        if ($request->hasFile('logo')) {
-            // Podmiana: kasujemy stary plik, żeby nie zostawiać sierot na dysku.
-            if ($shop->logo_path !== null) {
-                Storage::disk('public')->delete($shop->logo_path);
-            }
-            $shop->logo_path = $request->file('logo')->store('shops/'.$shop->id, 'public');
-        }
-
+        $shop->fill($request->validated());
         $shop->save();
 
         return redirect()

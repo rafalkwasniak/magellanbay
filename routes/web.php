@@ -11,6 +11,7 @@ use App\Http\Controllers\Auth\ResendActivationController;
 use App\Http\Controllers\Consent\ConsentController;
 use App\Http\Controllers\LegalController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\Seller\AppearanceController;
 use App\Http\Controllers\Seller\CompanyLookupController;
 use App\Http\Controllers\Seller\DashboardController as SellerDashboard;
 use App\Http\Controllers\Seller\ProductController;
@@ -104,6 +105,10 @@ Route::middleware(['auth', 'role:seller', 'ensure.consents'])
         // Profil sklepu (nazwa, opis, adres). Edycja przez POST (FOUNDATION sek. 5).
         Route::get('/sklep', [ShopProfileController::class, 'edit'])->name('shop.edit');
         Route::post('/sklep', [ShopProfileController::class, 'update'])->name('shop.update');
+
+        // Wygląd sklepu (logo; docelowo kolory/szablony). Edycja przez POST.
+        Route::get('/wyglad', [AppearanceController::class, 'edit'])->name('appearance.edit');
+        Route::post('/wyglad', [AppearanceController::class, 'update'])->name('appearance.update');
 
         // Auto-uzupełnienie danych firmy po NIP (Biała lista MF). Zwraca JSON.
         Route::post('/firma/z-nip', CompanyLookupController::class)

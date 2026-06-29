@@ -4,7 +4,7 @@
     <div class="grid gap-6 lg:grid-cols-12">
         {{-- Główna kolumna: formularz --}}
         <div class="lg:col-span-8">
-            <form method="POST" action="{{ route('seller.shop.update') }}" class="space-y-6" enctype="multipart/form-data" novalidate data-validate>
+            <form method="POST" action="{{ route('seller.shop.update') }}" class="space-y-6" novalidate data-validate>
                 @csrf
 
                 {{-- Dane podstawowe --}}
@@ -41,39 +41,6 @@
                                 <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
                             @enderror
                         </div>
-                    </div>
-                </div>
-
-                {{-- Identyfikacja sklepu (grafika i elementy wizualne; docelowo też kolory) --}}
-                <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
-                    <h2 class="font-semibold text-stone-900">Identyfikacja sklepu</h2>
-                    <p class="mt-1 text-sm text-stone-500">Logo i elementy wizualne Twojego sklepu (więcej wkrótce — m.in. kolory).</p>
-
-                    <div class="mt-6">
-                        <label for="logo" class="block text-sm font-medium text-stone-700">Logo sklepu <span class="text-stone-400">(opcjonalnie)</span></label>
-                        <div class="mt-1.5 flex items-center gap-4">
-                            <div class="flex h-20 shrink-0 items-center">
-                                <img id="logo-preview"
-                                    src="{{ $shop->logo_path ? \Illuminate\Support\Facades\Storage::disk('public')->url($shop->logo_path) : '' }}"
-                                    alt="Logo sklepu"
-                                    class="h-20 w-auto max-w-[14rem] object-contain {{ $shop->logo_path ? '' : 'hidden' }}">
-                                <span id="logo-placeholder" class="flex h-20 w-20 items-center justify-center rounded-2xl border border-dashed border-stone-300 text-2xl text-stone-400 {{ $shop->logo_path ? 'hidden' : '' }}">🛍️</span>
-                            </div>
-                            <div class="min-w-0 flex-1">
-                                <input id="logo" name="logo" type="file" accept="image/png,image/jpeg,image/webp"
-                                    class="block w-full text-sm text-stone-500 file:mr-4 file:rounded-xl file:border-0 file:bg-amber-100 file:px-4 file:py-2 file:text-sm file:font-medium file:text-amber-800 file:transition hover:file:bg-amber-200">
-                                <p class="mt-1.5 text-xs text-stone-400">PNG, JPG lub WebP, do 2 MB. Najlepiej kwadratowe.</p>
-                                @if ($shop->logo_path)
-                                    <label class="mt-2 inline-flex items-center gap-2 text-sm text-stone-600">
-                                        <input type="checkbox" name="remove_logo" value="1" class="shrink-0">
-                                        <span>Usuń obecne logo</span>
-                                    </label>
-                                @endif
-                            </div>
-                        </div>
-                        @error('logo')
-                            <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
-                        @enderror
                     </div>
                 </div>
 
@@ -222,10 +189,6 @@
                     </li>
                     <li class="flex gap-3">
                         <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400"></span>
-                        <span>Logo wzmacnia wizerunek marki — pojawi się w sklepie i przy jego prezentacji.</span>
-                    </li>
-                    <li class="flex gap-3">
-                        <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400"></span>
                         <span>Adres jest widoczny dla klientów i buduje zaufanie do sprzedawcy.</span>
                     </li>
                     <li class="flex gap-3">
@@ -246,10 +209,6 @@
                         <span class="mt-0.5 shrink-0 text-amber-500">🧾</span>
                         <span>W <span class="font-medium text-stone-700">Danych firmowych</span> wpisz NIP i kliknij <span class="font-medium text-stone-700">„Pobierz dane z NIP"</span> — uzupełnimy nazwę i adres.</span>
                     </li>
-                    <li class="flex gap-3">
-                        <span class="mt-0.5 shrink-0 text-amber-500">🖼️</span>
-                        <span>Najlepsze logo to kwadrat (np. 512×512 px) na jednolitym tle.</span>
-                    </li>
                 </ul>
             </div>
 
@@ -261,23 +220,4 @@
             </div>
         </aside>
     </div>
-
-    {{-- Podgląd logo na żywo (zero zależności). Licznik znaków opisu jest teraz
-         generyczny w resources/js/rich-editor.js. --}}
-    <script>
-        (function () {
-            const input = document.getElementById('logo');
-            const preview = document.getElementById('logo-preview');
-            const placeholder = document.getElementById('logo-placeholder');
-            if (!input || !preview) return;
-
-            input.addEventListener('change', function () {
-                const file = input.files && input.files[0];
-                if (!file) return;
-                preview.src = URL.createObjectURL(file);
-                preview.classList.remove('hidden');
-                if (placeholder) placeholder.classList.add('hidden');
-            });
-        })();
-    </script>
 </x-layouts.panel>

@@ -60,11 +60,6 @@ class ShopProfileRequest extends FormRequest
                     $fail('Podaj prawidłowy NIP (10 cyfr).');
                 }
             }],
-            'logo' => [
-                'nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:2048',
-                Rule::dimensions()->minWidth(100)->minHeight(100)->maxWidth(2000)->maxHeight(2000),
-            ],
-            'remove_logo' => ['nullable', 'boolean'],
             'country' => ['required', 'string', 'max:255'],
             'province' => ['required', Rule::in(config('shop.provinces'))],
             'city' => ['required', 'string', 'max:255'],
@@ -85,7 +80,6 @@ class ShopProfileRequest extends FormRequest
             'description' => 'opis sklepu',
             'company_name' => 'nazwa firmy',
             'nip' => 'NIP',
-            'logo' => 'logo',
             'country' => 'kraj',
             'province' => 'województwo',
             'city' => 'miejscowość',
@@ -104,10 +98,6 @@ class ShopProfileRequest extends FormRequest
         return [
             'postal_code.regex' => 'Podaj kod pocztowy w formacie NN-NNN.',
             'province.in' => 'Wybierz województwo z listy.',
-            'logo.image' => 'Logo musi być obrazem (PNG, JPG lub WebP).',
-            'logo.mimes' => 'Logo musi być w formacie PNG, JPG lub WebP.',
-            'logo.max' => 'Logo może mieć maksymalnie 2 MB.',
-            'logo.dimensions' => 'Logo powinno mieć od 100 do 2000 px boku.',
         ];
     }
 }

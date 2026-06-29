@@ -22,7 +22,7 @@
             <ul class="mt-6 space-y-3">
                 @foreach ($steps as $step)
                     <li>
-                        <a href="{{ route('seller.shop.edit') }}" class="flex items-center gap-4 rounded-2xl bg-white/60 px-4 py-3 transition hover:bg-white">
+                        <a href="{{ route($step['route']) }}" class="flex items-center gap-4 rounded-2xl bg-white/60 px-4 py-3 transition hover:bg-white">
                             @if ($step['done'])
                                 <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-semibold text-emerald-600">✓</span>
                             @else
