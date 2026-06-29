@@ -41,6 +41,8 @@ class ProductImageTest extends TestCase
         $this->assertSame(2, $product->images()->count());
         foreach ($product->images as $image) {
             Storage::disk('public')->assertExists($image->path);
+            // Każdy format wejściowy (jpg/png) jest przekodowany na WebP.
+            $this->assertStringEndsWith('.webp', $image->path);
         }
     }
 
@@ -48,7 +50,7 @@ class ProductImageTest extends TestCase
     {
         Storage::fake('public');
         [$seller, $product] = $this->sellerProduct();
-        foreach (range(1, 5) as $i) {
+        foreach (range(1, 8) as $i) {
             $product->images()->create(['path' => "products/{$product->id}/{$i}.jpg", 'position' => $i]);
         }
 
@@ -58,7 +60,7 @@ class ProductImageTest extends TestCase
             ])
             ->assertStatus(422);
 
-        $this->assertSame(5, $product->images()->count());
+        $this->assertSame(8, $product->images()->count());
     }
 
     public function test_reorder_sets_positions(): void

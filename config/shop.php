@@ -73,6 +73,24 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Zdjęcia produktu (optymalizacja)
+    |--------------------------------------------------------------------------
+    |
+    | Każde wgrane zdjęcie produktu jest skalowane (dłuższy bok do `max_side` px)
+    | i ponownie kodowane jako WebP — niezależnie od formatu wejściowego. WebP daje
+    | wyraźnie mniejsze pliki niż JPEG/PNG przy tej samej jakości i obsługuje
+    | przezroczystość, więc trzymamy jeden format. Ponowne kodowanie usuwa metadane
+    | (EXIF). `quality` 0–100: wyżej = lepsza jakość i większy plik.
+    |
+    */
+
+    'product_images' => [
+        'max_side' => (int) env('PRODUCT_IMAGE_MAX_SIDE', 1600),
+        'quality' => (int) env('PRODUCT_IMAGE_QUALITY', 82),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Pakiety i limity
     |--------------------------------------------------------------------------
     |

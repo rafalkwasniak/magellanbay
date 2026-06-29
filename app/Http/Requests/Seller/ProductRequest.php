@@ -59,7 +59,7 @@ class ProductRequest extends FormRequest
             'show_on_homepage' => ['boolean'],
             'tags' => ['nullable', 'string', 'max:500'],
             // Zdjęcia dodawane przy TWORZENIU produktu (na edycji galeria działa przez AJAX).
-            'images' => ['nullable', 'array', 'max:5'],
+            'images' => ['nullable', 'array', 'max:8'],
             'images.*' => ['image', 'mimes:jpeg,jpg,png,webp', 'max:4096'],
         ];
     }
@@ -86,7 +86,7 @@ class ProductRequest extends FormRequest
         return [
             'price_gross.numeric' => 'Podaj cenę liczbą, np. 49,99.',
             'stock.required_if' => 'Podaj stan magazynowy lub wyłącz kontrolę stanu.',
-            'images.max' => 'Możesz dodać maksymalnie 5 zdjęć.',
+            'images.max' => 'Możesz dodać maksymalnie 8 zdjęć.',
             'images.*.image' => 'Każdy plik musi być obrazem (PNG, JPG lub WebP).',
             'images.*.mimes' => 'Dozwolone formaty zdjęć: PNG, JPG, WebP.',
             'images.*.max' => 'Zdjęcie może mieć maksymalnie 4 MB.',

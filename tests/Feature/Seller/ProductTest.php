@@ -49,9 +49,11 @@ class ProductTest extends TestCase
     {
         [$seller, $shop] = $this->sellerWithShop();
 
-        $this->actingAs($seller)
-            ->post(route('seller.products.store'), $this->payload())
-            ->assertRedirect(route('seller.products.index'))
+        $response = $this->actingAs($seller)
+            ->post(route('seller.products.store'), $this->payload());
+
+        $product = $shop->products()->firstOrFail();
+        $response->assertRedirect(route('seller.products.edit', $product))
             ->assertSessionHas('success');
 
         $this->assertDatabaseHas('products', [
@@ -69,28 +71,28 @@ class ProductTest extends TestCase
         Storage::fake('public');
         [$seller, $shop] = $this->sellerWithShop();
 
-        $this->actingAs($seller)
+        $response = $this->actingAs($seller)
             ->post(route('seller.products.store'), $this->payload([
                 'images' => [
                     UploadedFile::fake()->image('a.jpg', 800, 600),
                     UploadedFile::fake()->image('b.jpg', 800, 600),
                 ],
-            ]))
-            ->assertRedirect(route('seller.products.index'));
+            ]));
 
         $product = $shop->products()->first();
+        $response->assertRedirect(route('seller.products.edit', $product));
         $this->assertSame(2, $product->images()->count());
         foreach ($product->images as $image) {
             Storage::disk('public')->assertExists($image->path);
         }
     }
 
-    public function test_create_rejects_more_than_five_images(): void
+    public function test_create_rejects_more_than_eight_images(): void
     {
         Storage::fake('public');
         [$seller] = $this->sellerWithShop();
         $images = [];
-        for ($i = 0; $i < 6; $i++) {
+        for ($i = 0; $i < 9; $i++) {
             $images[] = UploadedFile::fake()->image("p{$i}.jpg", 400, 400);
         }
 

@@ -12,11 +12,11 @@ use Illuminate\Support\Facades\Storage;
 
 /**
  * Zdjęcia produktu: dodawanie (z optymalizacją), ustawianie głównego i usuwanie.
- * Wszystko scope'owane do produktu sklepu zalogowanego sprzedawcy. Limit 5 zdjęć.
+ * Wszystko scope'owane do produktu sklepu zalogowanego sprzedawcy. Limit 8 zdjęć.
  */
 class ProductImageController extends Controller
 {
-    private const MAX_IMAGES = 5;
+    private const MAX_IMAGES = 8;
 
     public function store(Request $request, Product $product, ProductImageService $images): JsonResponse
     {

@@ -37,7 +37,7 @@ function initGallery(container) {
     const card = container.parentElement;
     const reorderUrl = container.dataset.reorderUrl;
     const storeUrl = container.dataset.storeUrl;
-    const max = parseInt(container.dataset.max, 10) || 5;
+    const max = parseInt(container.dataset.max, 10) || 8;
     const uploader = card.querySelector('[data-gallery-uploader]');
     const fileInput = card.querySelector('[data-gallery-upload]');
     const countEl = card.querySelector('[data-gallery-count]');
@@ -162,7 +162,7 @@ function initNewImages(root) {
 
     input.addEventListener('change', () => {
         preview.innerHTML = '';
-        const files = Array.from(input.files || []).slice(0, 5);
+        const files = Array.from(input.files || []).slice(0, 8);
         files.forEach((file) => {
             const card = document.createElement('div');
             card.className = 'rounded-2xl border border-stone-200 bg-stone-50 p-2';

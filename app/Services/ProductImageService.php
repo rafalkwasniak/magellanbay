@@ -9,21 +9,21 @@ use Illuminate\Support\Str;
 use RuntimeException;
 
 /**
- * Optymalizacja i zapis zdjęć produktu. Skaluje dłuższy bok do maks. 1600 px i
- * ponownie koduje przez GD — co usuwa metadane (EXIF). Oryginały nie są
- * przechowywane. Zapis na dysku `public` w katalogu produktu.
+ * Optymalizacja i zapis zdjęć produktu. Skaluje dłuższy bok do `shop.product_images.max_side`
+ * px i ponownie koduje przez GD jako WebP — niezależnie od formatu wejściowego (jpg/png/webp).
+ * WebP daje mniejsze pliki niż JPEG/PNG przy tej samej jakości i obsługuje przezroczystość, więc
+ * trzymamy jeden format. Ponowne kodowanie usuwa metadane (EXIF). Oryginały nie są przechowywane.
+ * Zapis na dysku `public` w katalogu produktu.
  */
 class ProductImageService
 {
-    private const MAX_SIDE = 1600;
-
     /**
-     * Zapisuje zoptymalizowane zdjęcie i zwraca jego ścieżkę na dysku `public`.
+     * Zapisuje zoptymalizowane zdjęcie (WebP) i zwraca jego ścieżkę na dysku `public`.
      */
     public function store(UploadedFile $file, Product $product): string
     {
-        [$binary, $ext] = $this->optimize($file);
-        $path = 'products/'.$product->id.'/'.Str::uuid()->toString().'.'.$ext;
+        $binary = $this->optimize($file);
+        $path = 'products/'.$product->id.'/'.Str::uuid()->toString().'.webp';
 
         Storage::disk('public')->put($path, $binary);
 
@@ -31,18 +31,19 @@ class ProductImageService
     }
 
     /**
-     * @return array{0:string, 1:string} zoptymalizowany obraz (binarnie) + rozszerzenie
+     * Skaluje i koduje obraz do WebP, zwraca binarną zawartość pliku.
      */
-    private function optimize(UploadedFile $file): array
+    private function optimize(UploadedFile $file): string
     {
         $source = @imagecreatefromstring((string) file_get_contents($file->getRealPath()));
         if ($source === false) {
             throw new RuntimeException('Nie udało się odczytać obrazu.');
         }
 
+        $maxSide = (int) config('shop.product_images.max_side', 1600);
         $width = imagesx($source);
         $height = imagesy($source);
-        $scale = min(1.0, self::MAX_SIDE / max($width, $height));
+        $scale = min(1.0, $maxSide / max($width, $height));
         $newWidth = max(1, (int) round($width * $scale));
         $newHeight = max(1, (int) round($height * $scale));
 
@@ -51,24 +52,15 @@ class ProductImageService
         imagesavealpha($canvas, true);
         imagecopyresampled($canvas, $source, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
 
-        $mime = (string) $file->getMimeType();
+        $quality = (int) config('shop.product_images.quality', 82);
 
         ob_start();
-        if (str_contains($mime, 'png')) {
-            imagepng($canvas, null, 6);
-            $ext = 'png';
-        } elseif (str_contains($mime, 'webp')) {
-            imagewebp($canvas, null, 82);
-            $ext = 'webp';
-        } else {
-            imagejpeg($canvas, null, 82);
-            $ext = 'jpg';
-        }
+        imagewebp($canvas, null, $quality);
         $binary = (string) ob_get_clean();
 
         imagedestroy($source);
         imagedestroy($canvas);
 
-        return [$binary, $ext];
+        return $binary;
     }
 }

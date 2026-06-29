@@ -57,15 +57,15 @@
                     <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
                         <div class="flex items-center justify-between">
                             <h2 class="font-semibold text-stone-900">Zdjęcia produktu</h2>
-                            <span class="text-sm text-stone-500"><span data-gallery-count>{{ $product->images->count() }}</span> / 5</span>
+                            <span class="text-sm text-stone-500"><span data-gallery-count>{{ $product->images->count() }}</span> / 8</span>
                         </div>
                         <p class="mt-1 text-sm text-stone-500">Pierwsze zdjęcie jest główne. Przeciągnij miniatury lub użyj strzałek, aby zmienić kolejność.</p>
 
                         <div data-gallery
                             data-reorder-url="{{ route('seller.products.images.reorder', $product) }}"
                             data-store-url="{{ route('seller.products.images.store', $product) }}"
-                            data-max="5"
-                            class="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-3 {{ $product->images->isEmpty() ? 'hidden' : '' }}">
+                            data-max="8"
+                            class="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-4 {{ $product->images->isEmpty() ? 'hidden' : '' }}">
                             @foreach ($product->images as $image)
                                 <div data-gallery-item data-id="{{ $image->id }}" draggable="true" class="relative cursor-move rounded-2xl border border-stone-200 bg-stone-50 p-2">
                                     <div class="flex h-28 items-center justify-center overflow-hidden rounded-xl bg-white">
@@ -86,21 +86,21 @@
                         <div class="mt-5" data-gallery-uploader>
                             <input type="file" data-gallery-upload multiple accept="image/png,image/jpeg,image/webp"
                                 class="block w-full text-sm text-stone-500 file:mr-4 file:rounded-xl file:border-0 file:bg-amber-100 file:px-4 file:py-2 file:text-sm file:font-medium file:text-amber-800 file:transition hover:file:bg-amber-200">
-                            <p class="mt-2 text-xs text-stone-400">PNG, JPG lub WebP, do 4 MB. Maksymalnie 5 zdjęć — wybierz, dodamy od razu.</p>
+                            <p class="mt-2 text-xs text-stone-400">PNG, JPG lub WebP, do 4 MB. Maksymalnie 8 zdjęć — wybierz, dodamy od razu.</p>
                         </div>
-                        <p class="mt-5 hidden text-xs text-stone-400" data-gallery-full>Osiągnięto limit 5 zdjęć — usuń jedno, aby dodać nowe.</p>
+                        <p class="mt-5 hidden text-xs text-stone-400" data-gallery-full>Osiągnięto limit 8 zdjęć — usuń jedno, aby dodać nowe.</p>
                     </div>
                 @else
                     {{-- Nowy produkt: zdjęcia lecą razem z formularzem (po zapisie produkt ma ID i je zapisujemy w kolejności dodania). --}}
                     <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
                         <h2 class="font-semibold text-stone-900">Zdjęcia produktu <span class="text-sm font-normal text-stone-400">(opcjonalnie)</span></h2>
-                        <p class="mt-1 text-sm text-stone-500">Wybierz do 5 zdjęć — dodamy je przy zapisie. Pierwsze będzie główne; kolejność zmienisz później w edycji.</p>
+                        <p class="mt-1 text-sm text-stone-500">Wybierz do 8 zdjęć — dodamy je przy zapisie. Pierwsze będzie główne; kolejność zmienisz później w edycji.</p>
 
                         <div class="mt-5" data-new-images>
                             <input type="file" name="images[]" multiple accept="image/png,image/jpeg,image/webp" data-new-images-input
                                 class="block w-full text-sm text-stone-500 file:mr-4 file:rounded-xl file:border-0 file:bg-amber-100 file:px-4 file:py-2 file:text-sm file:font-medium file:text-amber-800 file:transition hover:file:bg-amber-200">
-                            <div data-new-images-preview class="mt-4 grid grid-cols-2 gap-4 hidden sm:grid-cols-3"></div>
-                            <p class="mt-2 text-xs text-stone-400">PNG, JPG lub WebP, do 4 MB. Maksymalnie 5 zdjęć.</p>
+                            <div data-new-images-preview class="mt-4 grid grid-cols-2 gap-4 hidden sm:grid-cols-4"></div>
+                            <p class="mt-2 text-xs text-stone-400">PNG, JPG lub WebP, do 4 MB. Maksymalnie 8 zdjęć.</p>
                             @error('images')
                                 <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
                             @enderror

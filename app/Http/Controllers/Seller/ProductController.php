@@ -60,7 +60,7 @@ class ProductController extends Controller
             ]);
         }
 
-        return redirect()->route('seller.products.index')->with('success', 'Produkt został dodany.');
+        return redirect()->route('seller.products.edit', $product)->with('success', 'Produkt został dodany.');
     }
 
     public function edit(Request $request, Product $product): Renderable
@@ -80,7 +80,7 @@ class ProductController extends Controller
         $product->update($this->data($request));
         $this->syncTags($product, $request);
 
-        return redirect()->route('seller.products.index')->with('success', 'Zapisano zmiany w produkcie.');
+        return redirect()->route('seller.products.edit', $product)->with('success', 'Zapisano zmiany w produkcie.');
     }
 
     public function destroy(Request $request, Product $product): RedirectResponse
