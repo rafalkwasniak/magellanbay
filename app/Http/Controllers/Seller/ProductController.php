@@ -85,7 +85,10 @@ class ProductController extends Controller
         $product->update($this->data($request));
         $this->syncTags($product, $request);
 
-        return redirect()->route('seller.products.edit', $product)->with('success', 'Zapisano zmiany w produkcie.');
+        // Zachowujemy stronę listy, z której przyszedł sprzedawca (link „Wróć do listy").
+        $params = ['product' => $product] + ($request->filled('page') ? ['page' => $request->input('page')] : []);
+
+        return redirect()->route('seller.products.edit', $params)->with('success', 'Zapisano zmiany w produkcie.');
     }
 
     public function destroy(Request $request, Product $product): RedirectResponse

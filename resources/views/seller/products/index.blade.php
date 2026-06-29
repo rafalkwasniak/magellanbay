@@ -29,12 +29,14 @@
                         </a>
                     </div>
                 @else
+                    @php($listParams = $products->currentPage() > 1 ? ['page' => $products->currentPage()] : [])
                     <div class="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-4">
                         @foreach ($products as $product)
                             @php($main = $product->mainImage())
+                            @php($editUrl = route('seller.products.edit', ['product' => $product] + $listParams))
                             <div class="group flex flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white/80 shadow-sm transition hover:shadow-md">
                                 {{-- Zdjęcie + status --}}
-                                <a href="{{ route('seller.products.edit', $product) }}" class="relative block aspect-square overflow-hidden bg-stone-50">
+                                <a href="{{ $editUrl }}" class="relative block aspect-square overflow-hidden bg-stone-50">
                                     @if ($main)
                                         <img src="{{ $main->url() }}" alt="{{ $product->name }}" class="h-full w-full object-cover transition duration-300 group-hover:scale-105">
                                     @else
@@ -49,7 +51,7 @@
 
                                 {{-- Treść --}}
                                 <div class="flex flex-1 flex-col p-3">
-                                    <a href="{{ route('seller.products.edit', $product) }}" class="line-clamp-2 text-sm font-medium text-stone-900 transition hover:text-amber-700">{{ $product->name }}</a>
+                                    <a href="{{ $editUrl }}" class="line-clamp-2 text-sm font-medium text-stone-900 transition hover:text-amber-700">{{ $product->name }}</a>
 
                                     {{-- Dolny blok: cena + stan + akcje, zawsze przyklejony do spodu karty --}}
                                     <div class="mt-auto pt-3">
@@ -66,7 +68,7 @@
 
                                         {{-- Akcje --}}
                                         <div class="mt-3 flex items-center gap-2 border-t border-stone-100 pt-2.5">
-                                        <a href="{{ route('seller.products.edit', $product) }}" title="Edytuj" aria-label="Edytuj produkt"
+                                        <a href="{{ $editUrl }}" title="Edytuj" aria-label="Edytuj produkt"
                                             class="inline-flex items-center justify-center rounded-lg border border-stone-200 bg-white/70 p-1.5 text-stone-600 transition hover:bg-white hover:text-stone-900">
                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
                                                 <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" />
