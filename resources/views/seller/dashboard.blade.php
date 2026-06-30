@@ -16,7 +16,7 @@
             </p>
 
             <div class="mt-4 h-2 w-full overflow-hidden rounded-full bg-stone-100">
-                <div class="h-full rounded-full bg-gradient-to-r from-amber-500 to-rose-500 transition-all duration-500" style="width: {{ $pct }}%"></div>
+                <div class="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600 transition-all duration-500" style="width: {{ $pct }}%"></div>
             </div>
 
             <ul class="mt-6 space-y-3">
