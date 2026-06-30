@@ -4,6 +4,8 @@ namespace App\Models;
 
 use App\Enums\VatRate;
 use App\Observers\ProductObserver;
+use App\Support\OmnibusPrice;
+use Carbon\CarbonInterface;
 use Database\Factories\ProductFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
@@ -76,6 +78,28 @@ class Product extends Model
     public function tags(): BelongsToMany
     {
         return $this->belongsToMany(Tag::class);
+    }
+
+    /**
+     * Historia cen w kolejności chronologicznej (najstarsza pierwsza).
+     *
+     * @return HasMany<ProductPriceHistory, $this>
+     */
+    public function priceHistory(): HasMany
+    {
+        return $this->hasMany(ProductPriceHistory::class)->orderBy('recorded_at')->orderBy('id');
+    }
+
+    /**
+     * Najniższa cena z 30 dni przed obniżką (Omnibus) — do pokazania obok ceny.
+     * Zwraca null, gdy nie ma czego ujawniać: brak obniżki w ostatnich 30 dniach
+     * albo bieżąca cena nie jest niższa od wcześniejszej.
+     */
+    public function lowestPriceLast30Days(?CarbonInterface $now = null): ?float
+    {
+        $reference = OmnibusPrice::lowestBeforeCurrent($this->priceHistory, $now ?? now());
+
+        return ($reference !== null && $reference > (float) $this->price_gross) ? $reference : null;
     }
 
     /**

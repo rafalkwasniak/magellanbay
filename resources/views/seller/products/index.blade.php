@@ -66,6 +66,13 @@
                                             @endif
                                         </div>
 
+                                        @php($lowest30 = $product->lowestPriceLast30Days())
+                                        @if ($lowest30 !== null)
+                                            <p class="mt-1 text-[11px] leading-tight text-stone-400" title="Wymóg dyrektywy Omnibus">
+                                                Najniższa cena z 30 dni: {{ number_format($lowest30, 2, ',', ' ') }} zł
+                                            </p>
+                                        @endif
+
                                         {{-- Akcje --}}
                                         <div class="mt-3 flex items-center gap-2 border-t border-stone-100 pt-2.5">
                                         <a href="{{ $editUrl }}" title="Edytuj" aria-label="Edytuj produkt"
