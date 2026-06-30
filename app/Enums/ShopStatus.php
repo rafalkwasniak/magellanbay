@@ -3,10 +3,13 @@
 namespace App\Enums;
 
 /**
- * Cykl życia sklepu. Przy rejestracji powstaje szkic (Draft) — sklep ma już
- * zarezerwowaną subdomenę, ale nie jest jeszcze publiczny. Aktywacja sklepu i
- * publikacja (po uzupełnieniu danych + pierwszym produkcie) przełączą go na
- * Active. Lista będzie rosła wraz z logiką widoczności ze specyfikacji.
+ * Status = publiczna widoczność sklepu, napędzana wyłącznie produktami:
+ * Draft (Szkic, ukryty) = brak aktywnych produktów; Active (Aktywny, widoczny)
+ * = ≥1 aktywny produkt. Przy rejestracji powstaje Draft (zarezerwowana
+ * subdomena, pusty sklep). Przejścia w obie strony wykonuje automatycznie
+ * App\Observers\ProductObserver → Shop::refreshVisibility() — nie ustawiamy
+ * statusu ręcznie. Ewentualne zawieszenie przez admina to przyszła, osobna
+ * (prostopadła) flaga, nie ten enum.
  */
 enum ShopStatus: string
 {

@@ -84,4 +84,41 @@ class Shop extends Model
 
         return true;
     }
+
+    /**
+     * Czy sklep ma przynajmniej jeden aktywny produkt. To jedyny wyznacznik
+     * publicznej widoczności sklepu — pozostałe dane (adres, NIP, opis, logo) są
+     * opcjonalne. Stan magazynowy pojedynczego produktu nie ma tu znaczenia
+     * (wyczerpany produkt to sprawa produktu, nie całego sklepu).
+     */
+    public function hasActiveProducts(): bool
+    {
+        return $this->products()->where('is_active', true)->exists();
+    }
+
+    /**
+     * Czy sklep jest publicznie widoczny (na żywo). Status w bazie jest
+     * odzwierciedleniem tej widoczności — utrzymywanym automatycznie przez
+     * App\Observers\ProductObserver — więc admin i storefront czytają gotową
+     * kolumnę, bez liczenia produktów per sklep.
+     */
+    public function isVisible(): bool
+    {
+        return $this->status === ShopStatus::Active;
+    }
+
+    /**
+     * Przelicza i zapisuje status sklepu z liczby aktywnych produktów:
+     * ≥1 → Aktywny (widoczny), 0 → Szkic (ukryty). Wołane automatycznie przy
+     * każdej zmianie produktu. Zapis tylko gdy status faktycznie się zmienia.
+     */
+    public function refreshVisibility(): void
+    {
+        $target = $this->hasActiveProducts() ? ShopStatus::Active : ShopStatus::Draft;
+
+        if ($this->status !== $target) {
+            $this->status = $target;
+            $this->save();
+        }
+    }
 }

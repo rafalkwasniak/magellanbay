@@ -3,8 +3,10 @@
 namespace App\Models;
 
 use App\Enums\VatRate;
+use App\Observers\ProductObserver;
 use Database\Factories\ProductFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,7 +17,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 /**
  * Produkt sklepu. Cena `price_gross` jest brutto; netto i kwotę VAT wyliczamy
  * z brutto i ułamka stawki. `track_stock` decyduje, czy `stock` ma znaczenie.
+ * Zmiany produktu napędzają widoczność sklepu (ProductObserver).
  */
+#[ObservedBy(ProductObserver::class)]
 #[Fillable([
     'name', 'slug', 'description', 'price_gross', 'vat_rate',
     'track_stock', 'stock', 'is_active', 'show_on_homepage',

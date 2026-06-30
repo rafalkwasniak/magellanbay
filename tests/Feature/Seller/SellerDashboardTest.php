@@ -44,4 +44,17 @@ class SellerDashboardTest extends TestCase
             ->assertOk()
             ->assertSee('5 / 5');
     }
+
+    public function test_only_hidden_products_do_not_complete_the_product_step(): void
+    {
+        $seller = User::factory()->consented()->create();
+        $shop = Shop::factory()->create(['owner_id' => $seller->id]);
+        Product::factory()->for($shop)->hidden()->count(2)->create();
+
+        $this->actingAs($seller)
+            ->get(route('seller.dashboard'))
+            ->assertOk()
+            ->assertDontSee('5 / 5')
+            ->assertSee('wszystkie są ukryte', false);
+    }
 }

@@ -43,8 +43,10 @@
                 <p class="mt-0.5 text-xs text-stone-500">
                     @if ($productCount === 0)
                         Dodaj pierwszy produkt — to ostatni krok, by opublikować sklep i zacząć sprzedaż.
+                    @elseif ($activeProductCount === 0)
+                        Masz produkty, ale wszystkie są ukryte. Włącz przynajmniej jeden, aby sklep stał się widoczny dla klientów.
                     @elseif ($done < $total)
-                        Sklep ma już produkty. Uzupełnij pozostałe kroki, aby budził pełne zaufanie klientów.
+                        Sklep jest widoczny. Uzupełnij pozostałe kroki, aby budził pełne zaufanie klientów.
                     @else
                         Wszystko gotowe — zadbaj o zdjęcia i opisy produktów, a wkrótce ruszą zamówienia i statystyki.
                     @endif
@@ -81,9 +83,13 @@
                         'bg-stone-100 text-stone-500' => ! $isActive,
                     ])>{{ $shop->status->label() }}</span>
                     <p class="mt-2 text-xs text-stone-500">
-                        {{ $isActive
-                            ? 'Sklep jest widoczny dla klientów.'
-                            : 'Twój sklep nie jest jeszcze publiczny. Opublikujemy go automatycznie po dodaniu pierwszego produktu.' }}
+                        @if ($isActive)
+                            Sklep jest widoczny dla klientów.
+                        @elseif ($productCount > 0)
+                            Sklep jest ukryty — wszystkie produkty są nieaktywne. Włącz przynajmniej jeden, aby sklep stał się widoczny.
+                        @else
+                            Twój sklep nie jest jeszcze publiczny. Opublikujemy go automatycznie po dodaniu pierwszego widocznego produktu.
+                        @endif
                     </p>
                     <a href="{{ route('seller.shop.edit') }}"
                         class="mt-5 inline-flex rounded-2xl border border-stone-200 bg-white/70 px-5 py-2.5 text-sm font-semibold text-stone-700 transition hover:bg-white">
