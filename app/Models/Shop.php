@@ -20,6 +20,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'name', 'slug', 'domain', 'status', 'description', 'company_name', 'nip', 'logo_path',
     'country', 'province', 'city', 'postal_code', 'street', 'building_number', 'apartment_number',
     'default_vat_rate',
+    'bank_account_number', 'bank_account_holder', 'bank_name', 'bank_transfer_enabled',
 ])]
 class Shop extends Model
 {
@@ -34,6 +35,7 @@ class Shop extends Model
         return [
             'status' => ShopStatus::class,
             'default_vat_rate' => VatRate::class,
+            'bank_transfer_enabled' => 'boolean',
         ];
     }
 
@@ -120,5 +122,41 @@ class Shop extends Model
             $this->status = $target;
             $this->save();
         }
+    }
+
+    /**
+     * Czy sklep udostępnia w kasie płatność przelewem na konto. Dwa warunki:
+     * fiszka „Przelew na konto" włączona (Ustawienia) ORAZ numer konta wypełniony
+     * (dane w „Mój sklep") — bez numeru nie ma dokąd przelać. Wykorzystane później
+     * przy checkoucie (widoczność/wybór metody płatności).
+     */
+    public function bankTransferAvailable(): bool
+    {
+        return $this->bank_transfer_enabled && filled($this->bank_account_number);
+    }
+
+    /**
+     * Numer konta w czytelnej postaci — grupy po 4 cyfry (NN NNNN NNNN …).
+     * Przechowujemy same cyfry; formatujemy dopiero do wyświetlenia.
+     */
+    public function formattedBankAccountNumber(): ?string
+    {
+        if (blank($this->bank_account_number)) {
+            return null;
+        }
+
+        return trim(chunk_split($this->bank_account_number, 4, ' '));
+    }
+
+    /**
+     * Odbiorca przelewu do pokazania klientowi: jawnie ustawiony odbiorca, a gdy
+     * pusty — nazwa firmy sklepu (domyślny odbiorca). Może być null, gdy sklep nie
+     * uzupełnił jeszcze żadnej z tych danych.
+     */
+    public function bankAccountHolderName(): ?string
+    {
+        return filled($this->bank_account_holder)
+            ? $this->bank_account_holder
+            : ($this->company_name ?: null);
     }
 }

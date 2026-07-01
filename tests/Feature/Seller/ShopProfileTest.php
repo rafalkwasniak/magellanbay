@@ -142,4 +142,58 @@ class ShopProfileTest extends TestCase
             ->post(route('seller.shop.update'), $this->validPayload(['province' => 'nieistniejące']))
             ->assertSessionHasErrors('province');
     }
+
+    public function test_seller_can_save_bank_account_details(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+
+        $this->actingAs($seller)
+            ->post(route('seller.shop.update'), $this->validPayload([
+                'bank_account_number' => 'PL 12 3456 7890 1234 5678 9012 3456',
+                'bank_account_holder' => 'Kwiaciarnia Ania',
+                'bank_name' => 'mBank',
+            ]))
+            ->assertRedirect(route('seller.shop.edit'))
+            ->assertSessionHas('success');
+
+        $fresh = $shop->fresh();
+        // Prefiks PL i spacje usunięte — zostają same cyfry NRB.
+        $this->assertSame('12345678901234567890123456', $fresh->bank_account_number);
+        $this->assertSame('Kwiaciarnia Ania', $fresh->bank_account_holder);
+        $this->assertSame('mBank', $fresh->bank_name);
+    }
+
+    public function test_bank_account_number_with_wrong_length_is_rejected(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+
+        $this->actingAs($seller)
+            ->post(route('seller.shop.update'), $this->validPayload([
+                'bank_account_number' => '12 3456 7890',
+            ]))
+            ->assertSessionHasErrors('bank_account_number');
+
+        $this->assertNull($shop->fresh()->bank_account_number);
+    }
+
+    public function test_bank_account_details_are_optional(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+
+        $this->actingAs($seller)
+            ->post(route('seller.shop.update'), $this->validPayload(['bank_account_number' => '']))
+            ->assertSessionHasNoErrors();
+
+        $this->assertNull($shop->fresh()->bank_account_number);
+    }
+
+    public function test_bank_account_holder_falls_back_to_company_name(): void
+    {
+        [, $shop] = $this->sellerWithShop([
+            'company_name' => 'Firma Ania',
+            'bank_account_holder' => null,
+        ]);
+
+        $this->assertSame('Firma Ania', $shop->bankAccountHolderName());
+    }
 }

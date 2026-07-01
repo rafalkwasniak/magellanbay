@@ -18,12 +18,24 @@ class ShopSettingsRequest extends FormRequest
     }
 
     /**
+     * Fiszka „Przelew na konto" to checkbox — nieobecny w POST, gdy odznaczony.
+     * Normalizujemy do jawnego boola, żeby zapis nie gubił wyłączenia metody.
+     */
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'bank_transfer_enabled' => $this->boolean('bank_transfer_enabled'),
+        ]);
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function rules(): array
     {
         return [
             'default_vat_rate' => ['required', Rule::enum(VatRate::class)],
+            'bank_transfer_enabled' => ['boolean'],
         ];
     }
 
@@ -34,6 +46,7 @@ class ShopSettingsRequest extends FormRequest
     {
         return [
             'default_vat_rate' => 'domyślna stawka VAT',
+            'bank_transfer_enabled' => 'przelew na konto',
         ];
     }
 }

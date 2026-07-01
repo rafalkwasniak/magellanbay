@@ -52,4 +52,52 @@ class ShopSettingsTest extends TestCase
 
         $this->assertSame(VatRate::R23, $shop->fresh()->default_vat_rate);
     }
+
+    public function test_seller_can_disable_bank_transfer_method(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop([
+            'bank_account_number' => '12345678901234567890123456',
+            'bank_transfer_enabled' => true,
+        ]);
+
+        // Checkbox odznaczony = brak klucza w POST; fiszka schodzi na false.
+        $this->actingAs($seller)
+            ->post(route('seller.settings.update'), ['default_vat_rate' => '23'])
+            ->assertRedirect(route('seller.settings.edit'))
+            ->assertSessionHas('success');
+
+        $fresh = $shop->fresh();
+        $this->assertFalse($fresh->bank_transfer_enabled);
+        $this->assertFalse($fresh->bankTransferAvailable());
+    }
+
+    public function test_seller_can_enable_bank_transfer_method(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop([
+            'bank_account_number' => '12345678901234567890123456',
+            'bank_transfer_enabled' => false,
+        ]);
+
+        $this->actingAs($seller)
+            ->post(route('seller.settings.update'), [
+                'default_vat_rate' => '23',
+                'bank_transfer_enabled' => '1',
+            ])
+            ->assertSessionHas('success');
+
+        $fresh = $shop->fresh();
+        $this->assertTrue($fresh->bank_transfer_enabled);
+        $this->assertTrue($fresh->bankTransferAvailable());
+    }
+
+    public function test_bank_transfer_not_available_without_account_number(): void
+    {
+        [, $shop] = $this->sellerWithShop([
+            'bank_account_number' => null,
+            'bank_transfer_enabled' => true,
+        ]);
+
+        // Fiszka włączona, ale bez numeru konta metoda nie jest realnie dostępna.
+        $this->assertFalse($shop->bankTransferAvailable());
+    }
 }

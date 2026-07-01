@@ -43,6 +43,15 @@ class ShopProfileRequest extends FormRequest
             $merge['description'] = app(HtmlSanitizer::class)->clean((string) $this->input('description'));
         }
 
+        // Numer konta do samych cyfr NRB: usuwamy spacje i opcjonalny prefiks „PL"
+        // (sprzedawca może wkleić IBAN). Pusty numer zostaje pusty (dane opcjonalne).
+        if ($this->has('bank_account_number')) {
+            $account = strtoupper((string) $this->input('bank_account_number'));
+            $account = preg_replace('/^PL/', '', preg_replace('/\s+/', '', $account));
+            $account = preg_replace('/\D/', '', (string) $account);
+            $merge['bank_account_number'] = $account === '' ? null : $account;
+        }
+
         $this->merge($merge);
     }
 
@@ -67,6 +76,9 @@ class ShopProfileRequest extends FormRequest
             'street' => ['required', 'string', 'max:255'],
             'building_number' => ['required', 'string', 'max:32'],
             'apartment_number' => ['nullable', 'string', 'max:32'],
+            'bank_account_number' => ['nullable', 'digits:26'],
+            'bank_account_holder' => ['nullable', 'string', 'max:255'],
+            'bank_name' => ['nullable', 'string', 'max:255'],
         ];
     }
 
@@ -87,6 +99,9 @@ class ShopProfileRequest extends FormRequest
             'street' => 'ulica',
             'building_number' => 'numer budynku',
             'apartment_number' => 'numer lokalu',
+            'bank_account_number' => 'numer konta',
+            'bank_account_holder' => 'odbiorca przelewu',
+            'bank_name' => 'nazwa banku',
         ];
     }
 
@@ -98,6 +113,7 @@ class ShopProfileRequest extends FormRequest
         return [
             'postal_code.regex' => 'Podaj kod pocztowy w formacie NN-NNN.',
             'province.in' => 'Wybierz województwo z listy.',
+            'bank_account_number.digits' => 'Numer konta musi mieć 26 cyfr (polski numer NRB).',
         ];
     }
 }

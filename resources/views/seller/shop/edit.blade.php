@@ -169,6 +169,50 @@
                     </div>
                 </div>
 
+                {{-- Dane do przelewu — na końcu, bo to samodzielna dana; blok NIP→firma→adres
+                     zostaje w jednym ciągu (wypełnia się razem z pobrania danych z NIP). --}}
+                <div id="dane-do-przelewu" class="scroll-mt-24 rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                    <h2 class="font-semibold text-stone-900">Dane do przelewu <span class="text-sm font-normal text-stone-400">(opcjonalnie)</span></h2>
+                    <p class="mt-1 text-sm text-stone-500">Konto do płatności przelewem tradycyjnym. Podanie numeru pozwala włączyć tę metodę w <a href="{{ route('seller.settings.edit') }}" class="font-medium text-amber-700 underline decoration-amber-300 underline-offset-2 hover:text-amber-800">Ustawieniach</a>.</p>
+
+                    <div class="mt-6 grid grid-cols-12 gap-5">
+                        <div class="col-span-12">
+                            <label for="bank_account_number" class="block text-sm font-medium text-stone-700">Numer konta</label>
+                            <input type="text" id="bank_account_number" name="bank_account_number" inputmode="numeric" autocomplete="off"
+                                value="{{ old('bank_account_number', $shop->formattedBankAccountNumber()) }}"
+                                placeholder="00 0000 0000 0000 0000 0000 0000"
+                                class="mt-1.5 block w-full rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
+                            @error('bank_account_number')
+                                <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
+                            @enderror
+                            <p class="mt-1.5 text-xs text-stone-400">26 cyfr polskiego numeru konta. Możesz wkleić ze spacjami lub z „PL" — poprawimy zapis.</p>
+                        </div>
+
+                        <div class="col-span-12 sm:col-span-6">
+                            <label for="bank_account_holder" class="block text-sm font-medium text-stone-700">Odbiorca</label>
+                            <input type="text" id="bank_account_holder" name="bank_account_holder" autocomplete="off"
+                                value="{{ old('bank_account_holder', $shop->bank_account_holder) }}"
+                                placeholder="{{ $shop->company_name ?: 'Nazwa odbiorcy przelewu' }}"
+                                class="mt-1.5 block w-full rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
+                            @error('bank_account_holder')
+                                <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
+                            @enderror
+                            <p class="mt-1.5 text-xs text-stone-400">Puste = użyjemy nazwy firmy{{ $shop->company_name ? ' („'.$shop->company_name.'")' : '' }}.</p>
+                        </div>
+
+                        <div class="col-span-12 sm:col-span-6">
+                            <label for="bank_name" class="block text-sm font-medium text-stone-700">Nazwa banku <span class="text-stone-400">(opcjonalnie)</span></label>
+                            <input type="text" id="bank_name" name="bank_name" autocomplete="off"
+                                value="{{ old('bank_name', $shop->bank_name) }}"
+                                placeholder="np. mBank"
+                                class="mt-1.5 block w-full rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
+                            @error('bank_name')
+                                <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </div>
+                </div>
+
                 <div class="flex justify-end">
                     <button type="submit"
                         class="rounded-2xl bg-gradient-to-br from-amber-500 to-rose-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-rose-500/20 transition hover:brightness-105 focus:outline-none focus:ring-4 focus:ring-amber-500/25">
