@@ -91,20 +91,70 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Pakiety i limity
+    | Pakiety (abonament roczny)
     |--------------------------------------------------------------------------
     |
-    | Limity ilościowe w konfiguracji (nie w kodzie). W MVP dostępny jest tylko
-    | pakiet Free. Mechanizm gotowy na kolejne warianty abonamentowe.
+    | Definicja pakietów = źródło prawdy TYLKO w momencie zakupu/przypisania.
+    | Model „snapshot": po przypisaniu pakietu sklep KOPIUJE `entitlements` do
+    | siebie (kolumna `entitlements` na `shops`) i od tej pory żyje własnym
+    | zestawem — zmiana tych wartości później nie dotyka już opłaconych sklepów
+    | („kupiłeś, masz"). Patrz Shop::assignPackage() i Shop::entitlement().
+    |
+    | Slug (klucz, EN) jest stały i ukryty; `name` (PL) to naklejka widoczna dla
+    | klienta i można ją zmieniać bez ruszania bazy. `order` daje jawną hierarchię
+    | (kod nie zgaduje po slugu, co jest awansem, a co zejściem). `available`
+    | decyduje, czy pakiet da się kupić — wycofanego NIE usuwamy (stare sklepy go
+    | trzymają), tylko ustawiamy `false`.
+    |
+    | `entitlements` = kanoniczna lista uprawnień. Wygląd/kolory i Analytics są dla
+    | wszystkich, więc NIE są uprawnieniem. `price_yearly` to placeholder (kwoty
+    | nieustalone). `max_products` 24/48/96 dzieli się na pełne rzędy siatki.
     |
     */
 
     'packages' => [
-        'free' => [
-            // 24 dzieli się równo (24/12/6/4/3/2) — paginacja i siatki produktów
-            // (panel i storefront) zawsze wychodzą pełnymi rzędami.
-            'max_products' => 24,
+        'stall' => [
+            'name' => 'Kram',
+            'order' => 1,
+            'price_yearly' => 0,
+            'available' => true,
+            'entitlements' => [
+                'max_products' => 24,
+                'online_payments' => false,
+                'courier_shipping' => false,
+                'discount_codes' => false,
+                'custom_domain' => false,
+            ],
+        ],
+        'booth' => [
+            'name' => 'Stragan',
+            'order' => 2,
+            'price_yearly' => 500,
+            'available' => true,
+            'entitlements' => [
+                'max_products' => 48,
+                'online_payments' => true,
+                'courier_shipping' => true,
+                'discount_codes' => true,
+                'custom_domain' => false,
+            ],
+        ],
+        'pavilion' => [
+            'name' => 'Pawilon',
+            'order' => 3,
+            'price_yearly' => 900,
+            'available' => true,
+            'entitlements' => [
+                'max_products' => 96,
+                'online_payments' => true,
+                'courier_shipping' => true,
+                'discount_codes' => true,
+                'custom_domain' => true,
+            ],
         ],
     ],
+
+    // Slug pakietu domyślnego (darmowego) — przypisywany nowym sklepom.
+    'default_package' => 'stall',
 
 ];

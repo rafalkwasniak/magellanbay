@@ -135,16 +135,17 @@ class ProductTest extends TestCase
         $this->assertDatabaseHas('products', ['shop_id' => $shop->id, 'track_stock' => false, 'stock' => null]);
     }
 
-    public function test_free_plan_limits_number_of_products(): void
+    public function test_package_limits_number_of_products(): void
     {
         [$seller, $shop] = $this->sellerWithShop();
-        Product::factory()->count((int) config('shop.packages.free.max_products'))->create(['shop_id' => $shop->id]);
+        $max = (int) $shop->entitlement('max_products');
+        Product::factory()->count($max)->create(['shop_id' => $shop->id]);
 
         $this->actingAs($seller)
             ->post(route('seller.products.store'), $this->payload())
             ->assertSessionHas('error');
 
-        $this->assertSame((int) config('shop.packages.free.max_products'), $shop->products()->count());
+        $this->assertSame($max, $shop->products()->count());
     }
 
     public function test_seller_cannot_edit_another_shops_product(): void

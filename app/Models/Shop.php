@@ -21,6 +21,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'country', 'province', 'city', 'postal_code', 'street', 'building_number', 'apartment_number',
     'default_vat_rate',
     'bank_account_number', 'bank_account_holder', 'bank_name', 'bank_transfer_enabled',
+    'package', 'entitlements', 'subscription_ends_at', 'comped',
 ])]
 class Shop extends Model
 {
@@ -36,6 +37,9 @@ class Shop extends Model
             'status' => ShopStatus::class,
             'default_vat_rate' => VatRate::class,
             'bank_transfer_enabled' => 'boolean',
+            'entitlements' => 'array',
+            'subscription_ends_at' => 'datetime',
+            'comped' => 'boolean',
         ];
     }
 
@@ -158,5 +162,50 @@ class Shop extends Model
         return filled($this->bank_account_holder)
             ? $this->bank_account_holder
             : ($this->company_name ?: null);
+    }
+
+    /**
+     * Przypisuje pakiet i robi SNAPSHOT jego uprawnień: kopiuje `entitlements` z
+     * configu do kolumny sklepu. Od tej chwili sklep żyje własnym zestawem —
+     * późniejsza zmiana definicji pakietu w configu go nie dotyka („kupiłeś,
+     * masz"). Wołane przy rejestracji, zakupie/zmianie pakietu i z konsoli admina.
+     */
+    public function assignPackage(string $slug): void
+    {
+        $entitlements = config("shop.packages.{$slug}.entitlements");
+
+        if ($entitlements === null) {
+            throw new \InvalidArgumentException("Nieznany pakiet: {$slug}");
+        }
+
+        $this->package = $slug;
+        $this->entitlements = $entitlements;
+        $this->save();
+    }
+
+    /**
+     * Resolver uprawnień: aplikacja pyta „ile/czy X?", nie „jaki pakiet?".
+     * Wygrywa zapisany snapshot sklepu; gdy brak klucza (sklep bez snapshotu —
+     * legacy, albo nowe uprawnienie dodane po zakupie) — fallback do definicji
+     * aktualnego pakietu w configu jako siatka bezpieczeństwa.
+     */
+    public function entitlement(string $key): mixed
+    {
+        $snapshot = $this->entitlements ?? [];
+
+        if (array_key_exists($key, $snapshot)) {
+            return $snapshot[$key];
+        }
+
+        return config("shop.packages.{$this->package}.entitlements.{$key}");
+    }
+
+    /**
+     * Nazwa pakietu (PL, naklejka widoczna dla klienta) rozwiązywana ze sluga.
+     * Slug w bazie jest stały; nazwę można zmieniać w configu bez ruszania danych.
+     */
+    public function packageName(): string
+    {
+        return config("shop.packages.{$this->package}.name", $this->package);
     }
 }

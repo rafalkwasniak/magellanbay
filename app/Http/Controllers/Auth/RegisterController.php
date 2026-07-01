@@ -52,11 +52,15 @@ class RegisterController extends Controller
             $user->save();
 
             // Szkic sklepu — subdomena zaklepana, dane sklepu i publikacja przyjdą przy aktywacji.
-            $user->shop()->create([
+            $shop = $user->shop()->create([
                 'name' => $request->string('shop_name'),
                 'slug' => $request->string('slug'),
                 'status' => ShopStatus::Draft,
             ]);
+
+            // Snapshot pakietu domyślnego (darmowy „Kram") — sklep od startu ma pełny
+            // zestaw uprawnień zapisany u siebie (model snapshot, patrz config/shop.php).
+            $shop->assignPackage(config('shop.default_package'));
 
             $consents->record($user, $documents, $request->ip());
 

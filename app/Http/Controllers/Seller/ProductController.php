@@ -29,7 +29,7 @@ class ProductController extends Controller
                 ? $shop->products()->with('images', 'priceHistory')->latest()->paginate(12)->withQueryString()
                 : null,
             'total' => $shop ? $shop->products()->count() : 0,
-            'max' => (int) config('shop.packages.free.max_products'),
+            'max' => $shop ? (int) $shop->entitlement('max_products') : 0,
         ]);
     }
 
@@ -37,7 +37,7 @@ class ProductController extends Controller
     {
         if ($this->limitReached($request)) {
             return redirect()->route('seller.products.index')
-                ->with('error', $this->limitMessage());
+                ->with('error', $this->limitMessage($request));
         }
 
         return view('seller.products.form', [
@@ -50,7 +50,7 @@ class ProductController extends Controller
     public function store(ProductRequest $request, ProductImageService $images): RedirectResponse
     {
         if ($this->limitReached($request)) {
-            return redirect()->route('seller.products.index')->with('error', $this->limitMessage());
+            return redirect()->route('seller.products.index')->with('error', $this->limitMessage($request));
         }
 
         $product = $request->user()->shop->products()->create($this->data($request));
@@ -158,11 +158,13 @@ class ProductController extends Controller
     {
         $shop = $request->user()->shop;
 
-        return $shop !== null && $shop->products()->count() >= (int) config('shop.packages.free.max_products');
+        return $shop !== null && $shop->products()->count() >= (int) $shop->entitlement('max_products');
     }
 
-    private function limitMessage(): string
+    private function limitMessage(Request $request): string
     {
-        return 'Pakiet Free pozwala na maksymalnie '.config('shop.packages.free.max_products').' produktów.';
+        $shop = $request->user()->shop;
+
+        return 'Pakiet '.$shop->packageName().' pozwala na maksymalnie '.(int) $shop->entitlement('max_products').' produktów.';
     }
 }
