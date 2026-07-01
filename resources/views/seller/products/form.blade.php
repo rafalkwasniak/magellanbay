@@ -8,8 +8,10 @@
                 class="space-y-6" enctype="multipart/form-data" novalidate data-validate>
                 @csrf
 
-                {{-- Dane podstawowe --}}
-                <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                {{-- Dane podstawowe. relative z-20: podnosi kontekst tej karty ponad
+                     kartę zdjęć poniżej, żeby dropdown podpowiedzi tagów nie chował
+                     się pod nią (karty mają backdrop-blur = własny stacking context). --}}
+                <div class="relative z-20 rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
                     <h2 class="font-semibold text-stone-900">Dane produktu</h2>
                     <p class="mt-1 text-sm text-stone-500">Nazwa i opis widoczne dla klientów.</p>
 

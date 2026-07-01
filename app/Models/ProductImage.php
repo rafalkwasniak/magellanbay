@@ -14,6 +14,19 @@ use Illuminate\Support\Facades\Storage;
 class ProductImage extends Model
 {
     /**
+     * Plik zdjęcia znika z dysku razem z rekordem — jedno miejsce sprzątania dla
+     * każdej ścieżki usuwania (pojedyncze zdjęcie, twarde usunięcie produktu).
+     * UWAGA: kaskada FK na poziomie bazy NIE odpala tego zdarzenia, dlatego przy
+     * usuwaniu produktu kasujemy zdjęcia przez Eloquent (patrz Product::purge()).
+     */
+    protected static function booted(): void
+    {
+        static::deleting(function (ProductImage $image): void {
+            Storage::disk('public')->delete($image->path);
+        });
+    }
+
+    /**
      * @return BelongsTo<Product, $this>
      */
     public function product(): BelongsTo

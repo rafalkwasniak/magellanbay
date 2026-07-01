@@ -36,6 +36,7 @@ class ProductObserver
     public function deleted(Product $product): void
     {
         $this->sync($product);
+        $product->shop?->pruneOrphanTags();
     }
 
     public function restored(Product $product): void
@@ -46,6 +47,7 @@ class ProductObserver
     public function forceDeleted(Product $product): void
     {
         $this->sync($product);
+        $product->shop?->pruneOrphanTags();
     }
 
     private function sync(Product $product): void

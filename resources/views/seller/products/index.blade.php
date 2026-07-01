@@ -8,7 +8,7 @@
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <div>
                         <h2 class="font-semibold text-stone-900">Twoje produkty</h2>
-                        <p class="mt-1 text-sm text-stone-500">{{ $total }} / {{ $max }} w pakiecie Free</p>
+                        <p class="mt-1 text-sm text-stone-500">{{ $total }} / {{ $max }} w pakiecie {{ $shop?->packageName() }}</p>
                     </div>
                     @if ($total < $max)
                         <a href="{{ route('seller.products.create') }}"
@@ -128,10 +128,10 @@
             </div>
 
             <div class="rounded-3xl border border-amber-200/70 bg-amber-50/70 p-6 backdrop-blur">
-                <h2 class="font-semibold text-stone-900">Pakiet Free</h2>
+                <h2 class="font-semibold text-stone-900">Pakiet {{ $shop?->packageName() }}</h2>
                 <p class="mt-2 text-sm text-stone-600">
                     Wykorzystano <span class="font-medium text-amber-800">{{ $total }} z {{ $max }}</span> miejsc na produkty.
-                    Kolejne pakiety z większymi limitami pojawią się wkrótce.
+                    Wyższe pakiety dają więcej miejsca i dodatkowe funkcje.
                 </p>
             </div>
         </aside>

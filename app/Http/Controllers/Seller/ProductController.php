@@ -95,7 +95,13 @@ class ProductController extends Controller
     {
         $this->authorizeProduct($request, $product);
 
-        $product->delete();
+        if ($product->hasBeenOrdered()) {
+            // Zamówiony — zachowujemy dla historii zamówień i dokumentów (soft-delete).
+            $product->delete();
+        } else {
+            // Nigdy niezamówiony — trwałe usunięcie i sprzątanie (rekordy + pliki).
+            $product->purge();
+        }
 
         return redirect()->route('seller.products.index')->with('success', 'Produkt został usunięty.');
     }
@@ -129,16 +135,27 @@ class ProductController extends Controller
             ->all();
 
         $product->tags()->sync($ids);
+
+        // Edycja mogła odpiąć ostatni produkt od tagu — sprzątamy osierocone.
+        $shop->pruneOrphanTags();
     }
 
     /**
-     * Istniejące tagi sklepu — podpowiedzi do pola tagów.
+     * Podpowiedzi tagów: własne tagi sklepu mające ≥1 produkt, najczęściej używane
+     * na górze (przy remisie alfabetycznie). Osierocone tagi nie wchodzą.
      *
      * @return array<int, string>
      */
     private function tagSuggestions(Request $request): array
     {
-        return $request->user()->shop?->tags()->orderBy('name')->pluck('name')->all() ?? [];
+        return $request->user()->shop
+            ?->tags()
+            ->has('products')
+            ->withCount('products')
+            ->orderByDesc('products_count')
+            ->orderBy('name')
+            ->pluck('name')
+            ->all() ?? [];
     }
 
     /**

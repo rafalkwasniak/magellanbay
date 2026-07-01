@@ -68,6 +68,21 @@ class Shop extends Model
     }
 
     /**
+     * Usuwa osierocone tagi sklepu — takie, do których nie odnosi się już żaden
+     * produkt (również usunięty miękko). Tag powstaje przy produkcie i ma żyć tak
+     * długo, jak używa go choć jeden produkt; po usunięciu ostatniego znika, żeby
+     * nie zaśmiecał podpowiedzi ani chmury tagów. Kasowanie tagu usuwa też jego
+     * powiązania (kaskada FK product_tag). Trashed produkty liczą się jako
+     * używające tagu — tag zamówionego, miękko usuniętego produktu zostaje.
+     */
+    public function pruneOrphanTags(): void
+    {
+        $this->tags()
+            ->whereDoesntHave('products', fn ($query) => $query->withTrashed())
+            ->each(fn (Tag $tag) => $tag->delete());
+    }
+
+    /**
      * Host storefrontu: dedykowana domena, jeśli ustawiona, w przeciwnym razie
      * subdomena {slug}.{central_domain}.
      */
@@ -149,7 +164,15 @@ class Shop extends Model
             return null;
         }
 
-        return trim(chunk_split($this->bank_account_number, 4, ' '));
+        $number = $this->bank_account_number;
+
+        // Polski NRB (26 cyfr) czyta się jako: 2 cyfry kontrolne + grupy po 4
+        // (XX XXXX XXXX XXXX XXXX XXXX XXXX). Krótszy/nietypowy — grupujemy po 4 od startu.
+        if (strlen($number) < 3) {
+            return $number;
+        }
+
+        return substr($number, 0, 2).' '.trim(chunk_split(substr($number, 2), 4, ' '));
     }
 
     /**

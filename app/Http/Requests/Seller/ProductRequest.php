@@ -60,7 +60,7 @@ class ProductRequest extends FormRequest
             'tags' => ['nullable', 'string', 'max:500'],
             // Zdjęcia dodawane przy TWORZENIU produktu (na edycji galeria działa przez AJAX).
             'images' => ['nullable', 'array', 'max:8'],
-            'images.*' => ['image', 'mimes:jpeg,jpg,png,webp', 'max:4096'],
+            'images.*' => ['image', 'mimes:jpeg,jpg,png,webp', 'max:'.config('shop.product_images.max_upload_kb')],
         ];
     }
 
@@ -89,7 +89,7 @@ class ProductRequest extends FormRequest
             'images.max' => 'Możesz dodać maksymalnie 8 zdjęć.',
             'images.*.image' => 'Każdy plik musi być obrazem (PNG, JPG lub WebP).',
             'images.*.mimes' => 'Dozwolone formaty zdjęć: PNG, JPG, WebP.',
-            'images.*.max' => 'Zdjęcie może mieć maksymalnie 4 MB.',
+            'images.*.max' => 'Zdjęcie może mieć maksymalnie '.(int) (config('shop.product_images.max_upload_kb') / 1024).' MB.',
         ];
     }
 }

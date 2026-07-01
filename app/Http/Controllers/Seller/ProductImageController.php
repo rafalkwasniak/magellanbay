@@ -8,7 +8,6 @@ use App\Models\ProductImage;
 use App\Services\ProductImageService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * Zdjęcia produktu: dodawanie (z optymalizacją), ustawianie głównego i usuwanie.
@@ -24,12 +23,12 @@ class ProductImageController extends Controller
 
         $request->validate([
             'images' => ['required', 'array'],
-            'images.*' => ['image', 'mimes:jpeg,jpg,png,webp', 'max:4096'],
+            'images.*' => ['image', 'mimes:jpeg,jpg,png,webp', 'max:'.config('shop.product_images.max_upload_kb')],
         ], [
             'images.required' => 'Wybierz przynajmniej jedno zdjęcie.',
             'images.*.image' => 'Każdy plik musi być obrazem (PNG, JPG lub WebP).',
             'images.*.mimes' => 'Dozwolone formaty: PNG, JPG, WebP.',
-            'images.*.max' => 'Zdjęcie może mieć maksymalnie 4 MB.',
+            'images.*.max' => 'Zdjęcie może mieć maksymalnie '.(int) (config('shop.product_images.max_upload_kb') / 1024).' MB.',
         ]);
 
         $files = $request->file('images', []);
@@ -79,7 +78,7 @@ class ProductImageController extends Controller
     {
         $this->authorizeImage($request, $product, $image);
 
-        Storage::disk('public')->delete($image->path);
+        // Plik z dysku kasuje hook ProductImage::deleting (jedno miejsce sprzątania).
         $image->delete();
 
         return response()->json(['ok' => true]);

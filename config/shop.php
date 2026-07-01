@@ -82,11 +82,16 @@ return [
     | przezroczystość, więc trzymamy jeden format. Ponowne kodowanie usuwa metadane
     | (EXIF). `quality` 0–100: wyżej = lepsza jakość i większy plik.
     |
+    | `max_upload_kb` = górny limit ORYGINAŁU na wejściu (walidacja uploadu). Wysoki
+    | (20 MB), bo zdjęcia z telefonu bywają duże, a i tak zmniejszamy je do WebP i
+    | oryginał wyrzucamy — limit chroni tylko przed skrajnościami/pamięcią GD.
+    |
     */
 
     'product_images' => [
         'max_side' => (int) env('PRODUCT_IMAGE_MAX_SIDE', 1600),
         'quality' => (int) env('PRODUCT_IMAGE_QUALITY', 82),
+        'max_upload_kb' => 20480, // 20 MB
     ],
 
     /*

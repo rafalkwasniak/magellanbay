@@ -74,4 +74,46 @@ class ProductTagTest extends TestCase
         $this->assertSame(1, $tags->count());
         $this->assertSame('nowy', $tags->first()->name);
     }
+
+    public function test_deleting_product_prunes_its_orphan_tags(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+        $this->actingAs($seller)->post(route('seller.products.store'), $this->payload(['tags' => 'unikat']));
+        $product = $shop->products()->first();
+        $this->assertDatabaseHas('tags', ['shop_id' => $shop->id, 'name' => 'unikat']);
+
+        $this->actingAs($seller)->post(route('seller.products.destroy', $product));
+
+        // Ostatni produkt z tym tagiem zniknął → tag też (nie zaśmieca podpowiedzi).
+        $this->assertDatabaseMissing('tags', ['shop_id' => $shop->id, 'name' => 'unikat']);
+    }
+
+    public function test_shared_tag_survives_when_another_product_uses_it(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+        $this->actingAs($seller)->post(route('seller.products.store'), $this->payload(['name' => 'A', 'tags' => 'wspolny']));
+        $this->actingAs($seller)->post(route('seller.products.store'), $this->payload(['name' => 'B', 'tags' => 'wspolny']));
+        $productA = $shop->products()->where('name', 'A')->first();
+
+        $this->actingAs($seller)->post(route('seller.products.destroy', $productA));
+
+        // Produkt B nadal używa tagu → zostaje.
+        $this->assertDatabaseHas('tags', ['shop_id' => $shop->id, 'name' => 'wspolny']);
+    }
+
+    public function test_suggestions_show_popular_first_and_skip_orphans(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+        // „trek" na dwóch produktach, „mtb" na jednym → trek bardziej popularny.
+        $this->actingAs($seller)->post(route('seller.products.store'), $this->payload(['name' => 'A', 'tags' => 'trek, mtb']));
+        $this->actingAs($seller)->post(route('seller.products.store'), $this->payload(['name' => 'B', 'tags' => 'trek']));
+        // Tag bez żadnego produktu — nie powinien się podpowiadać.
+        $shop->tags()->create(['name' => 'sierota', 'slug' => 'sierota']);
+
+        $this->actingAs($seller)
+            ->get(route('seller.products.create'))
+            ->assertOk()
+            ->assertSeeInOrder(['trek', 'mtb']) // najczęściej używany na górze
+            ->assertDontSee('sierota');
+    }
 }

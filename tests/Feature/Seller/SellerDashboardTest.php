@@ -23,6 +23,44 @@ class SellerDashboardTest extends TestCase
             ->assertSee('0 / 5');
     }
 
+    public function test_panel_renders_mobile_navigation(): void
+    {
+        $seller = User::factory()->consented()->create();
+        Shop::factory()->create(['owner_id' => $seller->id]);
+
+        $this->actingAs($seller)
+            ->get(route('seller.dashboard'))
+            ->assertOk()
+            ->assertSee('data-mobile-nav-open', false)
+            ->assertSee('data-mobile-nav-panel', false);
+    }
+
+    public function test_unavailable_nav_items_show_soon_badge_not_dead_link(): void
+    {
+        $seller = User::factory()->consented()->create();
+        Shop::factory()->create(['owner_id' => $seller->id]);
+
+        $this->actingAs($seller)
+            ->get(route('seller.dashboard'))
+            ->assertOk()
+            ->assertSee('Zamówienia')
+            ->assertSee('wkrótce')
+            ->assertDontSee('href="#"', false);
+    }
+
+    public function test_dashboard_shows_package_and_product_usage(): void
+    {
+        $seller = User::factory()->consented()->create();
+        $shop = Shop::factory()->create(['owner_id' => $seller->id]);
+        Product::factory()->for($shop)->count(2)->create();
+
+        $this->actingAs($seller)
+            ->get(route('seller.dashboard'))
+            ->assertOk()
+            ->assertSee('Pakiet Kram')
+            ->assertSee('2 / 24 produktów');
+    }
+
     public function test_completed_shop_shows_full_setup_progress(): void
     {
         $seller = User::factory()->consented()->create();

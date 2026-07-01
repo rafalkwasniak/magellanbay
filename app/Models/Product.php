@@ -81,6 +81,29 @@ class Product extends Model
     }
 
     /**
+     * Czy produkt wystąpił kiedykolwiek w zamówieniu. Na teraz zawsze false —
+     * modułu zamówień jeszcze nie ma. Gdy powstanie, wystarczy tu zwrócić
+     * `$this->orderItems()->exists()` — reszta logiki usuwania nie drgnie.
+     */
+    public function hasBeenOrdered(): bool
+    {
+        return false; // TODO: z modułem zamówień → $this->orderItems()->exists();
+    }
+
+    /**
+     * Trwałe usunięcie produktu wraz ze sprzątaniem — dla produktów, które NIGDY
+     * nie były zamówione (bez wartości historycznej; typowo śmieci po testach).
+     * Zdjęcia kasujemy przez Eloquent, by odpalił się hook ProductImage::deleting
+     * usuwający pliki z dysku (kaskada FK usuwa tylko wiersze). forceDelete sprząta
+     * następnie wiersze zdjęć, historii cen i powiązań tagów (kaskada FK).
+     */
+    public function purge(): void
+    {
+        $this->images()->get()->each->delete();
+        $this->forceDelete();
+    }
+
+    /**
      * Historia cen w kolejności chronologicznej (najstarsza pierwsza).
      *
      * @return HasMany<ProductPriceHistory, $this>

@@ -187,6 +187,16 @@ class ShopProfileTest extends TestCase
         $this->assertNull($shop->fresh()->bank_account_number);
     }
 
+    public function test_bank_account_number_is_formatted_polish_nrb_style(): void
+    {
+        [, $shop] = $this->sellerWithShop([
+            'bank_account_number' => '43114020040000350275155558',
+        ]);
+
+        // NRB: 2 cyfry kontrolne + grupy po 4.
+        $this->assertSame('43 1140 2004 0000 3502 7515 5558', $shop->formattedBankAccountNumber());
+    }
+
     public function test_bank_account_holder_falls_back_to_company_name(): void
     {
         [, $shop] = $this->sellerWithShop([

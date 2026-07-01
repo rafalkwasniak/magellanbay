@@ -45,6 +45,16 @@ class ProductTest extends TestCase
         $this->actingAs($seller)->get(route('seller.products.index'))->assertOk();
     }
 
+    public function test_products_list_shows_real_package_name_not_free(): void
+    {
+        [$seller] = $this->sellerWithShop();
+
+        $this->actingAs($seller)
+            ->get(route('seller.products.index'))
+            ->assertSee('pakiecie Kram')
+            ->assertDontSee('pakiecie Free');
+    }
+
     public function test_new_product_form_prefills_shop_default_vat(): void
     {
         $seller = User::factory()->consented()->create();
@@ -156,15 +166,38 @@ class ProductTest extends TestCase
         $this->actingAs($seller)->get(route('seller.products.edit', $otherProduct))->assertForbidden();
     }
 
-    public function test_seller_can_delete_own_product(): void
+    public function test_deleting_unordered_product_purges_it_completely(): void
     {
+        Storage::fake('public');
         [$seller, $shop] = $this->sellerWithShop();
         $product = Product::factory()->create(['shop_id' => $shop->id]);
+
+        // Zdjęcie z plikiem na dysku. Historia cen powstaje przez observer przy create.
+        Storage::disk('public')->put('products/purge.webp', 'x');
+        $image = $product->images()->create(['path' => 'products/purge.webp', 'position' => 0]);
+        $this->assertDatabaseHas('product_price_history', ['product_id' => $product->id]);
 
         $this->actingAs($seller)
             ->post(route('seller.products.destroy', $product))
             ->assertRedirect(route('seller.products.index'));
 
-        $this->assertSoftDeleted('products', ['id' => $product->id]);
+        // Produkt niezamówiony znika CAŁKOWICIE — rekord, zdjęcia, historia cen i plik.
+        $this->assertDatabaseMissing('products', ['id' => $product->id]);
+        $this->assertDatabaseMissing('product_images', ['id' => $image->id]);
+        $this->assertDatabaseMissing('product_price_history', ['product_id' => $product->id]);
+        Storage::disk('public')->assertMissing('products/purge.webp');
+    }
+
+    public function test_deleting_product_hides_the_shop_when_it_was_the_only_active_one(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+        $product = Product::factory()->create(['shop_id' => $shop->id, 'is_active' => true]);
+        $shop->refresh();
+        $this->assertTrue($shop->isVisible());
+
+        $this->actingAs($seller)->post(route('seller.products.destroy', $product));
+
+        // Auto-widoczność: 0 aktywnych produktów → sklep wraca do szkicu.
+        $this->assertFalse($shop->fresh()->isVisible());
     }
 }

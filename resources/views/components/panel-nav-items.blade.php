@@ -1,0 +1,27 @@
+@props(['items'])
+
+{{-- Pozycje menu panelu. Pozycja z trasą = klikalny link (podświetla aktywną
+     stronę); bez trasy = funkcja jeszcze niegotowa — nie-klikalna, wyszarzona,
+     z plakietką „wkrótce" (zamiast ślepego linku #). Używane w sidebarze i w
+     wysuwanym menu mobilnym, żeby oba miały identyczne zachowanie. --}}
+@foreach ($items as $item)
+    @if ($item['route'])
+        @php($active = request()->routeIs($item['route']))
+        <a href="{{ route($item['route']) }}"
+           @class([
+               'flex items-center gap-3 rounded-2xl px-4 py-2.5 transition',
+               'bg-white font-medium text-stone-900 shadow-sm' => $active,
+               'text-stone-500 hover:bg-white/60' => ! $active,
+           ])>
+            <span class="text-base leading-none">{{ $item['icon'] }}</span>
+            {{ $item['label'] }}
+        </a>
+    @else
+        <span class="flex cursor-default select-none items-center gap-3 rounded-2xl px-4 py-2.5 text-stone-400"
+              title="Wkrótce dostępne">
+            <span class="text-base leading-none opacity-60">{{ $item['icon'] }}</span>
+            <span class="flex-1">{{ $item['label'] }}</span>
+            <span class="rounded-full bg-stone-200/70 px-2 py-0.5 text-[10px] font-medium text-stone-500">wkrótce</span>
+        </span>
+    @endif
+@endforeach
