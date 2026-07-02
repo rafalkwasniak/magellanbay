@@ -194,7 +194,7 @@ class ProductController extends Controller
         $shop = $request->attributes->get('shop');
 
         $model = $shop->products()
-            ->with(['images', 'priceHistory'])
+            ->with(['images', 'priceHistory', 'tags'])
             ->find((int) $product);
 
         abort_if($model === null, 404);
@@ -215,6 +215,13 @@ class ProductController extends Controller
             'shop' => $shop,
             'product' => $model,
             'back' => $this->safeBack($request->query('powrot')),
+            // Tagi produktu jako klikalne wejścia do przefiltrowanego wykazu.
+            'productTags' => $model->tags->map(fn ($tag): array => [
+                'name' => $tag->name,
+                'count' => null,
+                'url' => '/produkty?tagi='.$tag->slug,
+                'active' => false,
+            ])->all(),
         ]);
     }
 

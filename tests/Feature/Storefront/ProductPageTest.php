@@ -85,6 +85,19 @@ class ProductPageTest extends TestCase
             ->assertSee('Ukryty Skarb');
     }
 
+    public function test_product_page_shows_clickable_tags(): void
+    {
+        $shop = Shop::factory()->active()->create();
+        $product = $this->product($shop, ['name' => 'Rower Szosowy']);
+        $tag = $shop->tags()->create(['name' => 'madone', 'slug' => 'madone']);
+        $product->tags()->attach($tag->id);
+
+        $this->get($this->host($shop).$product->storefrontPath())
+            ->assertOk()
+            ->assertSee('madone')
+            ->assertSee('/produkty?tagi=madone', false);
+    }
+
     public function test_back_link_returns_to_filtered_listing(): void
     {
         $shop = Shop::factory()->active()->create();

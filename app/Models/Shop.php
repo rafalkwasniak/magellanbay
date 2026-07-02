@@ -70,6 +70,23 @@ class Shop extends Model
     }
 
     /**
+     * Tagi sklepu mające przynajmniej jeden aktywny produkt, z liczbą tych
+     * produktów (`products_count`), najpopularniejsze najpierw. Wejście do
+     * przeglądania po tagach (główna, chmura na wykazie bez filtra).
+     *
+     * @return \Illuminate\Support\Collection<int, Tag>
+     */
+    public function activeTagsByPopularity(): \Illuminate\Support\Collection
+    {
+        return $this->tags()
+            ->whereHas('products', fn ($query) => $query->where('is_active', true))
+            ->withCount(['products' => fn ($query) => $query->where('is_active', true)])
+            ->orderByDesc('products_count')
+            ->orderBy('name')
+            ->get();
+    }
+
+    /**
      * Usuwa osierocone tagi sklepu — takie, do których nie odnosi się już żaden
      * produkt (również usunięty miękko). Tag powstaje przy produkcie i ma żyć tak
      * długo, jak używa go choć jeden produkt; po usunięciu ostatniego znika, żeby

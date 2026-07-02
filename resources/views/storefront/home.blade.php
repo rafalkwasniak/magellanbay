@@ -79,5 +79,11 @@
                 </a>
             </div>
         @endif
+
+        @if (count($tagCloud))
+            <div class="st-border mt-16 border-t pt-8 text-center">
+                <x-storefront.tag-cloud :tags="$tagCloud" label="Przeglądaj po tagach:" :center="true" />
+            </div>
+        @endif
     </main>
 </x-layouts.storefront>

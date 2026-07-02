@@ -97,6 +97,35 @@ class HomeProductsTest extends TestCase
         $this->assertSame($limit, $shown);
     }
 
+    public function test_home_shows_tag_cloud_linking_to_listing(): void
+    {
+        $shop = Shop::factory()->active()->create();
+        $product = $this->promote($shop, 1)->first();
+        $tag = $shop->tags()->create(['name' => 'Komunia', 'slug' => 'komunia']);
+        $product->tags()->attach($tag->id);
+
+        $this->get($this->url($shop))
+            ->assertOk()
+            ->assertSee('Przeglądaj po tagach')
+            ->assertSee('Komunia')
+            ->assertSee('/produkty?tagi=komunia', false);
+    }
+
+    public function test_home_tag_cloud_skips_tags_without_active_products(): void
+    {
+        $shop = Shop::factory()->active()->create();
+        $this->promote($shop, 1); // aktywny produkt bez tagu — chmura pusta
+
+        $dead = Product::factory()->create(['shop_id' => $shop->id, 'is_active' => false]);
+        $tag = $shop->tags()->create(['name' => 'martwy', 'slug' => 'martwy']);
+        $dead->tags()->attach($tag->id);
+
+        $this->get($this->url($shop))
+            ->assertOk()
+            ->assertDontSee('Przeglądaj po tagach')
+            ->assertDontSee('martwy');
+    }
+
     public function test_falls_back_to_active_products_when_none_promoted(): void
     {
         $shop = Shop::factory()->active()->create();

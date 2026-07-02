@@ -27,7 +27,26 @@ class HomeController extends Controller
             'shop' => $shop,
             'products' => $this->homepageProducts($shop),
             'totalProducts' => $shop->products()->where('is_active', true)->count(),
+            'tagCloud' => $this->tagLinks($shop),
         ]);
+    }
+
+    /**
+     * Chmura tagów na główną — wejścia do przefiltrowanego wykazu. Każda pigułka
+     * prowadzi do `/produkty?tagi=<slug>` (bez licznika, bez stanu aktywnego).
+     *
+     * @return list<array{name: string, count: null, url: string, active: bool}>
+     */
+    private function tagLinks(Shop $shop): array
+    {
+        return $shop->activeTagsByPopularity()
+            ->map(fn ($tag): array => [
+                'name' => $tag->name,
+                'count' => null,
+                'url' => '/produkty?tagi='.$tag->slug,
+                'active' => false,
+            ])
+            ->all();
     }
 
     /**

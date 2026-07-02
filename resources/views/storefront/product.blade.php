@@ -47,6 +47,8 @@
                 @if (filled($product->description))
                     <div class="st-border mt-8 border-t pt-6 leading-relaxed opacity-90">{!! $product->description !!}</div>
                 @endif
+
+                <x-storefront.tag-cloud :tags="$productTags" label="Tagi:" />
             </div>
         </div>
     </div>

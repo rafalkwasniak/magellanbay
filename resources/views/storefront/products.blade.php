@@ -3,22 +3,7 @@
         <a href="/" class="text-sm opacity-70 transition hover:opacity-100">← {{ $shop->name }}</a>
         <h1 class="st-brand mt-4 text-3xl font-bold tracking-tight">Wszystkie produkty</h1>
 
-        @if ($tagCloud)
-            <div class="mt-6 flex flex-wrap items-center gap-2 text-sm">
-                <span class="opacity-60">Filtruj:</span>
-                @foreach ($tagCloud as $tag)
-                    <a href="{{ $tag['url'] }}" rel="nofollow"
-                        class="{{ $tag['active'] ? 'st-btn font-medium' : 'st-border border opacity-80 hover:opacity-100' }} inline-flex items-center gap-1 rounded-full px-3 py-1 transition">
-                        @if ($tag['active'])<span aria-hidden="true">×</span>@endif
-                        {{ $tag['name'] }}
-                        @if (! is_null($tag['count']))<span class="opacity-50">{{ $tag['count'] }}</span>@endif
-                    </a>
-                @endforeach
-                @if ($hasFilters)
-                    <a href="{{ $clearUrl }}" rel="nofollow" class="opacity-60 underline transition hover:opacity-100">Wyczyść</a>
-                @endif
-            </div>
-        @endif
+        <x-storefront.tag-cloud :tags="$tagCloud" :clearUrl="$hasFilters ? $clearUrl : null" />
 
         @if ($products->isEmpty())
             @if ($hasFilters)
