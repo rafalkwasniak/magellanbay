@@ -96,6 +96,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Wyróżnienie na stronie głównej sklepu
+    |--------------------------------------------------------------------------
+    |
+    | Ile produktów sprzedawca może wyróżnić na stronie głównej (`show_on_homepage`).
+    | Limit z premedytacją: strona główna ma być witryną „wow", a nie kopią listingu
+    | — bez sufitu ktoś wrzuciłby na główną cały katalog i zniknąłby efekt. Sufit
+    | domyka też liczbę sensownych układów głównej (hero/witryna dla ≤6). Dostępne
+    | dla wszystkich pakietów (wygląd/kolory nie są uprawnieniem).
+    |
+    */
+
+    'homepage_promoted_limit' => 6,
+
+    /*
+    |--------------------------------------------------------------------------
     | Pakiety (abonament roczny)
     |--------------------------------------------------------------------------
     |

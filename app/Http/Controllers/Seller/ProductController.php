@@ -44,6 +44,7 @@ class ProductController extends Controller
             'product' => new Product,
             'tagSuggestions' => $this->tagSuggestions($request),
             'defaultVat' => $this->defaultVat($request),
+            'homepage' => $this->homepageInfo($request),
         ]);
     }
 
@@ -75,6 +76,7 @@ class ProductController extends Controller
             'product' => $product,
             'tagSuggestions' => $this->tagSuggestions($request),
             'defaultVat' => $this->defaultVat($request),
+            'homepage' => $this->homepageInfo($request),
         ]);
     }
 
@@ -169,6 +171,22 @@ class ProductController extends Controller
     private function authorizeProduct(Request $request, Product $product): void
     {
         abort_unless($product->shop_id === $request->user()->shop?->id, 403);
+    }
+
+    /**
+     * Zajętość miejsc na stronie głównej (ile wyróżnionych / sufit) — do wskazówki
+     * na formularzu produktu. Sufit dla wszystkich pakietów (config/shop.php).
+     *
+     * @return array{count: int, limit: int}
+     */
+    private function homepageInfo(Request $request): array
+    {
+        $shop = $request->user()->shop;
+
+        return [
+            'count' => $shop ? $shop->products()->where('show_on_homepage', true)->count() : 0,
+            'limit' => (int) config('shop.homepage_promoted_limit'),
+        ];
     }
 
     private function limitReached(Request $request): bool

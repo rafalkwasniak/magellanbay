@@ -65,6 +65,41 @@ class ProductRequest extends FormRequest
     }
 
     /**
+     * Limit wyróżnień na stronie głównej — reguła zależna od stanu sklepu, więc
+     * poza tablicą `rules()`. Blokujemy dopiero PRZEKROCZENIE (przy próbie
+     * wyróżnienia ponad sufit), a nie odznaczanie. Na edycji pomijamy sam produkt,
+     * żeby ponowny zapis już-wyróżnionego nie liczył go podwójnie.
+     */
+    public function withValidator(\Illuminate\Validation\Validator $validator): void
+    {
+        $validator->after(function (\Illuminate\Validation\Validator $validator): void {
+            if (! $this->boolean('show_on_homepage')) {
+                return;
+            }
+
+            $shop = $this->user()?->shop;
+            if ($shop === null) {
+                return;
+            }
+
+            $limit = (int) config('shop.homepage_promoted_limit');
+            $current = $this->route('product');
+
+            $promoted = $shop->products()
+                ->where('show_on_homepage', true)
+                ->when($current, fn ($query) => $query->whereKeyNot($current->getKey()))
+                ->count();
+
+            if ($promoted >= $limit) {
+                $validator->errors()->add(
+                    'show_on_homepage',
+                    'Na stronie głównej możesz wyróżnić maksymalnie '.$limit.' produktów. Odznacz inny, aby zwolnić miejsce.',
+                );
+            }
+        });
+    }
+
+    /**
      * @return array<string, string>
      */
     public function attributes(): array

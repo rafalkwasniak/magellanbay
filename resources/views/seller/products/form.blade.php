@@ -183,8 +183,17 @@
                                 @checked(old('show_on_homepage', $product->show_on_homepage))>
                             <span>
                                 <span class="font-medium text-stone-800">Wyróżnij na stronie głównej</span> — pokaż produkt na stronie głównej sklepu.
+                                @isset($homepage)
+                                    @php($slotsFull = $homepage['count'] >= $homepage['limit'] && ! old('show_on_homepage', $product->show_on_homepage))
+                                    <span class="mt-1 block text-xs {{ $slotsFull ? 'text-rose-600' : 'text-stone-400' }}">
+                                        Zajęte {{ $homepage['count'] }} z {{ $homepage['limit'] }} miejsc na stronie głównej.@if ($slotsFull) Odznacz inny produkt, aby zwolnić miejsce.@endif
+                                    </span>
+                                @endisset
                             </span>
                         </label>
+                        @error('show_on_homepage')
+                            <p class="text-sm text-rose-600">{{ $message }}</p>
+                        @enderror
                     </div>
                 </div>
 

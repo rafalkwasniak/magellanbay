@@ -200,4 +200,58 @@ class ProductTest extends TestCase
         // Auto-widoczność: 0 aktywnych produktów → sklep wraca do szkicu.
         $this->assertFalse($shop->fresh()->isVisible());
     }
+
+    public function test_promoting_within_homepage_limit_succeeds(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+        Product::factory()->count(config('shop.homepage_promoted_limit') - 1)
+            ->create(['shop_id' => $shop->id, 'show_on_homepage' => true]);
+
+        $this->actingAs($seller)
+            ->post(route('seller.products.store'), $this->payload([
+                'name' => 'Ostatni wyróżniony',
+                'show_on_homepage' => '1',
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $this->assertTrue(
+            $shop->products()->where('name', 'Ostatni wyróżniony')->where('show_on_homepage', true)->exists(),
+        );
+    }
+
+    public function test_cannot_promote_more_than_homepage_limit(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+        $limit = config('shop.homepage_promoted_limit');
+        Product::factory()->count($limit)->create(['shop_id' => $shop->id, 'show_on_homepage' => true]);
+
+        $this->actingAs($seller)
+            ->post(route('seller.products.store'), $this->payload([
+                'name' => 'Za dużo wyróżniony',
+                'show_on_homepage' => '1',
+            ]))
+            ->assertSessionHasErrors('show_on_homepage');
+
+        // Walidacja zablokowała zapis — liczba wyróżnionych bez zmian.
+        $this->assertSame($limit, $shop->products()->where('show_on_homepage', true)->count());
+    }
+
+    public function test_already_promoted_product_can_be_saved_when_at_limit(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+        $limit = config('shop.homepage_promoted_limit');
+        $target = Product::factory()->count($limit)
+            ->create(['shop_id' => $shop->id, 'show_on_homepage' => true])
+            ->first();
+
+        // Ponowny zapis już-wyróżnionego przy pełnym limicie — pomija sam siebie.
+        $this->actingAs($seller)
+            ->post(route('seller.products.update', $target), $this->payload([
+                'name' => $target->name,
+                'show_on_homepage' => '1',
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $this->assertTrue($target->fresh()->show_on_homepage);
+    }
 }
