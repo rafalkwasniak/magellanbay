@@ -71,5 +71,13 @@
                     @endforeach
                 </section>
         @endswitch
+
+        @if ($totalProducts > $products->count())
+            <div class="mt-12 text-center">
+                <a href="/produkty" class="st-btn inline-block rounded-full px-8 py-3 text-sm font-semibold shadow-sm transition hover:brightness-105">
+                    Zobacz wszystkie produkty
+                </a>
+            </div>
+        @endif
     </main>
 </x-layouts.storefront>

@@ -173,5 +173,6 @@ Route::domain('{shop}.'.config('tenancy.central_domain'))
     ->middleware('tenant')
     ->group(function () {
         Route::get('/', [StorefrontHome::class, 'show'])->name('storefront.home');
+        Route::get('/produkty', [StorefrontProduct::class, 'index'])->name('storefront.products');
         Route::get('/produkt/{product}', [StorefrontProduct::class, 'show'])->name('storefront.product');
     });

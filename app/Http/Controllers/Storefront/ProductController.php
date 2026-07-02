@@ -16,6 +16,29 @@ use Illuminate\Http\Request;
  */
 class ProductController extends Controller
 {
+    /**
+     * Wykaz produktów sklepu — pełny katalog aktywnych produktów (paginowany).
+     * Sklep-szkic widzi publicznie tylko ekran „już wkrótce"; podgląd dla
+     * właściciela/administratora. Kafel = ten sam klocek co na głównej.
+     */
+    public function index(Request $request): View
+    {
+        $shop = $request->attributes->get('shop');
+
+        if (! $shop->isVisible() && ! $shop->canBePreviewedBy($request->user())) {
+            return view('storefront.coming-soon', ['shop' => $shop]);
+        }
+
+        $products = $shop->products()
+            ->where('is_active', true)
+            ->with('images')
+            ->latest()
+            ->paginate(12)
+            ->withQueryString();
+
+        return view('storefront.products', ['shop' => $shop, 'products' => $products]);
+    }
+
     public function show(Request $request, string $product): View|RedirectResponse
     {
         $shop = $request->attributes->get('shop');
