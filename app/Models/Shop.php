@@ -190,6 +190,16 @@ class Shop extends Model
     }
 
     /**
+     * Czy dany użytkownik może oglądać niepubliczną treść sklepu (sklep-szkic
+     * przed publikacją, nieaktywny produkt): tylko właściciel i administrator.
+     * Gość i obcy sprzedawca — nie. Wspólny predykat bramek storefrontu.
+     */
+    public function canBePreviewedBy(?User $user): bool
+    {
+        return $user !== null && ($user->id === $this->owner_id || $user->isAdmin());
+    }
+
+    /**
      * Slug aktywnego szablonu storefrontu, z siatką bezpieczeństwa: gdy sklep nie
      * ma wyboru albo trzyma slug, którego już nie ma w configu (szablon wycofany),
      * spadamy na domyślny szablon. Kod pyta o motyw przez te metody, nie o kolumnę.

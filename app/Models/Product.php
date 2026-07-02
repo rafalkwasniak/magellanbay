@@ -73,6 +73,16 @@ class Product extends Model
     }
 
     /**
+     * Kanoniczny adres produktu na storefroncie: /produkt/{id}-{slug} (styl
+     * PrestaShop — szukamy po ID, slug to ozdoba SEO). Względny, bo storefront
+     * to jeden host; unika parametru {shop} przy generowaniu URLi.
+     */
+    public function storefrontPath(): string
+    {
+        return '/produkt/'.$this->id.'-'.$this->slug;
+    }
+
+    /**
      * @return BelongsToMany<Tag, $this>
      */
     public function tags(): BelongsToMany

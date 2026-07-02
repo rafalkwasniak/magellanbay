@@ -19,20 +19,35 @@ class HomeController extends Controller
     {
         $shop = $request->attributes->get('shop');
 
-        if (! $shop->isVisible() && ! $this->canPreview($request, $shop)) {
+        if (! $shop->isVisible() && ! $shop->canBePreviewedBy($request->user())) {
             return view('storefront.coming-soon', ['shop' => $shop]);
         }
 
-        return view('storefront.home', ['shop' => $shop]);
+        return view('storefront.home', [
+            'shop' => $shop,
+            'products' => $this->homepageProducts($shop),
+        ]);
     }
 
     /**
-     * Kto może podejrzeć sklep-szkic przed publikacją: jego właściciel i admin.
+     * Produkty na stronę główną: wyróżnione przez sprzedawcę (`show_on_homepage`),
+     * do sufitu z configu ([[limit 6]]). Gdy żaden nie wyróżniony — najnowsze
+     * aktywne jako sensowna domyślna witryna (główna nigdy nie jest pusta).
+     * Liczba wyników steruje układem głównej (1/2/3 mają dedykowane aranżacje).
+     *
+     * @return \Illuminate\Support\Collection<int, \App\Models\Product>
      */
-    private function canPreview(Request $request, Shop $shop): bool
+    private function homepageProducts(Shop $shop): \Illuminate\Support\Collection
     {
-        $user = $request->user();
+        $limit = (int) config('shop.homepage_promoted_limit');
 
-        return $user !== null && ($user->id === $shop->owner_id || $user->isAdmin());
+        $active = $shop->products()->where('is_active', true)->with('images');
+
+        $promoted = (clone $active)->where('show_on_homepage', true)
+            ->latest()->take($limit)->get();
+
+        return $promoted->isNotEmpty()
+            ? $promoted
+            : $active->latest()->take($limit)->get();
     }
 }
