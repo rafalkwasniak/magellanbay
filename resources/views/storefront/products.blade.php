@@ -11,7 +11,7 @@
                         class="{{ $tag['active'] ? 'st-btn font-medium' : 'st-border border opacity-80 hover:opacity-100' }} inline-flex items-center gap-1 rounded-full px-3 py-1 transition">
                         @if ($tag['active'])<span aria-hidden="true">×</span>@endif
                         {{ $tag['name'] }}
-                        <span class="opacity-50">{{ $tag['count'] }}</span>
+                        @if (! is_null($tag['count']))<span class="opacity-50">{{ $tag['count'] }}</span>@endif
                     </a>
                 @endforeach
                 @if ($hasFilters)

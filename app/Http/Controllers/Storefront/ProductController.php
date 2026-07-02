@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Strona pojedynczego produktu na storefroncie. URL w stylu PrestaShop:
@@ -43,24 +44,17 @@ class ProductController extends Controller
         $sortKey = $this->resolveSort($request->query('sortowanie'));
         $sort = self::SORTS[$sortKey];
 
-        // Tagi sklepu z liczbą aktywnych produktów; najpopularniejsze najpierw.
-        $shopTags = $shop->tags()
-            ->withCount(['products' => fn ($q) => $q->where('is_active', true)])
-            ->orderByDesc('products_count')
-            ->orderBy('name')
-            ->get();
-
         // Wybrane tagi z URL (?tagi=a,b) — tylko realne tagi tego sklepu.
-        $selected = $this->resolveTags($request->query('tagi'), $shopTags->pluck('slug'));
+        $selected = $this->resolveTags($request->query('tagi'), $shop->tags()->pluck('slug'));
 
-        $query = $shop->products()->where('is_active', true)->with('images');
-
-        // Filtr AND: produkt musi mieć KAŻDY z wybranych tagów.
+        // Zbiór wynikowy: aktywne produkty mające KAŻDY z wybranych tagów (AND).
+        $filtered = $shop->products()->where('is_active', true);
         foreach ($selected as $slug) {
-            $query->whereHas('tags', fn ($q) => $q->where('tags.slug', $slug));
+            $filtered->whereHas('tags', fn ($q) => $q->where('tags.slug', $slug));
         }
 
-        $products = $query
+        $products = $filtered->clone()
+            ->with('images')
             ->orderBy($sort['column'], $sort['direction'])
             ->paginate($shop->productsPerPage())
             ->withQueryString();
@@ -70,7 +64,7 @@ class ProductController extends Controller
             'products' => $products,
             'sortKey' => $sortKey,
             'sortOptions' => $this->sortOptions($sortKey, $selected->all()),
-            'tagCloud' => $this->tagCloud($shopTags, $selected, $sortKey),
+            'tagCloud' => $this->tagCloud($shop, $filtered->clone(), $selected, $sortKey),
             'hasFilters' => $selected->isNotEmpty(),
             'clearUrl' => $this->listUrl(['sortowanie' => $sortKey]),
         ]);
@@ -94,35 +88,58 @@ class ProductController extends Controller
     }
 
     /**
-     * Chmura tagów dla widoku: równe pigułki, najpopularniejsze najpierw.
-     * Pokazujemy tag mający aktywne produkty albo aktualnie wybrany (żeby dało
-     * się go odznaczyć, nawet gdy wynik jest pusty). URL każdej pigułki
-     * PRZEŁĄCZA jej tag, zachowując resztę filtrów i sort.
+     * Chmura tagów fasetowa. Najpierw wybrane tagi (widoczne, klik je zdejmuje),
+     * potem tagi WSPÓŁWYSTĘPUJĄCE w bieżącym zbiorze wyników — czyli takie, które
+     * realnie go zawężają; martwe kombinacje (0 produktów) w ogóle nie wchodzą.
+     * Liczba przy kandydacie = ile z aktualnych produktów też ma dany tag.
      *
-     * @param  \Illuminate\Support\Collection<int, \App\Models\Tag>  $shopTags
+     * @param  \Illuminate\Database\Eloquent\Builder  $filtered  zapytanie bieżącego zbioru (przed paginacją)
      * @param  \Illuminate\Support\Collection<int, string>  $selected
-     * @return list<array{name: string, count: int, url: string, active: bool}>
+     * @return list<array{name: string, count: int|null, url: string, active: bool}>
      */
-    private function tagCloud($shopTags, $selected, string $sortKey): array
+    private function tagCloud($shop, $filtered, $selected, string $sortKey): array
     {
-        return $shopTags
-            ->filter(fn ($tag): bool => $tag->products_count > 0 || $selected->contains($tag->slug))
-            ->map(function ($tag) use ($selected, $sortKey): array {
-                $active = $selected->contains($tag->slug);
+        $cloud = [];
 
-                $toggled = $active
-                    ? $selected->reject(fn (string $s): bool => $s === $tag->slug)->values()
-                    : $selected->merge([$tag->slug])->values();
+        // Wybrane tagi — na początku, jako aktywne pigułki (klik = usuń).
+        $names = $shop->tags()->whereIn('slug', $selected->all())->pluck('name', 'slug');
+        foreach ($selected as $slug) {
+            $cloud[] = [
+                'name' => $names[$slug] ?? $slug,
+                'count' => null,
+                'url' => $this->listUrl([
+                    'sortowanie' => $sortKey,
+                    'tagi' => $selected->reject(fn (string $s): bool => $s === $slug)->values()->all(),
+                ]),
+                'active' => true,
+            ];
+        }
 
-                return [
-                    'name' => $tag->name,
-                    'count' => (int) $tag->products_count,
-                    'url' => $this->listUrl(['sortowanie' => $sortKey, 'tagi' => $toggled->all()]),
-                    'active' => $active,
-                ];
-            })
-            ->values()
-            ->all();
+        // Kandydaci: tagi obecne na produktach z bieżącego zbioru (poza wybranymi),
+        // z liczbą współwystąpień; najsilniej zawężające najpierw.
+        $facets = DB::table('product_tag')
+            ->join('tags', 'tags.id', '=', 'product_tag.tag_id')
+            ->whereIn('product_tag.product_id', $filtered->select('products.id'))
+            ->when($selected->isNotEmpty(), fn ($q) => $q->whereNotIn('tags.slug', $selected->all()))
+            ->groupBy('tags.slug', 'tags.name')
+            ->select('tags.slug', 'tags.name', DB::raw('COUNT(DISTINCT product_tag.product_id) as cnt'))
+            ->orderByDesc('cnt')
+            ->orderBy('tags.name')
+            ->get();
+
+        foreach ($facets as $facet) {
+            $cloud[] = [
+                'name' => $facet->name,
+                'count' => (int) $facet->cnt,
+                'url' => $this->listUrl([
+                    'sortowanie' => $sortKey,
+                    'tagi' => $selected->merge([$facet->slug])->values()->all(),
+                ]),
+                'active' => false,
+            ];
+        }
+
+        return $cloud;
     }
 
     /**

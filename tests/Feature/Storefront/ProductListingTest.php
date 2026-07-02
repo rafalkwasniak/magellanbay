@@ -216,6 +216,30 @@ class ProductListingTest extends TestCase
             ->assertSee('page=2', false);
     }
 
+    public function test_tag_cloud_narrows_to_cooccurring_tags(): void
+    {
+        $shop = Shop::factory()->active()->create();
+        $alpha = Product::factory()->create(['shop_id' => $shop->id, 'is_active' => true, 'name' => 'Alpha']);
+        $beta = Product::factory()->create(['shop_id' => $shop->id, 'is_active' => true, 'name' => 'Beta']);
+        $gamma = Product::factory()->create(['shop_id' => $shop->id, 'is_active' => true, 'name' => 'Gamma']);
+
+        $this->tagProducts($shop, 'trek', [$alpha, $beta]);
+        $this->tagProducts($shop, 'slx', [$alpha]);   // współwystępuje z trek
+        $this->tagProducts($shop, 'sly', [$beta]);    // współwystępuje z trek
+        $this->tagProducts($shop, 'rower', [$gamma]);  // NIE współwystępuje z trek
+
+        // Bez filtra — wszystkie tagi w chmurze.
+        $this->get($this->host($shop).'/produkty')
+            ->assertOk()->assertSee('rower');
+
+        // Po kliknięciu „trek" — tylko tagi realnie z nim występujące; „rower" znika.
+        $this->get($this->host($shop).'/produkty?tagi=trek')
+            ->assertOk()
+            ->assertSee('slx')
+            ->assertSee('sly')
+            ->assertDontSee('rower');
+    }
+
     public function test_cards_carry_return_url_with_current_filters(): void
     {
         $shop = Shop::factory()->active()->create();
