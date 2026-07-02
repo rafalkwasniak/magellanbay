@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 #[Fillable([
     'name', 'slug', 'domain', 'status', 'description', 'company_name', 'nip', 'logo_path',
+    'template', 'theme',
     'country', 'province', 'city', 'postal_code', 'street', 'building_number', 'apartment_number',
     'default_vat_rate',
     'bank_account_number', 'bank_account_holder', 'bank_name', 'bank_transfer_enabled',
@@ -35,6 +36,7 @@ class Shop extends Model
     {
         return [
             'status' => ShopStatus::class,
+            'theme' => 'array',
             'default_vat_rate' => VatRate::class,
             'bank_transfer_enabled' => 'boolean',
             'entitlements' => 'array',
@@ -185,6 +187,58 @@ class Shop extends Model
         return filled($this->bank_account_holder)
             ? $this->bank_account_holder
             : ($this->company_name ?: null);
+    }
+
+    /**
+     * Slug aktywnego szablonu storefrontu, z siatką bezpieczeństwa: gdy sklep nie
+     * ma wyboru albo trzyma slug, którego już nie ma w configu (szablon wycofany),
+     * spadamy na domyślny szablon. Kod pyta o motyw przez te metody, nie o kolumnę.
+     */
+    public function templateSlug(): string
+    {
+        $slug = $this->template ?: config('themes.default_template');
+
+        return config("themes.templates.{$slug}") !== null
+            ? $slug
+            : config('themes.default_template');
+    }
+
+    /**
+     * Nazwa szablonu (PL, widoczna) rozwiązywana ze sluga — jak przy pakietach,
+     * zmienialna w configu bez ruszania bazy.
+     */
+    public function templateName(): string
+    {
+        return config("themes.templates.{$this->templateSlug()}.name", $this->templateSlug());
+    }
+
+    /**
+     * Klucz wybranej palety w ramach szablonu. Sprzedawca wybiera gotowca; brak
+     * wyboru lub paleta nieobecna w szablonie (np. po zmianie szablonu) → domyślna
+     * paleta szablonu. Wybór trzymany w JSON `theme` pod kluczem `palette`.
+     */
+    public function themePalette(): string
+    {
+        $slug = $this->templateSlug();
+        $chosen = $this->theme['palette'] ?? null;
+
+        if ($chosen !== null && config("themes.templates.{$slug}.palettes.{$chosen}") !== null) {
+            return $chosen;
+        }
+
+        return config("themes.templates.{$slug}.default_palette");
+    }
+
+    /**
+     * Rozwiązane tokeny kolorów (brand/brand_ink/surface/ink) dla aktywnego
+     * szablonu + palety. To jedyne źródło, z którego storefront wyliczy zmienne
+     * CSS (:root) — reszta odcieni powstaje z tych w CSS, nie jest wybierana.
+     *
+     * @return array<string, string>
+     */
+    public function themeTokens(): array
+    {
+        return config("themes.templates.{$this->templateSlug()}.palettes.{$this->themePalette()}.tokens", []);
     }
 
     /**

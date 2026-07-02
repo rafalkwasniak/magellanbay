@@ -40,10 +40,76 @@
                     </div>
                 </div>
 
-                {{-- Kolory i szablon — w przygotowaniu --}}
-                <div class="rounded-3xl border border-dashed border-stone-200 bg-white/40 p-6">
-                    <h2 class="font-semibold text-stone-500">Kolory i szablon</h2>
-                    <p class="mt-1 text-sm text-stone-400">Wkrótce dobierzesz tu kolory i szablon swojego sklepu, aby dopasować go do marki.</p>
+                {{-- Kolory i szablon --}}
+                <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                    <h2 class="font-semibold text-stone-900">Kolory i szablon</h2>
+                    <p class="mt-1 text-sm text-stone-500">Wybierz wygląd swojego sklepu, a potem dobierz kolory. Zmiany zobaczysz w podglądzie od razu.</p>
+
+                    <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        @foreach (collect(config('themes.templates'))->sortBy('order') as $slug => $template)
+                            @php
+                                $isActive = $slug === $shop->templateSlug();
+                                $activePalette = $isActive ? $shop->themePalette() : $template['default_palette'];
+                                $previewTokens = $template['palettes'][$activePalette]['tokens'];
+                            @endphp
+                            <div data-template-card="{{ $slug }}"
+                                class="tpl-card flex flex-col overflow-hidden rounded-2xl border bg-white transition {{ $isActive ? 'border-amber-400 ring-2 ring-amber-400/60' : 'border-stone-200' }}">
+                                <input type="radio" name="template" id="template-{{ $slug }}" value="{{ $slug }}" class="sr-only" data-template-input @checked($isActive)>
+
+                                {{-- Klik w podgląd/nazwę = wybór szablonu --}}
+                                <label for="template-{{ $slug }}" class="cursor-pointer">
+                                    {{-- Mini-witryna produktu (żywy podgląd palety) --}}
+                                    <div data-preview="{{ $slug }}" class="p-4"
+                                        style="background: {{ $previewTokens['surface'] }}; color: {{ $previewTokens['ink'] }};">
+                                        @if (! empty($previewImageUrl))
+                                            {{-- Realne zdjęcie produktu sklepu — „to Twój sklep". --}}
+                                            <img src="{{ $previewImageUrl }}" alt="Podgląd produktu"
+                                                class="aspect-[4/3] w-full rounded-lg object-cover">
+                                        @else
+                                            {{-- Brak zdjęć — neutralny placeholder w kolorze palety (żywy). --}}
+                                            <div data-preview-img class="flex aspect-[4/3] w-full items-center justify-center rounded-lg"
+                                                style="background: {{ $previewTokens['brand'] }}; color: {{ $previewTokens['brand_ink'] }};">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-9 w-9 opacity-70" aria-hidden="true">
+                                                    <rect x="3" y="4" width="18" height="16" rx="2" />
+                                                    <circle cx="8.5" cy="9.5" r="1.5" fill="currentColor" stroke="none" />
+                                                    <path d="M4 17l4.5-4.5 3 3L15 12l5 5" />
+                                                </svg>
+                                            </div>
+                                        @endif
+                                        <p class="mt-2.5 truncate text-xs opacity-70">Nazwa produktu</p>
+                                        <p class="mt-0.5 text-sm font-semibold">49,00 zł</p>
+                                        <span data-preview-btn class="mt-2 block rounded-lg py-1 text-center text-[11px] font-semibold"
+                                            style="background: {{ $previewTokens['brand'] }}; color: {{ $previewTokens['brand_ink'] }};">Zobacz produkt</span>
+                                    </div>
+
+                                    <div class="border-t border-stone-100 px-4 pt-4">
+                                        <div class="flex items-center justify-between gap-2">
+                                            <h3 class="text-sm font-semibold text-stone-900">{{ $template['name'] }}</h3>
+                                            <span data-check class="text-amber-500 transition {{ $isActive ? '' : 'opacity-0' }}">✓</span>
+                                        </div>
+                                        <p class="mt-1 text-xs leading-relaxed text-stone-500">{{ $template['description'] }}</p>
+                                    </div>
+                                </label>
+
+                                {{-- Palety w ramach szablonu --}}
+                                <div class="flex flex-wrap items-center gap-2 px-4 pb-4 pt-3">
+                                    @foreach ($template['palettes'] as $key => $palette)
+                                        <label class="cursor-pointer" title="{{ $palette['name'] }}">
+                                            <input type="radio" name="palettes[{{ $slug }}]" value="{{ $key }}" class="peer sr-only"
+                                                data-palette-input
+                                                data-brand="{{ $palette['tokens']['brand'] }}"
+                                                data-brand-ink="{{ $palette['tokens']['brand_ink'] }}"
+                                                data-surface="{{ $palette['tokens']['surface'] }}"
+                                                data-ink="{{ $palette['tokens']['ink'] }}"
+                                                @checked($key === $activePalette)>
+                                            <span class="block h-6 w-6 rounded-full border border-black/10 transition peer-checked:ring-2 peer-checked:ring-stone-800 peer-checked:ring-offset-1"
+                                                style="background: {{ $palette['tokens']['brand'] }};"></span>
+                                        </label>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
                 </div>
 
                 <div class="flex justify-end">
@@ -87,6 +153,61 @@
                 preview.src = URL.createObjectURL(file);
                 preview.classList.remove('hidden');
                 if (placeholder) placeholder.classList.add('hidden');
+            });
+        })();
+    </script>
+
+    {{-- Wybór szablonu i palety: ring zaznaczenia + żywy podgląd kolorów (zero zależności). --}}
+    <script>
+        (function () {
+            const cards = document.querySelectorAll('[data-template-card]');
+            if (!cards.length) return;
+
+            function selectTemplate(slug) {
+                cards.forEach(function (card) {
+                    const active = card.getAttribute('data-template-card') === slug;
+                    card.classList.toggle('border-amber-400', active);
+                    card.classList.toggle('ring-2', active);
+                    card.classList.toggle('ring-amber-400/60', active);
+                    card.classList.toggle('border-stone-200', !active);
+                    const check = card.querySelector('[data-check]');
+                    if (check) check.classList.toggle('opacity-0', !active);
+                });
+            }
+
+            document.querySelectorAll('[data-template-input]').forEach(function (radio) {
+                radio.addEventListener('change', function () {
+                    if (radio.checked) selectTemplate(radio.value);
+                });
+            });
+
+            document.querySelectorAll('[data-palette-input]').forEach(function (inp) {
+                inp.addEventListener('change', function () {
+                    const card = inp.closest('[data-template-card]');
+                    if (!card) return;
+                    const slug = card.getAttribute('data-template-card');
+                    const preview = card.querySelector('[data-preview]');
+                    const img = card.querySelector('[data-preview-img]');
+                    const btn = card.querySelector('[data-preview-btn]');
+                    if (preview) {
+                        preview.style.background = inp.dataset.surface;
+                        preview.style.color = inp.dataset.ink;
+                    }
+                    if (img) {
+                        img.style.background = inp.dataset.brand;
+                        img.style.color = inp.dataset.brandInk;
+                    }
+                    if (btn) {
+                        btn.style.background = inp.dataset.brand;
+                        btn.style.color = inp.dataset.brandInk;
+                    }
+                    // Wybór palety oznacza też wybór jej szablonu.
+                    const tpl = document.getElementById('template-' + slug);
+                    if (tpl && !tpl.checked) {
+                        tpl.checked = true;
+                        selectTemplate(slug);
+                    }
+                });
             });
         })();
     </script>

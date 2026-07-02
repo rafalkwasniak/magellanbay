@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Seller;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Seller\AppearanceRequest;
+use App\Models\ProductImage;
 use Illuminate\Contracts\Support\Renderable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -24,7 +25,18 @@ class AppearanceController extends Controller
             return redirect()->route('seller.dashboard');
         }
 
-        return view('seller.appearance.edit', ['shop' => $shop]);
+        // Losowe zdjęcie produktu sklepu do mini-podglądu szablonu — „to Twój
+        // sklep". Gdy sprzedawca nie ma jeszcze żadnego zdjęcia, widok pokazuje
+        // neutralny placeholder w kolorze palety.
+        $previewImageUrl = ProductImage::query()
+            ->whereHas('product', fn ($query) => $query->where('shop_id', $shop->id))
+            ->inRandomOrder()
+            ->first()?->url();
+
+        return view('seller.appearance.edit', [
+            'shop' => $shop,
+            'previewImageUrl' => $previewImageUrl,
+        ]);
     }
 
     public function update(AppearanceRequest $request): RedirectResponse
@@ -42,6 +54,15 @@ class AppearanceController extends Controller
                 Storage::disk('public')->delete($shop->logo_path);
             }
             $shop->logo_path = $request->file('logo')->store('shops/'.$shop->id, 'public');
+        }
+
+        // Szablon i paleta: bierzemy paletę spod klucza wybranego szablonu, więc
+        // przełączanie szablonów zapamiętuje wybór palety każdego z nich osobno.
+        if ($request->filled('template')) {
+            $template = $request->string('template')->toString();
+            $palette = $request->input("palettes.{$template}");
+            $shop->template = $template;
+            $shop->theme = filled($palette) ? ['palette' => $palette] : null;
         }
 
         $shop->save();

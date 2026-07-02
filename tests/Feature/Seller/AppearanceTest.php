@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Seller;
 
+use App\Models\Product;
 use App\Models\Shop;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -73,5 +74,105 @@ class AppearanceTest extends TestCase
                 'logo' => UploadedFile::fake()->create('document.pdf', 100, 'application/pdf'),
             ])
             ->assertSessionHasErrors('logo');
+    }
+
+    public function test_appearance_page_shows_template_picker(): void
+    {
+        [$seller] = $this->sellerWithShop();
+
+        $this->actingAs($seller)
+            ->get(route('seller.appearance.edit'))
+            ->assertOk()
+            ->assertSee('Kolory i szablon')
+            ->assertSee('Aksamitna chmurka')
+            ->assertSee('Zielony zakątek')
+            ->assertSee('Grafitowy wieczór');
+    }
+
+    public function test_seller_can_choose_template_and_palette(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+
+        $this->actingAs($seller)
+            ->post(route('seller.appearance.update'), [
+                'template' => 'green_nook',
+                'palettes' => ['green_nook' => 'moss'],
+            ])
+            ->assertRedirect(route('seller.appearance.edit'))
+            ->assertSessionHas('success');
+
+        $shop->refresh();
+        $this->assertSame('green_nook', $shop->template);
+        $this->assertSame('moss', $shop->themePalette());
+    }
+
+    public function test_only_the_chosen_templates_palette_is_applied(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+
+        // Formularz wysyła paletę każdego szablonu; bierzemy tylko tę spod klucza
+        // wybranego szablonu, resztę ignorujemy.
+        $this->actingAs($seller)
+            ->post(route('seller.appearance.update'), [
+                'template' => 'graphite_dusk',
+                'palettes' => [
+                    'velvet_cloud' => 'lavender',
+                    'graphite_dusk' => 'rose',
+                ],
+            ]);
+
+        $shop->refresh();
+        $this->assertSame('graphite_dusk', $shop->template);
+        $this->assertSame('rose', $shop->themePalette());
+    }
+
+    public function test_unknown_template_is_rejected(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+        $original = $shop->fresh()->template;
+
+        $this->actingAs($seller)
+            ->post(route('seller.appearance.update'), ['template' => 'does_not_exist'])
+            ->assertSessionHasErrors('template');
+
+        $this->assertSame($original, $shop->fresh()->template);
+    }
+
+    public function test_palette_not_belonging_to_template_is_rejected(): void
+    {
+        [$seller] = $this->sellerWithShop();
+
+        // 'moss' należy do green_nook, nie do velvet_cloud.
+        $this->actingAs($seller)
+            ->post(route('seller.appearance.update'), [
+                'template' => 'velvet_cloud',
+                'palettes' => ['velvet_cloud' => 'moss'],
+            ])
+            ->assertSessionHasErrors('palettes.velvet_cloud');
+    }
+
+    public function test_preview_uses_a_real_product_image_when_available(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+        $product = Product::factory()->create(['shop_id' => $shop->id]);
+        $product->images()->create(['path' => 'shops/'.$shop->id.'/sample.webp', 'position' => 1]);
+
+        $this->actingAs($seller)
+            ->get(route('seller.appearance.edit'))
+            ->assertOk()
+            ->assertSee('shops/'.$shop->id.'/sample.webp')     // zdjęcie w podglądzie
+            ->assertSee('alt="Podgląd produktu"', false);       // realny <img>, nie placeholder
+    }
+
+    public function test_preview_falls_back_to_placeholder_without_images(): void
+    {
+        [$seller] = $this->sellerWithShop();
+
+        // Bez zdjęć nie ma realnego <img> — zostaje placeholder (marker w JS
+        // `data-preview-img` nie wystarcza, bo żyje w skrypcie zawsze).
+        $this->actingAs($seller)
+            ->get(route('seller.appearance.edit'))
+            ->assertOk()
+            ->assertDontSee('alt="Podgląd produktu"', false);
     }
 }
