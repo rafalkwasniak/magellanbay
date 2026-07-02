@@ -18,6 +18,7 @@ use App\Http\Controllers\Seller\ProductController;
 use App\Http\Controllers\Seller\ProductImageController;
 use App\Http\Controllers\Seller\ShopProfileController;
 use App\Http\Controllers\Seller\ShopSettingsController;
+use App\Http\Controllers\Storefront\HomeController as StorefrontHome;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -157,20 +158,18 @@ Route::middleware('auth')->group(function () {
 
 /*
 |==============================================================================
-| STOREFRONT — subdomena sklepu {shop}.{central_domain}  [SZKIELET, WYŁĄCZONY]
+| STOREFRONT — subdomena sklepu {shop}.{central_domain}
 |==============================================================================
 | Publiczny sklep jednego sprzedawcy. {shop} = slug = etykieta subdomeny;
-| middleware rozwiązuje model Shop i scope'uje wszystko do tego sklepu
-| (jedna baza + shop_id). Inne kontrolery niż centrala — to jest sedno
-| podziału „inne domeny → inne kontrolery".
+| middleware `tenant` (ResolveShop) rozwiązuje model Shop z subdomeny i dzieli
+| go z widokami (404 gdy slug bez sklepu). Inne kontrolery niż centrala — to
+| sedno podziału „inne domeny → inne kontrolery". Grupa łapie tylko hosty
+| {label}.{central_domain}, więc centrala (bez subdomeny) działa jak dotąd.
 |
-| Włączymy razem z budową storefrontu i wildcard-subdomen na serwerze:
-|
-| Route::domain('{shop}.'.config('tenancy.central_domain'))
-|     ->middleware('tenant')               // App\Http\Middleware\ResolveShop
-|     ->group(function () {
-|         Route::get('/', [Storefront\HomeController::class, 'show'])->name('storefront.home');
-|         Route::get('/produkt/{product}', [Storefront\ProductController::class, 'show'])->name('storefront.product');
-|         // /koszyk, /kategoria/{...}, ...
-|     });
+| Kolejno dojdą: /produkt/{product}, /kategoria/{...}, /koszyk.
 */
+Route::domain('{shop}.'.config('tenancy.central_domain'))
+    ->middleware('tenant')
+    ->group(function () {
+        Route::get('/', [StorefrontHome::class, 'show'])->name('storefront.home');
+    });

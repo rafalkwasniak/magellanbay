@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\EnsureConsentsAreCurrent;
 use App\Http\Middleware\EnsureUserHasRole;
+use App\Http\Middleware\ResolveShop;
 use App\Services\DiscordErrorReporter;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -18,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => EnsureUserHasRole::class,
             'ensure.consents' => EnsureConsentsAreCurrent::class,
+            'tenant' => ResolveShop::class,
         ]);
 
         // Niezalogowani trafiają na ekran logowania.
