@@ -12,23 +12,7 @@
                 @endforeach
             </div>
 
-            @if ($products->hasPages())
-                <nav class="mt-10 flex items-center justify-between text-sm">
-                    @if ($products->onFirstPage())
-                        <span class="opacity-40">← Poprzednie</span>
-                    @else
-                        <a href="{{ $products->previousPageUrl() }}" class="st-brand font-semibold">← Poprzednie</a>
-                    @endif
-
-                    <span class="opacity-60">Strona {{ $products->currentPage() }} z {{ $products->lastPage() }}</span>
-
-                    @if ($products->hasMorePages())
-                        <a href="{{ $products->nextPageUrl() }}" class="st-brand font-semibold">Następne →</a>
-                    @else
-                        <span class="opacity-40">Następne →</span>
-                    @endif
-                </nav>
-            @endif
+            {{ $products->onEachSide(1)->links('storefront.pagination') }}
         @endif
     </div>
 </x-layouts.storefront>

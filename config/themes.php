@@ -39,6 +39,9 @@ return [
             'name' => 'Aksamitna chmurka',
             'description' => 'Jasny i powietrzny — biel z nutą błękitu. Lekki, czysty, wygodny do czytania.',
             'order' => 1,
+            // Liczba produktów na stronę wykazu = właściwość UKŁADU, więc należy do
+            // szablonu: większe kadry → mniej na stronie. Ten jest powietrzny → 9.
+            'per_page' => 9,
             'default_palette' => 'sky',
             'palettes' => [
                 'sky' => [
@@ -66,6 +69,7 @@ return [
             'name' => 'Zielony zakątek',
             'description' => 'Kolory natury — zieleń, brąz i len. Ciepły, ekologiczny klimat.',
             'order' => 2,
+            'per_page' => 12,
             'default_palette' => 'forest',
             'palettes' => [
                 'forest' => [
@@ -93,6 +97,7 @@ return [
             'name' => 'Grafitowy wieczór',
             'description' => 'Ciemny i elegancki — grafit z ciepłym akcentem. Produkty wychodzą na pierwszy plan.',
             'order' => 3,
+            'per_page' => 12,
             'default_palette' => 'ember',
             'palettes' => [
                 'ember' => [

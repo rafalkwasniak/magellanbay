@@ -51,6 +51,15 @@ class ThemeResolverTest extends TestCase
         $this->assertSame('#6B8E4E', $shop->themeTokens()['brand']);
     }
 
+    public function test_products_per_page_is_read_from_template(): void
+    {
+        $airy = Shop::factory()->create(['template' => 'velvet_cloud']);
+        $dense = Shop::factory()->create(['template' => 'green_nook']);
+
+        $this->assertSame(9, $airy->productsPerPage());
+        $this->assertSame(12, $dense->productsPerPage());
+    }
+
     public function test_unknown_template_falls_back_to_default(): void
     {
         $shop = Shop::factory()->create(['template' => 'does_not_exist']);

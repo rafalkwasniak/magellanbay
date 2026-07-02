@@ -240,6 +240,16 @@ class Shop extends Model
     }
 
     /**
+     * Ile produktów na stronę wykazu — właściwość układu szablonu (config/themes.php),
+     * z fallbackiem 12, gdy szablon jej nie ustawia. Szablon z większymi kadrami
+     * pokazuje mniej na stronie.
+     */
+    public function productsPerPage(): int
+    {
+        return (int) (config("themes.templates.{$this->templateSlug()}.per_page") ?? 12);
+    }
+
+    /**
      * Rozwiązane tokeny kolorów (brand/brand_ink/surface/ink) dla aktywnego
      * szablonu + palety. To jedyne źródło, z którego storefront wyliczy zmienne
      * CSS (:root) — reszta odcieni powstaje z tych w CSS, nie jest wybierana.

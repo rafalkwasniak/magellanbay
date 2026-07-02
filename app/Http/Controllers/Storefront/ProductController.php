@@ -33,7 +33,7 @@ class ProductController extends Controller
             ->where('is_active', true)
             ->with('images')
             ->latest()
-            ->paginate(12)
+            ->paginate($shop->productsPerPage())
             ->withQueryString();
 
         return view('storefront.products', ['shop' => $shop, 'products' => $products]);
