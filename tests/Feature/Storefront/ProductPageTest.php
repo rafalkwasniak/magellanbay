@@ -84,4 +84,50 @@ class ProductPageTest extends TestCase
             ->assertOk()
             ->assertSee('Ukryty Skarb');
     }
+
+    public function test_back_link_returns_to_filtered_listing(): void
+    {
+        $shop = Shop::factory()->active()->create();
+        $product = $this->product($shop);
+        $back = '/produkty?tagi=srebro&sortowanie=nazwa';
+
+        $this->get($this->host($shop).$product->storefrontPath().'?powrot='.urlencode($back))
+            ->assertOk()
+            ->assertSee('Wróć do produktów')
+            ->assertSee('/produkty?tagi=srebro', false);
+    }
+
+    public function test_back_link_rejects_external_url(): void
+    {
+        $shop = Shop::factory()->active()->create();
+        $product = $this->product($shop);
+
+        // Open-redirect guard: obcy host jest odrzucany, wracamy na główną sklepu.
+        $this->get($this->host($shop).$product->storefrontPath().'?powrot='.urlencode('//evil.example'))
+            ->assertOk()
+            ->assertDontSee('evil.example')
+            ->assertSee($shop->name);
+    }
+
+    public function test_back_link_defaults_to_shop_home_without_powrot(): void
+    {
+        $shop = Shop::factory()->active()->create();
+        $product = $this->product($shop);
+
+        $this->get($this->host($shop).$product->storefrontPath())
+            ->assertOk()
+            ->assertSee($shop->name)
+            ->assertDontSee('Wróć do produktów');
+    }
+
+    public function test_canonical_redirect_preserves_return_url(): void
+    {
+        $shop = Shop::factory()->active()->create();
+        $product = $this->product($shop, ['slug' => 'kubek']);
+        $back = '/produkty?tagi=srebro';
+
+        $this->get($this->host($shop).'/produkt/'.$product->id.'-zly-slug?powrot='.urlencode($back))
+            ->assertStatus(301)
+            ->assertRedirect($product->storefrontPath().'?powrot='.urlencode($back));
+    }
 }

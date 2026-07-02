@@ -1,8 +1,13 @@
-@props(['product', 'aspect' => '4 / 3'])
+@props(['product', 'aspect' => '4 / 3', 'back' => null])
 
-@php $main = $product->mainImage(); @endphp
+@php
+    $main = $product->mainImage();
+    // Kafel niesie adres powrotu (URL listy z filtrami/stroną), by przycisk
+    // „Wróć" na produkcie wrócił dokładnie tu. Kodujemy, bo w wartości jest `&`.
+    $href = $product->storefrontPath().($back ? '?powrot='.urlencode($back) : '');
+@endphp
 
-<a href="{{ $product->storefrontPath() }}" {{ $attributes->merge(['class' => 'st-card st-border group block overflow-hidden rounded-2xl border transition hover:brightness-[1.02]']) }}>
+<a href="{{ $href }}" {{ $attributes->merge(['class' => 'st-card st-border group block overflow-hidden rounded-2xl border transition hover:brightness-[1.02]']) }}>
     <div class="w-full overflow-hidden" style="aspect-ratio: {{ $aspect }};">
         @if ($main)
             <img src="{{ $main->url() }}" alt="{{ $product->name }}"
