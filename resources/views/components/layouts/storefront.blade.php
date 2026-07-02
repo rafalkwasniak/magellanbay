@@ -25,6 +25,8 @@
         .st-brand { color: var(--brand); }
         .st-btn { background: var(--brand); color: var(--brand-ink); }
         .st-border { border-color: color-mix(in srgb, var(--ink) 12%, transparent); }
+        /* Panel karty — wyliczany z tokenów, czytelny na jasnym i ciemnym tle. */
+        .st-card { background: color-mix(in srgb, var(--ink) 4%, var(--surface)); }
     </style>
 </head>
 
