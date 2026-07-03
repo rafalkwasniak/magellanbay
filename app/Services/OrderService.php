@@ -20,14 +20,17 @@ use Illuminate\Support\Facades\DB;
  */
 class OrderService
 {
-    public function __construct(private CartService $cart) {}
+    public function __construct(
+        private CartService $cart,
+        private OrderMailer $mailer,
+    ) {}
 
     /**
      * @param  array<string, mixed>  $data  zwalidowane dane kupującego + metody
      */
     public function place(Shop $shop, array $data): Order
     {
-        return DB::transaction(function () use ($shop, $data): Order {
+        $order = DB::transaction(function () use ($shop, $data): Order {
             $raw = $this->cart->raw($shop->id);
 
             if ($raw === []) {
@@ -84,6 +87,14 @@ class OrderService
 
             return $order;
         });
+
+        // Po pomyślnym commicie kolejkujemy maile (outbox → cron): potwierdzenie
+        // dla klienta i powiadomienie dla sprzedawcy. Przerwana weryfikacja
+        // (CartNeedsReviewException) rzuca w transakcji — tu już nie dojdziemy.
+        $this->mailer->confirmToCustomer($order);
+        $this->mailer->notifySeller($order);
+
+        return $order;
     }
 
     /**

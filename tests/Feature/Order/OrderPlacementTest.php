@@ -4,6 +4,7 @@ namespace Tests\Feature\Order;
 
 use App\Enums\OrderStatus;
 use App\Exceptions\CartNeedsReviewException;
+use App\Models\EmailMessage;
 use App\Models\Product;
 use App\Models\Shop;
 use App\Services\CartService;
@@ -93,10 +94,58 @@ class OrderPlacementTest extends TestCase
             $this->assertNotEmpty($e->messages);
         }
 
-        // Zamówienie NIE powstało, koszyk uzgodniony do dostępnych 2.
+        // Zamówienie NIE powstało, koszyk uzgodniony do dostępnych 2, brak maili.
         $this->assertSame(0, $shop->orders()->count());
         $this->assertSame(2, app(CartService::class)->count($shop->id));
         $this->assertSame(2, $product->fresh()->stock);   // stan nietknięty przez zamówienie
+        $this->assertSame(0, EmailMessage::count());
+    }
+
+    public function test_place_enqueues_customer_and_seller_emails(): void
+    {
+        $shop = $this->shop();
+        $product = Product::factory()->create([
+            'shop_id' => $shop->id, 'is_active' => true, 'track_stock' => false, 'stock' => null, 'price_gross' => 30.00,
+        ]);
+        app(CartService::class)->add($product, 1);
+
+        $order = app(OrderService::class)->place($shop, $this->buyerData());
+
+        $this->assertSame(2, EmailMessage::count());
+        // Potwierdzenie do kupującego + powiadomienie do właściciela sklepu, priorytet Mid.
+        $this->assertDatabaseHas('email_messages', [
+            'to_email' => 'jan@example.com',
+            'subject' => 'Potwierdzenie zamówienia #'.$order->number.' — '.$shop->name,
+            'priority' => \App\Enums\MailPriority::Mid->value,
+        ]);
+        $this->assertDatabaseHas('email_messages', ['to_email' => $shop->owner->email]);
+    }
+
+    public function test_seller_email_formats_phone_and_includes_company_address(): void
+    {
+        $shop = $this->shop();
+        $product = Product::factory()->create([
+            'shop_id' => $shop->id, 'is_active' => true, 'track_stock' => false, 'stock' => null, 'price_gross' => 10.00,
+        ]);
+        app(CartService::class)->add($product, 1);
+
+        $data = array_merge($this->buyerData(), [
+            'buyer_phone' => '668196229',
+            'is_company' => true,
+            'company_name' => 'ACME sp. z o.o.',
+            'company_nip' => '5252248481',
+            'company_street' => 'Polna',
+            'company_building_number' => '3',
+            'company_postal_code' => '00-002',
+            'company_city' => 'Kraków',
+        ]);
+
+        app(OrderService::class)->place($shop, $data);
+
+        $sellerEmail = EmailMessage::where('to_email', $shop->owner->email)->firstOrFail();
+
+        $this->assertContains('Telefon: +48 668 196 229', $sellerEmail->intro_lines);
+        $this->assertContains('Adres: Polna 3, 00-002 Kraków', $sellerEmail->intro_lines);
     }
 
     public function test_place_stores_company_data_when_buying_as_company(): void

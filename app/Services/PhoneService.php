@@ -32,4 +32,26 @@ class PhoneService
         // dopnij prefiks kraju
         return '48'.$digits;
     }
+
+    /**
+     * Czytelna postać do wyświetlenia: „+48 668 196 229". Przyjmuje dowolny zapis
+     * (najpierw normalizuje). Gdy rdzeń nie ma 9 cyfr — zwraca znormalizowaną
+     * wartość bez grupowania (nie zgadujemy formatu).
+     */
+    public function format(?string $value): ?string
+    {
+        $normalized = $this->normalize($value);
+
+        if ($normalized === null) {
+            return null;
+        }
+
+        $core = substr($normalized, 2);
+
+        if (strlen($core) !== 9) {
+            return $normalized;
+        }
+
+        return '+48 '.substr($core, 0, 3).' '.substr($core, 3, 3).' '.substr($core, 6, 3);
+    }
 }

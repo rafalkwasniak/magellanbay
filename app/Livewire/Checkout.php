@@ -10,6 +10,7 @@ use App\Services\CartService;
 use App\Services\CompanyLookup;
 use App\Services\NipService;
 use App\Services\OrderService;
+use App\Services\PhoneService;
 use App\Support\Money;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
@@ -178,6 +179,8 @@ class Checkout extends Component
 
     public function place(OrderService $orders)
     {
+        $this->buyer_phone = app(PhoneService::class)->normalize($this->buyer_phone) ?? $this->buyer_phone;
+
         if ($this->is_company) {
             $this->company_nip = app(NipService::class)->normalize($this->company_nip);
         }
