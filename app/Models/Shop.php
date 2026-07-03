@@ -23,6 +23,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'country', 'province', 'city', 'postal_code', 'street', 'building_number', 'apartment_number',
     'default_vat_rate',
     'bank_account_number', 'bank_account_holder', 'bank_name', 'bank_transfer_enabled',
+    'pickup_enabled', 'pay_on_pickup_enabled',
     'package', 'entitlements', 'subscription_ends_at', 'comped',
 ])]
 class Shop extends Model
@@ -40,6 +41,8 @@ class Shop extends Model
             'theme' => 'array',
             'default_vat_rate' => VatRate::class,
             'bank_transfer_enabled' => 'boolean',
+            'pickup_enabled' => 'boolean',
+            'pay_on_pickup_enabled' => 'boolean',
             'entitlements' => 'array',
             'subscription_ends_at' => 'datetime',
             'comped' => 'boolean',
@@ -191,6 +194,26 @@ class Shop extends Model
     public function bankTransferAvailable(): bool
     {
         return $this->bank_transfer_enabled && filled($this->bank_account_number);
+    }
+
+    /**
+     * Czy sklep oferuje odbiór osobisty. Dwa warunki: fiszka włączona
+     * (Ustawienia) ORAZ kompletny adres sklepu (adres odbioru bierze się z danych
+     * sklepu — bez niego nie ma dokąd przyjść). Analogia do bankTransferAvailable.
+     */
+    public function pickupAvailable(): bool
+    {
+        return $this->pickup_enabled && $this->addressComplete();
+    }
+
+    /**
+     * Czy sklep przyjmuje płatność przy odbiorze. Metoda płatności zależna od
+     * dostawy: wymaga realnie dostępnego odbioru osobistego ORAZ włączonej
+     * fiszki. Bez odbioru nie ma gdzie zapłacić „na miejscu".
+     */
+    public function payOnPickupAvailable(): bool
+    {
+        return $this->pay_on_pickup_enabled && $this->pickupAvailable();
     }
 
     /**

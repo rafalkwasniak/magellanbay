@@ -100,4 +100,107 @@ class ShopSettingsTest extends TestCase
         // Fiszka włączona, ale bez numeru konta metoda nie jest realnie dostępna.
         $this->assertFalse($shop->bankTransferAvailable());
     }
+
+    /**
+     * @return array<string, string>
+     */
+    private function completeAddress(): array
+    {
+        return [
+            'street' => 'Kwiatowa',
+            'building_number' => '5',
+            'postal_code' => '00-001',
+            'city' => 'Warszawa',
+            'province' => 'mazowieckie',
+        ];
+    }
+
+    public function test_pickup_available_with_complete_address(): void
+    {
+        [, $shop] = $this->sellerWithShop(array_merge($this->completeAddress(), ['pickup_enabled' => true]));
+
+        $this->assertTrue($shop->pickupAvailable());
+    }
+
+    public function test_pickup_not_available_without_address(): void
+    {
+        // Fiszka włączona, ale bez adresu odbiór nie jest realnie dostępny.
+        [, $shop] = $this->sellerWithShop(['pickup_enabled' => true, 'street' => null]);
+
+        $this->assertFalse($shop->pickupAvailable());
+    }
+
+    public function test_seller_can_disable_pickup(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop(array_merge($this->completeAddress(), ['pickup_enabled' => true]));
+
+        // Checkbox odznaczony = brak klucza w POST; fiszka schodzi na false.
+        $this->actingAs($seller)
+            ->post(route('seller.settings.update'), ['default_vat_rate' => '23'])
+            ->assertSessionHas('success');
+
+        $this->assertFalse($shop->fresh()->pickup_enabled);
+    }
+
+    public function test_seller_can_enable_pickup(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop(array_merge($this->completeAddress(), ['pickup_enabled' => false]));
+
+        $this->actingAs($seller)
+            ->post(route('seller.settings.update'), [
+                'default_vat_rate' => '23',
+                'pickup_enabled' => '1',
+            ])
+            ->assertSessionHas('success');
+
+        $fresh = $shop->fresh();
+        $this->assertTrue($fresh->pickup_enabled);
+        $this->assertTrue($fresh->pickupAvailable());
+    }
+
+    public function test_pay_on_pickup_available_only_with_pickup(): void
+    {
+        [, $withPickup] = $this->sellerWithShop(array_merge($this->completeAddress(), [
+            'pickup_enabled' => true,
+            'pay_on_pickup_enabled' => true,
+        ]));
+        $this->assertTrue($withPickup->payOnPickupAvailable());
+
+        // Bez odbioru (brak adresu) płatność przy odbiorze jest niedostępna.
+        [, $noPickup] = $this->sellerWithShop([
+            'street' => null,
+            'pickup_enabled' => true,
+            'pay_on_pickup_enabled' => true,
+        ]);
+        $this->assertFalse($noPickup->payOnPickupAvailable());
+    }
+
+    public function test_seller_can_toggle_pay_on_pickup(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop(array_merge($this->completeAddress(), [
+            'pickup_enabled' => true,
+            'pay_on_pickup_enabled' => false,
+        ]));
+
+        // Włączenie.
+        $this->actingAs($seller)
+            ->post(route('seller.settings.update'), [
+                'default_vat_rate' => '23',
+                'pickup_enabled' => '1',
+                'pay_on_pickup_enabled' => '1',
+            ])
+            ->assertSessionHas('success');
+
+        $this->assertTrue($shop->fresh()->payOnPickupAvailable());
+
+        // Wyłączenie (checkbox odznaczony = brak klucza w POST).
+        $this->actingAs($seller)
+            ->post(route('seller.settings.update'), [
+                'default_vat_rate' => '23',
+                'pickup_enabled' => '1',
+            ])
+            ->assertSessionHas('success');
+
+        $this->assertFalse($shop->fresh()->pay_on_pickup_enabled);
+    }
 }

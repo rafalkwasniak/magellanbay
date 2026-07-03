@@ -30,6 +30,36 @@
                     </div>
                 </div>
 
+                {{-- Dostawa --}}
+                <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                    <h2 class="font-semibold text-stone-900">Dostawa</h2>
+                    <p class="mt-1 text-sm text-stone-500">Sposoby dostawy widoczne dla klientów w kasie.</p>
+
+                    <div class="mt-6 space-y-4">
+                        @php($hasAddress = $shop->addressComplete())
+                        <div class="flex items-start gap-4 rounded-2xl border border-stone-200 bg-white/60 p-5 sm:p-6 {{ $hasAddress ? '' : 'opacity-60' }}">
+                            {{-- hidden = wartość bazowa; bez adresu checkbox jest disabled i nic nie wysyła --}}
+                            <input type="hidden" name="pickup_enabled" value="{{ $hasAddress ? '0' : ($shop->pickup_enabled ? '1' : '0') }}">
+                            <input type="checkbox" id="pickup_enabled" name="pickup_enabled" value="1"
+                                @checked(old('pickup_enabled', $shop->pickup_enabled)) @disabled(! $hasAddress)
+                                class="mt-0.5 h-5 w-5 shrink-0 rounded-md border-stone-300 text-amber-600 focus:ring-4 focus:ring-amber-500/20 disabled:cursor-not-allowed">
+                            <label for="pickup_enabled" class="flex-1 {{ $hasAddress ? 'cursor-pointer' : 'cursor-not-allowed' }}">
+                                <span class="block text-sm font-medium text-stone-800">Odbiór osobisty</span>
+                                <span class="mt-0.5 block text-sm text-stone-500">Klient odbiera zamówienie pod adresem Twojego sklepu. Bez kosztów dostawy.</span>
+                                @unless($hasAddress)
+                                    @if($shop->pickup_enabled)
+                                        <span class="mt-1.5 block text-xs text-amber-700">Odbiór jest włączony, ale zacznie działać w kasie, gdy uzupełnisz adres sklepu w <a href="{{ route('seller.shop.edit') }}" class="font-medium underline decoration-amber-300 underline-offset-2">Mój sklep</a>.</span>
+                                    @else
+                                        <span class="mt-1.5 block text-xs text-amber-700">Aby móc włączyć, najpierw uzupełnij adres sklepu w <a href="{{ route('seller.shop.edit') }}" class="font-medium underline decoration-amber-300 underline-offset-2">Mój sklep</a>.</span>
+                                    @endif
+                                @endunless
+                            </label>
+                        </div>
+
+                        <p class="text-xs text-stone-400">Kolejne metody (kurier, dostawa własna) dojdą tutaj wkrótce.</p>
+                    </div>
+                </div>
+
                 {{-- Płatności --}}
                 <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
                     <h2 class="font-semibold text-stone-900">Płatności</h2>
@@ -52,6 +82,22 @@
                                     @else
                                         <span class="mt-1.5 block text-xs text-amber-700">Aby móc włączyć tę metodę, najpierw podaj numer konta w <a href="{{ route('seller.shop.edit') }}#dane-do-przelewu" class="font-medium underline decoration-amber-300 underline-offset-2">Mój sklep</a>.</span>
                                     @endif
+                                @endunless
+                            </label>
+                        </div>
+
+                        {{-- Płatność przy odbiorze — zależna od włączonego odbioru osobistego. --}}
+                        @php($pickupReady = $shop->pickupAvailable())
+                        <div class="flex items-start gap-4 rounded-2xl border border-stone-200 bg-white/60 p-5 sm:p-6 {{ $pickupReady ? '' : 'opacity-60' }}">
+                            <input type="hidden" name="pay_on_pickup_enabled" value="{{ $pickupReady ? '0' : ($shop->pay_on_pickup_enabled ? '1' : '0') }}">
+                            <input type="checkbox" id="pay_on_pickup_enabled" name="pay_on_pickup_enabled" value="1"
+                                @checked(old('pay_on_pickup_enabled', $shop->pay_on_pickup_enabled)) @disabled(! $pickupReady)
+                                class="mt-0.5 h-5 w-5 shrink-0 rounded-md border-stone-300 text-amber-600 focus:ring-4 focus:ring-amber-500/20 disabled:cursor-not-allowed">
+                            <label for="pay_on_pickup_enabled" class="flex-1 {{ $pickupReady ? 'cursor-pointer' : 'cursor-not-allowed' }}">
+                                <span class="block text-sm font-medium text-stone-800">Płatność przy odbiorze</span>
+                                <span class="mt-0.5 block text-sm text-stone-500">Klient płaci na miejscu przy odbiorze zamówienia. Bez operatora i prowizji.</span>
+                                @unless($pickupReady)
+                                    <span class="mt-1.5 block text-xs text-amber-700">Ta metoda wymaga włączonego <a href="#" onclick="document.getElementById('pickup_enabled').scrollIntoView({behavior:'smooth',block:'center'});return false;" class="font-medium underline decoration-amber-300 underline-offset-2">odbioru osobistego</a> (z uzupełnionym adresem sklepu).</span>
                                 @endunless
                             </label>
                         </div>

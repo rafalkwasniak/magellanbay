@@ -25,6 +25,8 @@ class ShopSettingsRequest extends FormRequest
     {
         $this->merge([
             'bank_transfer_enabled' => $this->boolean('bank_transfer_enabled'),
+            'pickup_enabled' => $this->boolean('pickup_enabled'),
+            'pay_on_pickup_enabled' => $this->boolean('pay_on_pickup_enabled'),
             'google_analytics_enabled' => $this->boolean('google_analytics_enabled'),
         ]);
     }
@@ -37,6 +39,8 @@ class ShopSettingsRequest extends FormRequest
         return [
             'default_vat_rate' => ['required', Rule::enum(VatRate::class)],
             'bank_transfer_enabled' => ['boolean'],
+            'pickup_enabled' => ['boolean'],
+            'pay_on_pickup_enabled' => ['boolean'],
             'google_analytics_enabled' => ['boolean'],
         ];
     }
@@ -49,6 +53,8 @@ class ShopSettingsRequest extends FormRequest
         return [
             'default_vat_rate' => 'domyślna stawka VAT',
             'bank_transfer_enabled' => 'przelew na konto',
+            'pickup_enabled' => 'odbiór osobisty',
+            'pay_on_pickup_enabled' => 'płatność przy odbiorze',
             'google_analytics_enabled' => 'Google Analytics',
         ];
     }
