@@ -93,6 +93,34 @@ class Shop extends Model
     }
 
     /**
+     * @return HasMany<Order, $this>
+     */
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
+    }
+
+    /**
+     * Alokuje kolejny numer zamówienia tego sklepu — atomowo, przez blokadę
+     * wiersza sklepu (unika kolizji przy równoczesnych zamówieniach). Numeracja
+     * jest ciągła i nieodzyskiwana: licznik rośnie niezależnie od anulowania czy
+     * usunięcia logicznego zamówień. Wołane w transakcji składania zamówienia.
+     */
+    public function allocateOrderNumber(): int
+    {
+        return \Illuminate\Support\Facades\DB::transaction(function (): int {
+            $locked = self::whereKey($this->getKey())->lockForUpdate()->firstOrFail();
+            $next = $locked->last_order_number + 1;
+            $locked->last_order_number = $next;
+            $locked->save();
+
+            $this->last_order_number = $next;
+
+            return $next;
+        });
+    }
+
+    /**
      * Tagi sklepu mające przynajmniej jeden aktywny produkt, z liczbą tych
      * produktów (`products_count`), najpopularniejsze najpierw. Wejście do
      * przeglądania po tagach (główna, chmura na wykazie bez filtra).
