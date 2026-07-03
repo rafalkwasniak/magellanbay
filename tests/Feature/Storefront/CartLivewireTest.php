@@ -90,6 +90,16 @@ class CartLivewireTest extends TestCase
             ->assertSee('2');
     }
 
+    public function test_listing_and_home_expose_add_to_cart(): void
+    {
+        $shop = Shop::factory()->active()->create();
+        $this->product($shop);
+        $base = 'http://'.$shop->slug.'.'.config('tenancy.central_domain');
+
+        $this->get($base.'/produkty')->assertOk()->assertSeeLivewire(AddToCart::class);
+        $this->get($base.'/')->assertOk()->assertSeeLivewire(AddToCart::class);
+    }
+
     public function test_cart_page_renders_with_livewire_component(): void
     {
         $shop = Shop::factory()->active()->create();

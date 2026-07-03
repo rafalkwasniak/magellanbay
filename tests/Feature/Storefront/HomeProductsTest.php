@@ -39,7 +39,7 @@ class HomeProductsTest extends TestCase
         $this->get($this->url($shop))
             ->assertOk()
             ->assertSee($product->name)
-            ->assertSee('Zobacz produkt'); // CTA tylko w układzie hero (1 produkt)
+            ->assertSee('Zobacz szczegóły'); // link do szczegółów tylko w układzie hero (1 produkt)
     }
 
     public function test_two_and_three_products_render_all(): void

@@ -24,13 +24,17 @@ class AddToCart extends Component
 
     public ?int $stock = null;
 
-    public function mount(Product $product): void
+    /** Wariant na kafel: pełna szerokość, bez linii „Dostępne: N szt.". */
+    public bool $compact = false;
+
+    public function mount(Product $product, bool $compact = false): void
     {
         $this->productId = $product->id;
         $this->shopId = (int) $product->shop_id;
         $this->active = (bool) $product->is_active;
         $this->trackStock = (bool) $product->track_stock;
         $this->stock = $product->stock;
+        $this->compact = $compact;
     }
 
     public function add(CartService $cart): void

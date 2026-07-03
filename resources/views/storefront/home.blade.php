@@ -33,8 +33,11 @@
                         @if (filled($p->description))
                             <div class="mt-4 leading-relaxed opacity-80">{!! $p->description !!}</div>
                         @endif
-                        <p class="mt-5 text-2xl font-bold">{{ number_format((float) $p->price_gross, 2, ',', ' ') }} zł</p>
-                        <a href="{{ $p->storefrontPath() }}" class="st-btn mt-6 inline-block rounded-full px-8 py-3 text-sm font-semibold shadow-sm transition hover:brightness-105">Zobacz produkt</a>
+                        <p class="mt-5 text-2xl font-bold">{{ \App\Support\Money::pln($p->price_gross) }}</p>
+                        <div class="mt-6 flex flex-wrap items-center justify-center gap-4 md:justify-start">
+                            <livewire:add-to-cart :product="$p" wire:key="hero-atc-{{ $p->id }}" />
+                            <a href="{{ $p->storefrontPath() }}" class="text-sm font-medium underline-offset-4 opacity-70 transition hover:underline hover:opacity-100">Zobacz szczegóły →</a>
+                        </div>
                     </div>
                 </section>
                 @break
