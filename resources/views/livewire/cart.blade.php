@@ -78,12 +78,10 @@
                         <span class="opacity-70">Razem (brutto)</span>
                         <span class="text-xl font-bold tabular-nums">{{ \App\Support\Money::pln($total) }}</span>
                     </div>
-                    <button type="button" disabled
-                        class="st-btn mt-6 w-full cursor-not-allowed rounded-full px-8 py-3 text-sm font-semibold opacity-60"
-                        title="Kasa dojdzie w kolejnym kroku">
+                    <a href="/kasa" wire:navigate
+                        class="st-btn mt-6 block w-full rounded-full px-8 py-3 text-center text-sm font-semibold shadow-sm transition hover:brightness-105">
                         Przejdź do kasy
-                    </button>
-                    <p class="mt-2 text-center text-xs opacity-50">Kasa i dostawa dojdą wkrótce.</p>
+                    </a>
                 </div>
             </aside>
         </div>

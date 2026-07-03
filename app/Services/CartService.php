@@ -93,6 +93,23 @@ class CartService
     }
 
     /**
+     * Nadpisuje cały koszyk sklepu podaną mapą [product_id => qty]. Używane przy
+     * uzgodnieniu przed złożeniem zamówienia (finalna weryfikacja dostępności).
+     *
+     * @param  array<int, int>  $items
+     */
+    public function overwrite(int $shopId, array $items): void
+    {
+        if ($items === []) {
+            $this->clear($shopId);
+
+            return;
+        }
+
+        session()->put(self::KEY.'.'.$shopId, $items);
+    }
+
+    /**
      * Uzgodnione pozycje koszyka: świeże produkty z bazy, ilości przycięte do
      * stanu, pominięte produkty nieistniejące/nieaktywne (i wyczyszczone z sesji).
      * Każda pozycja: product, quantity, unit_price (brutto), line_total.

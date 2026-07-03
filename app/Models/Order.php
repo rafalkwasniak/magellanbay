@@ -23,6 +23,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'number', 'customer_id', 'status',
     'buyer_name', 'buyer_surname', 'buyer_email', 'buyer_phone',
     'is_company', 'company_name', 'company_nip',
+    'company_street', 'company_building_number', 'company_apartment_number', 'company_postal_code', 'company_city',
     'ship_street', 'ship_building_number', 'ship_apartment_number', 'ship_postal_code', 'ship_city',
     'delivery_method', 'delivery_cost', 'payment_method',
     'items_total', 'total_net', 'total_vat', 'total_gross', 'note',
