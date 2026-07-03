@@ -143,4 +143,21 @@ class ProductPageTest extends TestCase
             ->assertStatus(301)
             ->assertRedirect($product->storefrontPath().'?powrot='.urlencode($back));
     }
+
+    public function test_product_page_renders_breadcrumbs(): void
+    {
+        $shop = Shop::factory()->active()->create(['name' => 'Srebrny Kram']);
+        $product = $this->product($shop, ['name' => 'Bransoletka']);
+
+        $this->get($this->host($shop).$product->storefrontPath())
+            ->assertOk()
+            // Widoczna ścieżka: nazwa sklepu → Produkty → produkt (bieżący).
+            ->assertSee('aria-label="Ścieżka nawigacji"', false)
+            ->assertSee('Srebrny Kram')
+            ->assertSee('aria-current="page"', false)
+            // SEO: schema.org BreadcrumbList z korzeniem = nazwa sklepu.
+            ->assertSee('BreadcrumbList', false)
+            ->assertSee('"name":"Srebrny Kram"', false)
+            ->assertSee('"name":"Bransoletka"', false);
+    }
 }

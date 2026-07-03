@@ -1,7 +1,13 @@
 <x-layouts.storefront :shop="$shop" :title="$product->name">
     <div class="mx-auto max-w-5xl px-6 pt-10">
+        <x-storefront.breadcrumbs :items="[
+            ['label' => $shop->name, 'url' => '/'],
+            ['label' => 'Produkty', 'url' => '/produkty'],
+            ['label' => $product->name],
+        ]" />
+
         @php $backToList = str_starts_with($back, '/produkty'); @endphp
-        <a href="{{ $back }}" class="text-sm opacity-70 transition hover:opacity-100">← {{ $backToList ? 'Wróć do produktów' : $shop->name }}</a>
+        <a href="{{ $back }}" class="mt-3 inline-block text-sm opacity-70 transition hover:opacity-100">← {{ $backToList ? 'Wróć do produktów' : $shop->name }}</a>
 
         <div class="mt-6 grid gap-8 md:grid-cols-2">
             {{-- Galeria --}}

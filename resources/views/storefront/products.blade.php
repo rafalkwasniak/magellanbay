@@ -1,6 +1,11 @@
 <x-layouts.storefront :shop="$shop" title="Produkty">
     <div class="mx-auto max-w-6xl px-6 pt-10">
-        <a href="/" class="text-sm opacity-70 transition hover:opacity-100">← {{ $shop->name }}</a>
+        <x-storefront.breadcrumbs :items="[
+            ['label' => $shop->name, 'url' => '/'],
+            ['label' => 'Produkty'],
+        ]" />
+
+        <a href="/" class="mt-3 inline-block text-sm opacity-70 transition hover:opacity-100">← {{ $shop->name }}</a>
         <h1 class="st-brand mt-4 text-3xl font-bold tracking-tight">Wszystkie produkty</h1>
 
         <x-storefront.tag-cloud :tags="$tagCloud" :clearUrl="$hasFilters ? $clearUrl : null" />

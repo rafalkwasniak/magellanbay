@@ -269,4 +269,16 @@ class ProductListingTest extends TestCase
             ->assertOk()
             ->assertSee('Zobacz wszystkie produkty');
     }
+
+    public function test_listing_renders_breadcrumbs(): void
+    {
+        $shop = Shop::factory()->active()->create(['name' => 'Złoty Kram']);
+
+        $this->get($this->host($shop).'/produkty')
+            ->assertOk()
+            ->assertSee('aria-label="Ścieżka nawigacji"', false)
+            ->assertSee('BreadcrumbList', false)
+            ->assertSee('"name":"Złoty Kram"', false)
+            ->assertSee('"name":"Produkty"', false);
+    }
 }
