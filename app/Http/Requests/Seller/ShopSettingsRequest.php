@@ -18,13 +18,14 @@ class ShopSettingsRequest extends FormRequest
     }
 
     /**
-     * Fiszka „Przelew na konto" to checkbox — nieobecny w POST, gdy odznaczony.
+     * Włączniki usług to checkboxy — nieobecne w POST, gdy odznaczone.
      * Normalizujemy do jawnego boola, żeby zapis nie gubił wyłączenia metody.
      */
     protected function prepareForValidation(): void
     {
         $this->merge([
             'bank_transfer_enabled' => $this->boolean('bank_transfer_enabled'),
+            'google_analytics_enabled' => $this->boolean('google_analytics_enabled'),
         ]);
     }
 
@@ -36,6 +37,7 @@ class ShopSettingsRequest extends FormRequest
         return [
             'default_vat_rate' => ['required', Rule::enum(VatRate::class)],
             'bank_transfer_enabled' => ['boolean'],
+            'google_analytics_enabled' => ['boolean'],
         ];
     }
 
@@ -47,6 +49,7 @@ class ShopSettingsRequest extends FormRequest
         return [
             'default_vat_rate' => 'domyślna stawka VAT',
             'bank_transfer_enabled' => 'przelew na konto',
+            'google_analytics_enabled' => 'Google Analytics',
         ];
     }
 }

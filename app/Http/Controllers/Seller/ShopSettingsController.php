@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Seller;
 
+use App\Enums\IntegrationType;
 use App\Enums\VatRate;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Seller\ShopSettingsRequest;
@@ -10,9 +11,9 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 /**
- * Ustawienia sklepu — typowane pola konfiguracyjne (na razie domyślna stawka
- * VAT). Osobna pozycja lewego menu; integracje zaawansowane (GA, płatności)
- * dojdą później jako odrębny moduł. Edycja przez POST (FOUNDATION sek. 5).
+ * Ustawienia sklepu — typowane pola (domyślny VAT), fiszki metod (przelew) oraz
+ * WŁĄCZNIKI usług konfigurowanych w Integracjach (Google Analytics). Podział:
+ * tutaj włączasz/wyłączasz, konfigurujesz w „Integracje". Edycja przez POST.
  */
 class ShopSettingsController extends Controller
 {
@@ -27,6 +28,8 @@ class ShopSettingsController extends Controller
         return view('seller.settings.edit', [
             'shop' => $shop,
             'vatRates' => VatRate::cases(),
+            'googleAnalyticsId' => $shop->googleAnalyticsId(),
+            'googleAnalyticsEnabled' => (bool) $shop->integration(IntegrationType::GoogleAnalytics)?->enabled,
         ]);
     }
 
@@ -34,8 +37,15 @@ class ShopSettingsController extends Controller
     {
         $shop = $request->user()->shop;
 
-        $shop->fill($request->validated());
+        // Pola typowane sklepu (VAT, przelew) — bez włącznika GA, który żyje na
+        // wierszu integracji, nie na kolumnie shops.
+        $shop->fill($request->safe()->except('google_analytics_enabled'));
         $shop->save();
+
+        // Włącznik GA działa tylko, gdy integracja jest skonfigurowana (istnieje
+        // wiersz). Bez ID checkbox jest wyłączony i nie ma czego przełączać.
+        $shop->integration(IntegrationType::GoogleAnalytics)
+            ?->update(['enabled' => $request->boolean('google_analytics_enabled')]);
 
         return redirect()
             ->route('seller.settings.edit')

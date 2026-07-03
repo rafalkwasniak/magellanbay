@@ -14,6 +14,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Seller\AppearanceController;
 use App\Http\Controllers\Seller\CompanyLookupController;
 use App\Http\Controllers\Seller\DashboardController as SellerDashboard;
+use App\Http\Controllers\Seller\IntegrationController;
 use App\Http\Controllers\Seller\ProductController;
 use App\Http\Controllers\Seller\ProductImageController;
 use App\Http\Controllers\Seller\ShopProfileController;
@@ -116,6 +117,10 @@ Route::middleware(['auth', 'role:seller', 'ensure.consents'])
         // Ustawienia sklepu (na razie domyślny VAT; docelowo więcej). Edycja przez POST.
         Route::get('/ustawienia', [ShopSettingsController::class, 'edit'])->name('settings.edit');
         Route::post('/ustawienia', [ShopSettingsController::class, 'update'])->name('settings.update');
+
+        // Integracje (na razie Google Analytics — konfiguracja usług). Edycja przez POST.
+        Route::get('/integracje', [IntegrationController::class, 'edit'])->name('integrations.edit');
+        Route::post('/integracje', [IntegrationController::class, 'update'])->name('integrations.update');
 
         // Auto-uzupełnienie danych firmy po NIP (Biała lista MF). Zwraca JSON.
         Route::post('/firma/z-nip', CompanyLookupController::class)

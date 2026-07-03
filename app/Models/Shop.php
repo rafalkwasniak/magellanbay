@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\IntegrationType;
 use App\Enums\ShopStatus;
 use App\Enums\VatRate;
 use Database\Factories\ShopFactory;
@@ -67,6 +68,25 @@ class Shop extends Model
     public function tags(): HasMany
     {
         return $this->hasMany(Tag::class);
+    }
+
+    /**
+     * Integracje sklepu (GA, w przyszłości PayU/InPost…). Jeden wiersz na typ.
+     *
+     * @return HasMany<ShopIntegration, $this>
+     */
+    public function integrations(): HasMany
+    {
+        return $this->hasMany(ShopIntegration::class);
+    }
+
+    /**
+     * Wiersz integracji danego typu (lub null). Czyta z załadowanej relacji,
+     * żeby nie odpytywać bazy przy każdym wywołaniu w obrębie jednego requestu.
+     */
+    public function integration(IntegrationType $type): ?ShopIntegration
+    {
+        return $this->integrations->firstWhere('type', $type);
     }
 
     /**
@@ -171,6 +191,28 @@ class Shop extends Model
     public function bankTransferAvailable(): bool
     {
         return $this->bank_transfer_enabled && filled($this->bank_account_number);
+    }
+
+    /**
+     * Skonfigurowany identyfikator Google Analytics / Tag Manager (G-… lub
+     * GTM-…), niezależnie od włącznika. Do sprawdzenia „czy skonfigurowane"
+     * (Integracje, Ustawienia). null, gdy integracji nie ma lub nie ma ID.
+     */
+    public function googleAnalyticsId(): ?string
+    {
+        return $this->integration(IntegrationType::GoogleAnalytics)?->config['tracking_id'] ?? null;
+    }
+
+    /**
+     * Czy storefront ma faktycznie wstrzyknąć GA: dwa warunki — fiszka włączona
+     * (Ustawienia) ORAZ identyfikator wpisany (Integracje). Analogia do
+     * bankTransferAvailable(): stan efektywny, nie sam włącznik.
+     */
+    public function tracksWithGoogleAnalytics(): bool
+    {
+        $integration = $this->integration(IntegrationType::GoogleAnalytics);
+
+        return $integration?->enabled === true && filled($integration->config['tracking_id'] ?? null);
     }
 
     /**

@@ -47,12 +47,40 @@
                                 <span class="block text-sm font-medium text-stone-800">Przelew na konto</span>
                                 <span class="mt-0.5 block text-sm text-stone-500">Klient otrzymuje Twój numer konta i tytuł przelewu. Bez operatora i prowizji.</span>
                                 @unless($hasAccount)
-                                    <span class="mt-1.5 block text-xs text-amber-700">Najpierw uzupełnij numer konta w <a href="{{ route('seller.shop.edit') }}#dane-do-przelewu" class="font-medium underline decoration-amber-300 underline-offset-2">Mój sklep</a>, aby włączyć tę metodę.</span>
+                                    @if($shop->bank_transfer_enabled)
+                                        <span class="mt-1.5 block text-xs text-amber-700">Ta metoda jest włączona, ale zacznie działać w kasie dopiero, gdy podasz numer konta w <a href="{{ route('seller.shop.edit') }}#dane-do-przelewu" class="font-medium underline decoration-amber-300 underline-offset-2">Mój sklep</a>.</span>
+                                    @else
+                                        <span class="mt-1.5 block text-xs text-amber-700">Aby móc włączyć tę metodę, najpierw podaj numer konta w <a href="{{ route('seller.shop.edit') }}#dane-do-przelewu" class="font-medium underline decoration-amber-300 underline-offset-2">Mój sklep</a>.</span>
+                                    @endif
                                 @endunless
                             </label>
                         </div>
 
                         <p class="text-xs text-stone-400">Płatności online (szybkie przelewy, BLIK, karty) dojdą później jako integracja w wyższych pakietach.</p>
+                    </div>
+                </div>
+
+                {{-- Integracje (włączniki; konfiguracja w zakładce Integracje) --}}
+                <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                    <h2 class="font-semibold text-stone-900">Integracje</h2>
+                    <p class="mt-1 text-sm text-stone-500">Włączasz i wyłączasz usługi skonfigurowane w zakładce <a href="{{ route('seller.integrations.edit') }}" class="font-medium text-stone-700 underline decoration-amber-300 underline-offset-2">Integracje</a>.</p>
+
+                    <div class="mt-6 space-y-4">
+                        @php($gaConfigured = filled($googleAnalyticsId))
+                        <div class="flex items-start gap-4 rounded-2xl border border-stone-200 bg-white/60 p-5 sm:p-6 {{ $gaConfigured ? '' : 'opacity-60' }}">
+                            {{-- hidden = wartość bazowa; bez ID checkbox jest disabled i nic nie wysyła --}}
+                            <input type="hidden" name="google_analytics_enabled" value="{{ $gaConfigured ? '0' : ($googleAnalyticsEnabled ? '1' : '0') }}">
+                            <input type="checkbox" id="google_analytics_enabled" name="google_analytics_enabled" value="1"
+                                @checked(old('google_analytics_enabled', $googleAnalyticsEnabled)) @disabled(! $gaConfigured)
+                                class="mt-0.5 h-5 w-5 shrink-0 rounded-md border-stone-300 text-amber-600 focus:ring-4 focus:ring-amber-500/20 disabled:cursor-not-allowed">
+                            <label for="google_analytics_enabled" class="flex-1 {{ $gaConfigured ? 'cursor-pointer' : 'cursor-not-allowed' }}">
+                                <span class="block text-sm font-medium text-stone-800">Google Analytics</span>
+                                <span class="mt-0.5 block text-sm text-stone-500">Zbiera statystyki ruchu w Twoim sklepie i wysyła je na Twoje konto Google.</span>
+                                @unless($gaConfigured)
+                                    <span class="mt-1.5 block text-xs text-amber-700">Aby móc włączyć, najpierw wpisz identyfikator w <a href="{{ route('seller.integrations.edit') }}" class="font-medium underline decoration-amber-300 underline-offset-2">Integracjach</a>.</span>
+                                @endunless
+                            </label>
+                        </div>
                     </div>
                 </div>
 

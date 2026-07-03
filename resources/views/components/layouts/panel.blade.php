@@ -28,6 +28,7 @@
             ['label' => 'Zamówienia', 'route' => null, 'icon' => '📦'],
             ['label' => 'Wygląd', 'route' => 'seller.appearance.edit', 'icon' => '🎨'],
             ['label' => 'Ustawienia', 'route' => 'seller.settings.edit', 'icon' => '⚙️'],
+            ['label' => 'Integracje', 'route' => 'seller.integrations.edit', 'icon' => '🔌'],
         ];
         $initials = strtoupper(mb_substr($user->name ?? '?', 0, 1) . mb_substr($user->surname ?? '', 0, 1));
         $avatar = $user?->avatar_path ? \Illuminate\Support\Facades\Storage::disk('public')->url($user->avatar_path) : null;

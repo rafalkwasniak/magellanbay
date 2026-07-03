@@ -1,6 +1,13 @@
 @props(['shop', 'title' => null])
 
-@php $tokens = $shop->themeTokens(); @endphp
+@php
+    $tokens = $shop->themeTokens();
+    // Google Analytics/Tag Manager: wstrzykujemy tylko gdy włączone (Ustawienia)
+    // i skonfigurowane (Integracje). ID jest zwalidowane do [A-Z0-9-] (Form
+    // Request), więc bezpieczne w <script>. GTM- → Tag Manager, G- → GA4.
+    $gaId = $shop->tracksWithGoogleAnalytics() ? $shop->googleAnalyticsId() : null;
+    $isGtm = $gaId !== null && str_starts_with($gaId, 'GTM-');
+@endphp
 <!doctype html>
 <html lang="pl" class="h-full">
 
@@ -28,9 +35,30 @@
         /* Panel karty — wyliczany z tokenów, czytelny na jasnym i ciemnym tle. */
         .st-card { background: color-mix(in srgb, var(--ink) 4%, var(--surface)); }
     </style>
+
+    @if($gaId)
+        @if($isGtm)
+            {{-- Google Tag Manager --}}
+            <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','{{ $gaId }}');</script>
+        @else
+            {{-- Google Analytics 4 --}}
+            <script async src="https://www.googletagmanager.com/gtag/js?id={{ $gaId }}"></script>
+            <script>
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+                gtag('config', '{{ $gaId }}');
+            </script>
+        @endif
+    @endif
 </head>
 
 <body class="min-h-full font-sans antialiased">
+    @if($gaId && $isGtm)
+        {{-- Google Tag Manager (noscript) --}}
+        <noscript><iframe src="https://www.googletagmanager.com/ns.html?id={{ $gaId }}" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    @endif
+
     {{ $slot }}
 
     <footer class="st-border mt-16 border-t py-8 text-center text-xs opacity-60">
