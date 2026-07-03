@@ -1,4 +1,4 @@
-@props(['product', 'aspect' => '4 / 3', 'back' => null])
+@props(['product', 'aspect' => '1 / 1', 'back' => null])
 
 @php
     $main = $product->mainImage();
@@ -8,6 +8,7 @@
 @endphp
 
 <a href="{{ $href }}" {{ $attributes->merge(['class' => 'st-card st-border group block overflow-hidden rounded-2xl border transition hover:brightness-[1.02]']) }}>
+    {{-- Listing: kadr kwadratowy, przycięty (object-cover) — równa siatka. --}}
     <div class="w-full overflow-hidden" style="aspect-ratio: {{ $aspect }};">
         @if ($main)
             <img src="{{ $main->url() }}" alt="{{ $product->name }}"

@@ -1,5 +1,5 @@
 <x-layouts.storefront :shop="$shop" :title="$product->name">
-    <div class="mx-auto max-w-5xl px-6 pt-10">
+    <div class="mx-auto max-w-6xl px-6 pt-10">
         <x-storefront.breadcrumbs :items="[
             ['label' => $shop->name, 'url' => '/'],
             ['label' => 'Produkty', 'url' => '/produkty'],
@@ -13,19 +13,21 @@
             {{-- Galeria --}}
             <div>
                 @php($main = $product->mainImage())
-                <div class="st-card st-border overflow-hidden rounded-3xl border" style="aspect-ratio: 1 / 1;">
-                    @if ($main)
-                        <img id="st-gallery-main" src="{{ $main->url() }}" alt="{{ $product->name }}" class="h-full w-full object-cover">
-                    @else
-                        <div class="st-btn flex h-full w-full items-center justify-center">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-16 w-16 opacity-70" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5" fill="currentColor" stroke="none"/><path d="M4 17l4.5-4.5 3 3L15 12l5 5"/></svg>
-                        </div>
-                    @endif
-                </div>
+                {{-- Karta produktu: zdjęcie takie, jak dodał sprzedawca — naturalne
+                     proporcje, bez przycinania i bez wypełniania. --}}
+                @if ($main)
+                    <img id="st-gallery-main" src="{{ $main->url() }}" alt="{{ $product->name }}"
+                        class="st-border w-full rounded-3xl border">
+                @else
+                    <div class="st-card st-border flex items-center justify-center overflow-hidden rounded-3xl border" style="aspect-ratio: 1 / 1;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-16 w-16 opacity-70" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5" fill="currentColor" stroke="none"/><path d="M4 17l4.5-4.5 3 3L15 12l5 5"/></svg>
+                    </div>
+                @endif
 
                 @if ($product->images->count() > 1)
                     <div class="mt-3 flex flex-wrap gap-3">
                         @foreach ($product->images as $img)
+                            {{-- Miniatury: kwadrat, przycięte (object-cover) — jak kafle na wykazie. --}}
                             <button type="button" data-gallery-thumb="{{ $img->url() }}"
                                 class="st-border h-16 w-16 overflow-hidden rounded-xl border transition hover:brightness-105">
                                 <img src="{{ $img->url() }}" alt="" class="h-full w-full object-cover">
