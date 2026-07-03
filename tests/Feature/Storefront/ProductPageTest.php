@@ -40,7 +40,7 @@ class ProductPageTest extends TestCase
             ->assertOk()
             ->assertSee('Kubek Ceramiczny')
             ->assertSee('29,90 zł')
-            ->assertSee('Dodaj do koszyka');
+            ->assertSeeLivewire(\App\Livewire\AddToCart::class);
     }
 
     public function test_wrong_slug_redirects_to_canonical(): void

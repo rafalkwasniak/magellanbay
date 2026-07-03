@@ -19,6 +19,7 @@ use App\Http\Controllers\Seller\ProductController;
 use App\Http\Controllers\Seller\ProductImageController;
 use App\Http\Controllers\Seller\ShopProfileController;
 use App\Http\Controllers\Seller\ShopSettingsController;
+use App\Http\Controllers\Storefront\CartController as StorefrontCart;
 use App\Http\Controllers\Storefront\HomeController as StorefrontHome;
 use App\Http\Controllers\Storefront\ProductController as StorefrontProduct;
 use Illuminate\Support\Facades\Route;
@@ -180,4 +181,5 @@ Route::domain('{shop}.'.config('tenancy.central_domain'))
         Route::get('/', [StorefrontHome::class, 'show'])->name('storefront.home');
         Route::get('/produkty', [StorefrontProduct::class, 'index'])->name('storefront.products');
         Route::get('/produkt/{product}', [StorefrontProduct::class, 'show'])->name('storefront.product');
+        Route::get('/koszyk', [StorefrontCart::class, 'show'])->name('storefront.cart');
     });

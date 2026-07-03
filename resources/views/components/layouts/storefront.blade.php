@@ -34,7 +34,10 @@
         .st-border { border-color: color-mix(in srgb, var(--ink) 12%, transparent); }
         /* Panel karty — wyliczany z tokenów, czytelny na jasnym i ciemnym tle. */
         .st-card { background: color-mix(in srgb, var(--ink) 4%, var(--surface)); }
+        [x-cloak] { display: none !important; }
     </style>
+
+    @livewireStyles
 
     @if($gaId)
         @if($isGtm)
@@ -59,11 +62,21 @@
         <noscript><iframe src="https://www.googletagmanager.com/ns.html?id={{ $gaId }}" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     @endif
 
+    {{-- Slim pasek użytkowy: powrót do sklepu + koszyk (na każdej podstronie). --}}
+    <header class="st-border sticky top-0 z-30 border-b backdrop-blur" style="background: color-mix(in srgb, var(--surface) 82%, transparent);">
+        <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3">
+            <a href="/" wire:navigate class="st-brand truncate text-sm font-semibold sm:text-base">{{ $shop->name }}</a>
+            <livewire:cart-counter :shop-id="$shop->id" />
+        </div>
+    </header>
+
     {{ $slot }}
 
     <footer class="st-border mt-16 border-t py-8 text-center text-xs opacity-60">
         Sklep na <a href="https://{{ config('tenancy.central_domain') }}" class="font-semibold">Kramio</a>
     </footer>
+
+    @livewireScripts
 </body>
 
 </html>

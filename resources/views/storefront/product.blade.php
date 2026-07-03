@@ -41,16 +41,15 @@
             <div>
                 <h1 class="st-brand text-3xl font-bold tracking-tight">{{ $product->name }}</h1>
 
-                <p class="mt-4 text-3xl font-bold">{{ number_format((float) $product->price_gross, 2, ',', ' ') }} zł</p>
+                <p class="mt-4 text-3xl font-bold">{{ \App\Support\Money::pln($product->price_gross) }}</p>
                 @php($lowest = $product->lowestPriceLast30Days())
                 @if ($lowest !== null)
-                    <p class="mt-1 text-sm opacity-70">Najniższa cena z 30 dni: {{ number_format($lowest, 2, ',', ' ') }} zł</p>
+                    <p class="mt-1 text-sm opacity-70">Najniższa cena z 30 dni: {{ \App\Support\Money::pln($lowest) }}</p>
                 @endif
 
-                <button type="button" class="st-btn mt-6 w-full rounded-full px-8 py-3.5 text-sm font-semibold shadow-sm transition hover:brightness-105 sm:w-auto">
-                    Dodaj do koszyka
-                </button>
-                <p class="mt-2 text-xs opacity-50">Koszyk uruchomimy w następnym kroku.</p>
+                <div class="mt-6">
+                    <livewire:add-to-cart :product="$product" />
+                </div>
 
                 @if (filled($product->description))
                     <div class="st-border mt-8 border-t pt-6 leading-relaxed opacity-90">{!! $product->description !!}</div>
