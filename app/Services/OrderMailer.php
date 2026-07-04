@@ -7,6 +7,7 @@ use App\Enums\MailPriority;
 use App\Enums\PaymentMethod;
 use App\Models\EmailMessage;
 use App\Models\Order;
+use App\Models\Shop;
 use App\Support\Money;
 
 /**
@@ -26,7 +27,7 @@ class OrderMailer
         $order->loadMissing(['items', 'shop']);
         $shop = $order->shop;
 
-        EmailMessage::create([
+        EmailMessage::create($this->senderIdentity($shop) + [
             'priority' => MailPriority::Mid,
             'shop_id' => $shop->id,
             'to_email' => $order->buyer_email,
@@ -68,7 +69,7 @@ class OrderMailer
             return;
         }
 
-        EmailMessage::create([
+        EmailMessage::create($this->senderIdentity($shop) + [
             'priority' => MailPriority::Mid,
             'shop_id' => $shop->id,
             'to_email' => $owner->email,
@@ -156,6 +157,21 @@ class OrderMailer
     private function blocks(array $blocks): array
     {
         return array_values(array_filter($blocks, fn (array $block): bool => $block !== []));
+    }
+
+    /**
+     * Tożsamość nadawcy „od sklepu", wspólna dla maili zamówienia: display-name
+     * koperty = nazwa sklepu, Reply-To = e-mail kontaktowy sklepu. From-address
+     * zostaje nasz (deliverability) — renderer składa to w `OutboxMailable`.
+     *
+     * @return array<string, string|null>
+     */
+    private function senderIdentity(Shop $shop): array
+    {
+        return [
+            'from_name' => $shop->name,
+            'reply_to' => $shop->contact_email,
+        ];
     }
 
     /**

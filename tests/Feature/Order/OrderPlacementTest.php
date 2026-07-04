@@ -121,6 +121,26 @@ class OrderPlacementTest extends TestCase
         $this->assertDatabaseHas('email_messages', ['to_email' => $shop->owner->email]);
     }
 
+    public function test_order_emails_carry_shop_sender_identity(): void
+    {
+        $shop = $this->shop();
+        $shop->update(['name' => 'I like my bike', 'contact_email' => 'kontakt@bike.test']);
+        $product = Product::factory()->create([
+            'shop_id' => $shop->id, 'is_active' => true, 'track_stock' => false, 'stock' => null, 'price_gross' => 30.00,
+        ]);
+        app(CartService::class)->add($product, 1);
+
+        app(OrderService::class)->place($shop, $this->buyerData());
+
+        // Oba maile (do klienta i do sprzedawcy) niosą tożsamość sklepu: nadawca =
+        // nazwa sklepu, Reply-To = e-mail kontaktowy sklepu.
+        $this->assertSame(2, EmailMessage::count());
+        foreach (EmailMessage::all() as $email) {
+            $this->assertSame('I like my bike', $email->from_name);
+            $this->assertSame('kontakt@bike.test', $email->reply_to);
+        }
+    }
+
     public function test_customer_email_bolds_full_transfer_title_and_amount(): void
     {
         $shop = $this->shop();

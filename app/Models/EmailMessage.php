@@ -14,7 +14,7 @@ use Illuminate\Support\Carbon;
  * go dostarcza. Wzorzec z kociaczek.com.pl + `shop_id`/`heading`/`preheader`.
  */
 #[Fillable([
-    'priority', 'shop_id', 'to_email', 'to_name', 'subject', 'preheader',
+    'priority', 'shop_id', 'to_email', 'to_name', 'from_name', 'reply_to', 'subject', 'preheader',
     'heading', 'greeting', 'intro_lines', 'action_text', 'action_url',
     'outro_lines', 'scheduled_at',
 ])]

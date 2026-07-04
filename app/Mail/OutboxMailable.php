@@ -5,6 +5,7 @@ namespace App\Mail;
 use App\Models\EmailMessage;
 use App\Support\MailBranding;
 use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Address;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 
@@ -21,7 +22,16 @@ class OutboxMailable extends Mailable
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: $this->message->subject);
+        // From-address zawsze nasz (SPF/DKIM na kramio.pl), a display-name to nazwa
+        // sklepu — mail „od sklepu", nie od platformy. Reply-To kieruje odpowiedź
+        // klienta do sprzedawcy. Puste pola = mail platformy → domyślne Kramio.
+        $fromName = $this->message->from_name ?: config('mail.from.name');
+
+        return new Envelope(
+            from: new Address(config('mail.from.address'), $fromName),
+            replyTo: filled($this->message->reply_to) ? [new Address($this->message->reply_to)] : [],
+            subject: $this->message->subject,
+        );
     }
 
     public function content(): Content

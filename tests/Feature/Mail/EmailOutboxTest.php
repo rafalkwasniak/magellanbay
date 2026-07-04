@@ -33,6 +33,33 @@ class EmailOutboxTest extends TestCase
         $this->assertNull($message->sent_at);
     }
 
+    public function test_shop_message_envelope_uses_shop_from_name_and_reply_to(): void
+    {
+        $message = $this->queue([
+            'from_name' => 'I like my bike',
+            'reply_to' => 'kontakt@bike.test',
+        ]);
+
+        $envelope = (new OutboxMailable($message))->envelope();
+
+        // From-address zostaje nasz (deliverability), display-name = nazwa sklepu.
+        $this->assertSame(config('mail.from.address'), $envelope->from->address);
+        $this->assertSame('I like my bike', $envelope->from->name);
+        // Reply-To kieruje odpowiedź klienta do sprzedawcy.
+        $this->assertCount(1, $envelope->replyTo);
+        $this->assertSame('kontakt@bike.test', $envelope->replyTo[0]->address);
+    }
+
+    public function test_platform_message_envelope_falls_back_to_kramio_identity(): void
+    {
+        // Brak from_name / reply_to = mail platformy (np. aktywacja).
+        $envelope = (new OutboxMailable($this->queue()))->envelope();
+
+        $this->assertSame(config('mail.from.address'), $envelope->from->address);
+        $this->assertSame(config('mail.from.name'), $envelope->from->name);
+        $this->assertSame([], $envelope->replyTo);
+    }
+
     public function test_dispatch_sends_due_messages_and_marks_them_sent(): void
     {
         Mail::fake();
