@@ -44,6 +44,41 @@
                     </div>
                 </div>
 
+                {{-- Dane kontaktowe — osobny box: e-mail i telefon nie wypełniają się z NIP
+                     (jak adres), a budują wiarygodność sklepu i zasilają kontakt/maile. --}}
+                <div id="dane-kontaktowe" class="scroll-mt-24 rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                    <h2 class="font-semibold text-stone-900">Dane kontaktowe</h2>
+                    <p class="mt-1 text-sm text-stone-500">Widoczne dla klientów — pod tym adresem i numerem odpisujesz na pytania o zamówienia. E-mail trafia też w odpowiedź na maile ze sklepu.</p>
+
+                    <div class="mt-6 grid gap-5 sm:grid-cols-2">
+                        <div>
+                            <label for="contact_email" class="block text-sm font-medium text-stone-700">E-mail kontaktowy</label>
+                            <input id="contact_email" name="contact_email" type="email" required
+                                value="{{ old('contact_email', $shop->contact_email) }}"
+                                data-msg-required="Podaj e-mail kontaktowy."
+                                data-msg-email="Podaj prawidłowy adres e-mail."
+                                class="mt-1.5 block w-full rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
+                            <p class="mt-1.5 text-xs text-stone-400">Na ten adres klient odpowie, pisząc na maila o zamówieniu.</p>
+                            @error('contact_email')
+                                <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div>
+                            <label for="contact_phone" class="block text-sm font-medium text-stone-700">Telefon kontaktowy</label>
+                            <input id="contact_phone" name="contact_phone" type="tel" inputmode="tel" required
+                                value="{{ old('contact_phone', $shop->formattedContactPhone()) }}"
+                                placeholder="+48 600 700 800"
+                                data-msg-required="Podaj telefon kontaktowy."
+                                class="mt-1.5 block w-full rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
+                            <p class="mt-1.5 text-xs text-stone-400">9 cyfr. Możesz wpisać ze spacjami lub z „+48" — poprawimy zapis.</p>
+                            @error('contact_phone')
+                                <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </div>
+                </div>
+
                 {{-- Dane firmowe (NIP pierwszy + pobranie z rejestru; wypełnia nazwę i adres poniżej) --}}
                 <div id="dane-firmowe" class="scroll-mt-24 rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
                     <h2 class="font-semibold text-stone-900">Dane firmowe <span class="text-sm font-normal text-stone-400">(opcjonalnie)</span></h2>

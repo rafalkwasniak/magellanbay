@@ -27,6 +27,8 @@ class ShopProfileTest extends TestCase
         return array_merge([
             'name' => 'Nowa nazwa sklepu',
             'description' => 'Rękodzieło z pasją.',
+            'contact_email' => 'kontakt@sklep.test',
+            'contact_phone' => '600700800',
             'company_name' => 'Pracownia Test sp. z o.o.',
             'nip' => '1234563218', // poprawna suma kontrolna
             'country' => 'Polska',
@@ -97,6 +99,60 @@ class ShopProfileTest extends TestCase
             ->post(route('seller.shop.update'), $this->validPayload(['nip' => '123-456-32-18']));
 
         $this->assertSame('1234563218', $shop->fresh()->nip);
+    }
+
+    public function test_contact_email_and_phone_are_saved(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+
+        $this->actingAs($seller)
+            ->post(route('seller.shop.update'), $this->validPayload([
+                'contact_email' => 'sklep@example.com',
+                'contact_phone' => '668 196 229',
+            ]))
+            ->assertSessionHasNoErrors();
+
+        $fresh = $shop->fresh();
+        $this->assertSame('sklep@example.com', $fresh->contact_email);
+        // Telefon zapisany kanonicznie (48 + 9 cyfr), niezależnie od zapisu w formularzu.
+        $this->assertSame('48668196229', $fresh->contact_phone);
+        $this->assertSame('+48 668 196 229', $fresh->formattedContactPhone());
+    }
+
+    public function test_contact_email_is_required(): void
+    {
+        [$seller] = $this->sellerWithShop();
+
+        $this->actingAs($seller)
+            ->post(route('seller.shop.update'), $this->validPayload(['contact_email' => '']))
+            ->assertSessionHasErrors('contact_email');
+    }
+
+    public function test_contact_phone_is_required(): void
+    {
+        [$seller] = $this->sellerWithShop();
+
+        $this->actingAs($seller)
+            ->post(route('seller.shop.update'), $this->validPayload(['contact_phone' => '']))
+            ->assertSessionHasErrors('contact_phone');
+    }
+
+    public function test_invalid_contact_email_is_rejected(): void
+    {
+        [$seller] = $this->sellerWithShop();
+
+        $this->actingAs($seller)
+            ->post(route('seller.shop.update'), $this->validPayload(['contact_email' => 'nie-email']))
+            ->assertSessionHasErrors('contact_email');
+    }
+
+    public function test_invalid_contact_phone_is_rejected(): void
+    {
+        [$seller] = $this->sellerWithShop();
+
+        $this->actingAs($seller)
+            ->post(route('seller.shop.update'), $this->validPayload(['contact_phone' => '12345']))
+            ->assertSessionHasErrors('contact_phone');
     }
 
     public function test_name_change_does_not_change_slug(): void

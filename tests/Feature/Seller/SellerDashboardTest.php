@@ -20,7 +20,7 @@ class SellerDashboardTest extends TestCase
         $this->actingAs($seller)
             ->get(route('seller.dashboard'))
             ->assertOk()
-            ->assertSee('0 / 5');
+            ->assertSee('0 / 6');
     }
 
     public function test_panel_renders_mobile_navigation(): void
@@ -74,13 +74,32 @@ class SellerDashboardTest extends TestCase
             'description' => 'Rękodzieło z pasją.',
             'logo_path' => 'shops/1/logo.png',
             'nip' => '1234563218',
+            'contact_email' => 'kontakt@sklep.test',
+            'contact_phone' => '48600700800',
         ]);
         Product::factory()->create(['shop_id' => $shop->id]);
 
         $this->actingAs($seller)
             ->get(route('seller.dashboard'))
             ->assertOk()
-            ->assertSee('5 / 5');
+            ->assertSee('6 / 6');
+    }
+
+    public function test_contact_step_needs_both_email_and_phone(): void
+    {
+        $seller = User::factory()->consented()->create();
+        // E-mail jest (jak po backfillu z właściciela), telefonu brak — krok NIEzaliczony.
+        $shop = Shop::factory()->create([
+            'owner_id' => $seller->id,
+            'contact_email' => 'kontakt@sklep.test',
+            'contact_phone' => null,
+        ]);
+
+        $this->assertFalse($shop->contactComplete());
+
+        $shop->update(['contact_phone' => '48600700800']);
+
+        $this->assertTrue($shop->fresh()->contactComplete());
     }
 
     public function test_only_hidden_products_do_not_complete_the_product_step(): void
@@ -92,7 +111,7 @@ class SellerDashboardTest extends TestCase
         $this->actingAs($seller)
             ->get(route('seller.dashboard'))
             ->assertOk()
-            ->assertDontSee('5 / 5')
+            ->assertDontSee('6 / 6')
             ->assertSee('wszystkie są ukryte', false);
     }
 }

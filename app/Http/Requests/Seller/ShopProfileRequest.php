@@ -4,6 +4,7 @@ namespace App\Http\Requests\Seller;
 
 use App\Services\HtmlSanitizer;
 use App\Services\NipService;
+use App\Services\PhoneService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -38,6 +39,11 @@ class ShopProfileRequest extends FormRequest
             $merge['nip'] = app(NipService::class)->normalize($this->input('nip'));
         }
 
+        // Telefon kontaktowy do postaci kanonicznej (48 + 9 cyfr) przed walidacją.
+        if ($this->has('contact_phone')) {
+            $merge['contact_phone'] = app(PhoneService::class)->normalize($this->input('contact_phone'));
+        }
+
         // Opis to HTML z edytora Trix — sanityzujemy wąską whitelistą przed walidacją/zapisem.
         if ($this->has('description')) {
             $merge['description'] = app(HtmlSanitizer::class)->clean((string) $this->input('description'));
@@ -63,6 +69,8 @@ class ShopProfileRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:'.config('shop.description_max')],
+            'contact_email' => ['required', 'email', 'max:255'],
+            'contact_phone' => ['required', 'regex:/^48[0-9]{9}$/'], // 48 + 9 cyfr (po normalizacji)
             'company_name' => ['nullable', 'string', 'max:255'],
             'nip' => ['nullable', function (string $attribute, mixed $value, \Closure $fail): void {
                 if (filled($value) && ! app(NipService::class)->isValid((string) $value)) {
@@ -90,6 +98,8 @@ class ShopProfileRequest extends FormRequest
         return [
             'name' => 'nazwa sklepu',
             'description' => 'opis sklepu',
+            'contact_email' => 'e-mail kontaktowy',
+            'contact_phone' => 'telefon kontaktowy',
             'company_name' => 'nazwa firmy',
             'nip' => 'NIP',
             'country' => 'kraj',
@@ -112,6 +122,7 @@ class ShopProfileRequest extends FormRequest
     {
         return [
             'postal_code.regex' => 'Podaj kod pocztowy w formacie NN-NNN.',
+            'contact_phone.regex' => 'Podaj prawidłowy numer telefonu (9 cyfr).',
             'province.in' => 'Wybierz województwo z listy.',
             'bank_account_number.digits' => 'Numer konta musi mieć 26 cyfr (polski numer NRB).',
         ];

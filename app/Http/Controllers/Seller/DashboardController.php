@@ -20,6 +20,7 @@ class DashboardController extends Controller
         // Każdy krok prowadzi do konkretnej sekcji (kotwica). Liczone z danych.
         $steps = $shop ? [
             ['label' => 'Dane sklepu', 'desc' => 'Adres prowadzenia działalności.', 'done' => $shop->addressComplete(), 'route' => 'seller.shop.edit', 'anchor' => '#adres'],
+            ['label' => 'Dane kontaktowe', 'desc' => 'E-mail i telefon dla klientów.', 'done' => $shop->contactComplete(), 'route' => 'seller.shop.edit', 'anchor' => '#dane-kontaktowe'],
             ['label' => 'Dane firmowe', 'desc' => 'Nazwa firmy i NIP.', 'done' => filled($shop->nip), 'route' => 'seller.shop.edit', 'anchor' => '#dane-firmowe'],
             ['label' => 'Opis sklepu', 'desc' => 'Krótko o tym, co sprzedajesz.', 'done' => filled($shop->description), 'route' => 'seller.shop.edit', 'anchor' => '#dane-podstawowe'],
             ['label' => 'Logo sklepu', 'desc' => 'Wizytówka Twojej marki.', 'done' => filled($shop->logo_path), 'route' => 'seller.appearance.edit', 'anchor' => '#logo'],

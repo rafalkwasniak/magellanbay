@@ -19,6 +19,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 #[Fillable([
     'name', 'slug', 'domain', 'status', 'description', 'company_name', 'nip', 'logo_path',
+    'contact_email', 'contact_phone',
     'template', 'theme',
     'country', 'province', 'city', 'postal_code', 'street', 'building_number', 'apartment_number',
     'default_vat_rate',
@@ -177,6 +178,16 @@ class Shop extends Model
     }
 
     /**
+     * Czy dane kontaktowe są kompletne (e-mail i telefon). Oba wymagane w panelu;
+     * używane na pulpicie (postęp konfiguracji). E-mail bywa backfillowany z konta
+     * właściciela, więc realnym „brakiem" jest zwykle telefon.
+     */
+    public function contactComplete(): bool
+    {
+        return filled($this->contact_email) && filled($this->contact_phone);
+    }
+
+    /**
      * Czy sklep ma przynajmniej jeden aktywny produkt. To jedyny wyznacznik
      * publicznej widoczności sklepu — pozostałe dane (adres, NIP, opis, logo) są
      * opcjonalne. Stan magazynowy pojedynczego produktu nie ma tu znaczenia
@@ -264,6 +275,16 @@ class Shop extends Model
         $integration = $this->integration(IntegrationType::GoogleAnalytics);
 
         return $integration?->enabled === true && filled($integration->config['tracking_id'] ?? null);
+    }
+
+    /**
+     * Telefon kontaktowy w czytelnej postaci („+48 668 196 229"). Przechowujemy
+     * kanonicznie (48 + 9 cyfr); formatujemy dopiero do wyświetlenia — stopka,
+     * maile, storefront. Null, gdy sklep nie ma jeszcze numeru.
+     */
+    public function formattedContactPhone(): ?string
+    {
+        return app(\App\Services\PhoneService::class)->format($this->contact_phone);
     }
 
     /**
