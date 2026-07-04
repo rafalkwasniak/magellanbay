@@ -177,6 +177,33 @@ class Checkout extends Component
         ];
     }
 
+    /**
+     * Czytelne nazwy pól w komunikatach walidacji — bez tego Laravel wstawia
+     * surową nazwę właściwości („buyer phone"). Konwencja: interfejs po polsku.
+     *
+     * @return array<string, string>
+     */
+    protected function validationAttributes(): array
+    {
+        return [
+            'buyer_name' => 'imię',
+            'buyer_surname' => 'nazwisko',
+            'buyer_email' => 'e-mail',
+            'buyer_phone' => 'telefon',
+            'delivery_method' => 'sposób dostawy',
+            'payment_method' => 'sposób płatności',
+            'note' => 'uwagi',
+            'accept_terms' => 'regulamin',
+            'company_name' => 'nazwa firmy',
+            'company_nip' => 'NIP',
+            'company_street' => 'ulica',
+            'company_building_number' => 'numer budynku',
+            'company_apartment_number' => 'numer lokalu',
+            'company_postal_code' => 'kod pocztowy',
+            'company_city' => 'miejscowość',
+        ];
+    }
+
     public function place(OrderService $orders)
     {
         $this->buyer_phone = app(PhoneService::class)->normalize($this->buyer_phone) ?? $this->buyer_phone;

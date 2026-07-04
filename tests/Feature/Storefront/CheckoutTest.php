@@ -68,6 +68,21 @@ class CheckoutTest extends TestCase
         $this->assertSame(0, Order::count());
     }
 
+    public function test_validation_messages_use_polish_field_names(): void
+    {
+        $shop = $this->shopReadyForOrders();
+        $this->cartProduct($shop);
+
+        Livewire::test(Checkout::class, ['shopId' => $shop->id])
+            ->set('buyer_phone', '')
+            ->set('accept_terms', true)
+            ->call('place')
+            ->assertHasErrors('buyer_phone')
+            // Czytelna nazwa pola zamiast surowej właściwości „buyer phone".
+            ->assertSee('Pole telefon jest wymagane.')
+            ->assertDontSee('buyer phone');
+    }
+
     public function test_guest_can_place_order(): void
     {
         $shop = $this->shopReadyForOrders();
