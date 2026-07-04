@@ -33,15 +33,19 @@
                         <td align="center" style="padding:8px 0 24px 0;">
                             @if (!empty($brand['logo_url']))
                                 <img src="{{ $brand['logo_url'] }}" alt="{{ $brand['name'] }}" height="40" style="display:block; border:0; height:40px;">
-                            @else
+                            @elseif (!empty($brand['glyph']))
+                                {{-- Kramio: znak marki w kółku + nazwa. --}}
                                 <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                                     <tr>
                                         <td style="padding-right:10px;">
-                                            <div style="width:40px; height:40px; border-radius:9999px; background-color:{{ $brand['gradient_from'] }}; background-image:linear-gradient(135deg, {{ $brand['gradient_from'] }}, {{ $brand['gradient_to'] }}); color:#ffffff; font-size:20px; line-height:40px; text-align:center;">{{ $brand['glyph'] }}</div>
+                                            <div style="width:40px; height:40px; border-radius:9999px; background-color:{{ $brand['brand'] }}; color:{{ $brand['brand_ink'] }}; font-size:20px; line-height:40px; text-align:center;">{{ $brand['glyph'] }}</div>
                                         </td>
                                         <td style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:20px; font-weight:700; letter-spacing:-0.02em; color:{{ $brand['text'] }};">{{ $brand['name'] }}</td>
                                     </tr>
                                 </table>
+                            @else
+                                {{-- Sklep bez logo: sama nazwa sklepu w miejscu logo. --}}
+                                <div style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:22px; font-weight:700; letter-spacing:-0.02em; color:{{ $brand['text'] }};">{{ $brand['name'] }}</div>
                             @endif
                         </td>
                     </tr>

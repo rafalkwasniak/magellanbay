@@ -35,9 +35,9 @@
     @if ($actionText && $actionUrl)
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0;">
             <tr>
-                <td style="border-radius:14px; background-color:{{ $brand['gradient_from'] }}; background-image:linear-gradient(135deg, {{ $brand['gradient_from'] }}, {{ $brand['gradient_to'] }});">
+                <td style="border-radius:14px; background-color:{{ $brand['brand'] }};">
                     <a href="{{ $actionUrl }}" target="_blank" rel="noopener"
-                       style="display:inline-block; padding:14px 28px; font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:15px; font-weight:600; color:#ffffff; text-decoration:none;">{{ $actionText }}</a>
+                       style="display:inline-block; padding:14px 28px; font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:15px; font-weight:600; color:{{ $brand['brand_ink'] }}; text-decoration:none;">{{ $actionText }}</a>
                 </td>
             </tr>
         </table>
