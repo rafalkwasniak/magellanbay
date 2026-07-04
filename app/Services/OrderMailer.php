@@ -35,16 +35,21 @@ class OrderMailer
             'preheader' => 'Otrzymaliśmy Twoje zamówienie. Dziękujemy!',
             'heading' => 'Dziękujemy za zamówienie!',
             'greeting' => 'Cześć '.$order->buyer_name.',',
-            'intro_lines' => array_merge(
-                ['Otrzymaliśmy Twoje zamówienie #'.$order->number.' i już się nim zajmujemy.'],
-                ['Dziękujemy za zakupy w '.$shop->name.'!'],
-                ['Zamówione produkty:'],
-                $this->productLines($order),
-                ['Razem do zapłaty: '.Money::pln($order->total_gross)],
+            'intro_lines' => $this->blocks([
+                [
+                    'Otrzymaliśmy Twoje **zamówienie #'.$order->number.'** i już się nim zajmujemy.',
+                    'Dziękujemy za zakupy w **'.$shop->name.'**!',
+                ],
+                array_merge(
+                    ['**Zamówione produkty:**'],
+                    $this->productLines($order),
+                    ['Razem do zapłaty: **'.Money::pln($order->total_gross).'**'],
+                ),
                 $this->paymentBlock($order, $shop),
                 $this->deliveryBlock($order, $shop),
                 $this->companyBlock($order),
-            ),
+                $this->noteBlock($order, 'Uwagi:'),
+            ]),
             'action_text' => 'Wróć do sklepu',
             'action_url' => 'https://'.$shop->host(),
             'outro_lines' => [
@@ -72,20 +77,26 @@ class OrderMailer
             'preheader' => 'Masz nowe zamówienie na kwotę '.Money::pln($order->total_gross).'.',
             'heading' => 'Nowe zamówienie #'.$order->number,
             'greeting' => 'Cześć '.$owner->name.',',
-            'intro_lines' => array_merge(
-                ['W Twoim sklepie '.$shop->name.' pojawiło się nowe zamówienie #'.$order->number.'.'],
-                ['Dane kupującego:'],
-                ['Imię i nazwisko: '.trim($order->buyer_name.' '.$order->buyer_surname)],
-                ['E-mail: '.$order->buyer_email],
-                $order->buyer_phone ? ['Telefon: '.$this->phone->format($order->buyer_phone)] : [],
+            'intro_lines' => $this->blocks([
+                ['W Twoim sklepie **'.$shop->name.'** pojawiło się nowe **zamówienie #'.$order->number.'**.'],
+                array_merge(
+                    ['**Dane kupującego:**'],
+                    ['Imię i nazwisko: '.trim($order->buyer_name.' '.$order->buyer_surname)],
+                    ['E-mail: '.$order->buyer_email],
+                    $order->buyer_phone ? ['Telefon: '.$this->phone->format($order->buyer_phone)] : [],
+                ),
                 $this->companyBlock($order),
-                ['Zamówione produkty:'],
-                $this->productLines($order),
-                ['Wartość zamówienia: '.Money::pln($order->total_gross)],
-                ['Dostawa: '.$order->delivery_method->label()],
-                ['Płatność: '.$order->payment_method->label()],
-                filled($order->note) ? ['Uwagi klienta: '.$order->note] : [],
-            ),
+                array_merge(
+                    ['**Zamówione produkty:**'],
+                    $this->productLines($order),
+                    ['Wartość zamówienia: **'.Money::pln($order->total_gross).'**'],
+                ),
+                [
+                    'Dostawa: '.$order->delivery_method->label(),
+                    'Płatność: '.$order->payment_method->label(),
+                ],
+                $this->noteBlock($order, 'Uwagi klienta:'),
+            ]),
             'outro_lines' => [
                 'Obsługę statusów zamówienia udostępnimy wkrótce w panelu.',
             ],
@@ -111,11 +122,40 @@ class OrderMailer
         );
 
         return array_values(array_filter([
-            'Dane do faktury:',
+            '**Dane do faktury:**',
             'Firma: '.$order->company_name,
             'NIP: '.$order->company_nip,
             $address !== '' ? 'Adres: '.$address : null,
         ]));
+    }
+
+    /**
+     * Blok „Uwagi" z notatką klienta (gdy podana). Nagłówek pogrubiony, treść
+     * notatki w osobnej linii. Etykieta różni się między mailem klienta a
+     * sprzedawcy.
+     *
+     * @return list<string>
+     */
+    private function noteBlock(Order $order, string $label): array
+    {
+        if (! filled($order->note)) {
+            return [];
+        }
+
+        return ['**'.$label.'**', $order->note];
+    }
+
+    /**
+     * Odfiltrowuje puste bloki (np. brak danych firmy czy notatki), by nie
+     * zostawić pustego akapitu w mailu. Każdy pozostały blok to tablica linii,
+     * którą komponent renderuje jako jeden akapit (linie sklejone <br>).
+     *
+     * @param  list<list<string>>  $blocks
+     * @return list<list<string>>
+     */
+    private function blocks(array $blocks): array
+    {
+        return array_values(array_filter($blocks, fn (array $block): bool => $block !== []));
     }
 
     /**
@@ -142,8 +182,8 @@ class OrderMailer
             return array_values(array_filter([
                 'Sposób płatności: Przelew na konto'.(filled($shop->bank_name) ? ' ('.$shop->bank_name.')' : ''),
                 $shop->formattedBankAccountNumber() ? 'Numer konta: '.$shop->formattedBankAccountNumber() : null,
-                'Tytuł przelewu: Zamówienie #'.$order->number,
-                'Kwota: '.Money::pln($order->total_gross),
+                'Tytuł przelewu: **Zamówienie #'.$order->number.'**',
+                'Kwota: **'.Money::pln($order->total_gross).'**',
             ]));
         }
 

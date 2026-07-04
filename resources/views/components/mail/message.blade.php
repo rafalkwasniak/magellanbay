@@ -3,7 +3,7 @@
     'preheader' => null,
     'heading' => null,
     'greeting' => null,
-    'lines' => [],          // akapity przed przyciskiem
+    'lines' => [],          // bloki przed przyciskiem: string = akapit, tablica = akapit z linii sklejonych <br>
     'actionText' => null,   // tekst przycisku CTA (opcjonalny)
     'actionUrl' => null,
     'outroLines' => [],     // akapity po przycisku
@@ -22,8 +22,14 @@
         <p style="margin:0 0 16px 0; font-size:15px; line-height:1.65; color:{{ $brand['text'] }};">{{ $greeting }}</p>
     @endisset
 
-    @foreach ($lines as $line)
-        <p style="margin:0 0 16px 0; font-size:15px; line-height:1.65; color:{{ $brand['muted'] }};">{{ $line }}</p>
+    @foreach ($lines as $block)
+        @php
+            // String = pojedynczy akapit; tablica = jeden akapit, linie sklejone <br>.
+            // Odstęp akapitu (16px) daje „pustą linię" między blokami, a <br> trzyma
+            // linie jednego bloku ciasno razem.
+            $html = implode('<br>', array_map([\App\Support\MailMarkup::class, 'inline'], (array) $block));
+        @endphp
+        <p style="margin:0 0 16px 0; font-size:15px; line-height:1.65; color:{{ $brand['muted'] }};">{!! $html !!}</p>
     @endforeach
 
     @if ($actionText && $actionUrl)
@@ -43,7 +49,7 @@
     @endif
 
     @foreach ($outroLines as $line)
-        <p style="margin:16px 0 0 0; font-size:15px; line-height:1.65; color:{{ $brand['muted'] }};">{{ $line }}</p>
+        <p style="margin:16px 0 0 0; font-size:15px; line-height:1.65; color:{{ $brand['muted'] }};">{!! \App\Support\MailMarkup::inline($line) !!}</p>
     @endforeach
 
     {{ $slot ?? '' }}

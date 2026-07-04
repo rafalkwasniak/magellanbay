@@ -121,6 +121,33 @@ class OrderPlacementTest extends TestCase
         $this->assertDatabaseHas('email_messages', ['to_email' => $shop->owner->email]);
     }
 
+    public function test_customer_email_bolds_full_transfer_title_and_amount(): void
+    {
+        $shop = $this->shop();
+        $shop->update([
+            'bank_transfer_enabled' => true,
+            'bank_account_number' => '43114020040000350275155558',
+            'bank_name' => 'mBank',
+        ]);
+        $product = Product::factory()->create([
+            'shop_id' => $shop->id, 'is_active' => true, 'track_stock' => false, 'stock' => null, 'price_gross' => 20.00,
+        ]);
+        app(CartService::class)->add($product, 1);
+
+        $order = app(OrderService::class)->place($shop, array_merge($this->buyerData(), [
+            'payment_method' => 'bank_transfer',
+        ]));
+
+        $customerEmail = EmailMessage::where('to_email', 'jan@example.com')->firstOrFail();
+        $lines = collect($customerEmail->intro_lines)->flatten()->all();
+
+        // Cały tytuł przelewu (nie samo #N) i kwota są pogrubione — to wartości do skopiowania.
+        $this->assertContains('Tytuł przelewu: **Zamówienie #'.$order->number.'**', $lines);
+        $this->assertContains('Kwota: **'.\App\Support\Money::pln($order->total_gross).'**', $lines);
+        // Fraza „zamówienie #N" w zdaniu jest pogrubiona w całości, nie samo #N.
+        $this->assertContains('Otrzymaliśmy Twoje **zamówienie #'.$order->number.'** i już się nim zajmujemy.', $lines);
+    }
+
     public function test_seller_email_formats_phone_and_includes_company_address(): void
     {
         $shop = $this->shop();
@@ -144,8 +171,16 @@ class OrderPlacementTest extends TestCase
 
         $sellerEmail = EmailMessage::where('to_email', $shop->owner->email)->firstOrFail();
 
-        $this->assertContains('Telefon: +48 668 196 229', $sellerEmail->intro_lines);
-        $this->assertContains('Adres: Polna 3, 00-002 Kraków', $sellerEmail->intro_lines);
+        // intro_lines to teraz bloki (tablice linii) — spłaszczamy przed szukaniem.
+        $lines = collect($sellerEmail->intro_lines)->flatten()->all();
+        $this->assertContains('Telefon: +48 668 196 229', $lines);
+        $this->assertContains('Adres: Polna 3, 00-002 Kraków', $lines);
+        // Nagłówki sekcji są pogrubiane zapisem **...**.
+        $this->assertContains('**Dane kupującego:**', $lines);
+        $this->assertContains('**Dane do faktury:**', $lines);
+        // Fraza „zamówienie #N" w zdaniu jest pogrubiona w całości, nie samo #N.
+        $order = $shop->orders()->firstOrFail();
+        $this->assertContains('W Twoim sklepie **'.$shop->name.'** pojawiło się nowe **zamówienie #'.$order->number.'**.', $lines);
     }
 
     public function test_place_stores_company_data_when_buying_as_company(): void
