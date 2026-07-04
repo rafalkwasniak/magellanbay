@@ -134,6 +134,14 @@
                         <span class="mt-0.5 shrink-0 text-amber-500">✨</span>
                         <span>Logo wzmacnia wizerunek marki — buduje rozpoznawalność i zaufanie klientów.</span>
                     </li>
+                    <li class="flex gap-3">
+                        <span class="mt-0.5 shrink-0 text-amber-500">🎨</span>
+                        <span>Najpierw wybierz szablon, potem dobierz paletę kolorów — podgląd zmienia się od razu.</span>
+                    </li>
+                    <li class="flex gap-3">
+                        <span class="mt-0.5 shrink-0 text-amber-500">🏬</span>
+                        <span>Wygląd dotyczy Twojego sklepu widocznego dla klientów — panel sprzedawcy zostaje bez zmian.</span>
+                    </li>
                 </ul>
             </div>
         </aside>

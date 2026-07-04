@@ -268,11 +268,19 @@
                     </li>
                     <li class="flex gap-3">
                         <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400"></span>
+                        <span>Dane kontaktowe (e-mail i telefon) są widoczne dla klientów i trafiają do maili o zamówieniu — pod nie klient odpisze z pytaniem.</span>
+                    </li>
+                    <li class="flex gap-3">
+                        <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400"></span>
                         <span>Adres jest widoczny dla klientów i buduje zaufanie do sprzedawcy.</span>
                     </li>
                     <li class="flex gap-3">
                         <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400"></span>
                         <span>Dane firmowe i adresowe trafiają automatycznie do regulaminu i dokumentów sprzedażowych.</span>
+                    </li>
+                    <li class="flex gap-3">
+                        <span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400"></span>
+                        <span>Numer konta do przelewu pozwala włączyć płatność przelewem w Ustawieniach.</span>
                     </li>
                 </ul>
             </div>

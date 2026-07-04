@@ -153,8 +153,12 @@
                         <span>Numer konta do przelewu podajesz w <a href="{{ route('seller.shop.edit') }}#dane-do-przelewu" class="font-medium text-stone-700 underline decoration-amber-300 underline-offset-2">Mój sklep</a>; tutaj tylko włączasz metodę.</span>
                     </li>
                     <li class="flex gap-3">
+                        <span class="mt-0.5 shrink-0 text-amber-500">🚚</span>
+                        <span>Odbiór osobisty i płatność przy odbiorze wymagają uzupełnionego adresu sklepu w <a href="{{ route('seller.shop.edit') }}#adres" class="font-medium text-stone-700 underline decoration-amber-300 underline-offset-2">Mój sklep</a>.</span>
+                    </li>
+                    <li class="flex gap-3">
                         <span class="mt-0.5 shrink-0 text-amber-500">🔧</span>
-                        <span>Płatności online i integracje dojdą tutaj wkrótce.</span>
+                        <span>Płatności online (BLIK, karty) dojdą wkrótce jako integracja w wyższych pakietach.</span>
                     </li>
                 </ul>
             </div>

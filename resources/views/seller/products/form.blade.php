@@ -222,7 +222,15 @@
                     </li>
                     <li class="flex gap-3">
                         <span class="mt-0.5 shrink-0 text-amber-500">🖼️</span>
-                        <span>Dodawanie zdjęć produktu pojawi się już wkrótce.</span>
+                        <span>Pierwsze zdjęcie jest główne — dodasz do 8 i ustawisz kolejność przeciąganiem.</span>
+                    </li>
+                    <li class="flex gap-3">
+                        <span class="mt-0.5 shrink-0 text-amber-500">🏷️</span>
+                        <span>Tagi pomagają klientom odnaleźć produkt — podpowiadamy je z Twoich wcześniejszych.</span>
+                    </li>
+                    <li class="flex gap-3">
+                        <span class="mt-0.5 shrink-0 text-amber-500">👁️</span>
+                        <span>Odznacz <span class="font-medium text-stone-700">Aktywny</span>, aby ukryć produkt; <span class="font-medium text-stone-700">Wyróżnij</span>, aby pokazać go na stronie głównej.</span>
                     </li>
                 </ul>
             </div>
