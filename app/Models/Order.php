@@ -66,4 +66,39 @@ class Order extends Model
     {
         return $this->hasMany(OrderItem::class);
     }
+
+    /**
+     * Oś czasu zmian statusu (od najstarszej). Pierwsza linia osi na widoku to
+     * `created_at` samego zamówienia; tu są kolejne przejścia.
+     *
+     * @return HasMany<OrderStatusEvent, $this>
+     */
+    public function statusEvents(): HasMany
+    {
+        return $this->hasMany(OrderStatusEvent::class)->oldest('id');
+    }
+
+    /**
+     * Zmienia status i dopisuje zdarzenie do osi czasu. No-op (false), gdy status
+     * się nie zmienia — nie zaśmiecamy historii pustym przejściem. Jedyne miejsce,
+     * które modyfikuje `status`, więc historia zawsze jest kompletna.
+     */
+    public function changeStatus(OrderStatus $to, ?string $note = null): bool
+    {
+        if ($to === $this->status) {
+            return false;
+        }
+
+        $from = $this->status;
+        $this->status = $to;
+        $this->save();
+
+        $this->statusEvents()->create([
+            'from_status' => $from,
+            'to_status' => $to,
+            'note' => $note,
+        ]);
+
+        return true;
+    }
 }

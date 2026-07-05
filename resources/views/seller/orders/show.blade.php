@@ -58,13 +58,7 @@
 
         {{-- Kolumna boczna: status, kupujący, dostawa, płatność --}}
         <aside class="space-y-6 lg:col-span-4">
-            <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
-                <div class="flex items-center justify-between gap-3">
-                    <h2 class="font-semibold text-stone-900">Status</h2>
-                    <span class="inline-flex rounded-full px-3 py-1 text-sm font-medium {{ $order->status->badgeClasses() }}">{{ $order->status->label() }}</span>
-                </div>
-                <p class="mt-2 text-sm text-stone-400">Złożone {{ $order->created_at->format('d.m.Y, H:i') }}</p>
-            </div>
+            <livewire:seller.order-status-manager :order="$order" />
 
             <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
                 <h2 class="font-semibold text-stone-900">Kupujący</h2>
