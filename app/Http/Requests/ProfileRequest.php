@@ -42,7 +42,7 @@ class ProfileRequest extends FormRequest
             // E-mail = login do platformy; unikalny w obrębie kont platformy (users),
             // z pominięciem własnego. Ten sam adres jako klient sklepu to osobna baza.
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($this->user()->id)],
-            'phone' => ['nullable', 'regex:/^48[0-9]{9}$/'],
+            'phone' => ['nullable', PhoneService::RULE],
             'avatar' => [
                 'nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:2048',
                 Rule::dimensions()->minWidth(100)->minHeight(100)->maxWidth(2000)->maxHeight(2000),
@@ -76,7 +76,7 @@ class ProfileRequest extends FormRequest
     public function messages(): array
     {
         return array_merge([
-            'phone.regex' => 'Podaj prawidłowy numer telefonu (9 cyfr).',
+            'phone.regex' => PhoneService::RULE_MESSAGE,
             'email.unique' => 'Ten adres e-mail jest już zajęty.',
             'avatar.image' => 'Awatar musi być obrazem (PNG, JPG lub WebP).',
             'avatar.mimes' => 'Awatar musi być w formacie PNG, JPG lub WebP.',

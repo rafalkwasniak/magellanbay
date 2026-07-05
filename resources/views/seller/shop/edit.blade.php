@@ -71,7 +71,7 @@
                                 placeholder="+48 600 700 800"
                                 data-msg-required="Podaj telefon kontaktowy."
                                 class="mt-1.5 block w-full rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
-                            <p class="mt-1.5 text-xs text-stone-400">9 cyfr. Możesz wpisać ze spacjami lub z „+48" — poprawimy zapis.</p>
+                            <p class="mt-1.5 text-xs text-stone-400">48 i 9 cyfr, np. 48 500 600 700. Możesz wpisać ze spacjami lub z „+48" — poprawimy zapis.</p>
                             @error('contact_phone')
                                 <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
                             @enderror

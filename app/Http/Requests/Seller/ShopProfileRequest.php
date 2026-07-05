@@ -70,7 +70,7 @@ class ShopProfileRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:'.config('shop.description_max')],
             'contact_email' => ['required', 'email', 'max:255'],
-            'contact_phone' => ['required', 'regex:/^48[0-9]{9}$/'], // 48 + 9 cyfr (po normalizacji)
+            'contact_phone' => ['required', PhoneService::RULE], // 48 + 9 cyfr (po normalizacji)
             'company_name' => ['nullable', 'string', 'max:255'],
             'nip' => ['nullable', function (string $attribute, mixed $value, \Closure $fail): void {
                 if (filled($value) && ! app(NipService::class)->isValid((string) $value)) {
@@ -122,7 +122,7 @@ class ShopProfileRequest extends FormRequest
     {
         return [
             'postal_code.regex' => 'Podaj kod pocztowy w formacie NN-NNN.',
-            'contact_phone.regex' => 'Podaj prawidłowy numer telefonu (9 cyfr).',
+            'contact_phone.regex' => PhoneService::RULE_MESSAGE,
             'province.in' => 'Wybierz województwo z listy.',
             'bank_account_number.digits' => 'Numer konta musi mieć 26 cyfr (polski numer NRB).',
         ];

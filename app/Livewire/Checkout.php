@@ -109,7 +109,7 @@ class Checkout extends Component
             'buyer_name' => ['required', 'string', 'max:100'],
             'buyer_surname' => ['required', 'string', 'max:100'],
             'buyer_email' => ['required', 'email', 'max:255'],
-            'buyer_phone' => ['required', 'string', 'max:30'],
+            'buyer_phone' => ['required', 'string', PhoneService::RULE],
             'delivery_method' => ['required', Rule::in(array_keys($this->deliveryOptions()))],
             'payment_method' => ['required', Rule::in(array_keys($this->paymentOptions()))],
             'note' => ['nullable', 'string', 'max:1000'],
@@ -174,6 +174,7 @@ class Checkout extends Component
     {
         return [
             'accept_terms.accepted' => 'Zaakceptuj regulamin, aby złożyć zamówienie.',
+            'buyer_phone.regex' => PhoneService::RULE_MESSAGE,
         ];
     }
 

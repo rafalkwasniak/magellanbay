@@ -40,7 +40,7 @@ class ActivationRequest extends FormRequest
             'token_email' => ['required', 'string', 'email'],
             'name' => ['required', 'string', 'min:2', 'max:255'],
             'surname' => ['required', 'string', 'min:2', 'max:255'],
-            'phone' => ['nullable', 'regex:/^48[0-9]{9}$/'], // 48 + 9 cyfr (po normalizacji)
+            'phone' => ['nullable', PhoneService::RULE], // 48 + 9 cyfr (po normalizacji)
             'password' => $this->passwordRules(),
             'terms' => ['accepted'],
             'privacy' => ['accepted'],
@@ -66,7 +66,7 @@ class ActivationRequest extends FormRequest
     public function messages(): array
     {
         return array_merge([
-            'phone.regex' => 'Podaj prawidłowy numer telefonu (9 cyfr).',
+            'phone.regex' => PhoneService::RULE_MESSAGE,
             'terms.accepted' => 'Musisz zaakceptować Regulamin.',
             'privacy.accepted' => 'Musisz zaakceptować Politykę Prywatności.',
         ], $this->passwordMessages());

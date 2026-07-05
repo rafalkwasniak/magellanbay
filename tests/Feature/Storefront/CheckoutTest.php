@@ -68,6 +68,47 @@ class CheckoutTest extends TestCase
         $this->assertSame(0, Order::count());
     }
 
+    public function test_phone_must_be_a_valid_pl_mobile(): void
+    {
+        $shop = $this->shopReadyForOrders();
+        $this->cartProduct($shop);
+
+        // Za dużo cyfr — po normalizacji to nie jest „48 + 9 cyfr", więc odpada.
+        Livewire::test(Checkout::class, ['shopId' => $shop->id])
+            ->set('buyer_name', 'Jan')
+            ->set('buyer_surname', 'Kowalski')
+            ->set('buyer_email', 'jan@example.com')
+            ->set('buyer_phone', '123456789012345')
+            ->set('delivery_method', 'pickup')
+            ->set('payment_method', 'bank_transfer')
+            ->set('accept_terms', true)
+            ->call('place')
+            ->assertHasErrors('buyer_phone')
+            ->assertSee('Podaj numer w formacie 48 i 9 cyfr, np. 48 500 600 700.');
+
+        $this->assertSame(0, Order::count());
+    }
+
+    public function test_phone_stored_in_canonical_form(): void
+    {
+        $shop = $this->shopReadyForOrders();
+        $this->cartProduct($shop);
+
+        // Zapis „ludzki" (spacje, +48) → w bazie kanoniczne „48" + 9 cyfr.
+        Livewire::test(Checkout::class, ['shopId' => $shop->id])
+            ->set('buyer_name', 'Jan')
+            ->set('buyer_surname', 'Kowalski')
+            ->set('buyer_email', 'jan@example.com')
+            ->set('buyer_phone', '+48 500 600 700')
+            ->set('delivery_method', 'pickup')
+            ->set('payment_method', 'bank_transfer')
+            ->set('accept_terms', true)
+            ->call('place')
+            ->assertRedirect('/kasa/dziekujemy');
+
+        $this->assertSame('48500600700', Order::first()->buyer_phone);
+    }
+
     public function test_validation_messages_use_polish_field_names(): void
     {
         $shop = $this->shopReadyForOrders();
