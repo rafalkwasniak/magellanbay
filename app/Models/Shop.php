@@ -397,13 +397,36 @@ class Shop extends Model
     }
 
     /**
-     * Ile produktów na stronę wykazu — właściwość układu szablonu (config/themes.php),
-     * z fallbackiem 12, gdy szablon jej nie ustawia. Szablon z większymi kadrami
-     * pokazuje mniej na stronie.
+     * Gęstość wykazu dobrana do SKALI katalogu: {columns, per_page}. Bierzemy
+     * najmniejszy układ z drabinki (config themes.listing.steps), przy którym
+     * wszystkie aktywne produkty mieszczą się w `max_pages` podstronach — rosnąc
+     * najpierw wierszami przy 3 kolumnach, a dopiero potem skokiem na 4 kolumny.
+     * Wielkość kafla robią kolumny (3 = duże/wyraziste, 4 = gęstsze); `rows`
+     * steruje tylko długością strony (per_page = columns × rows).
+     *
+     * Liczba liczona z aktywnych produktów CAŁEGO sklepu, nie z przefiltrowanego
+     * widoku — dzięki temu skala (i układ) są stałe niezależnie od tagów/sortu:
+     * treść nie „pływa" przy filtrowaniu.
+     *
+     * @return array{columns: int, per_page: int}
      */
-    public function productsPerPage(): int
+    public function listingDensity(): array
     {
-        return (int) (config("themes.templates.{$this->templateSlug()}.per_page") ?? 12);
+        $count = $this->products()->where('is_active', true)->count();
+        $steps = config('themes.listing.steps');
+        $maxPages = (int) config('themes.listing.max_pages', 3);
+
+        foreach ($steps as $step) {
+            $perPage = $step['columns'] * $step['rows'];
+            if ($count <= $maxPages * $perPage) {
+                return ['columns' => $step['columns'], 'per_page' => $perPage];
+            }
+        }
+
+        // Powyżej ostatniego stopnia zostaje sufit — podstron po prostu przybywa.
+        $last = end($steps);
+
+        return ['columns' => $last['columns'], 'per_page' => $last['columns'] * $last['rows']];
     }
 
     /**

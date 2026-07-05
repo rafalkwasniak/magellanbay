@@ -39,9 +39,6 @@ return [
             'name' => 'Aksamitna chmurka',
             'description' => 'Jasny i powietrzny — biel z nutą błękitu. Lekki, czysty, wygodny do czytania.',
             'order' => 1,
-            // Liczba produktów na stronę wykazu = właściwość UKŁADU, więc należy do
-            // szablonu: większe kadry → mniej na stronie. Ten jest powietrzny → 9.
-            'per_page' => 9,
             'default_palette' => 'sky',
             'palettes' => [
                 'sky' => [
@@ -96,7 +93,6 @@ return [
             'name' => 'Zielony zakątek',
             'description' => 'Kolory natury — zieleń, brąz i len. Ciepły, ekologiczny klimat.',
             'order' => 2,
-            'per_page' => 12,
             'default_palette' => 'forest',
             'palettes' => [
                 'forest' => [
@@ -151,7 +147,6 @@ return [
             'name' => 'Grafitowy wieczór',
             'description' => 'Ciemny i elegancki — grafit z ciepłym akcentem. Produkty wychodzą na pierwszy plan.',
             'order' => 3,
-            'per_page' => 12,
             'default_palette' => 'ember',
             'palettes' => [
                 'ember' => [
@@ -207,5 +202,42 @@ return [
     // Slug szablonu domyślnego — przypisywany nowym sklepom (spójne z kolumną
     // `shops.template` default). Musi istnieć w `templates` powyżej.
     'default_template' => 'velvet_cloud',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Gęstość wykazu — adaptacja do SKALI katalogu
+    |--------------------------------------------------------------------------
+    |
+    | Wykaz (/produkty) sam dobiera układ do liczby aktywnych produktów sklepu:
+    | mały katalog → mniej kolumn = duże, wyraziste kafle; duży → więcej kolumn
+    | i więcej na stronę. To trzecia oś motywów („adaptacja do ilości") — globalna,
+    | wspólna dla wszystkich szablonów (nie zależy od wyboru szablonu).
+    |
+    | Reguła: bierzemy PIERWSZY (najmniejszy) układ z drabinki `steps`, przy którym
+    | wszystkie aktywne produkty mieszczą się w `max_pages` podstronach. Rośniemy
+    | w kolejności wpisów: najpierw wiersze przy 3 kolumnach (3→5), a dopiero gdy
+    | i to nie starcza — skok na 4 kolumny (wiersze 4→6). Powyżej ostatniego stopnia
+    | zostaje sufit i podstron po prostu przybywa.
+    |
+    | Klucz: WIELKOŚĆ KAFLA robią kolumny (3 = duże, 4 = gęstsze); `rows` steruje
+    | tylko długością strony (per_page = columns × rows). Liczba liczona z aktywnych
+    | produktów CAŁEGO sklepu, NIE z przefiltrowanego widoku — skala jest stała
+    | niezależnie od tego, co klient akurat filtruje/sortuje.
+    |
+    | Klasy siatki (`lg:grid-cols-3` / `lg:grid-cols-4`) muszą istnieć w buildzie
+    | Tailwinda — trzymaj `columns` w zbiorze {3, 4}, inaczej dorób klasę i widok.
+    |
+    */
+    'listing' => [
+        'max_pages' => 3,
+        'steps' => [
+            ['columns' => 3, 'rows' => 3], // 9  — do 27 produktów
+            ['columns' => 3, 'rows' => 4], // 12 — do 36
+            ['columns' => 3, 'rows' => 5], // 15 — do 45
+            ['columns' => 4, 'rows' => 4], // 16 — do 48
+            ['columns' => 4, 'rows' => 5], // 20 — do 60
+            ['columns' => 4, 'rows' => 6], // 24 — do 72 (dalej: sufit + więcej podstron)
+        ],
+    ],
 
 ];

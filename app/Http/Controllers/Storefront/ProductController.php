@@ -53,15 +53,20 @@ class ProductController extends Controller
             $filtered->whereHas('tags', fn ($q) => $q->where('tags.slug', $slug));
         }
 
+        // Gęstość wykazu (kolumny + ile na stronę) skalowana do wielkości katalogu,
+        // liczonej z CAŁEGO sklepu — nie ze zbioru po filtrze, żeby układ nie „pływał".
+        $density = $shop->listingDensity();
+
         $products = $filtered->clone()
             ->with('images')
             ->orderBy($sort['column'], $sort['direction'])
-            ->paginate($shop->productsPerPage())
+            ->paginate($density['per_page'])
             ->withQueryString();
 
         return view('storefront.products', [
             'shop' => $shop,
             'products' => $products,
+            'columns' => $density['columns'],
             'sortKey' => $sortKey,
             'sortOptions' => $this->sortOptions($sortKey, $selected->all()),
             'tagCloud' => $this->tagCloud($shop, $filtered->clone(), $selected, $sortKey),

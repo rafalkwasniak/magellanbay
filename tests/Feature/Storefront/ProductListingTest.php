@@ -60,17 +60,22 @@ class ProductListingTest extends TestCase
         $this->get($this->host($shop).'/produkty?page=2')->assertOk();
     }
 
-    public function test_products_per_page_comes_from_template(): void
+    public function test_listing_density_scales_columns_with_catalog_size(): void
     {
-        // velvet_cloud → 9 na stronę: 12 produktów = 2 strony (pager widoczny).
-        $airy = Shop::factory()->active()->create(['template' => 'velvet_cloud']);
-        Product::factory()->count(12)->create(['shop_id' => $airy->id, 'is_active' => true]);
-        $this->get($this->host($airy).'/produkty')->assertOk()->assertSee('Wyświetlono');
+        // Mały katalog (≤27 aktywnych) → 3 kolumny (duże kafle).
+        $small = Shop::factory()->active()->create();
+        Product::factory()->count(10)->create(['shop_id' => $small->id, 'is_active' => true]);
+        $this->get($this->host($small).'/produkty')
+            ->assertOk()
+            ->assertSee('lg:grid-cols-3', false)
+            ->assertDontSee('lg:grid-cols-4', false);
 
-        // green_nook → 12 na stronę: 12 produktów = 1 strona (bez pagera).
-        $dense = Shop::factory()->active()->create(['template' => 'green_nook']);
-        Product::factory()->count(12)->create(['shop_id' => $dense->id, 'is_active' => true]);
-        $this->get($this->host($dense).'/produkty')->assertOk()->assertDontSee('Wyświetlono');
+        // Duży katalog (>45 aktywnych) → 4 kolumny (gęściej).
+        $large = Shop::factory()->active()->create();
+        Product::factory()->count(50)->create(['shop_id' => $large->id, 'is_active' => true]);
+        $this->get($this->host($large).'/produkty')
+            ->assertOk()
+            ->assertSee('lg:grid-cols-4', false);
     }
 
     public function test_listing_sorts_by_price_ascending(): void

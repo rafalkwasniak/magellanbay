@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Shop;
 
+use App\Models\Product;
 use App\Models\Shop;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -51,13 +52,33 @@ class ThemeResolverTest extends TestCase
         $this->assertSame('#6B8E4E', $shop->themeTokens()['brand']);
     }
 
-    public function test_products_per_page_is_read_from_template(): void
+    public function test_listing_density_scales_with_active_product_count(): void
     {
-        $airy = Shop::factory()->create(['template' => 'velvet_cloud']);
-        $dense = Shop::factory()->create(['template' => 'green_nook']);
+        $shop = Shop::factory()->create();
+        $addActive = fn (int $n) => Product::factory()->count($n)->create(['shop_id' => $shop->id, 'is_active' => true]);
 
-        $this->assertSame(9, $airy->productsPerPage());
-        $this->assertSame(12, $dense->productsPerPage());
+        // Mały katalog: 3 kolumny, 9 na stronę (duże, wyraziste kafle).
+        $addActive(5); // 5
+        $this->assertSame(['columns' => 3, 'per_page' => 9], $shop->listingDensity());
+
+        $addActive(23); // 28 → 3×4 = 12 (żeby zmieścić w 3 podstronach)
+        $this->assertSame(['columns' => 3, 'per_page' => 12], $shop->listingDensity());
+
+        $addActive(18); // 46 → skok na 4 kolumny, 4×4 = 16
+        $this->assertSame(['columns' => 4, 'per_page' => 16], $shop->listingDensity());
+
+        $addActive(30); // 76 → sufit 4×6 = 24 (dalej rosną tylko podstrony)
+        $this->assertSame(['columns' => 4, 'per_page' => 24], $shop->listingDensity());
+    }
+
+    public function test_listing_density_ignores_hidden_products(): void
+    {
+        $shop = Shop::factory()->create();
+        Product::factory()->count(5)->create(['shop_id' => $shop->id, 'is_active' => true]);
+        Product::factory()->count(60)->create(['shop_id' => $shop->id, 'is_active' => false]);
+
+        // Liczą się tylko aktywne (5) — ukryte nie podbijają skali.
+        $this->assertSame(['columns' => 3, 'per_page' => 9], $shop->listingDensity());
     }
 
     public function test_unknown_template_falls_back_to_default(): void
