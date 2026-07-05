@@ -15,6 +15,7 @@ use App\Http\Controllers\Seller\AppearanceController;
 use App\Http\Controllers\Seller\CompanyLookupController;
 use App\Http\Controllers\Seller\DashboardController as SellerDashboard;
 use App\Http\Controllers\Seller\IntegrationController;
+use App\Http\Controllers\Seller\OrderController;
 use App\Http\Controllers\Seller\ProductController;
 use App\Http\Controllers\Seller\ProductImageController;
 use App\Http\Controllers\Seller\ShopProfileController;
@@ -128,6 +129,10 @@ Route::middleware(['auth', 'role:seller', 'ensure.consents'])
         Route::post('/firma/z-nip', CompanyLookupController::class)
             ->middleware('throttle:20,1')
             ->name('company.lookup');
+
+        // Zamówienia (podgląd + zmiana statusu). Lista i szczegół; zmiana statusu przez POST.
+        Route::get('/zamowienia', [OrderController::class, 'index'])->name('orders.index');
+        Route::get('/zamowienia/{order}', [OrderController::class, 'show'])->name('orders.show');
 
         // Produkty (edycja/usuwanie przez POST — FOUNDATION sek. 5).
         Route::get('/produkty', [ProductController::class, 'index'])->name('products.index');

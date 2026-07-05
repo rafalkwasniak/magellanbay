@@ -25,7 +25,7 @@
             ['label' => 'Pulpit', 'route' => 'seller.dashboard', 'icon' => '🏠'],
             ['label' => 'Mój sklep', 'route' => 'seller.shop.edit', 'icon' => '🛍️'],
             ['label' => 'Produkty', 'route' => 'seller.products.index', 'icon' => '🏷️'],
-            ['label' => 'Zamówienia', 'route' => null, 'icon' => '📦'],
+            ['label' => 'Zamówienia', 'route' => 'seller.orders.index', 'icon' => '📦'],
             ['label' => 'Wygląd', 'route' => 'seller.appearance.edit', 'icon' => '🎨'],
             ['label' => 'Ustawienia', 'route' => 'seller.settings.edit', 'icon' => '⚙️'],
             ['label' => 'Integracje', 'route' => 'seller.integrations.edit', 'icon' => '🔌'],

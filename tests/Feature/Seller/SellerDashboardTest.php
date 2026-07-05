@@ -37,7 +37,7 @@ class SellerDashboardTest extends TestCase
             ->assertSee('data-mobile-nav-panel', false);
     }
 
-    public function test_unavailable_nav_items_show_soon_badge_not_dead_link(): void
+    public function test_orders_nav_is_a_working_link_not_dead(): void
     {
         $seller = User::factory()->consented()->create();
         Shop::factory()->create(['owner_id' => $seller->id]);
@@ -46,8 +46,8 @@ class SellerDashboardTest extends TestCase
             ->get(route('seller.dashboard'))
             ->assertOk()
             ->assertSee('Zamówienia')
-            ->assertSee('wkrótce')
-            ->assertDontSee('href="#"', false);
+            ->assertSee(route('seller.orders.index'), false)   // kafel Zamówień prowadzi do listy
+            ->assertDontSee('href="#"', false);                // żadnych martwych linków
     }
 
     public function test_dashboard_shows_package_and_product_usage(): void

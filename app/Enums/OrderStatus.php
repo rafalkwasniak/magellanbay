@@ -31,4 +31,22 @@ enum OrderStatus: string
             self::Cancelled => 'Anulowane',
         };
     }
+
+    /**
+     * Klasy Tailwind plakietki statusu (miękkie tło + tekst) — jedno źródło
+     * kolorów dla listy i szczegółu zamówienia. Ciepła paleta panelu.
+     */
+    public function badgeClasses(): string
+    {
+        return match ($this) {
+            self::New => 'bg-amber-100 text-amber-800',
+            self::AwaitingPayment => 'bg-orange-100 text-orange-800',
+            self::Paid => 'bg-emerald-100 text-emerald-800',
+            self::Processing => 'bg-sky-100 text-sky-800',
+            self::ReadyForPickup => 'bg-violet-100 text-violet-800',
+            self::Shipped => 'bg-indigo-100 text-indigo-800',
+            self::Completed => 'bg-green-100 text-green-800',
+            self::Cancelled => 'bg-stone-200 text-stone-600',
+        };
+    }
 }

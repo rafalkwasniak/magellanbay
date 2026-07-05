@@ -16,4 +16,17 @@ enum DeliveryMethod: string
             self::Pickup => 'Odbiór osobisty',
         };
     }
+
+    /**
+     * Czy metoda wiąże się z WYSYŁKĄ (a więc i z kosztem dostawy). Odbiór
+     * osobisty — nie: nie ma czego dowozić, więc w podsumowaniu nie pokazujemy
+     * wiersza „Dostawa" (a „gratis" ma sens dopiero przy wysyłce z progiem
+     * darmowej dostawy, np. kurier/paczkomat). Kolejne metody będą shipped=true.
+     */
+    public function isShipped(): bool
+    {
+        return match ($this) {
+            self::Pickup => false,
+        };
+    }
 }
