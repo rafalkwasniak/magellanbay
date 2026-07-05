@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Seller;
 
+use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
 use Illuminate\Contracts\Support\Renderable;
 use Illuminate\Http\Request;
@@ -13,6 +14,20 @@ class DashboardController extends Controller
         $shop = $request->user()->shop;
         $productCount = $shop ? $shop->products()->count() : 0;
         $activeProductCount = $shop ? $shop->products()->where('is_active', true)->count() : 0;
+
+        // Sprzedaż z ostatnich 30 dni — realne liczby zamiast zer na kafelkach.
+        // Anulowane zamówienia nie liczą się ani do sztuk, ani do przychodu.
+        // Wyświetlenia jeszcze nie są zbierane (brak trackingu ruchu) — kafelek
+        // zostaje placeholderem do czasu modułu statystyk.
+        $recentOrders = $shop
+            ? $shop->orders()
+                ->where('created_at', '>=', now()->subDays(30))
+                ->where('status', '!=', OrderStatus::Cancelled->value)
+                ->get(['id', 'total_gross'])
+            : collect();
+
+        $orderCount = $recentOrders->count();
+        $revenue = (float) $recentOrders->sum(fn ($order) => (float) $order->total_gross);
 
         // Ścieżka „kim jesteś → jak wyglądasz → idź na żywo". Kolejność = realne kroki
         // do pokazania sklepu klientom; ostatni (widoczny produkt) publikuje sklep —
@@ -32,6 +47,8 @@ class DashboardController extends Controller
             'steps' => $steps,
             'productCount' => $productCount,
             'activeProductCount' => $activeProductCount,
+            'orderCount' => $orderCount,
+            'revenue' => $revenue,
             'done' => collect($steps)->where('done', true)->count(),
             'total' => count($steps),
         ]);
