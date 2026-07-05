@@ -62,6 +62,33 @@ return [
                         'ink' => '#2A2540',
                     ],
                 ],
+                'mint' => [
+                    'name' => 'Mięta',
+                    'tokens' => [
+                        'brand' => '#2FA98C',
+                        'brand_ink' => '#FFFFFF',
+                        'surface' => '#F5FBF8',
+                        'ink' => '#1E3A33',
+                    ],
+                ],
+                'blush' => [
+                    'name' => 'Pudrowy róż',
+                    'tokens' => [
+                        'brand' => '#E0699B',
+                        'brand_ink' => '#FFFFFF',
+                        'surface' => '#FDF7FA',
+                        'ink' => '#3A2530',
+                    ],
+                ],
+                'coral' => [
+                    'name' => 'Koral',
+                    'tokens' => [
+                        'brand' => '#F0765B',
+                        'brand_ink' => '#FFFFFF',
+                        'surface' => '#FEF8F5',
+                        'ink' => '#3A2822',
+                    ],
+                ],
             ],
         ],
 
@@ -90,6 +117,33 @@ return [
                         'ink' => '#33372B',
                     ],
                 ],
+                'clay' => [
+                    'name' => 'Glina',
+                    'tokens' => [
+                        'brand' => '#B4633E',
+                        'brand_ink' => '#FFFFFF',
+                        'surface' => '#F6F1EA',
+                        'ink' => '#3A2C24',
+                    ],
+                ],
+                'olive' => [
+                    'name' => 'Oliwka',
+                    'tokens' => [
+                        'brand' => '#7A7B3F',
+                        'brand_ink' => '#FFFFFF',
+                        'surface' => '#F4F2E8',
+                        'ink' => '#34331F',
+                    ],
+                ],
+                'honey' => [
+                    'name' => 'Miód',
+                    'tokens' => [
+                        'brand' => '#C79338',
+                        'brand_ink' => '#FFFFFF',
+                        'surface' => '#F7F3E9',
+                        'ink' => '#3A3018',
+                    ],
+                ],
             ],
         ],
 
@@ -116,6 +170,33 @@ return [
                         'brand_ink' => '#1A1A1A',
                         'surface' => '#222024',
                         'ink' => '#ECE8E6',
+                    ],
+                ],
+                'gold' => [
+                    'name' => 'Złoto',
+                    'tokens' => [
+                        'brand' => '#D4B15F',
+                        'brand_ink' => '#1A1A1A',
+                        'surface' => '#202225',
+                        'ink' => '#E9E6DE',
+                    ],
+                ],
+                'teal' => [
+                    'name' => 'Turkus',
+                    'tokens' => [
+                        'brand' => '#5FB3AE',
+                        'brand_ink' => '#1A1A1A',
+                        'surface' => '#1E2325',
+                        'ink' => '#E4E9E8',
+                    ],
+                ],
+                'orchid' => [
+                    'name' => 'Storczyk',
+                    'tokens' => [
+                        'brand' => '#B394D6',
+                        'brand_ink' => '#1A1A1A',
+                        'surface' => '#232027',
+                        'ink' => '#E9E5EC',
                     ],
                 ],
             ],

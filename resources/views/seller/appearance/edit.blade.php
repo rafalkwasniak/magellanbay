@@ -1,6 +1,12 @@
 <x-layouts.panel title="Wygląd">
     <x-slot:heading>Wygląd sklepu</x-slot:heading>
 
+    @php
+        // Kolor własny sklepu (kanoniczny #RRGGBB lub null). Napędza box „Kolor
+        // przewodni" oraz wirtualną próbkę „custom" przy każdym szablonie.
+        $brandColor = $shop->brandColor();
+    @endphp
+
     <div class="grid gap-6 lg:grid-cols-12">
         {{-- Główna kolumna: formularz --}}
         <div class="lg:col-span-8">
@@ -40,6 +46,32 @@
                     </div>
                 </div>
 
+                {{-- Kolor przewodni (własny akcent sklepu) --}}
+                <div id="kolor" class="scroll-mt-24 rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                    <h2 class="font-semibold text-stone-900">Kolor przewodni</h2>
+                    <p class="mt-1 text-sm text-stone-500">Twój własny kolor marki. Gdy go ustawisz, przy każdym szablonie pojawi się dodatkowa próbka „Twój kolor" — reszta odcieni dobierze się sama, żeby sklep pozostał czytelny.</p>
+
+                    <div class="mt-6 flex flex-wrap items-center gap-4">
+                        <input type="color" id="brand-color-input" value="{{ $brandColor ?? '#3B82F6' }}"
+                            aria-label="Wybierz kolor przewodni"
+                            class="h-12 w-12 shrink-0 cursor-pointer rounded-xl border border-stone-200 bg-white p-1">
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm text-stone-500">HEX</span>
+                            {{-- To pole niesie wartość na serwer; color input jest tylko pomocą. --}}
+                            <input type="text" id="brand-color-hex" name="brand_color" value="{{ $brandColor ?? '' }}"
+                                placeholder="#RRGGBB" maxlength="7" autocomplete="off" spellcheck="false"
+                                class="w-32 rounded-xl border border-stone-200 px-3 py-2 font-mono text-sm uppercase text-stone-700 focus:border-amber-400 focus:ring-amber-400/30">
+                        </div>
+                        <button type="button" id="brand-color-clear"
+                            class="text-sm text-stone-500 underline-offset-2 hover:text-stone-700 hover:underline {{ $brandColor ? '' : 'hidden' }}">
+                            Wyczyść
+                        </button>
+                    </div>
+                    @error('brand_color')
+                        <p class="mt-2 text-sm text-rose-600">{{ $message }}</p>
+                    @enderror
+                </div>
+
                 {{-- Kolory i szablon --}}
                 <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
                     <h2 class="font-semibold text-stone-900">Kolory i szablon</h2>
@@ -50,7 +82,12 @@
                             @php
                                 $isActive = $slug === $shop->templateSlug();
                                 $activePalette = $isActive ? $shop->themePalette() : $template['default_palette'];
-                                $previewTokens = $template['palettes'][$activePalette]['tokens'];
+                                // Baza custom = domyślna paleta szablonu (surface/ink dziedziczy).
+                                $defaultTokens = $template['palettes'][$template['default_palette']]['tokens'];
+                                // Paleta „custom" nie żyje w configu — jej tokeny liczy model.
+                                $previewTokens = $activePalette === 'custom'
+                                    ? $shop->themeTokens()
+                                    : $template['palettes'][$activePalette]['tokens'];
                             @endphp
                             <div data-template-card="{{ $slug }}"
                                 class="tpl-card flex flex-col overflow-hidden rounded-2xl border bg-white transition {{ $isActive ? 'border-amber-400 ring-2 ring-amber-400/60' : 'border-stone-200' }}">
@@ -106,6 +143,21 @@
                                                 style="background: {{ $palette['tokens']['brand'] }};"></span>
                                         </label>
                                     @endforeach
+
+                                    {{-- Próbka „Twój kolor" (custom) — widoczna dopiero, gdy ustawiono
+                                         kolor przewodni. Dashed outline = „to Twój własny akcent". --}}
+                                    <label data-custom-swatch="{{ $slug }}" title="Twój kolor"
+                                        class="cursor-pointer {{ $brandColor ? '' : 'hidden' }}">
+                                        <input type="radio" name="palettes[{{ $slug }}]" value="custom" class="peer sr-only"
+                                            data-palette-input data-custom-input
+                                            data-brand="{{ $brandColor ?? '' }}"
+                                            data-brand-ink="{{ $brandColor ? \App\Support\Color::readableInkOn($brandColor) : '#FFFFFF' }}"
+                                            data-surface="{{ $defaultTokens['surface'] }}"
+                                            data-ink="{{ $defaultTokens['ink'] }}"
+                                            @checked($isActive && $activePalette === 'custom')>
+                                        <span data-custom-dot class="block h-6 w-6 rounded-full outline-dashed outline-1 outline-offset-2 outline-stone-400 transition peer-checked:ring-2 peer-checked:ring-stone-800 peer-checked:ring-offset-1"
+                                            style="background: {{ $brandColor ?? 'transparent' }};"></span>
+                                    </label>
                                 </div>
                             </div>
                         @endforeach
@@ -217,6 +269,85 @@
                     }
                 });
             });
+        })();
+    </script>
+
+    {{-- Kolor przewodni: picker ↔ HEX, propagacja na próbki „custom", Wyczyść. --}}
+    <script>
+        (function () {
+            const colorInput = document.getElementById('brand-color-input');
+            const hexInput = document.getElementById('brand-color-hex');
+            const clearBtn = document.getElementById('brand-color-clear');
+            if (!hexInput) return;
+
+            const swatches = document.querySelectorAll('[data-custom-swatch]');
+            const HEX_RE = /^#[0-9A-Fa-f]{6}$/;
+
+            // Mirror App\Support\Color::readableInkOn — trzymaj zgodne z PHP.
+            function inkOn(hex) {
+                const h = hex.replace('#', '');
+                const r = parseInt(h.slice(0, 2), 16);
+                const g = parseInt(h.slice(2, 4), 16);
+                const b = parseInt(h.slice(4, 6), 16);
+                const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+                return lum > 0.6 ? '#1A1A1A' : '#FFFFFF';
+            }
+
+            // Rozpropaguj kolor na wszystkie próbki custom (dane + kropka), odsłoń
+            // je i „Wyczyść". Gdy custom jest gdzieś aktywny — odśwież podgląd karty.
+            function applyColor(hex) {
+                const ink = inkOn(hex);
+                swatches.forEach(function (label) {
+                    label.classList.remove('hidden');
+                    const input = label.querySelector('[data-custom-input]');
+                    const dot = label.querySelector('[data-custom-dot]');
+                    if (input) {
+                        input.dataset.brand = hex;
+                        input.dataset.brandInk = ink;
+                    }
+                    if (dot) dot.style.background = hex;
+                    if (input && input.checked) input.dispatchEvent(new Event('change'));
+                });
+                if (clearBtn) clearBtn.classList.remove('hidden');
+            }
+
+            // Wyczyść kolor: ukryj próbki i przycisk; a jeśli custom był gdzieś
+            // zaznaczony — przeskocz na 1. (domyślną) paletę tego szablonu.
+            function clearColor() {
+                hexInput.value = '';
+                swatches.forEach(function (label) {
+                    const input = label.querySelector('[data-custom-input]');
+                    if (input && input.checked) {
+                        const card = label.closest('[data-template-card]');
+                        const first = card && card.querySelector('[data-palette-input]:not([data-custom-input])');
+                        if (first) {
+                            first.checked = true;
+                            first.dispatchEvent(new Event('change'));
+                        }
+                    }
+                    label.classList.add('hidden');
+                });
+                if (clearBtn) clearBtn.classList.add('hidden');
+            }
+
+            if (colorInput) {
+                colorInput.addEventListener('input', function () {
+                    hexInput.value = colorInput.value.toUpperCase();
+                    applyColor(hexInput.value);
+                });
+            }
+
+            // Ręczny wpis HEX: sanityzuj do „#" + max 6 znaków hex; zastosuj gdy pełny.
+            hexInput.addEventListener('input', function () {
+                const digits = hexInput.value.replace(/[^0-9A-Fa-f]/g, '').slice(0, 6);
+                hexInput.value = digits ? '#' + digits.toUpperCase() : '';
+                if (HEX_RE.test(hexInput.value)) {
+                    if (colorInput) colorInput.value = hexInput.value;
+                    applyColor(hexInput.value);
+                }
+            });
+
+            if (clearBtn) clearBtn.addEventListener('click', clearColor);
         })();
     </script>
 </x-layouts.panel>

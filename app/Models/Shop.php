@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\IntegrationType;
 use App\Enums\ShopStatus;
 use App\Enums\VatRate;
+use App\Support\Color;
 use Database\Factories\ShopFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -354,14 +355,39 @@ class Shop extends Model
     }
 
     /**
+     * Kolor własny sklepu („kolor przewodni") w postaci kanonicznej „#RRGGBB",
+     * lub null gdy nieustawiony/niepoprawny. Nadpisuje TYLKO token `brand`
+     * (akcent); reszta kolorów dziedziczy z bazowej palety szablonu. Trzymany
+     * w JSON `theme` pod kluczem `brand_color`.
+     */
+    public function brandColor(): ?string
+    {
+        $color = $this->theme['brand_color'] ?? null;
+
+        return is_string($color) && preg_match('/^#[0-9A-Fa-f]{6}$/', $color)
+            ? strtoupper($color)
+            : null;
+    }
+
+    /**
      * Klucz wybranej palety w ramach szablonu. Sprzedawca wybiera gotowca; brak
      * wyboru lub paleta nieobecna w szablonie (np. po zmianie szablonu) → domyślna
      * paleta szablonu. Wybór trzymany w JSON `theme` pod kluczem `palette`.
+     *
+     * „custom" to paleta WIRTUALNA — istnieje tylko wtedy, gdy realnie ustawiono
+     * kolor własny. Gdy koloru brak (sprzedawca go wyczyścił), a wybór został na
+     * „custom", spadamy na domyślną paletę szablonu (siatka bezpieczeństwa).
      */
     public function themePalette(): string
     {
         $slug = $this->templateSlug();
         $chosen = $this->theme['palette'] ?? null;
+
+        if ($chosen === 'custom') {
+            return $this->brandColor() !== null
+                ? 'custom'
+                : config("themes.templates.{$slug}.default_palette");
+        }
 
         if ($chosen !== null && config("themes.templates.{$slug}.palettes.{$chosen}") !== null) {
             return $chosen;
@@ -389,7 +415,24 @@ class Shop extends Model
      */
     public function themeTokens(): array
     {
-        return config("themes.templates.{$this->templateSlug()}.palettes.{$this->themePalette()}.tokens", []);
+        $slug = $this->templateSlug();
+        $palette = $this->themePalette();
+
+        // Kolor własny: baza = domyślna paleta szablonu (surface/ink dziedziczą,
+        // więc sklep zostaje czytelny — jasny albo ciemny wg szablonu), a token
+        // `brand` nadpisany kolorem sprzedawcy; `brand_ink` liczony dla kontrastu.
+        if ($palette === 'custom') {
+            $default = config("themes.templates.{$slug}.default_palette");
+            $base = config("themes.templates.{$slug}.palettes.{$default}.tokens", []);
+            $brand = $this->brandColor();
+
+            return array_merge($base, [
+                'brand' => $brand,
+                'brand_ink' => Color::readableInkOn($brand),
+            ]);
+        }
+
+        return config("themes.templates.{$slug}.palettes.{$palette}.tokens", []);
     }
 
     /**

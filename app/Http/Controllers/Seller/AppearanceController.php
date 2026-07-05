@@ -56,13 +56,30 @@ class AppearanceController extends Controller
             $shop->logo_path = $request->file('logo')->store('shops/'.$shop->id, 'public');
         }
 
-        // Szablon i paleta: bierzemy paletę spod klucza wybranego szablonu, więc
-        // przełączanie szablonów zapamiętuje wybór palety każdego z nich osobno.
+        // Szablon, paleta i kolor własny zapisują się jednym submitem. Paletę
+        // bierzemy spod klucza wybranego szablonu, więc przełączanie szablonów
+        // zapamiętuje wybór palety każdego z nich osobno.
         if ($request->filled('template')) {
             $template = $request->string('template')->toString();
             $palette = $request->input("palettes.{$template}");
+            $brandColor = $request->filled('brand_color')
+                ? strtoupper($request->string('brand_color')->toString())
+                : null;
+
+            // SAFEGUARD: paleta „custom" ma sens tylko z kolorem własnym. Gdy
+            // sprzedawca wyczyścił kolor, a wybór został na „custom", cofamy
+            // paletę na domyślną szablonu (brak wpisu → resolver bierze default).
+            if ($palette === 'custom' && $brandColor === null) {
+                $palette = null;
+            }
+
+            $theme = array_filter([
+                'palette' => filled($palette) ? $palette : null,
+                'brand_color' => $brandColor,
+            ], fn ($value) => $value !== null);
+
             $shop->template = $template;
-            $shop->theme = filled($palette) ? ['palette' => $palette] : null;
+            $shop->theme = $theme !== [] ? $theme : null;
         }
 
         $shop->save();

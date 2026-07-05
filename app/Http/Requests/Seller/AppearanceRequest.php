@@ -28,13 +28,17 @@ class AppearanceRequest extends FormRequest
             ],
             'remove_logo' => ['nullable', 'boolean'],
             'template' => ['nullable', 'string', Rule::in(array_keys(config('themes.templates')))],
+            // Kolor własny („kolor przewodni"): pusty = brak, inaczej kanoniczny hex.
+            'brand_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
         ];
 
         // Paleta jest trzymana per szablon (palettes[<slug>]); każda musi należeć
-        // do swojego szablonu. Zła para szablon/paleta nie przejdzie walidacji.
+        // do swojego szablonu. „custom" to paleta wirtualna (kolor własny), więc
+        // dopuszczamy ją obok gotowców. Zła para szablon/paleta nie przejdzie.
         foreach (array_keys(config('themes.templates')) as $slug) {
             $rules["palettes.{$slug}"] = [
-                'nullable', 'string', Rule::in(array_keys(config("themes.templates.{$slug}.palettes"))),
+                'nullable', 'string',
+                Rule::in([...array_keys(config("themes.templates.{$slug}.palettes")), 'custom']),
             ];
         }
 
@@ -61,6 +65,7 @@ class AppearanceRequest extends FormRequest
             'logo.mimes' => 'Logo musi być w formacie PNG, JPG lub WebP.',
             'logo.max' => 'Logo może mieć maksymalnie 2 MB.',
             'logo.dimensions' => 'Logo powinno mieć od 100 do 2000 px boku.',
+            'brand_color.regex' => 'Kolor przewodni musi być zapisany jako #RRGGBB.',
         ];
     }
 }

@@ -151,6 +151,108 @@ class AppearanceTest extends TestCase
             ->assertSessionHasErrors('palettes.velvet_cloud');
     }
 
+    public function test_seller_can_set_a_custom_brand_color(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+
+        $this->actingAs($seller)
+            ->post(route('seller.appearance.update'), [
+                'template' => 'velvet_cloud',
+                'palettes' => ['velvet_cloud' => 'custom'],
+                'brand_color' => '#12ab34',
+            ])
+            ->assertRedirect(route('seller.appearance.edit'))
+            ->assertSessionHas('success');
+
+        $shop->refresh();
+        $this->assertSame('#12AB34', $shop->brandColor());      // znormalizowany do wielkich liter
+        $this->assertSame('custom', $shop->themePalette());
+
+        // Kolor własny nadpisuje TYLKO `brand`; surface/ink dziedziczą z domyślnej palety.
+        $tokens = $shop->themeTokens();
+        $this->assertSame('#12AB34', $tokens['brand']);
+        $this->assertSame(
+            config('themes.templates.velvet_cloud.palettes.sky.tokens.surface'),
+            $tokens['surface'],
+        );
+    }
+
+    public function test_brand_ink_contrasts_with_the_chosen_color(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+
+        // Ciemny kolor → biały tusz.
+        $this->actingAs($seller)->post(route('seller.appearance.update'), [
+            'template' => 'velvet_cloud',
+            'palettes' => ['velvet_cloud' => 'custom'],
+            'brand_color' => '#101820',
+        ]);
+        $this->assertSame('#FFFFFF', $shop->refresh()->themeTokens()['brand_ink']);
+
+        // Jasny kolor → ciemny tusz.
+        $this->actingAs($seller)->post(route('seller.appearance.update'), [
+            'template' => 'velvet_cloud',
+            'palettes' => ['velvet_cloud' => 'custom'],
+            'brand_color' => '#FCE7A2',
+        ]);
+        $this->assertSame('#1A1A1A', $shop->refresh()->themeTokens()['brand_ink']);
+    }
+
+    public function test_clearing_the_color_resets_a_custom_palette_to_default(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+        $shop->update(['template' => 'velvet_cloud', 'theme' => ['palette' => 'custom', 'brand_color' => '#12AB34']]);
+
+        // Sprzedawca czyści kolor (puste pole), a wybór palety został na „custom".
+        $this->actingAs($seller)->post(route('seller.appearance.update'), [
+            'template' => 'velvet_cloud',
+            'palettes' => ['velvet_cloud' => 'custom'],
+            'brand_color' => '',
+        ]);
+
+        $shop->refresh();
+        $this->assertNull($shop->brandColor());
+        $this->assertSame(config('themes.templates.velvet_cloud.default_palette'), $shop->themePalette());
+    }
+
+    public function test_brand_color_is_kept_alongside_a_preset_palette(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+
+        $this->actingAs($seller)->post(route('seller.appearance.update'), [
+            'template' => 'velvet_cloud',
+            'palettes' => ['velvet_cloud' => 'lavender'],
+            'brand_color' => '#abcdef',
+        ]);
+
+        $shop->refresh();
+        $this->assertSame('lavender', $shop->themePalette());   // gotowiec wygrywa jako aktywna paleta
+        $this->assertSame('#ABCDEF', $shop->brandColor());      // ale kolor zostaje zapamiętany
+    }
+
+    public function test_invalid_brand_color_is_rejected(): void
+    {
+        [$seller] = $this->sellerWithShop();
+
+        $this->actingAs($seller)
+            ->post(route('seller.appearance.update'), [
+                'template' => 'velvet_cloud',
+                'brand_color' => 'niebieski',
+            ])
+            ->assertSessionHasErrors('brand_color');
+    }
+
+    public function test_custom_swatch_is_offered_when_a_brand_color_is_set(): void
+    {
+        [$seller] = $this->sellerWithShop(['theme' => ['palette' => 'custom', 'brand_color' => '#123456']]);
+
+        $this->actingAs($seller)
+            ->get(route('seller.appearance.edit'))
+            ->assertOk()
+            ->assertSee('Kolor przewodni')
+            ->assertSee('#123456');
+    }
+
     public function test_preview_uses_a_real_product_image_when_available(): void
     {
         [$seller, $shop] = $this->sellerWithShop();
