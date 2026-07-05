@@ -175,14 +175,14 @@ class OrderMailer
     }
 
     /**
-     * Pozycje jako osobne linie: „• 2 × Nazwa — 40,00 zł".
+     * Pozycje jako osobne linie: „• 2 szt. × Nazwa — 40,00 zł" (albo „2,50 kg ×…").
      *
      * @return list<string>
      */
     private function productLines(Order $order): array
     {
         return $order->items
-            ->map(fn ($item): string => '• '.$item->quantity.' × '.$item->name.' — '.Money::pln($item->line_total_gross))
+            ->map(fn ($item): string => '• '.$item->sale_unit->formatQuantity((float) $item->quantity).' × '.$item->name.' — '.Money::pln($item->line_total_gross))
             ->values()
             ->all();
     }

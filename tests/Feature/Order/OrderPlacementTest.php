@@ -62,7 +62,8 @@ class OrderPlacementTest extends TestCase
 
         $item = $order->items->first();
         $this->assertSame('123.00', $item->unit_price_gross);
-        $this->assertSame(2, $item->quantity);
+        $this->assertSame('2.00', $item->quantity);
+        $this->assertSame(\App\Enums\SaleUnit::Piece, $item->sale_unit);
         $this->assertSame('246.00', $item->line_total_gross);
 
         // Sumy: 246 brutto → netto 200, VAT 46.
@@ -71,7 +72,7 @@ class OrderPlacementTest extends TestCase
         $this->assertSame('46.00', $order->total_vat);
 
         // Stan zdjęty i koszyk pusty.
-        $this->assertSame(3, $product->fresh()->stock);
+        $this->assertSame('3.00', $product->fresh()->stock);
         $this->assertSame(0, app(CartService::class)->count($shop->id));
     }
 
@@ -96,8 +97,9 @@ class OrderPlacementTest extends TestCase
 
         // Zamówienie NIE powstało, koszyk uzgodniony do dostępnych 2, brak maili.
         $this->assertSame(0, $shop->orders()->count());
-        $this->assertSame(2, app(CartService::class)->count($shop->id));
-        $this->assertSame(2, $product->fresh()->stock);   // stan nietknięty przez zamówienie
+        $this->assertSame(1, app(CartService::class)->count($shop->id));   // jedna pozycja
+        $this->assertSame(2.0, app(CartService::class)->raw($shop->id)[$product->id]);
+        $this->assertSame('2.00', $product->fresh()->stock);   // stan nietknięty przez zamówienie
         $this->assertSame(0, EmailMessage::count());
     }
 

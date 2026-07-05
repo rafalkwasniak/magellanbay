@@ -58,16 +58,16 @@ class OrderService
                 }
 
                 $limited = $product->track_stock && $product->stock !== null;
-                $finalQty = $limited ? min($qty, $product->stock) : $qty;
+                $finalQty = $limited ? min((float) $qty, (float) $product->stock) : (float) $qty;
 
-                if ($finalQty < 1) {
+                if ($finalQty <= 0) {
                     $messages[] = 'Produkt „'.$product->name.'" jest wyprzedany i został usunięty z koszyka.';
 
                     continue;
                 }
 
                 if ($finalQty < $qty) {
-                    $messages[] = 'Ilość „'.$product->name.'" została dostosowana do dostępności ('.$finalQty.' szt.).';
+                    $messages[] = 'Ilość „'.$product->name.'" została dostosowana do dostępności ('.$product->sale_unit->formatQuantity($finalQty).').';
                 }
 
                 $reconciled[$productId] = $finalQty;
@@ -101,7 +101,7 @@ class OrderService
      * Buduje zamówienie z migawki pozycji i zdejmuje stan magazynowy.
      *
      * @param  array<string, mixed>  $data
-     * @param  list<array{product: Product, quantity: int}>  $lines
+     * @param  list<array{product: Product, quantity: float}>  $lines
      */
     private function createOrder(Shop $shop, array $data, array $lines): Order
     {
@@ -129,6 +129,7 @@ class OrderService
                 'unit_price_gross' => $unit,
                 'vat_rate' => $product->vat_rate->value,
                 'quantity' => $quantity,
+                'sale_unit' => $product->sale_unit->value,
                 'line_total_gross' => $lineGross,
             ];
 

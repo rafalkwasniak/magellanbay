@@ -34,14 +34,16 @@
                         </div>
 
                         @php($atMax = $product->track_stock && $product->stock !== null && $line['quantity'] >= $product->stock)
+                        @php($atMin = $line['quantity'] <= $product->sale_unit->minQuantity())
                         <div class="min-w-0 flex-1">
                             <a href="{{ $product->storefrontPath() }}" wire:navigate class="block truncate font-semibold hover:underline">{{ $product->name }}</a>
-                            <p class="mt-0.5 text-sm opacity-70">{{ \App\Support\Money::pln($line['unit_price']) }} / szt.</p>
+                            <p class="mt-0.5 text-sm opacity-70">{{ \App\Support\Money::pln($line['unit_price']) }} / {{ $product->sale_unit->abbreviation() }}</p>
 
-                            {{-- Ilość: przy 1 szt. lewy przycisk to KOSZ (usuwa), od 2 w górę „−". --}}
+                            {{-- Ilość: krok +/− wg jednostki (1 szt. / 0,5 kg), pole wpisywane z palca.
+                                 Przy minimum lewy przycisk to KOSZ (usuwa), wyżej „−". --}}
                             <div class="mt-3 flex items-center gap-3">
                                 <div class="inline-flex items-center gap-1">
-                                    @if ($line['quantity'] <= 1)
+                                    @if ($atMin)
                                         <button type="button" wire:click="remove({{ $product->id }})"
                                             class="st-border flex h-8 w-8 items-center justify-center rounded-full border transition hover:border-rose-400 hover:text-rose-600"
                                             aria-label="Usuń z koszyka" title="Usuń z koszyka">
@@ -52,13 +54,19 @@
                                             class="st-border flex h-8 w-8 items-center justify-center rounded-full border text-lg leading-none transition hover:brightness-95"
                                             aria-label="Zmniejsz ilość">−</button>
                                     @endif
-                                    <span class="w-10 text-center font-semibold tabular-nums">{{ $line['quantity'] }}</span>
+                                    <input type="text" inputmode="decimal"
+                                        wire:key="qty-{{ $product->id }}-{{ $line['quantity'] }}"
+                                        value="{{ $product->sale_unit->inputAmount($line['quantity']) }}"
+                                        x-on:change="$wire.updateQuantity({{ $product->id }}, $event.target.value)"
+                                        aria-label="Ilość"
+                                        class="st-border h-8 w-14 rounded-full border bg-transparent text-center text-sm font-semibold tabular-nums focus:outline-none focus:ring-2 focus:ring-current/20">
                                     <button type="button" wire:click="increment({{ $product->id }})" @disabled($atMax)
                                         class="st-border flex h-8 w-8 items-center justify-center rounded-full border text-lg leading-none transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-40"
                                         aria-label="Zwiększ ilość">+</button>
+                                    <span class="ml-1 text-sm opacity-70">{{ $product->sale_unit->abbreviation() }}</span>
                                 </div>
                                 @if ($atMax)
-                                    <span class="text-xs opacity-60">maks. {{ $product->stock }} szt.</span>
+                                    <span class="text-xs opacity-60">maks. {{ $product->sale_unit->formatQuantity($product->stock) }}</span>
                                 @endif
                             </div>
                         </div>

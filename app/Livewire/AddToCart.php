@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Enums\SaleUnit;
 use App\Models\Product;
 use App\Services\CartService;
 use Livewire\Attributes\On;
@@ -22,7 +23,9 @@ class AddToCart extends Component
 
     public bool $trackStock = false;
 
-    public ?int $stock = null;
+    public ?float $stock = null;
+
+    public SaleUnit $unit = SaleUnit::Piece;
 
     /** Wariant na kafel: pełna szerokość, bez linii „Dostępne: N szt.". */
     public bool $compact = false;
@@ -33,7 +36,8 @@ class AddToCart extends Component
         $this->shopId = (int) $product->shop_id;
         $this->active = (bool) $product->is_active;
         $this->trackStock = (bool) $product->track_stock;
-        $this->stock = $product->stock;
+        $this->stock = $product->stock !== null ? (float) $product->stock : null;
+        $this->unit = $product->sale_unit;
         $this->compact = $compact;
     }
 

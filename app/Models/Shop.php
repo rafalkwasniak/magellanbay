@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\IntegrationType;
+use App\Enums\SaleUnit;
 use App\Enums\ShopStatus;
 use App\Enums\VatRate;
 use App\Support\Color;
@@ -23,7 +24,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'contact_email', 'contact_phone',
     'template', 'theme',
     'country', 'province', 'city', 'postal_code', 'street', 'building_number', 'apartment_number',
-    'default_vat_rate',
+    'default_vat_rate', 'default_sale_unit',
     'bank_account_number', 'bank_account_holder', 'bank_name', 'bank_transfer_enabled',
     'pickup_enabled', 'pay_on_pickup_enabled',
     'package', 'entitlements', 'subscription_ends_at', 'comped',
@@ -42,6 +43,7 @@ class Shop extends Model
             'status' => ShopStatus::class,
             'theme' => 'array',
             'default_vat_rate' => VatRate::class,
+            'default_sale_unit' => SaleUnit::class,
             'bank_transfer_enabled' => 'boolean',
             'pickup_enabled' => 'boolean',
             'pay_on_pickup_enabled' => 'boolean',

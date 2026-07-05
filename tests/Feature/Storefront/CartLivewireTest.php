@@ -72,7 +72,7 @@ class CartLivewireTest extends TestCase
         Livewire::test(AddToCart::class, ['product' => $product])
             ->call('add')
             ->assertDontSee('Do koszyka')
-            ->assertSee('Masz w koszyku wszystkie dostępne sztuki');
+            ->assertSee('Masz w koszyku wszystko, co dostępne');
 
         // Kolejne próby nie zwiększają ponad stan.
         $this->assertSame(1, app(CartService::class)->count($shop->id));
@@ -81,8 +81,9 @@ class CartLivewireTest extends TestCase
     public function test_counter_reflects_cart_and_refreshes_on_event(): void
     {
         $shop = Shop::factory()->create();
-        $product = $this->product($shop);
-        app(CartService::class)->add($product, 2);
+        // Licznik pokazuje liczbę POZYCJI — dwa różne produkty → „2".
+        app(CartService::class)->add($this->product($shop), 3);
+        app(CartService::class)->add($this->product($shop), 1);
 
         Livewire::test(CartCounter::class, ['shopId' => $shop->id])
             ->assertSee('2')
@@ -120,10 +121,10 @@ class CartLivewireTest extends TestCase
             ->assertSee($product->name)
             ->call('increment', $product->id);
 
-        $this->assertSame(2, app(CartService::class)->count($shop->id));
+        $this->assertSame(2.0, app(CartService::class)->raw($shop->id)[$product->id]);
 
         $component->call('decrement', $product->id);
-        $this->assertSame(1, app(CartService::class)->count($shop->id));
+        $this->assertSame(1.0, app(CartService::class)->raw($shop->id)[$product->id]);
 
         $component->call('remove', $product->id)
             ->assertDispatched('cart-updated')
@@ -169,6 +170,46 @@ class CartLivewireTest extends TestCase
             ->call('increment', $product->id)
             ->assertSee('maks. 2 szt.');
 
-        $this->assertSame(2, app(CartService::class)->count($shop->id));
+        $this->assertSame(2.0, app(CartService::class)->raw($shop->id)[$product->id]);
+    }
+
+    public function test_weight_stepper_moves_by_half_kilo(): void
+    {
+        $shop = Shop::factory()->create();
+        $product = $this->product($shop, ['sale_unit' => \App\Enums\SaleUnit::Weight, 'track_stock' => false, 'stock' => null]);
+        app(CartService::class)->add($product, 1.0);   // 1,00 kg
+
+        $component = Livewire::test(Cart::class, ['shopId' => $shop->id])
+            ->call('increment', $product->id);
+        $this->assertSame(1.5, app(CartService::class)->raw($shop->id)[$product->id]);
+
+        $component->call('decrement', $product->id);
+        $this->assertSame(1.0, app(CartService::class)->raw($shop->id)[$product->id]);
+    }
+
+    public function test_weight_quantity_can_be_typed_by_hand(): void
+    {
+        $shop = Shop::factory()->create();
+        $product = $this->product($shop, ['sale_unit' => \App\Enums\SaleUnit::Weight, 'track_stock' => false, 'stock' => null]);
+        app(CartService::class)->add($product, 0.5);
+
+        Livewire::test(Cart::class, ['shopId' => $shop->id])
+            ->call('updateQuantity', $product->id, '1,20');
+
+        $this->assertSame(1.2, app(CartService::class)->raw($shop->id)[$product->id]);
+    }
+
+    public function test_weight_decrement_floors_at_half_kilo_and_shows_trash(): void
+    {
+        $shop = Shop::factory()->create();
+        $product = $this->product($shop, ['sale_unit' => \App\Enums\SaleUnit::Weight, 'track_stock' => false, 'stock' => null]);
+        app(CartService::class)->add($product, 0.5);   // już na minimum
+
+        Livewire::test(Cart::class, ['shopId' => $shop->id])
+            ->assertSee('Usuń z koszyka')          // przy 0,5 kg lewy przycisk = kosz
+            ->assertDontSee('Zmniejsz ilość')
+            ->call('decrement', $product->id);      // nie schodzi poniżej minimum
+
+        $this->assertSame(0.5, app(CartService::class)->raw($shop->id)[$product->id]);
     }
 }

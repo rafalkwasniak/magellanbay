@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\SaleUnit;
 use App\Enums\VatRate;
 use App\Models\Product;
 use App\Models\Shop;
@@ -29,6 +30,7 @@ class ProductFactory extends Factory
             'vat_rate' => VatRate::R23,
             'track_stock' => true,
             'stock' => fake()->numberBetween(0, 50),
+            'sale_unit' => SaleUnit::Piece,
             'is_active' => true,
             'show_on_homepage' => false,
         ];
@@ -37,5 +39,16 @@ class ProductFactory extends Factory
     public function hidden(): static
     {
         return $this->state(fn () => ['is_active' => false]);
+    }
+
+    /**
+     * Produkt sprzedawany na wagę (kg) — ilość i stan ułamkowe.
+     */
+    public function weight(): static
+    {
+        return $this->state(fn () => [
+            'sale_unit' => SaleUnit::Weight,
+            'stock' => fake()->randomFloat(2, 1, 50),
+        ]);
     }
 }

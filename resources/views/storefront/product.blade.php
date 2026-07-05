@@ -41,7 +41,7 @@
             <div>
                 <h1 class="st-brand text-3xl font-bold tracking-tight">{{ $product->name }}</h1>
 
-                <p class="mt-4 text-3xl font-bold">{{ \App\Support\Money::pln($product->price_gross) }}</p>
+                <p class="mt-4 text-3xl font-bold">{{ \App\Support\Money::pln($product->price_gross) }}@if ($product->sale_unit->isWeight())<span class="text-lg font-medium opacity-60"> / {{ $product->sale_unit->abbreviation() }}</span>@endif</p>
                 @php($lowest = $product->lowestPriceLast30Days())
                 @if ($lowest !== null)
                     <p class="mt-1 text-sm opacity-70">Najniższa cena z 30 dni: {{ \App\Support\Money::pln($lowest) }}</p>

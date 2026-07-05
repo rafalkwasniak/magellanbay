@@ -33,7 +33,7 @@
                         @if (filled($p->description))
                             <div class="mt-4 leading-relaxed opacity-80">{!! $p->description !!}</div>
                         @endif
-                        <p class="mt-5 text-2xl font-bold">{{ \App\Support\Money::pln($p->price_gross) }}</p>
+                        <p class="mt-5 text-2xl font-bold">{{ \App\Support\Money::pln($p->price_gross) }}@if ($p->sale_unit->isWeight())<span class="text-base font-medium opacity-60"> / {{ $p->sale_unit->abbreviation() }}</span>@endif</p>
                         <div class="mt-6 flex flex-wrap items-center justify-center gap-4 md:justify-start">
                             <livewire:add-to-cart :product="$p" wire:key="hero-atc-{{ $p->id }}" />
                             <a href="{{ $p->storefrontPath() }}" class="text-sm font-medium underline-offset-4 opacity-70 transition hover:underline hover:opacity-100">Zobacz szczegóły →</a>

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Seller;
 
 use App\Enums\IntegrationType;
+use App\Enums\SaleUnit;
 use App\Enums\VatRate;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Seller\ShopSettingsRequest;
@@ -28,6 +29,7 @@ class ShopSettingsController extends Controller
         return view('seller.settings.edit', [
             'shop' => $shop,
             'vatRates' => VatRate::cases(),
+            'saleUnits' => SaleUnit::cases(),
             'googleAnalyticsId' => $shop->googleAnalyticsId(),
             'googleAnalyticsEnabled' => (bool) $shop->integration(IntegrationType::GoogleAnalytics)?->enabled,
         ]);

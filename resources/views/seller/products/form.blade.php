@@ -114,12 +114,15 @@
                 @endif
 
                 {{-- Cena i stan --}}
-                <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                @php($selectedUnit = old('sale_unit', $product->sale_unit?->value ?? $defaultSaleUnit))
+                @php($unitMeta = collect(\App\Enums\SaleUnit::cases())->mapWithKeys(fn ($u) => [$u->value => ['abbr' => $u->abbreviation(), 'step' => $u->step()]]))
+                <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur"
+                    data-price-unit data-units='@json($unitMeta)'>
                     <h2 class="font-semibold text-stone-900">Cena i dostępność</h2>
 
                     <div class="mt-6 grid grid-cols-12 gap-5">
-                        <div class="col-span-12 sm:col-span-5">
-                            <label for="price_gross" class="block text-sm font-medium text-stone-700">Cena brutto</label>
+                        <div class="col-span-12 sm:col-span-4">
+                            <label for="price_gross" class="block text-sm font-medium text-stone-700">Cena brutto <span class="font-normal text-stone-400">za 1&nbsp;<span data-unit-name>{{ $unitMeta[$selectedUnit]['abbr'] ?? 'szt.' }}</span></span></label>
                             <div class="relative mt-1.5">
                                 <input id="price_gross" name="price_gross" type="text" inputmode="decimal" required placeholder="0,00"
                                     value="{{ old('price_gross', $product->price_gross) }}"
@@ -132,7 +135,20 @@
                             @enderror
                         </div>
 
-                        <div class="col-span-12 sm:col-span-3">
+                        <div class="col-span-6 sm:col-span-4">
+                            <label for="sale_unit" class="block text-sm font-medium text-stone-700">Jednostka sprzedaży</label>
+                            <select id="sale_unit" name="sale_unit" required data-sale-unit
+                                class="mt-1.5 block w-full rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
+                                @foreach (\App\Enums\SaleUnit::cases() as $unit)
+                                    <option value="{{ $unit->value }}" @selected($selectedUnit === $unit->value)>{{ $unit->label() }}</option>
+                                @endforeach
+                            </select>
+                            @error('sale_unit')
+                                <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div class="col-span-6 sm:col-span-4">
                             <label for="vat_rate" class="block text-sm font-medium text-stone-700">Stawka VAT</label>
                             @php($selectedVat = old('vat_rate', $product->vat_rate?->value ?? $defaultVat))
                             <select id="vat_rate" name="vat_rate" required
@@ -146,11 +162,14 @@
                             @enderror
                         </div>
 
-                        <div class="col-span-12 sm:col-span-4" data-stock-field>
+                        <div class="col-span-12 sm:col-span-6" data-stock-field>
                             <label for="stock" class="block text-sm font-medium text-stone-700">Stan magazynowy</label>
-                            <input id="stock" name="stock" type="number" min="0" inputmode="numeric"
-                                value="{{ old('stock', $product->stock) }}"
-                                class="mt-1.5 block w-full rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
+                            <div class="relative mt-1.5">
+                                <input id="stock" name="stock" type="text" inputmode="decimal"
+                                    value="{{ old('stock', $product->stock !== null ? rtrim(rtrim((string) $product->stock, '0'), '.') : '') }}"
+                                    class="block w-full rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 pr-12 text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
+                                <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm text-stone-400" data-unit-name>{{ $unitMeta[$selectedUnit]['abbr'] ?? 'szt.' }}</span>
+                            </div>
                             @error('stock')
                                 <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
                             @enderror
@@ -251,6 +270,24 @@
                 field.classList.toggle('opacity-50', !on);
             };
             toggle.addEventListener('change', sync);
+            sync();
+        })();
+
+        {{-- Jednostka sprzedaży: przyrostki „szt."/„kg" przy cenie i stanie idą za wyborem. --}}
+        (function () {
+            const container = document.querySelector('[data-price-unit]');
+            const select = document.querySelector('[data-sale-unit]');
+            if (!container || !select) return;
+
+            const units = JSON.parse(container.dataset.units || '{}');
+            const labels = container.querySelectorAll('[data-unit-name]');
+
+            const sync = () => {
+                const meta = units[select.value];
+                if (!meta) return;
+                labels.forEach((el) => { el.textContent = meta.abbr; });
+            };
+            select.addEventListener('change', sync);
             sync();
         })();
     </script>

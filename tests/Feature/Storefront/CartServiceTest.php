@@ -40,8 +40,9 @@ class CartServiceTest extends TestCase
         $this->cart()->add($product, 2);
         $this->cart()->add($product, 3);
 
-        $this->assertSame(5, $this->cart()->count($shop->id));
-        $this->assertSame([$product->id => 5], $this->cart()->raw($shop->id));
+        // Licznik = liczba POZYCJI (jeden produkt), ilość zsumowana w koszyku.
+        $this->assertSame(1, $this->cart()->count($shop->id));
+        $this->assertSame([$product->id => 5.0], $this->cart()->raw($shop->id));
     }
 
     public function test_add_caps_to_tracked_stock(): void
@@ -51,7 +52,7 @@ class CartServiceTest extends TestCase
 
         $this->cart()->add($product, 10);
 
-        $this->assertSame(4, $this->cart()->count($shop->id));
+        $this->assertSame([$product->id => 4.0], $this->cart()->raw($shop->id));
     }
 
     public function test_inactive_or_foreign_products_are_ignored(): void
@@ -111,7 +112,42 @@ class CartServiceTest extends TestCase
         $product->update(['stock' => 3]);
         $lines = $this->cart()->lines($shop->id);
 
-        $this->assertSame(3, $lines->first()['quantity']);
-        $this->assertSame(3, $this->cart()->count($shop->id));
+        $this->assertSame(3.0, $lines->first()['quantity']);
+        $this->assertSame(1, $this->cart()->count($shop->id));
+    }
+
+    public function test_weight_product_takes_fractional_quantity_and_caps_to_stock(): void
+    {
+        $shop = Shop::factory()->create();
+        $product = $this->product($shop, [
+            'sale_unit' => \App\Enums\SaleUnit::Weight,
+            'track_stock' => true,
+            'stock' => 2.50,
+            'price_gross' => 20.00,
+        ]);
+
+        // Krok 0,5 kg + dokładna waga z palca sumują się jak liczby.
+        $this->cart()->add($product, 0.5);
+        $this->cart()->setQuantity($shop->id, $product->id, 1.20);
+
+        $lines = $this->cart()->lines($shop->id);
+        $this->assertSame(1.20, $lines->first()['quantity']);
+        $this->assertSame(24.0, $lines->first()['line_total']);   // 1,20 kg × 20,00 zł
+
+        // Powyżej stanu przycina do dostępnej wagi (2,50 kg).
+        $this->cart()->setQuantity($shop->id, $product->id, 9.0);
+        $this->assertSame(2.50, $this->cart()->lines($shop->id)->first()['quantity']);
+    }
+
+    public function test_weight_quantity_below_minimum_removes_line(): void
+    {
+        $shop = Shop::factory()->create();
+        $product = $this->product($shop, ['sale_unit' => \App\Enums\SaleUnit::Weight]);
+        $this->cart()->add($product, 1.0);
+
+        // Podłoga = 0,5 kg; wpisane 0,2 kg schodzi poniżej minimum → usunięcie.
+        $this->cart()->setQuantity($shop->id, $product->id, 0.2);
+
+        $this->assertSame(0, $this->cart()->count($shop->id));
     }
 }

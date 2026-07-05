@@ -15,7 +15,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * zmianie lub miękkim usunięciu produktu.
  */
 #[Fillable([
-    'product_id', 'name', 'unit_price_gross', 'vat_rate', 'quantity', 'line_total_gross',
+    'product_id', 'name', 'unit_price_gross', 'vat_rate', 'quantity', 'sale_unit', 'line_total_gross',
 ])]
 class OrderItem extends Model
 {
@@ -31,7 +31,8 @@ class OrderItem extends Model
             'unit_price_gross' => 'decimal:2',
             'line_total_gross' => 'decimal:2',
             'vat_rate' => VatRate::class,
-            'quantity' => 'integer',
+            'sale_unit' => \App\Enums\SaleUnit::class,
+            'quantity' => 'decimal:2',
         ];
     }
 

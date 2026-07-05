@@ -44,6 +44,7 @@ class ProductController extends Controller
             'product' => new Product,
             'tagSuggestions' => $this->tagSuggestions($request),
             'defaultVat' => $this->defaultVat($request),
+            'defaultSaleUnit' => $this->defaultSaleUnit($request),
             'homepage' => $this->homepageInfo($request),
         ]);
     }
@@ -76,6 +77,7 @@ class ProductController extends Controller
             'product' => $product,
             'tagSuggestions' => $this->tagSuggestions($request),
             'defaultVat' => $this->defaultVat($request),
+            'defaultSaleUnit' => $this->defaultSaleUnit($request),
             'homepage' => $this->homepageInfo($request),
         ]);
     }
@@ -117,6 +119,11 @@ class ProductController extends Controller
     {
         $data = $request->safe()->except(['tags', 'images']);
         $data['stock'] = $data['track_stock'] ? ($data['stock'] ?? 0) : null;
+
+        // Stan na sztuki to liczba całkowita; na wagę zostaje ułamkiem (2,50 kg).
+        if ($data['stock'] !== null && ($data['sale_unit'] ?? 'piece') === \App\Enums\SaleUnit::Piece->value) {
+            $data['stock'] = (int) round((float) $data['stock']);
+        }
 
         return $data;
     }
@@ -166,6 +173,14 @@ class ProductController extends Controller
     private function defaultVat(Request $request): string
     {
         return $request->user()->shop?->default_vat_rate?->value ?? '23';
+    }
+
+    /**
+     * Domyślna jednostka sprzedaży do prefillu nowego produktu — z ustawień sklepu.
+     */
+    private function defaultSaleUnit(Request $request): string
+    {
+        return $request->user()->shop?->default_sale_unit?->value ?? 'piece';
     }
 
     private function authorizeProduct(Request $request, Product $product): void

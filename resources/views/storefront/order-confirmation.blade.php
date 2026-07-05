@@ -18,7 +18,7 @@
                 <ul class="mt-4 space-y-3">
                     @foreach ($order->items as $item)
                         <li class="flex justify-between gap-3 text-sm">
-                            <span class="opacity-80">{{ $item->quantity }}× {{ $item->name }}</span>
+                            <span class="opacity-80">{{ $item->sale_unit->formatQuantity((float) $item->quantity) }} × {{ $item->name }}</span>
                             <span class="shrink-0 tabular-nums">{{ \App\Support\Money::pln($item->line_total_gross) }}</span>
                         </li>
                     @endforeach

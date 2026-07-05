@@ -1,9 +1,9 @@
 <div>
     @if ($limited && ! $compact)
         <p class="mb-2 text-sm opacity-70">
-            Dostępne: <span class="font-semibold">{{ $stock }}</span> szt.
+            Dostępne: <span class="font-semibold">{{ $unit->formatAmount($stock) }}</span> {{ $unit->abbreviation() }}
             @if ($inCart > 0)
-                <span class="opacity-60">(w koszyku: {{ $inCart }})</span>
+                <span class="opacity-60">(w koszyku: {{ $unit->formatQuantity($inCart) }})</span>
             @endif
         </p>
     @endif
@@ -25,7 +25,7 @@
         {{-- Wszystkie dostępne sztuki są już w koszyku. --}}
         <span class="inline-flex items-center justify-center gap-2 rounded-full border st-border {{ $compact ? 'px-4 py-2.5' : 'px-6 py-3' }} text-sm font-medium opacity-80">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4 shrink-0" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
-            {{ $compact ? 'Masz maksimum' : 'Masz w koszyku wszystkie dostępne sztuki' }}
+            {{ $compact ? 'Masz maksimum' : 'Masz w koszyku wszystko, co dostępne' }}
         </span>
     @else
         <span class="inline-flex items-center justify-center rounded-full border st-border {{ $compact ? 'px-4 py-2.5' : 'px-6 py-3' }} text-sm font-medium opacity-60">

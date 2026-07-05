@@ -32,6 +32,7 @@ class ProductTest extends TestCase
             'description' => 'Ręcznie robiony.',
             'price_gross' => '49,99',
             'vat_rate' => '23',
+            'sale_unit' => 'piece',
             'track_stock' => '1',
             'stock' => '10',
             'is_active' => '1',
@@ -64,6 +65,52 @@ class ProductTest extends TestCase
             ->get(route('seller.products.create'))
             ->assertOk()
             ->assertSee('value="8" selected', false);
+    }
+
+    public function test_new_product_form_prefills_shop_default_sale_unit(): void
+    {
+        $seller = User::factory()->consented()->create();
+        Shop::factory()->create(['owner_id' => $seller->id, 'default_sale_unit' => 'weight']);
+
+        $this->actingAs($seller)
+            ->get(route('seller.products.create'))
+            ->assertOk()
+            ->assertSee('value="weight" selected', false);
+    }
+
+    public function test_seller_can_create_weight_product_with_fractional_stock(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+
+        $this->actingAs($seller)
+            ->post(route('seller.products.store'), $this->payload(['sale_unit' => 'weight', 'stock' => '2,5']))
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('products', [
+            'shop_id' => $shop->id,
+            'sale_unit' => 'weight',
+            'stock' => 2.5,
+        ]);
+    }
+
+    public function test_piece_stock_is_rounded_to_integer(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+
+        $this->actingAs($seller)
+            ->post(route('seller.products.store'), $this->payload(['sale_unit' => 'piece', 'stock' => '7,6']))
+            ->assertSessionHas('success');
+
+        $this->assertSame('8.00', $shop->products()->firstOrFail()->stock);
+    }
+
+    public function test_invalid_sale_unit_is_rejected(): void
+    {
+        [$seller] = $this->sellerWithShop();
+
+        $this->actingAs($seller)
+            ->post(route('seller.products.store'), $this->payload(['sale_unit' => 'kilo']))
+            ->assertSessionHasErrors('sale_unit');
     }
 
     public function test_seller_can_create_product_with_normalised_price(): void

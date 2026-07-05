@@ -27,6 +27,21 @@
                             @enderror
                             <p class="mt-1.5 text-xs text-stone-400">Wstępnie ustawiana przy każdym nowym produkcie — przy produkcie nadal możesz ją zmienić.</p>
                         </div>
+
+                        <div class="col-span-6 sm:col-span-4">
+                            <label for="default_sale_unit" class="block text-sm font-medium text-stone-700">Domyślna jednostka sprzedaży</label>
+                            @php($selectedUnit = old('default_sale_unit', $shop->default_sale_unit?->value ?? 'piece'))
+                            <select id="default_sale_unit" name="default_sale_unit" required
+                                class="mt-1.5 block w-full rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
+                                @foreach ($saleUnits as $unit)
+                                    <option value="{{ $unit->value }}" @selected($selectedUnit === $unit->value)>{{ $unit->label() }}</option>
+                                @endforeach
+                            </select>
+                            @error('default_sale_unit')
+                                <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
+                            @enderror
+                            <p class="mt-1.5 text-xs text-stone-400">Sprzedajesz głównie na wagę (warzywa, wędliny)? Ustaw „kg" — przy każdym produkcie i tak możesz zmienić.</p>
+                        </div>
                     </div>
                 </div>
 

@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\SaleUnit;
 use App\Enums\VatRate;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -27,6 +28,7 @@ class OrderItemFactory extends Factory
             'unit_price_gross' => $unit,
             'vat_rate' => VatRate::R23,
             'quantity' => $quantity,
+            'sale_unit' => SaleUnit::Piece,
             'line_total_gross' => round($unit * $quantity, 2),
         ];
     }

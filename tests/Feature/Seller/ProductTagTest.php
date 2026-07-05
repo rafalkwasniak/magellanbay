@@ -29,6 +29,7 @@ class ProductTagTest extends TestCase
             'name' => 'Pierścionek',
             'price_gross' => '120,00',
             'vat_rate' => '23',
+            'sale_unit' => 'piece',
             'track_stock' => '1',
             'stock' => '5',
             'is_active' => '1',

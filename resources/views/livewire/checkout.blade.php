@@ -168,7 +168,7 @@
                     <ul class="mt-4 space-y-3">
                         @foreach ($lines as $line)
                             <li class="flex justify-between gap-3 text-sm">
-                                <span class="opacity-80">{{ $line['quantity'] }}× {{ $line['product']->name }}</span>
+                                <span class="opacity-80">{{ $line['product']->sale_unit->formatQuantity($line['quantity']) }} × {{ $line['product']->name }}</span>
                                 <span class="shrink-0 tabular-nums">{{ \App\Support\Money::pln($line['line_total']) }}</span>
                             </li>
                         @endforeach

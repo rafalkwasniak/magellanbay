@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\SaleUnit;
 use App\Enums\VatRate;
 use App\Observers\ProductObserver;
 use App\Support\OmnibusPrice;
@@ -24,7 +25,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 #[ObservedBy(ProductObserver::class)]
 #[Fillable([
     'name', 'slug', 'description', 'price_gross', 'vat_rate',
-    'track_stock', 'stock', 'is_active', 'show_on_homepage',
+    'track_stock', 'stock', 'sale_unit', 'is_active', 'show_on_homepage',
 ])]
 class Product extends Model
 {
@@ -38,11 +39,12 @@ class Product extends Model
     {
         return [
             'vat_rate' => VatRate::class,
+            'sale_unit' => SaleUnit::class,
             'price_gross' => 'decimal:2',
             'track_stock' => 'boolean',
             'is_active' => 'boolean',
             'show_on_homepage' => 'boolean',
-            'stock' => 'integer',
+            'stock' => 'decimal:2',
         ];
     }
 
@@ -156,6 +158,6 @@ class Product extends Model
      */
     public function inStock(): bool
     {
-        return ! $this->track_stock || (int) $this->stock > 0;
+        return ! $this->track_stock || (float) $this->stock > 0;
     }
 }

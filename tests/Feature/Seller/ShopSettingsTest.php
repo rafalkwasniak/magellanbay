@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Seller;
 
+use App\Enums\SaleUnit;
 use App\Enums\VatRate;
 use App\Models\Shop;
 use App\Models\User;
@@ -40,6 +41,29 @@ class ShopSettingsTest extends TestCase
             ->assertSessionHas('success');
 
         $this->assertSame(VatRate::R8, $shop->fresh()->default_vat_rate);
+    }
+
+    public function test_seller_can_change_default_sale_unit(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop(['default_sale_unit' => 'piece']);
+
+        $this->actingAs($seller)
+            ->post(route('seller.settings.update'), ['default_vat_rate' => '23', 'default_sale_unit' => 'weight'])
+            ->assertRedirect(route('seller.settings.edit'))
+            ->assertSessionHas('success');
+
+        $this->assertSame(SaleUnit::Weight, $shop->fresh()->default_sale_unit);
+    }
+
+    public function test_invalid_sale_unit_is_rejected(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop(['default_sale_unit' => 'piece']);
+
+        $this->actingAs($seller)
+            ->post(route('seller.settings.update'), ['default_vat_rate' => '23', 'default_sale_unit' => 'ton'])
+            ->assertSessionHasErrors('default_sale_unit');
+
+        $this->assertSame(SaleUnit::Piece, $shop->fresh()->default_sale_unit);
     }
 
     public function test_invalid_vat_rate_is_rejected(): void

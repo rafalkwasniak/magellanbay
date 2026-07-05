@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Seller;
 
+use App\Enums\SaleUnit;
 use App\Enums\VatRate;
 use App\Services\HtmlSanitizer;
 use App\Services\SlugService;
@@ -34,6 +35,11 @@ class ProductRequest extends FormRequest
             'show_on_homepage' => $this->boolean('show_on_homepage'),
         ];
 
+        // Stan może być ułamkowy przy sprzedaży na wagę (2,50 kg) — przecinek na kropkę.
+        if ($this->filled('stock')) {
+            $merge['stock'] = str_replace([' ', "\u{a0}", ','], ['', '', '.'], trim((string) $this->input('stock')));
+        }
+
         // Opis to HTML z edytora Trix — sanityzujemy wąską whitelistą przed walidacją/zapisem.
         if ($this->has('description')) {
             $merge['description'] = app(HtmlSanitizer::class)->clean((string) $this->input('description'));
@@ -53,8 +59,9 @@ class ProductRequest extends FormRequest
             'description' => ['nullable', 'string', 'max:'.config('shop.product_description_max')],
             'price_gross' => ['required', 'numeric', 'min:0', 'max:9999999.99'],
             'vat_rate' => ['required', Rule::enum(VatRate::class)],
+            'sale_unit' => ['required', Rule::enum(SaleUnit::class)],
             'track_stock' => ['boolean'],
-            'stock' => ['nullable', 'integer', 'min:0', 'max:1000000', 'required_if:track_stock,true'],
+            'stock' => ['nullable', 'numeric', 'min:0', 'max:1000000', 'required_if:track_stock,true'],
             'is_active' => ['boolean'],
             'show_on_homepage' => ['boolean'],
             'tags' => ['nullable', 'string', 'max:500'],
@@ -109,6 +116,7 @@ class ProductRequest extends FormRequest
             'description' => 'opis',
             'price_gross' => 'cena',
             'vat_rate' => 'stawka VAT',
+            'sale_unit' => 'jednostka sprzedaży',
             'stock' => 'stan magazynowy',
         ];
     }

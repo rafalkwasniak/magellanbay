@@ -62,7 +62,7 @@
                                                     'text-[11px] font-medium',
                                                     'text-stone-500' => $product->stock > 0,
                                                     'text-rose-600' => $product->stock <= 0,
-                                                ])>{{ $product->stock > 0 ? 'Zostało '.$product->stock.' szt.' : 'Brak na stanie' }}</span>
+                                                ])>{{ $product->stock > 0 ? 'Zostało '.$product->sale_unit->formatQuantity((float) $product->stock) : 'Brak na stanie' }}</span>
                                             @endif
                                         </div>
 

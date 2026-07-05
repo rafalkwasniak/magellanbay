@@ -20,10 +20,10 @@ class CartService
     private const KEY = 'carts';
 
     /**
-     * Surowa zawartość koszyka sklepu: [product_id => qty]. Kolejność wstawiania
-     * zachowana (PHP array).
+     * Surowa zawartość koszyka sklepu: [product_id => qty]. Ilość jest ułamkowa
+     * (waga: 2,50 kg) albo całkowita (sztuki). Kolejność wstawiania zachowana.
      *
-     * @return array<int, int>
+     * @return array<int, float>
      */
     public function raw(int $shopId): array
     {
@@ -31,22 +31,25 @@ class CartService
     }
 
     /**
-     * Łączna liczba sztuk (do licznika w nagłówku). Liczona z samej sesji, bez
-     * zapytań — badge może chwilowo policzyć produkt zdjęty przez sprzedawcę;
-     * pełne uzgodnienie robi strona koszyka (lines()).
+     * Liczba POZYCJI w koszyku (do licznika w nagłówku) — nie suma ilości, bo ta
+     * miesza sztuki z kilogramami i dawałaby przy wadze ułamek („4,5"). Liczona
+     * z samej sesji, bez zapytań; pełne uzgodnienie robi strona koszyka (lines()).
      */
     public function count(int $shopId): int
     {
-        return array_sum($this->raw($shopId));
+        return count($this->raw($shopId));
     }
 
     /**
-     * Dodaje produkt do koszyka (zwiększa ilość o $qty). Ignoruje produkt spoza
-     * sklepu lub nieaktywny. Ilość przycinana do stanu magazynowego, gdy śledzony.
+     * Dodaje produkt do koszyka (zwiększa ilość o $qty; domyślnie o krok jednostki
+     * — 1 szt. albo 0,5 kg). Ignoruje produkt spoza sklepu lub nieaktywny. Ilość
+     * przycinana do stanu magazynowego, gdy śledzony.
      */
-    public function add(Product $product, int $qty = 1): void
+    public function add(Product $product, ?float $qty = null): void
     {
-        if ($product->shop_id === null || ! $product->is_active || $qty < 1) {
+        $qty ??= $product->sale_unit->step();
+
+        if ($product->shop_id === null || ! $product->is_active || $qty <= 0) {
             return;
         }
 
@@ -57,19 +60,23 @@ class CartService
     }
 
     /**
-     * Ustawia dokładną ilość produktu. 0 (lub mniej) usuwa pozycję.
+     * Ustawia dokładną ilość produktu. Ilość normalizowana wg jednostki produktu
+     * (waga do 2 miejsc, sztuki do całkowitej); poniżej minimum lub ≤ 0 usuwa
+     * pozycję.
      */
-    public function setQuantity(int $shopId, int $productId, int $qty): void
+    public function setQuantity(int $shopId, int $productId, float $qty): void
     {
-        if ($qty < 1) {
+        $product = Product::where('shop_id', $shopId)->where('is_active', true)->find($productId);
+
+        if ($product === null) {
             $this->remove($shopId, $productId);
 
             return;
         }
 
-        $product = Product::where('shop_id', $shopId)->where('is_active', true)->find($productId);
+        $qty = $product->sale_unit->normalizeQuantity($qty);
 
-        if ($product === null) {
+        if ($qty <= 0) {
             $this->remove($shopId, $productId);
 
             return;
@@ -96,7 +103,7 @@ class CartService
      * Nadpisuje cały koszyk sklepu podaną mapą [product_id => qty]. Używane przy
      * uzgodnieniu przed złożeniem zamówienia (finalna weryfikacja dostępności).
      *
-     * @param  array<int, int>  $items
+     * @param  array<int, float>  $items
      */
     public function overwrite(int $shopId, array $items): void
     {
@@ -114,7 +121,7 @@ class CartService
      * stanu, pominięte produkty nieistniejące/nieaktywne (i wyczyszczone z sesji).
      * Każda pozycja: product, quantity, unit_price (brutto), line_total.
      *
-     * @return Collection<int, array{product: Product, quantity: int, unit_price: float, line_total: float}>
+     * @return Collection<int, array{product: Product, quantity: float, unit_price: float, line_total: float}>
      */
     public function lines(int $shopId): Collection
     {
@@ -140,9 +147,9 @@ class CartService
                     return null;    // zdjęty/usunięty — wypadnie z koszyka
                 }
 
-                $qty = $this->capToStock($product, $raw[$productId]);
+                $qty = $this->capToStock($product, (float) $raw[$productId]);
 
-                if ($qty < 1) {
+                if ($qty <= 0) {
                     return null;    // wyprzedany — wypada
                 }
 
@@ -153,7 +160,7 @@ class CartService
                     'product' => $product,
                     'quantity' => $qty,
                     'unit_price' => $unit,
-                    'line_total' => $unit * $qty,
+                    'line_total' => round($unit * $qty, 2),
                 ];
             })
             ->filter()
@@ -176,7 +183,7 @@ class CartService
     /**
      * Zapis pojedynczej pozycji z przycięciem do stanu.
      */
-    private function store(int $shopId, int $productId, int $qty, Product $product): void
+    private function store(int $shopId, int $productId, float $qty, Product $product): void
     {
         $cart = $this->raw($shopId);
         $cart[$productId] = $this->capToStock($product, $qty);
@@ -187,10 +194,10 @@ class CartService
      * Ilość ograniczona stanem magazynowym, gdy produkt go śledzi. Bez śledzenia
      * (usługa/nielimitowany) ilość bez ograniczeń.
      */
-    private function capToStock(Product $product, int $qty): int
+    private function capToStock(Product $product, float $qty): float
     {
         if ($product->track_stock && $product->stock !== null) {
-            return max(0, min($qty, $product->stock));
+            return max(0, min($qty, (float) $product->stock));
         }
 
         return max(0, $qty);
