@@ -54,6 +54,10 @@
                     <p class="mt-2 whitespace-pre-line text-sm text-stone-600">{{ $order->note }}</p>
                 </div>
             @endif
+
+            <div class="pt-2">
+                <a href="{{ route('seller.orders.index', $listQuery) }}" class="text-sm font-medium text-stone-500 transition hover:text-stone-800">← Wróć do listy</a>
+            </div>
         </div>
 
         {{-- Kolumna boczna: status, kupujący, dostawa, płatność --}}
