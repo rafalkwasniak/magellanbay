@@ -83,6 +83,10 @@ class OrderService
 
             $order = $this->createOrder($shop, $data, $lines);
 
+            // Powiadomienie „nowe zamówienie" dla sprzedawcy — licznik na sklepie
+            // rośnie atomowo (UPDATE … + 1), zeruje wejście na listę Zamówień.
+            $shop->increment('unseen_orders_count');
+
             $this->cart->clear($shop->id);
 
             return $order;

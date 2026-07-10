@@ -125,7 +125,22 @@
     {{-- Sprzedaż — ruszy po dodaniu produktów i publikacji --}}
     <div class="mt-8">
         <h2 class="text-sm font-medium text-stone-500">Twoja sprzedaż</h2>
-        <div class="mt-3 grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div class="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {{-- „Nowe zamówienia": powiadomienie z listy Zamówień (to samo źródło co badge
+                 w menu) — klik prowadzi na listę, gdzie licznik się zeruje. Akcent gdy > 0. --}}
+            <a href="{{ route('seller.orders.index') }}"
+               @class([
+                   'rounded-3xl border p-5 backdrop-blur transition',
+                   'border-emerald-200 bg-emerald-50/80 hover:bg-emerald-50' => $unseenOrders > 0,
+                   'border-white/60 bg-white/70 hover:bg-white' => $unseenOrders === 0,
+               ])>
+                <div class="flex items-center justify-between">
+                    <p @class(['text-sm font-medium', 'text-emerald-600' => $unseenOrders > 0, 'text-stone-500' => $unseenOrders === 0])>Nowe zamówienia</p>
+                    <span class="text-lg">🔔</span>
+                </div>
+                <p @class(['mt-2 text-3xl font-semibold tracking-tight', 'text-emerald-600' => $unseenOrders > 0, 'text-stone-900' => $unseenOrders === 0])>{{ $unseenOrders }}</p>
+                <p class="mt-1 text-xs text-stone-400">{{ $unseenOrders > 0 ? 'Od Twojej ostatniej wizyty' : 'Brak nowych zamówień' }}</p>
+            </a>
             @foreach ([
                 ['Produkty', (string) $productCount, $productCount > 0 ? 'W Twoim sklepie' : 'Dodaj pierwszy produkt', '🏷️'],
                 ['Zamówienia (30 dni)', (string) $orderCount, $orderCount > 0 ? 'W ostatnich 30 dniach' : 'Czekają na pierwszych klientów', '📦'],

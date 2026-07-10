@@ -50,6 +50,7 @@ class Shop extends Model
             'entitlements' => 'array',
             'subscription_ends_at' => 'datetime',
             'comped' => 'boolean',
+            'unseen_orders_count' => 'integer',
         ];
     }
 

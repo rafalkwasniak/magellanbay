@@ -17,7 +17,11 @@
                'text-stone-500 hover:bg-white/60' => ! $active,
            ])>
             <span class="text-base leading-none">{{ $item['icon'] }}</span>
-            {{ $item['label'] }}
+            <span class="flex-1">{{ $item['label'] }}</span>
+            @if (($item['badge'] ?? 0) > 0)
+                {{-- Powiadomienie „nowe od Twojej ostatniej wizyty"; miły detal „9+" powyżej dziewięciu. --}}
+                <span class="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-emerald-500 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">{{ $item['badge'] > 9 ? '9+' : $item['badge'] }}</span>
+            @endif
         </a>
     @else
         <span class="flex cursor-default select-none items-center gap-3 rounded-2xl px-4 py-2.5 text-stone-400"

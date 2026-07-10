@@ -49,6 +49,7 @@ class DashboardController extends Controller
             'activeProductCount' => $activeProductCount,
             'orderCount' => $orderCount,
             'revenue' => $revenue,
+            'unseenOrders' => (int) ($shop?->unseen_orders_count ?? 0),
             'done' => collect($steps)->where('done', true)->count(),
             'total' => count($steps),
         ]);

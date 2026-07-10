@@ -40,6 +40,13 @@ class OrderController extends Controller
         $stats = ['orders' => 0, 'revenue' => 0.0, 'products' => 0.0];
 
         if ($shop !== null) {
+            // Wejście na listę = „przejrzane": zerujemy powiadomienie o nowych
+            // zamówieniach. Zerujemy na już-załadowanej instancji, więc badge w
+            // nawigacji gaśnie od razu na tej stronie. Zapis tylko gdy jest co gasić.
+            if ($shop->unseen_orders_count > 0) {
+                $shop->forceFill(['unseen_orders_count' => 0])->save();
+            }
+
             $total = $shop->orders()->count();
             $productOptions = $this->productOptions($shop);
 
