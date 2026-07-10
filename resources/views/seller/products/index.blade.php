@@ -10,12 +10,31 @@
                         <h2 class="font-semibold text-stone-900">Twoje produkty</h2>
                         <p class="mt-1 text-sm text-stone-500">{{ $total }} / {{ $max }} w pakiecie {{ $shop?->packageName() }}</p>
                     </div>
-                    @if ($total < $max)
-                        <a href="{{ route('seller.products.create') }}"
-                            class="rounded-2xl bg-gradient-to-br from-amber-500 to-rose-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-rose-500/20 transition hover:brightness-105">
-                            Dodaj produkt
-                        </a>
-                    @endif
+                    <div class="flex flex-wrap items-center gap-2">
+                        {{-- Sortowanie: GET bez `page` → zmiana zeruje paginację; hidden pola
+                             niosą aktywne filtry, żeby sort ich nie gubił. --}}
+                        @if ($total > 0)
+                            <form method="GET" action="{{ route('seller.products.index') }}" class="flex items-center gap-2">
+                                @if ($filters['cena_od'] !== null)<input type="hidden" name="cena_od" value="{{ $filters['cena_od'] }}">@endif
+                                @if ($filters['cena_do'] !== null)<input type="hidden" name="cena_do" value="{{ $filters['cena_do'] }}">@endif
+                                @if ($filters['szukaj'] !== '')<input type="hidden" name="szukaj" value="{{ $filters['szukaj'] }}">@endif
+                                @if ($filters['tag'] !== '')<input type="hidden" name="tag" value="{{ $filters['tag'] }}">@endif
+                                <label for="sortowanie" class="text-sm text-stone-500">Sortuj</label>
+                                <select id="sortowanie" name="sortowanie" onchange="this.form.submit()"
+                                    class="rounded-2xl border border-stone-200 bg-white/80 px-3 py-2 text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
+                                    @foreach ($sortOptions as $opt)
+                                        <option value="{{ $opt['key'] }}" @selected($opt['active'])>{{ $opt['label'] }}</option>
+                                    @endforeach
+                                </select>
+                            </form>
+                        @endif
+                        @if ($total < $max)
+                            <a href="{{ route('seller.products.create') }}"
+                                class="rounded-2xl bg-gradient-to-br from-amber-500 to-rose-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-rose-500/20 transition hover:brightness-105">
+                                Dodaj produkt
+                            </a>
+                        @endif
+                    </div>
                 </div>
 
                 @if ($total === 0)
@@ -28,12 +47,21 @@
                             Dodaj pierwszy produkt
                         </a>
                     </div>
+                @elseif ($products->isEmpty())
+                    <div class="mt-8 flex flex-col items-center justify-center rounded-2xl border border-dashed border-stone-300 px-6 py-12 text-center">
+                        <span class="flex h-14 w-14 items-center justify-center rounded-2xl bg-stone-100 text-2xl">🔍</span>
+                        <p class="mt-4 font-medium text-stone-700">Brak produktów pasujących do filtrów</p>
+                        <p class="mt-1 text-sm text-stone-500">Zmień kryteria lub wyczyść filtry, aby zobaczyć więcej.</p>
+                        <a href="{{ route('seller.products.index', $sortKey !== 'domyslne' ? ['sortowanie' => $sortKey] : []) }}"
+                            class="mt-5 inline-flex rounded-2xl border border-stone-200 bg-white/70 px-5 py-2.5 text-sm font-semibold text-stone-700 transition hover:bg-white">
+                            Wyczyść filtry
+                        </a>
+                    </div>
                 @else
-                    @php($listParams = $products->currentPage() > 1 ? ['page' => $products->currentPage()] : [])
                     <div class="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-4">
                         @foreach ($products as $product)
                             @php($main = $product->mainImage())
-                            @php($editUrl = route('seller.products.edit', ['product' => $product] + $listParams))
+                            @php($editUrl = route('seller.products.edit', ['product' => $product] + $listQuery))
                             <div class="group flex flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white/80 shadow-sm transition hover:shadow-md">
                                 {{-- Zdjęcie + status --}}
                                 <a href="{{ $editUrl }}" class="relative block aspect-square overflow-hidden bg-stone-50">
@@ -107,8 +135,63 @@
             </div>
         </div>
 
-        {{-- Kolumna pomocnicza: opisy --}}
+        {{-- Kolumna pomocnicza: filtry + opisy --}}
         <aside class="lg:col-span-4 space-y-6">
+            {{-- Filtry: GET bez `page` → włączenie/zmiana filtra zeruje paginację do
+                 pierwszej strony. Aktywne sortowanie niesiemy hidden polem. --}}
+            @if ($total > 0 || $hasFilters)
+                <form method="GET" action="{{ route('seller.products.index') }}" class="space-y-4 rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                    <div class="flex items-center justify-between">
+                        <h2 class="font-semibold text-stone-900">Filtry</h2>
+                        @if ($hasFilters)
+                            <a href="{{ route('seller.products.index', $sortKey !== 'domyslne' ? ['sortowanie' => $sortKey] : []) }}"
+                                class="text-xs font-medium text-stone-500 underline decoration-stone-300 underline-offset-2 transition hover:text-stone-700">Wyczyść</a>
+                        @endif
+                    </div>
+
+                    @if ($sortKey !== 'domyslne')
+                        <input type="hidden" name="sortowanie" value="{{ $sortKey }}">
+                    @endif
+
+                    <div>
+                        <label class="block text-sm font-medium text-stone-700">Cena (zł)</label>
+                        <div class="mt-1.5 flex items-center gap-2">
+                            <input type="text" inputmode="decimal" name="cena_od" placeholder="od" aria-label="Cena od"
+                                value="{{ $filters['cena_od'] !== null ? number_format($filters['cena_od'], 2, ',', '') : '' }}"
+                                class="block w-full rounded-2xl border border-stone-200 bg-white/80 px-3 py-2.5 text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
+                            <span class="text-stone-400">–</span>
+                            <input type="text" inputmode="decimal" name="cena_do" placeholder="do" aria-label="Cena do"
+                                value="{{ $filters['cena_do'] !== null ? number_format($filters['cena_do'], 2, ',', '') : '' }}"
+                                class="block w-full rounded-2xl border border-stone-200 bg-white/80 px-3 py-2.5 text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="szukaj" class="block text-sm font-medium text-stone-700">Szukaj w produktach</label>
+                        <input id="szukaj" type="search" name="szukaj" placeholder="nazwa lub opis"
+                            value="{{ $filters['szukaj'] }}"
+                            class="mt-1.5 block w-full rounded-2xl border border-stone-200 bg-white/80 px-3 py-2.5 text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
+                    </div>
+
+                    <div>
+                        <label for="tag" class="block text-sm font-medium text-stone-700">Tag</label>
+                        <input id="tag" type="text" name="tag" list="tag-suggestions" placeholder="wpisz lub wybierz z listy"
+                            value="{{ $filters['tag'] }}" autocomplete="off"
+                            class="mt-1.5 block w-full rounded-2xl border border-stone-200 bg-white/80 px-3 py-2.5 text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
+                        <datalist id="tag-suggestions">
+                            @foreach ($tagSuggestions as $tagName)
+                                <option value="{{ $tagName }}"></option>
+                            @endforeach
+                        </datalist>
+                    </div>
+
+                    <button type="submit"
+                        class="w-full rounded-2xl border border-amber-200 bg-amber-50 px-5 py-2.5 text-sm font-semibold text-amber-800 transition hover:bg-amber-100">
+                        Filtruj
+                    </button>
+                </form>
+            @endif
+
             <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
                 <h2 class="font-semibold text-stone-900">O produktach</h2>
                 <ul class="mt-4 space-y-3 text-sm text-stone-500">

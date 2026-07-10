@@ -4,7 +4,7 @@
     <div class="grid gap-6 lg:grid-cols-12">
         <div class="lg:col-span-8">
             <form method="POST"
-                action="{{ $product->exists ? route('seller.products.update', ['product' => $product] + (request('page') ? ['page' => request('page')] : [])) : route('seller.products.store') }}"
+                action="{{ $product->exists ? route('seller.products.update', ['product' => $product] + $listQuery) : route('seller.products.store') }}"
                 class="space-y-6" enctype="multipart/form-data" novalidate data-validate>
                 @csrf
 
@@ -217,7 +217,7 @@
                 </div>
 
                 <div class="flex items-center justify-between gap-3">
-                    <a href="{{ route('seller.products.index', request('page') ? ['page' => request('page')] : []) }}" class="text-sm font-medium text-stone-500 transition hover:text-stone-800">← Wróć do listy</a>
+                    <a href="{{ route('seller.products.index', $listQuery) }}" class="text-sm font-medium text-stone-500 transition hover:text-stone-800">← Wróć do listy</a>
                     <button type="submit"
                         class="rounded-2xl bg-gradient-to-br from-amber-500 to-rose-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-rose-500/20 transition hover:brightness-105 focus:outline-none focus:ring-4 focus:ring-amber-500/25">
                         {{ $product->exists ? 'Zapisz zmiany' : 'Dodaj produkt' }}

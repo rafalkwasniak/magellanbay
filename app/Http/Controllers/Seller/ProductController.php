@@ -19,17 +19,46 @@ use Illuminate\Http\Request;
  */
 class ProductController extends Controller
 {
+    /**
+     * Dozwolone sortowania listy: klucz w URL (po polsku) → [kolumna, kierunek].
+     * Nieznany klucz spada na pierwszy wpis („Domyślnie" = najnowsze).
+     */
+    private const SORTS = [
+        'domyslne' => ['label' => 'Domyślnie', 'column' => 'created_at', 'direction' => 'desc'],
+        'cena' => ['label' => 'Cena', 'column' => 'price_gross', 'direction' => 'asc'],
+        'nazwa' => ['label' => 'Nazwa', 'column' => 'name', 'direction' => 'asc'],
+    ];
+
     public function index(Request $request): Renderable
     {
         $shop = $request->user()->shop;
 
+        $filters = $this->filters($request);
+        $sortKey = $this->resolveSort($request->query('sortowanie'));
+
+        $products = null;
+        if ($shop !== null) {
+            $query = $shop->products()->with('images', 'priceHistory');
+            $this->applyFilters($query, $filters);
+
+            $sort = self::SORTS[$sortKey];
+            $products = $query->orderBy($sort['column'], $sort['direction'])
+                ->paginate(12)
+                ->withQueryString();
+        }
+
         return view('seller.products.index', [
             'shop' => $shop,
-            'products' => $shop
-                ? $shop->products()->with('images', 'priceHistory')->latest()->paginate(12)->withQueryString()
-                : null,
+            'products' => $products,
+            // Licznik pakietu = CAŁY katalog, nie zbiór po filtrze (nie może „kłamać").
             'total' => $shop ? $shop->products()->count() : 0,
             'max' => $shop ? (int) $shop->entitlement('max_products') : 0,
+            'filters' => $filters,
+            'sortKey' => $sortKey,
+            'sortOptions' => $this->sortOptions($sortKey),
+            'tagSuggestions' => $this->tagSuggestions($request),
+            'hasFilters' => $this->hasActiveFilters($filters),
+            'listQuery' => $this->listQuery($request),
         ]);
     }
 
@@ -46,6 +75,8 @@ class ProductController extends Controller
             'defaultVat' => $this->defaultVat($request),
             'defaultSaleUnit' => $this->defaultSaleUnit($request),
             'homepage' => $this->homepageInfo($request),
+            // Nowy produkt nie ma kontekstu listy do odtworzenia.
+            'listQuery' => [],
         ]);
     }
 
@@ -79,6 +110,9 @@ class ProductController extends Controller
             'defaultVat' => $this->defaultVat($request),
             'defaultSaleUnit' => $this->defaultSaleUnit($request),
             'homepage' => $this->homepageInfo($request),
+            // Kontekst listy (filtry + sort + strona) z query stringa — do odtworzenia
+            // „Wróć do listy" i akcji zapisu, żeby wrócić na tę samą, przefiltrowaną stronę.
+            'listQuery' => $this->listQuery($request),
         ]);
     }
 
@@ -89,8 +123,9 @@ class ProductController extends Controller
         $product->update($this->data($request));
         $this->syncTags($product, $request);
 
-        // Zachowujemy stronę listy, z której przyszedł sprzedawca (link „Wróć do listy").
-        $params = ['product' => $product] + ($request->filled('page') ? ['page' => $request->input('page')] : []);
+        // Zachowujemy pełny kontekst listy (filtry + sort + strona), z którego przyszedł
+        // sprzedawca — akcja formularza niesie go w query stringu.
+        $params = ['product' => $product] + $this->listQuery($request);
 
         return redirect()->route('seller.products.edit', $params)->with('success', 'Zapisano zmiany w produkcie.');
     }
@@ -216,5 +251,139 @@ class ProductController extends Controller
         $shop = $request->user()->shop;
 
         return 'Pakiet '.$shop->packageName().' pozwala na maksymalnie '.(int) $shop->entitlement('max_products').' produktów.';
+    }
+
+    /**
+     * Filtry listy z query stringa, znormalizowane. Ceny akceptują przecinek lub
+     * kropkę; puste/nieprawidłowe → brak filtra.
+     *
+     * @return array{cena_od: float|null, cena_do: float|null, szukaj: string, tag: string}
+     */
+    private function filters(Request $request): array
+    {
+        return [
+            'cena_od' => $this->parsePrice($request->query('cena_od')),
+            'cena_do' => $this->parsePrice($request->query('cena_do')),
+            'szukaj' => $this->stringQuery($request, 'szukaj'),
+            'tag' => $this->stringQuery($request, 'tag'),
+        ];
+    }
+
+    /**
+     * Nakłada aktywne filtry na zapytanie o produkty. Szukanie po nazwie i opisie
+     * (znaki specjalne LIKE ekranowane); tag po dokładnej nazwie (z podpowiedzi).
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<\App\Models\Product>  $query
+     * @param  array{cena_od: float|null, cena_do: float|null, szukaj: string, tag: string}  $f
+     */
+    private function applyFilters($query, array $f): void
+    {
+        if ($f['cena_od'] !== null) {
+            $query->where('price_gross', '>=', $f['cena_od']);
+        }
+
+        if ($f['cena_do'] !== null) {
+            $query->where('price_gross', '<=', $f['cena_do']);
+        }
+
+        if ($f['szukaj'] !== '') {
+            $term = '%'.str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $f['szukaj']).'%';
+            $query->where(fn ($q) => $q
+                ->where('name', 'like', $term)
+                ->orWhere('description', 'like', $term));
+        }
+
+        if ($f['tag'] !== '') {
+            $query->whereHas('tags', fn ($q) => $q->where('name', $f['tag']));
+        }
+    }
+
+    /**
+     * Kontekst listy (filtry + sort + strona) jako parametry query — jedno źródło
+     * dla linku edycji, akcji zapisu i „Wróć do listy", żeby po edycji wracać na tę
+     * samą, przefiltrowaną stronę. Domyślne/puste pomijamy (czysty URL).
+     *
+     * @return array<string, string|int>
+     */
+    private function listQuery(Request $request): array
+    {
+        $filters = $this->filters($request);
+        $sortKey = $this->resolveSort($request->query('sortowanie'));
+        $page = (int) $request->query('page', 1);
+
+        return array_filter([
+            'sortowanie' => $sortKey !== array_key_first(self::SORTS) ? $sortKey : null,
+            'cena_od' => $filters['cena_od'],
+            'cena_do' => $filters['cena_do'],
+            'szukaj' => $filters['szukaj'] !== '' ? $filters['szukaj'] : null,
+            'tag' => $filters['tag'] !== '' ? $filters['tag'] : null,
+            'page' => $page > 1 ? $page : null,
+        ], fn ($v): bool => $v !== null);
+    }
+
+    /**
+     * Czy jakikolwiek filtr jest aktywny (do pokazania „Wyczyść").
+     *
+     * @param  array{cena_od: float|null, cena_do: float|null, szukaj: string, tag: string}  $f
+     */
+    private function hasActiveFilters(array $f): bool
+    {
+        return $f['cena_od'] !== null
+            || $f['cena_do'] !== null
+            || $f['szukaj'] !== ''
+            || $f['tag'] !== '';
+    }
+
+    /**
+     * Normalizuje cenę z pola filtra: spacje out, przecinek → kropka. Ujemne i
+     * nienumeryczne (oraz tablice z URL) → null (brak filtra).
+     */
+    private function parsePrice(mixed $raw): ?float
+    {
+        if (! is_string($raw) && ! is_int($raw) && ! is_float($raw)) {
+            return null;
+        }
+
+        $normalized = str_replace([' ', ','], ['', '.'], trim((string) $raw));
+
+        if ($normalized === '' || ! is_numeric($normalized)) {
+            return null;
+        }
+
+        $value = (float) $normalized;
+
+        return $value >= 0 ? $value : null;
+    }
+
+    /**
+     * Wartość tekstowa z query stringa, przycięta; tablice/braki → pusty string.
+     */
+    private function stringQuery(Request $request, string $key): string
+    {
+        $value = $request->query($key);
+
+        return is_string($value) ? trim($value) : '';
+    }
+
+    /**
+     * Sprowadza wartość z URL do dozwolonego klucza sortowania (whitelist).
+     */
+    private function resolveSort(mixed $key): string
+    {
+        return is_string($key) && isset(self::SORTS[$key]) ? $key : array_key_first(self::SORTS);
+    }
+
+    /**
+     * Opcje sortowania dla selecta: klucz, etykieta, flaga aktywności.
+     *
+     * @return list<array{key: string, label: string, active: bool}>
+     */
+    private function sortOptions(string $current): array
+    {
+        return collect(self::SORTS)->map(fn (array $sort, string $key): array => [
+            'key' => $key,
+            'label' => $sort['label'],
+            'active' => $key === $current,
+        ])->values()->all();
     }
 }

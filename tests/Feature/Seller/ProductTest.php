@@ -301,4 +301,138 @@ class ProductTest extends TestCase
 
         $this->assertTrue($target->fresh()->show_on_homepage);
     }
+
+    public function test_list_filters_by_price_range(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+        Product::factory()->create(['shop_id' => $shop->id, 'name' => 'Tani kubek', 'price_gross' => '10.00']);
+        Product::factory()->create(['shop_id' => $shop->id, 'name' => 'Sredni kubek', 'price_gross' => '50.00']);
+        Product::factory()->create(['shop_id' => $shop->id, 'name' => 'Drogi kubek', 'price_gross' => '200.00']);
+
+        $this->actingAs($seller)
+            ->get(route('seller.products.index', ['cena_od' => '20', 'cena_do' => '100']))
+            ->assertOk()
+            ->assertSee('Sredni kubek')
+            ->assertDontSee('Tani kubek')
+            ->assertDontSee('Drogi kubek');
+    }
+
+    public function test_list_filters_by_search_in_name_and_description(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+        Product::factory()->create(['shop_id' => $shop->id, 'name' => 'Bukiet ruzowy', 'description' => 'Nic']);
+        Product::factory()->create(['shop_id' => $shop->id, 'name' => 'Wazon', 'description' => 'Do bukietu']);
+        Product::factory()->create(['shop_id' => $shop->id, 'name' => 'Doniczka', 'description' => 'Ceramika']);
+
+        $this->actingAs($seller)
+            ->get(route('seller.products.index', ['szukaj' => 'bukiet']))
+            ->assertOk()
+            ->assertSee('Bukiet ruzowy')
+            ->assertSee('Wazon')
+            ->assertDontSee('Doniczka');
+    }
+
+    public function test_list_filters_by_tag(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+        $tagged = Product::factory()->create(['shop_id' => $shop->id, 'name' => 'Z tagiem']);
+        Product::factory()->create(['shop_id' => $shop->id, 'name' => 'Bez tagu']);
+        $tagged->tags()->attach($shop->tags()->create(['name' => 'promocja', 'slug' => 'promocja'])->id);
+
+        $this->actingAs($seller)
+            ->get(route('seller.products.index', ['tag' => 'promocja']))
+            ->assertOk()
+            ->assertSee('Z tagiem')
+            ->assertDontSee('Bez tagu');
+    }
+
+    public function test_list_sorts_by_name(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+        Product::factory()->create(['shop_id' => $shop->id, 'name' => 'Zebra']);
+        Product::factory()->create(['shop_id' => $shop->id, 'name' => 'Antylopa']);
+
+        $response = $this->actingAs($seller)
+            ->get(route('seller.products.index', ['sortowanie' => 'nazwa']))
+            ->assertOk();
+
+        $this->assertLessThan(
+            strpos($response->getContent(), 'Zebra'),
+            strpos($response->getContent(), 'Antylopa'),
+            'Sortowanie po nazwie powinno ustawić Antylopę przed Zebrą.'
+        );
+    }
+
+    public function test_active_filter_resets_pagination_to_first_page(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+        Product::factory()->count(15)->create(['shop_id' => $shop->id, 'price_gross' => '10.00']);
+
+        // Strona 2 istnieje bez filtra (15 > 12 na stronę)...
+        $this->actingAs($seller)
+            ->get(route('seller.products.index', ['page' => 2]))
+            ->assertOk();
+
+        // ...ale wąski filtr cenowy daje 1 wynik — formularz GET nie niesie `page`,
+        // więc lądujemy na stronie 1 i widzimy wynik, nie pustkę „poza zakresem".
+        Product::factory()->create(['shop_id' => $shop->id, 'name' => 'Jedyny drogi', 'price_gross' => '500.00']);
+
+        $this->actingAs($seller)
+            ->get(route('seller.products.index', ['cena_od' => '400']))
+            ->assertOk()
+            ->assertSee('Jedyny drogi');
+    }
+
+    public function test_filtered_empty_result_shows_hint_not_true_empty_state(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+        Product::factory()->create(['shop_id' => $shop->id, 'price_gross' => '10.00']);
+
+        $this->actingAs($seller)
+            ->get(route('seller.products.index', ['szukaj' => 'czegos-czego-nie-ma-xyz']))
+            ->assertOk()
+            ->assertSee('Brak produktów pasujących do filtrów')
+            ->assertDontSee('Nie masz jeszcze produktów');
+    }
+
+    public function test_edit_form_carries_list_filter_context(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+        $product = Product::factory()->create(['shop_id' => $shop->id]);
+
+        // Wejście w edycję z kontekstu przefiltrowanej listy — formularz (akcja zapisu
+        // i „Wróć do listy") musi ten kontekst nieść dalej.
+        $this->actingAs($seller)
+            ->get(route('seller.products.edit', [
+                'product' => $product,
+                'szukaj' => 'kubek',
+                'sortowanie' => 'nazwa',
+                'page' => 2,
+            ]))
+            ->assertOk()
+            ->assertSee('szukaj=kubek', false)
+            ->assertSee('sortowanie=nazwa', false)
+            ->assertSee('page=2', false);
+    }
+
+    public function test_update_redirects_back_to_filtered_list_context(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+        $product = Product::factory()->create(['shop_id' => $shop->id]);
+
+        $this->actingAs($seller)
+            ->post(
+                route('seller.products.update', [
+                    'product' => $product,
+                    'szukaj' => 'kubek',
+                    'page' => 3,
+                ]),
+                $this->payload(['name' => $product->name])
+            )
+            ->assertRedirect(route('seller.products.edit', [
+                'product' => $product,
+                'szukaj' => 'kubek',
+                'page' => 3,
+            ]));
+    }
 }
