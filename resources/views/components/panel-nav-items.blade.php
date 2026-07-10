@@ -3,10 +3,13 @@
 {{-- Pozycje menu panelu. Pozycja z trasą = klikalny link (podświetla aktywną
      stronę); bez trasy = funkcja jeszcze niegotowa — nie-klikalna, wyszarzona,
      z plakietką „wkrótce" (zamiast ślepego linku #). Używane w sidebarze i w
-     wysuwanym menu mobilnym, żeby oba miały identyczne zachowanie. --}}
+     wysuwanym menu mobilnym, żeby oba miały identyczne zachowanie.
+     Podświetlenie: domyślnie dokładna trasa (`route`); dla pozycji z podstronami
+     (lista + szczegół/edycja) można podać wzorzec `active` z wildcardem
+     (np. `seller.orders.*`), żeby zakładka świeciła też na szczególe. --}}
 @foreach ($items as $item)
     @if ($item['route'])
-        @php($active = request()->routeIs($item['route']))
+        @php($active = request()->routeIs($item['active'] ?? $item['route']))
         <a href="{{ route($item['route']) }}"
            @class([
                'flex items-center gap-3 rounded-2xl px-4 py-2.5 transition',
