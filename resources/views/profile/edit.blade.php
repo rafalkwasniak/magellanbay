@@ -105,8 +105,8 @@
                     <h2 class="font-semibold text-stone-900">Zmiana hasła <span class="text-sm font-normal text-stone-400">(opcjonalnie)</span></h2>
                     <p class="mt-1 text-sm text-stone-500">Zostaw puste, jeśli nie chcesz zmieniać hasła.</p>
 
-                    <div class="mt-6 grid gap-5 sm:grid-cols-2">
-                        <div class="sm:col-span-2">
+                    <div class="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-3">
+                        <div>
                             <label for="current_password" class="block text-sm font-medium text-stone-700">Aktualne hasło</label>
                             <input id="current_password" name="current_password" type="password" autocomplete="current-password"
                                 class="mt-1.5 block w-full rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
