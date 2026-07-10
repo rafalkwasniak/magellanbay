@@ -94,14 +94,25 @@ class NewOrdersBadgeTest extends TestCase
         $this->assertSame(5, $shop->fresh()->unseen_orders_count);
     }
 
-    public function test_badge_caps_at_nine_plus(): void
+    public function test_two_digit_count_shows_in_full(): void
     {
         [$seller, $shop] = $this->sellerWithShop();
-        $shop->forceFill(['unseen_orders_count' => 12])->save();
+        $shop->forceFill(['unseen_orders_count' => 16])->save();
 
         $this->actingAs($seller)
             ->get(route('seller.dashboard'))
             ->assertOk()
-            ->assertSee('9+');
+            ->assertSee('16');
+    }
+
+    public function test_badge_caps_at_ninety_nine_plus(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+        $shop->forceFill(['unseen_orders_count' => 150])->save();
+
+        $this->actingAs($seller)
+            ->get(route('seller.dashboard'))
+            ->assertOk()
+            ->assertSee('99+');
     }
 }
