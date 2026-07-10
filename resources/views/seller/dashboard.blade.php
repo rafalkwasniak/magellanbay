@@ -143,8 +143,8 @@
             </a>
             @foreach ([
                 ['Produkty', (string) $productCount, $productCount > 0 ? 'W Twoim sklepie' : 'Dodaj pierwszy produkt', '🏷️'],
-                ['Zamówienia (30 dni)', (string) $orderCount, $orderCount > 0 ? 'W ostatnich 30 dniach' : 'Czekają na pierwszych klientów', '📦'],
-                ['Przychód (30 dni)', \App\Support\Money::pln($revenue), $revenue > 0 ? 'W ostatnich 30 dniach' : 'Pierwsza sprzedaż przed Tobą', '💰'],
+                ['Zamówienia', (string) $orderCount, $orderCount > 0 ? 'W ostatnich 30 dniach' : 'Czekają na pierwszych klientów', '📦'],
+                ['Przychód', \App\Support\Money::pln($revenue), $revenue > 0 ? 'W ostatnich 30 dniach' : 'Pierwsza sprzedaż przed Tobą', '💰'],
             ] as [$label, $value, $hint, $icon])
                 <div class="rounded-3xl border border-white/60 bg-white/70 p-5 backdrop-blur">
                     <div class="flex items-center justify-between">
