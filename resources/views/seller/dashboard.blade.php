@@ -103,7 +103,7 @@
                             <span class="text-xs text-stone-500">{{ $productCount }} / {{ $maxProducts }} produktów</span>
                         </div>
                         <div class="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-stone-100">
-                            <div class="h-full min-w-[0.5rem] rounded-full bg-gradient-to-r from-amber-400 to-rose-500 transition-all duration-500" style="width: {{ $usagePct }}%"></div>
+                            <div class="h-full min-w-[0.5rem] rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600 transition-all duration-500" style="width: {{ $usagePct }}%"></div>
                         </div>
                     </div>
 
