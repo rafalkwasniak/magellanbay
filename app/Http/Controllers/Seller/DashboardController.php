@@ -17,8 +17,8 @@ class DashboardController extends Controller
 
         // Sprzedaż z ostatnich 30 dni — realne liczby zamiast zer na kafelkach.
         // Anulowane zamówienia nie liczą się ani do sztuk, ani do przychodu.
-        // Wyświetlenia jeszcze nie są zbierane (brak trackingu ruchu) — kafelek
-        // zostaje placeholderem do czasu modułu statystyk.
+        // Wyświetlenia/ruch: brak trackingu → kafelek świadomie usunięty z Pulpitu
+        // (wróci przy module analityki), zamiast straszyć placeholderem „wkrótce".
         $recentOrders = $shop
             ? $shop->orders()
                 ->where('created_at', '>=', now()->subDays(30))

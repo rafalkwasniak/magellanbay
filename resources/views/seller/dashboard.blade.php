@@ -125,12 +125,11 @@
     {{-- Sprzedaż — ruszy po dodaniu produktów i publikacji --}}
     <div class="mt-8">
         <h2 class="text-sm font-medium text-stone-500">Twoja sprzedaż</h2>
-        <div class="mt-3 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div class="mt-3 grid grid-cols-1 gap-4 lg:grid-cols-3">
             @foreach ([
                 ['Produkty', (string) $productCount, $productCount > 0 ? 'W Twoim sklepie' : 'Dodaj pierwszy produkt', '🏷️'],
                 ['Zamówienia (30 dni)', (string) $orderCount, $orderCount > 0 ? 'W ostatnich 30 dniach' : 'Czekają na pierwszych klientów', '📦'],
                 ['Przychód (30 dni)', \App\Support\Money::pln($revenue), $revenue > 0 ? 'W ostatnich 30 dniach' : 'Pierwsza sprzedaż przed Tobą', '💰'],
-                ['Wyświetlenia (30 dni)', '—', 'Wkrótce — po uruchomieniu statystyk', '👁️'],
             ] as [$label, $value, $hint, $icon])
                 <div class="rounded-3xl border border-white/60 bg-white/70 p-5 backdrop-blur">
                     <div class="flex items-center justify-between">
