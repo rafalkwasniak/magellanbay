@@ -197,6 +197,60 @@ return [
             ],
         ],
 
+        'velour_mist' => [
+            'name' => 'Welurowa mgła',
+            'description' => 'Miękkie, przygaszone barwy — brudny róż i welurowe, zamglone odcienie. Ciepły, nastrojowy klimat.',
+            'order' => 4,
+            'default_palette' => 'dusty_rose',
+            'palettes' => [
+                'dusty_rose' => [
+                    'name' => 'Brudny róż',
+                    'tokens' => [
+                        'brand' => '#B26E79',
+                        'brand_ink' => '#FFFFFF',
+                        'surface' => '#FBF5F6',
+                        'ink' => '#3B2C30',
+                    ],
+                ],
+                'dusty_blue' => [
+                    'name' => 'Zamglony błękit',
+                    'tokens' => [
+                        'brand' => '#6F8BA6',
+                        'brand_ink' => '#FFFFFF',
+                        'surface' => '#F4F7FA',
+                        'ink' => '#2C343C',
+                    ],
+                ],
+                'sage' => [
+                    'name' => 'Szałwia',
+                    'tokens' => [
+                        'brand' => '#6F8D6D',
+                        'brand_ink' => '#FFFFFF',
+                        'surface' => '#F4F8F3',
+                        'ink' => '#2E372C',
+                    ],
+                ],
+                'cocoa' => [
+                    'name' => 'Kakao',
+                    'tokens' => [
+                        'brand' => '#9D7B67',
+                        'brand_ink' => '#FFFFFF',
+                        'surface' => '#F8F4F0',
+                        'ink' => '#372B24',
+                    ],
+                ],
+                'ochre' => [
+                    'name' => 'Ochra',
+                    'tokens' => [
+                        'brand' => '#A6853C',
+                        'brand_ink' => '#FFFFFF',
+                        'surface' => '#FAF6EE',
+                        'ink' => '#352C1C',
+                    ],
+                ],
+            ],
+        ],
+
     ],
 
     // Slug szablonu domyślnego — przypisywany nowym sklepom (spójne z kolumną

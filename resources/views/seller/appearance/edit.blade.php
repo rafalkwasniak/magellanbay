@@ -77,7 +77,7 @@
                     <h2 class="font-semibold text-stone-900">Kolory i szablon</h2>
                     <p class="mt-1 text-sm text-stone-500">Wybierz wygląd swojego sklepu, a potem dobierz kolory. Zmiany zobaczysz w podglądzie od razu.</p>
 
-                    <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                         @foreach (collect(config('themes.templates'))->sortBy('order') as $slug => $template)
                             @php
                                 $isActive = $slug === $shop->templateSlug();
@@ -101,10 +101,10 @@
                                         @if (! empty($previewImageUrl))
                                             {{-- Realne zdjęcie produktu sklepu — „to Twój sklep". --}}
                                             <img src="{{ $previewImageUrl }}" alt="Podgląd produktu"
-                                                class="aspect-[4/3] w-full rounded-lg object-cover">
+                                                class="aspect-square w-full rounded-lg object-cover">
                                         @else
                                             {{-- Brak zdjęć — neutralny placeholder w kolorze palety (żywy). --}}
-                                            <div data-preview-img class="flex aspect-[4/3] w-full items-center justify-center rounded-lg"
+                                            <div data-preview-img class="flex aspect-square w-full items-center justify-center rounded-lg"
                                                 style="background: {{ $previewTokens['brand'] }}; color: {{ $previewTokens['brand_ink'] }};">
                                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-9 w-9 opacity-70" aria-hidden="true">
                                                     <rect x="3" y="4" width="18" height="16" rx="2" />
