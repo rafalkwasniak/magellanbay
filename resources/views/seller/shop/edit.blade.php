@@ -35,7 +35,7 @@
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-stone-700">Opis sklepu <span class="text-stone-400">(opcjonalnie)</span></label>
+                            <label class="block text-sm font-medium text-stone-700">O sklepie <span class="text-stone-400">(opcjonalnie)</span></label>
                             <x-rich-editor name="description" :value="old('description', $shop->description)" ai-field="shop_description" :max="config('shop.description_max')">Krótko o tym, co sprzedajesz — pojawi się na stronie głównej sklepu.</x-rich-editor>
                             @error('description')
                                 <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
