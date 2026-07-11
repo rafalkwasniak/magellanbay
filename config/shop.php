@@ -110,6 +110,14 @@ return [
     'homepage_promoted_limit' => 6,
 
     /*
+    | Gdy sprzedawca NIE wyróżnił żadnego produktu — ile LOSOWYCH aktywnych
+    | pokazać na głównej (żeby nie była pusta; główna ma tak mało treści, że aż
+    | prosi się o produkty). Losowe, nie „najnowsze", by za każdym wejściem
+    | eksponować inne pozycje.
+    */
+    'homepage_fallback_count' => 3,
+
+    /*
     |--------------------------------------------------------------------------
     | Pakiety (abonament roczny)
     |--------------------------------------------------------------------------

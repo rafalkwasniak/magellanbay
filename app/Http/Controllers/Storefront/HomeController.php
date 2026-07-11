@@ -50,23 +50,22 @@ class HomeController extends Controller
 
     /**
      * Produkty na stronę główną: wyróżnione przez sprzedawcę (`show_on_homepage`),
-     * do sufitu z configu ([[limit 6]]). Gdy żaden nie wyróżniony — najnowsze
-     * aktywne jako sensowna domyślna witryna (główna nigdy nie jest pusta).
-     * Liczba wyników steruje układem głównej (1/2/3 mają dedykowane aranżacje).
+     * do sufitu z configu ([[limit 6]]). Gdy żaden nie wyróżniony — kilka LOSOWYCH
+     * aktywnych (config `homepage_fallback_count`), żeby główna nie była pusta i za
+     * każdym wejściem eksponowała inne pozycje. Liczba wyników steruje układem
+     * głównej (kafelek dla 1, jednolita siatka dla 2+).
      *
      * @return \Illuminate\Support\Collection<int, \App\Models\Product>
      */
     private function homepageProducts(Shop $shop): \Illuminate\Support\Collection
     {
-        $limit = (int) config('shop.homepage_promoted_limit');
-
         $active = $shop->products()->where('is_active', true)->with('images');
 
         $promoted = (clone $active)->where('show_on_homepage', true)
-            ->latest()->take($limit)->get();
+            ->latest()->take((int) config('shop.homepage_promoted_limit'))->get();
 
         return $promoted->isNotEmpty()
             ? $promoted
-            : $active->latest()->take($limit)->get();
+            : $active->inRandomOrder()->take((int) config('shop.homepage_fallback_count'))->get();
     }
 }

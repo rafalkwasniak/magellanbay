@@ -10,7 +10,7 @@ use Tests\TestCase;
 
 /**
  * Produkty na stronie głównej storefrontu: wyróżnione (`show_on_homepage`) do
- * sufitu 6, fallback do najnowszych aktywnych, i adaptacja układu do liczby
+ * sufitu 6, fallback do losowych aktywnych, i adaptacja układu do liczby
  * (1/2/3 mają dedykowane aranżacje, 4–6 wspólną siatkę).
  */
 class HomeProductsTest extends TestCase
@@ -66,14 +66,15 @@ class HomeProductsTest extends TestCase
         }
     }
 
-    public function test_price_is_formatted_polish(): void
+    public function test_home_does_not_show_prices(): void
     {
-        // Cena widnieje na kaflach widoku wielo-produktowego; box z 1 produktem
-        // celowo BEZ ceny (główna nie sprzedaje). Format sprawdzamy na kaflu.
+        // Główna NIE sprzedaje — kafle produktów (i 1, i 2+) nie pokazują ceny
+        // ani „do koszyka”; zachęcają do wejścia w produkt. Format ceny sam
+        // w sobie jest pokryty na stronie produktu (ProductPageTest).
         $shop = Shop::factory()->active()->create();
         $this->promote($shop, 2)->first()->update(['price_gross' => 49.99]);
 
-        $this->get($this->url($shop))->assertSee('49,99 zł');
+        $this->get($this->url($shop))->assertOk()->assertDontSee('49,99 zł');
     }
 
     public function test_home_shows_at_most_the_limit(): void
@@ -137,9 +138,29 @@ class HomeProductsTest extends TestCase
             'show_on_homepage' => false, // nie wyróżniony
         ]);
 
-        // Brak wyróżnionych → główna pokazuje najnowsze aktywne, nie jest pusta.
+        // Brak wyróżnionych → główna pokazuje losowe aktywne, nie jest pusta.
         $this->get($this->url($shop))
             ->assertOk()
             ->assertSee($product->name);
+    }
+
+    public function test_fallback_shows_configured_number_of_random_products(): void
+    {
+        // Brak wyróżnionych, a produktów więcej niż fallback → główna pokazuje
+        // dokładnie `homepage_fallback_count` losowych kafli (liczymy „Pokaż
+        // produkt”, po jednym na kafel).
+        $shop = Shop::factory()->active()->create();
+        Product::factory()->count(5)->create([
+            'shop_id' => $shop->id,
+            'is_active' => true,
+            'show_on_homepage' => false,
+        ]);
+
+        $content = $this->get($this->url($shop))->assertOk()->getContent();
+
+        $this->assertSame(
+            (int) config('shop.homepage_fallback_count'),
+            substr_count($content, 'Pokaż produkt'),
+        );
     }
 }

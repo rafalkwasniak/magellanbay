@@ -16,6 +16,15 @@
            o szerokości boxu decyduje ZDJĘCIE, a tekst zawija się do jego
            szerokości (bez tego długa linia opisu robiłaby box szerszy). */
         .solo-info { width: 0; min-width: 100%; box-sizing: border-box; }
+
+        /* Siatka 2+ produktów — kafle jednakowego wymiaru. Kadr o stałych
+           proporcjach (4/5) + object-cover na obrazie = wszystkie kafle równe,
+           zdjęcie wypełnia kadr (przycięte, ale możliwie oryginalne). Zoom na
+           hover (przycięty przez overflow ramki). Opis clampowany do 3 linii,
+           żeby wysokość tekstu — a więc i kafla — była jednakowa. */
+        .hpc-img { transition: transform .3s ease; }
+        .hpc:hover .hpc-img { transform: scale(1.05); }
+        .hpc-excerpt { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
     </style>
 
     {{-- Hero sklepu — editorial „okładka". Winieta u góry niesie logo/nazwę jako
@@ -27,14 +36,10 @@
     </header>
 
     <main class="mx-auto max-w-6xl px-6 pt-12">
-        @switch($products->count())
-
-            {{-- 1 produkt → KAFELEK bez apli (wariant do porównania z wersją
-                 z aplą, commit 3408b87). Zdjęcie w naturalnych proporcjach na
-                 górze, a POD nim info w stylu strony produktowej: nazwa · część
-                 opisu · przycisk „Pokaż produkt". Strona główna NIE sprzedaje
-                 (bez ceny/koszyka) — ma zachęcić do wejścia w produkt. --}}
-            @case(1)
+        {{-- 1 produkt → KAFELEK: zdjęcie w naturalnych proporcjach na górze,
+             POD nim info (nazwa w akcencie, wycinek opisu, „Pokaż produkt").
+             Główna NIE sprzedaje (bez ceny/koszyka). --}}
+        @if ($products->count() === 1)
                 @php($p = $products->first())
                 @php($main = $p->mainImage())
                 @php($excerpt = filled($p->description) ? \Illuminate\Support\Str::of(strip_tags($p->description))->squish()->limit(180, preserveWords: true) : null)
@@ -62,40 +67,47 @@
                         </div>
                     </div>
                 </section>
-                @break
 
-            {{-- 2 produkty → para 50/50: dwa duże panele. --}}
-            @case(2)
-                <section class="grid gap-6 sm:grid-cols-2">
-                    @foreach ($products as $p)
-                        <x-storefront.product-card :product="$p" aspect="4 / 5" />
-                    @endforeach
-                </section>
-                @break
-
-            {{-- 3 produkty → tryptyk: jeden szeroki na górze + dwa pod spodem. --}}
-            @case(3)
-                <section class="space-y-6">
-                    <x-storefront.product-card :product="$products[0]" aspect="16 / 9" />
-                    <div class="grid gap-6 sm:grid-cols-2">
-                        <x-storefront.product-card :product="$products[1]" />
-                        <x-storefront.product-card :product="$products[2]" />
+        {{-- 2+ produktów → JEDNOLITA siatka kafli tego samego wymiaru. Kadr
+             zdjęcia o stałych proporcjach (4/5) + object-cover: wszystkie kafle
+             równe, każde (różne) zdjęcie wypełnia kadr — przycięte, ale możliwie
+             oryginalne. Pod zdjęciem dane jak przy 1 produkcie (bez ceny/koszyka
+             — główna nie sprzedaje). 2 → 2 kolumny, 3+ → 3. Lokalny kafel
+             (NIE product-card, bo ta karmi wykaz). --}}
+        @elseif ($products->count() >= 2)
+            {{-- Kolumny wg liczby: 2→2, 3→3, 4→2 (2×2), 5/6→3. Baza sm:grid-cols-2
+                 daje 2 kol; dla 4 celowo NIE dodajemy 3. kolumny (zostaje 2×2). --}}
+            <section class="grid gap-6 sm:grid-cols-2 @if ($products->count() >= 3 && $products->count() !== 4) lg:grid-cols-3 @endif">
+                @foreach ($products as $p)
+                    @php($m = $p->mainImage())
+                    @php($ex = filled($p->description) ? \Illuminate\Support\Str::of(strip_tags($p->description))->squish()->limit(120, preserveWords: true) : null)
+                    <div class="hpc st-card st-border group flex flex-col overflow-hidden rounded-2xl border text-left">
+                        <a href="{{ $p->storefrontPath() }}" wire:navigate class="block overflow-hidden">
+                            <div class="w-full overflow-hidden" style="aspect-ratio: 4 / 5;">
+                                @if ($m)
+                                    <img src="{{ $m->url() }}" alt="{{ $p->name }}" class="hpc-img h-full w-full object-cover">
+                                @else
+                                    <div class="st-btn flex h-full w-full items-center justify-center">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-10 w-10 opacity-70" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5" fill="currentColor" stroke="none"/><path d="M4 17l4.5-4.5 3 3L15 12l5 5"/></svg>
+                                    </div>
+                                @endif
+                            </div>
+                        </a>
+                        <div class="flex flex-1 flex-col p-5">
+                            <h3 class="st-brand font-serif text-xl font-normal tracking-tight">
+                                <a href="{{ $p->storefrontPath() }}" wire:navigate class="transition hover:opacity-70">{{ $p->name }}</a>
+                            </h3>
+                            @if ($ex)
+                                <p class="hpc-excerpt mt-2 text-sm leading-relaxed opacity-80">{{ $ex }}</p>
+                            @endif
+                            <div class="mt-auto pt-4">
+                                <a href="{{ $p->storefrontPath() }}" wire:navigate class="st-btn inline-block rounded-full px-6 py-3 text-sm font-semibold shadow-sm transition hover:brightness-105">Pokaż produkt</a>
+                            </div>
+                        </div>
                     </div>
-                </section>
-                @break
-
-            @case(0)
-                {{-- Aktywny sklep ma ≥1 produkt; ten przypadek to bezpiecznik. --}}
-                @break
-
-            {{-- 4–6 → wspólna witryna (siatka). --}}
-            @default
-                <section class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                    @foreach ($products as $p)
-                        <x-storefront.product-card :product="$p" />
-                    @endforeach
-                </section>
-        @endswitch
+                @endforeach
+            </section>
+        @endif
 
         {{-- O sklepie — głos sklepu POD ofertą (nie na górze, gdzie psuł odbiór).
              Długi opis (≥ próg) → wycinek + „czytaj więcej" na wirtualną podstronę;
