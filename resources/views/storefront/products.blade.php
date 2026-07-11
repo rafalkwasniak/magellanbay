@@ -5,9 +5,35 @@
             ['label' => 'Produkty'],
         ]" />
 
-        <h1 class="st-brand mt-4 font-serif text-4xl leading-tight tracking-tight">Wszystkie produkty</h1>
+        <h1 class="st-brand mt-4 font-serif text-4xl leading-tight tracking-tight">Produkty</h1>
 
-        <x-storefront.tag-cloud :tags="$tagCloud" :clearUrl="$hasFilters ? $clearUrl : null" />
+        <div class="st-border mt-8 border-t"></div>
+
+        {{-- Filtruj + Sortuj obok siebie: Filtruj rośnie (flex-1), Sortuj to
+             wąski select (mniej miejsca, niższy wiersz). Na wąskich ekranach
+             kafle spadają pod siebie. --}}
+        @if (count($tagCloud) || $products->isNotEmpty())
+            <div class="mt-8 flex flex-col gap-4 sm:flex-row sm:items-start">
+                @if (count($tagCloud))
+                    <div class="st-card st-border flex-1 rounded-3xl border p-6 text-left">
+                        <h2 class="st-brand font-serif text-xl font-normal tracking-tight">Filtruj</h2>
+                        <x-storefront.tag-cloud :tags="$tagCloud" label="" :clearUrl="$hasFilters ? $clearUrl : null" />
+                    </div>
+                @endif
+
+                @if ($products->isNotEmpty())
+                    <div class="st-card st-border rounded-3xl border p-6 text-left sm:w-64 sm:shrink-0">
+                        <h2 class="st-brand font-serif text-xl font-normal tracking-tight">Sortuj</h2>
+                        <select onchange="if (this.value) window.location.href = this.value"
+                            class="st-border mt-4 w-full rounded-xl border bg-transparent px-4 py-2 text-sm">
+                            @foreach ($sortOptions as $option)
+                                <option value="{{ $option['url'] }}" @selected($option['active'])>{{ $option['label'] }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                @endif
+            </div>
+        @endif
 
         @if ($products->isEmpty())
             @if ($hasFilters)
@@ -16,18 +42,6 @@
                 <p class="mt-8 opacity-70">Nie ma jeszcze produktów.</p>
             @endif
         @else
-            <div class="mt-6 flex flex-wrap items-center gap-2 text-sm">
-                <span class="opacity-60">Sortuj:</span>
-                @foreach ($sortOptions as $option)
-                    @if ($option['active'])
-                        <span class="st-btn rounded-full px-3 py-1 font-medium">{{ $option['label'] }}</span>
-                    @else
-                        <a href="{{ $option['url'] }}" rel="nofollow"
-                            class="st-border rounded-full border px-3 py-1 opacity-80 transition hover:opacity-100">{{ $option['label'] }}</a>
-                    @endif
-                @endforeach
-            </div>
-
             {{-- Liczba kolumn skalowana do wielkości katalogu (klasy statyczne dla Tailwinda). --}}
             <div class="mt-8 grid gap-6 sm:grid-cols-2 {{ ($columns ?? 3) === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3' }}">
                 @foreach ($products as $product)
