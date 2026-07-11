@@ -4,49 +4,7 @@
     <div class="grid gap-6 lg:grid-cols-12">
         {{-- Główna kolumna: pozycje + podsumowanie --}}
         <div class="space-y-6 lg:col-span-8">
-            <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
-                <h2 class="font-semibold text-stone-900">Pozycje</h2>
-
-                <div class="mt-4 divide-y divide-stone-100">
-                    @foreach ($order->items as $item)
-                        <div class="flex items-start justify-between gap-4 py-3">
-                            <div class="min-w-0">
-                                <p class="truncate font-medium text-stone-800">{{ $item->name }}</p>
-                                <p class="mt-0.5 text-sm text-stone-500">
-                                    {{ $item->sale_unit->formatQuantity((float) $item->quantity) }} × {{ \App\Support\Money::pln($item->unit_price_gross) }}
-                                    <span class="text-stone-400">· VAT {{ $item->vat_rate->label() }}</span>
-                                </p>
-                            </div>
-                            <span class="shrink-0 font-semibold tabular-nums text-stone-900">{{ \App\Support\Money::pln($item->line_total_gross) }}</span>
-                        </div>
-                    @endforeach
-                </div>
-
-                <dl class="mt-4 space-y-2 border-t border-stone-100 pt-4 text-sm">
-                    <div class="flex justify-between">
-                        <dt class="text-stone-500">Produkty (brutto)</dt>
-                        <dd class="tabular-nums text-stone-700">{{ \App\Support\Money::pln($order->items_total) }}</dd>
-                    </div>
-                    @if ($order->delivery_method->isShipped())
-                        <div class="flex justify-between">
-                            <dt class="text-stone-500">Dostawa</dt>
-                            <dd class="tabular-nums text-stone-700">{{ (float) $order->delivery_cost > 0 ? \App\Support\Money::pln($order->delivery_cost) : 'gratis' }}</dd>
-                        </div>
-                    @endif
-                    <div class="flex justify-between text-stone-400">
-                        <dt>w tym netto</dt>
-                        <dd class="tabular-nums">{{ \App\Support\Money::pln($order->total_net) }}</dd>
-                    </div>
-                    <div class="flex justify-between text-stone-400">
-                        <dt>w tym VAT</dt>
-                        <dd class="tabular-nums">{{ \App\Support\Money::pln($order->total_vat) }}</dd>
-                    </div>
-                    <div class="flex justify-between border-t border-stone-100 pt-2 text-base font-bold text-stone-900">
-                        <dt>Razem</dt>
-                        <dd class="tabular-nums">{{ \App\Support\Money::pln($order->total_gross) }}</dd>
-                    </div>
-                </dl>
-            </div>
+            <livewire:seller.order-editor :order="$order" />
 
             @if (filled($order->note))
                 <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">

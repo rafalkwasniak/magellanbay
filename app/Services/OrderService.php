@@ -23,6 +23,7 @@ class OrderService
     public function __construct(
         private CartService $cart,
         private OrderMailer $mailer,
+        private OrderTotals $totals,
     ) {}
 
     /**
@@ -109,28 +110,18 @@ class OrderService
      */
     private function createOrder(Shop $shop, array $data, array $lines): Order
     {
-        $itemsTotal = 0.0;
-        $totalNet = 0.0;
-        $totalVat = 0.0;
         $itemRows = [];
 
         foreach ($lines as $line) {
             $product = $line['product'];
             $quantity = $line['quantity'];
 
-            $unit = (float) $product->price_gross;
-            $lineGross = round($unit * $quantity, 2);
-            $lineNet = round($lineGross / (1 + $product->vat_rate->fraction()), 2);
-            $lineVat = round($lineGross - $lineNet, 2);
-
-            $itemsTotal += $lineGross;
-            $totalNet += $lineNet;
-            $totalVat += $lineVat;
+            [$lineGross] = $this->totals->lineAmounts((float) $product->price_gross, $quantity, $product->vat_rate);
 
             $itemRows[] = [
                 'product_id' => $product->id,
                 'name' => $product->name,
-                'unit_price_gross' => $unit,
+                'unit_price_gross' => (float) $product->price_gross,
                 'vat_rate' => $product->vat_rate->value,
                 'quantity' => $quantity,
                 'sale_unit' => $product->sale_unit->value,
@@ -141,8 +132,6 @@ class OrderService
                 $product->decrement('stock', $quantity);
             }
         }
-
-        $deliveryCost = 0.0;    // MVP: odbiór osobisty bez kosztu
 
         $order = $shop->orders()->create([
             'number' => $shop->allocateOrderNumber(),
@@ -160,16 +149,19 @@ class OrderService
             'company_postal_code' => $this->companyField($data, 'company_postal_code'),
             'company_city' => $this->companyField($data, 'company_city'),
             'delivery_method' => DeliveryMethod::from($data['delivery_method']),
-            'delivery_cost' => $deliveryCost,
+            'delivery_cost' => 0.0,    // MVP: odbiór osobisty bez kosztu
             'payment_method' => PaymentMethod::from($data['payment_method']),
-            'items_total' => round($itemsTotal, 2),
-            'total_net' => round($totalNet, 2),
-            'total_vat' => round($totalVat, 2),
-            'total_gross' => round($itemsTotal + $deliveryCost, 2),
+            'items_total' => 0,
+            'total_net' => 0,
+            'total_vat' => 0,
+            'total_gross' => 0,
             'note' => $data['note'] ?? null,
         ]);
 
         $order->items()->createMany($itemRows);
+
+        // Sumy z jednego źródła (OrderTotals) — identycznie jak przy edycji zamówienia.
+        $this->totals->recalculate($order->load('items'));
 
         return $order;
     }
