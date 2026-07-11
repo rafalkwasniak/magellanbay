@@ -26,7 +26,6 @@ class HomeController extends Controller
         return view('storefront.home', [
             'shop' => $shop,
             'products' => $this->homepageProducts($shop),
-            'totalProducts' => $shop->products()->where('is_active', true)->count(),
             'tagCloud' => $this->tagLinks($shop),
         ]);
     }

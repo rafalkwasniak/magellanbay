@@ -10,7 +10,7 @@ use Tests\TestCase;
 
 /**
  * Wykaz produktów storefrontu (/produkty): pełny katalog aktywnych produktów,
- * paginacja, bramka szkicu i link „Zobacz wszystkie" z głównej.
+ * paginacja, bramka szkicu i link do katalogu z głównej (przez menu).
  */
 class ProductListingTest extends TestCase
 {
@@ -265,14 +265,17 @@ class ProductListingTest extends TestCase
             ->assertSee('już wkrótce');
     }
 
-    public function test_home_links_to_catalog_when_more_products_than_shown(): void
+    public function test_home_links_to_catalog_via_menu(): void
     {
         $shop = Shop::factory()->active()->create();
         Product::factory()->count(8)->create(['shop_id' => $shop->id, 'is_active' => true]);
 
+        // Dostęp do pełnego katalogu jest przez menu „Produkty" — CTA „Zobacz
+        // wszystkie produkty" usunięte ze strony głównej (wyglądał jak zwykły
+        // przycisk, a menu i tak niesie „Produkty").
         $this->get($this->host($shop).'/')
             ->assertOk()
-            ->assertSee('Zobacz wszystkie produkty');
+            ->assertSee('href="/produkty"', false);
     }
 
     public function test_listing_renders_breadcrumbs(): void

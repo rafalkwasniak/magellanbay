@@ -1,33 +1,21 @@
 <x-layouts.storefront :shop="$shop">
     {{-- Style lokalne WYŁĄCZNIE dla boxu 1 produktu na tej stronie. Trzymamy je
-         tutaj, nie w layoucie — layout jest współdzielony przez cały storefront.
-         Apla wjeżdża na CAŁE zdjęcie na hover (zdjęcie przygasa + powiększa się);
-         na dotyku (brak hovera) apla staje się statycznym panelem pod zdjęciem —
-         dane zawsze widoczne, zero JS. --}}
+         tutaj, nie w layoucie — layout jest współdzielony przez cały storefront. --}}
     <style>
-        /* Box huggający zdjęcie: inline-block wyśrodkowany, więc apla trzyma się
-           obrazu (a nie całej kolumny). Zdjęcie ograniczone I szerokością (poziome
-           = pełna szerokość treści) I wysokością (pionowe = max-height związane z
-           ekranem, nigdy nie przekroczy widoku). Bez przycinania. */
+        /* WARIANT BEZ apli (do porównania): kafelek huggujący zdjęcie
+           (inline-block, wyśrodkowany), a informacje POD zdjęciem w stylu
+           strony produktowej. Zdjęcie ograniczone I szerokością (poziome =
+           pełna szerokość kafla) I wysokością (pionowe = max-height związane
+           z ekranem). Bez przycinania. */
         .solo { display: inline-block; max-width: 100%; }
-        .solo-media { display: block; max-width: 100%; max-height: 75vh; width: auto; height: auto; transition: transform .6s cubic-bezier(.22,1,.36,1), filter .5s ease; }
-        .solo:hover .solo-media,
-        .solo:focus-within .solo-media { transform: scale(1.06); filter: brightness(.42); }
-        /* Apla u DOŁU zdjęcia, wysoka tylko na tyle, ile trzeba na tekst.
-           Wyjeżdża z dołu (translateY) na hover. */
-        .solo-apla {
-            position: absolute; left: 0; right: 0; bottom: 0;
-            background: color-mix(in srgb, var(--surface) 55%, transparent);
-            backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
-            transform: translateY(100%);
-            transition: transform .5s cubic-bezier(.22,1,.36,1);
-        }
-        .solo:hover .solo-apla,
-        .solo:focus-within .solo-apla { transform: translateY(0); }
-        @media (hover: none) {
-            .solo-media { filter: none !important; transform: none !important; }
-            .solo-apla { position: static; transform: none; background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; padding-top: 1.5rem; padding-bottom: 0; }
-        }
+        .solo-media { display: block; max-width: 100%; max-height: 68vh; width: auto; height: auto; transition: transform .3s ease; }
+        /* Zoom na najechanie — jak na kaflach wykazu (scale 1.05); kafel ma
+           overflow-hidden, więc powiększenie jest przycięte do ramki. */
+        .solo:hover .solo-media { transform: scale(1.05); }
+        /* Panel z info nie rozpycha kafla: width:0 + min-width:100% sprawia, że
+           o szerokości boxu decyduje ZDJĘCIE, a tekst zawija się do jego
+           szerokości (bez tego długa linia opisu robiłaby box szerszy). */
+        .solo-info { width: 0; min-width: 100%; box-sizing: border-box; }
     </style>
 
     {{-- Hero sklepu — editorial „okładka". Winieta u góry niesie logo/nazwę jako
@@ -41,35 +29,36 @@
     <main class="mx-auto max-w-6xl px-6 pt-12">
         @switch($products->count())
 
-            {{-- 1 produkt → BOX z aplą. Zdjęcie w naturalnych proporcjach (bez
-                 przycinania). Na hover CAŁE zdjęcie przygasa + powiększa się, a
-                 na nie wjeżdża półprzezroczysta apla: nazwa produktu · część
+            {{-- 1 produkt → KAFELEK bez apli (wariant do porównania z wersją
+                 z aplą, commit 3408b87). Zdjęcie w naturalnych proporcjach na
+                 górze, a POD nim info w stylu strony produktowej: nazwa · część
                  opisu · przycisk „Pokaż produkt". Strona główna NIE sprzedaje
-                 (bez ceny/koszyka) — ma zachęcić do wejścia w produkt. Nazwa
-                 produktu celowo NIE nad zdjęciem — tam winieta niesie nazwę
-                 SKLEPU. Style i zachowanie dotykowe: <style> u góry pliku. --}}
+                 (bez ceny/koszyka) — ma zachęcić do wejścia w produkt. --}}
             @case(1)
                 @php($p = $products->first())
                 @php($main = $p->mainImage())
                 @php($excerpt = filled($p->description) ? \Illuminate\Support\Str::of(strip_tags($p->description))->squish()->limit(180, preserveWords: true) : null)
                 <section class="text-center">
-                    <div class="solo group relative overflow-hidden rounded-3xl shadow-sm">
-                        @if ($main)
-                            <img src="{{ $main->url() }}" alt="{{ $p->name }}" class="solo-media">
-                        @else
-                            <div class="st-card st-border flex items-center justify-center border" style="width: 26rem; height: 26rem; max-width: 100%;">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-16 w-16 opacity-40" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5" fill="currentColor" stroke="none"/><path d="M4 17l4.5-4.5 3 3L15 12l5 5"/></svg>
-                            </div>
-                        @endif
-
-                        {{-- Apla — całe zdjęcie. Poza anchorem, bo przycisk Livewire
-                             nie może żyć w <a>; nazwa jest linkiem do produktu. --}}
-                        <div class="solo-apla flex flex-col items-start gap-3 p-6 text-left">
-                            <h2 class="font-serif text-3xl font-normal tracking-tight">{{ $p->name }}</h2>
-                            @if ($excerpt)
-                                <p class="max-w-md leading-relaxed opacity-80">{{ $excerpt }}</p>
+                    <div class="solo st-card st-border overflow-hidden rounded-3xl border text-left">
+                        <a href="{{ $p->storefrontPath() }}" wire:navigate class="block overflow-hidden">
+                            @if ($main)
+                                <img src="{{ $main->url() }}" alt="{{ $p->name }}" class="solo-media">
+                            @else
+                                <div class="st-btn flex items-center justify-center" style="width: 26rem; height: 26rem; max-width: 100%;">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-16 w-16 opacity-70" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5" fill="currentColor" stroke="none"/><path d="M4 17l4.5-4.5 3 3L15 12l5 5"/></svg>
+                                </div>
                             @endif
-                            <a href="{{ $p->storefrontPath() }}" wire:navigate class="st-btn mt-1 inline-block rounded-full px-8 py-3 text-sm font-semibold shadow-sm transition hover:brightness-105">Pokaż produkt</a>
+                        </a>
+
+                        {{-- Info pod zdjęciem --}}
+                        <div class="solo-info p-6">
+                            <h2 class="st-brand font-serif text-2xl font-normal tracking-tight sm:text-3xl">
+                                <a href="{{ $p->storefrontPath() }}" wire:navigate class="transition hover:opacity-70">{{ $p->name }}</a>
+                            </h2>
+                            @if ($excerpt)
+                                <p class="mt-3 leading-relaxed opacity-80">{{ $excerpt }}</p>
+                            @endif
+                            <a href="{{ $p->storefrontPath() }}" wire:navigate class="st-btn mt-5 inline-block rounded-full px-8 py-3 text-sm font-semibold shadow-sm transition hover:brightness-105">Pokaż produkt</a>
                         </div>
                     </div>
                 </section>
@@ -108,14 +97,6 @@
                 </section>
         @endswitch
 
-        @if ($totalProducts > $products->count())
-            <div class="mt-12 text-center">
-                <a href="/produkty" class="st-btn inline-block rounded-full px-8 py-3 text-sm font-semibold shadow-sm transition hover:brightness-105">
-                    Zobacz wszystkie produkty
-                </a>
-            </div>
-        @endif
-
         {{-- O sklepie — głos sklepu POD ofertą (nie na górze, gdzie psuł odbiór).
              Długi opis (≥ próg) → wycinek + „czytaj więcej" na wirtualną podstronę;
              krótki → cała treść tutaj, z zachowaniem formatowania. --}}
@@ -125,7 +106,7 @@
                 <div class="st-card st-border rounded-3xl border p-8 text-left">
                     <h2 class="st-brand font-serif text-2xl font-normal tracking-tight sm:text-3xl">O sklepie</h2>
                     @if ($shop->aboutInMenu())
-                        <p class="mt-5 leading-relaxed opacity-80">{{ \Illuminate\Support\Str::of($shop->aboutPlainText())->limit(280, preserveWords: true) }}</p>
+                        <p class="mt-5 leading-relaxed opacity-80">{{ \Illuminate\Support\Str::of($shop->aboutPlainText())->limit((int) config('pages.about.menu_threshold'), preserveWords: true) }}</p>
                         <a href="{{ $shop->aboutPath() }}" wire:navigate class="st-brand mt-5 inline-block text-sm font-medium underline-offset-4 hover:underline">Czytaj więcej →</a>
                     @else
                         <div class="st-prose mt-5 opacity-90">{!! $shop->description !!}</div>

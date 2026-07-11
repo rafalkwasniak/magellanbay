@@ -31,7 +31,7 @@ return [
     'about' => [
         'slug' => 'o-sklepie',
         'title' => 'O sklepie',
-        'menu_threshold' => 200,
+        'menu_threshold' => 400,
     ],
 
     /*

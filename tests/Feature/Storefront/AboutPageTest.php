@@ -98,4 +98,37 @@ class AboutPageTest extends TestCase
         $this->assertFalse($bloated->aboutInMenu());
         $this->assertTrue($bloated->hasAbout());
     }
+
+    public function test_short_about_renders_formatted_on_home_without_more_link_or_menu(): void
+    {
+        // Opis PONIŻEJ progu: na głównej pełny, SFORMATOWANY tekst (jest gdzie
+        // zobaczyć formatowanie — nie ma dokąd wejść), BEZ „Czytaj więcej",
+        // BEZ kropek, BEZ pozycji w menu (brak linku do /informacje/o-sklepie).
+        $shop = Shop::factory()->active()->create([
+            'description' => '<p>Robimy rowery z <strong>pasją</strong>.</p><ul><li>Ręcznie</li></ul>',
+        ]);
+        $this->assertFalse($shop->aboutInMenu());
+
+        $this->get($this->host($shop).'/')
+            ->assertOk()
+            ->assertSee('<strong>pasją</strong>', false)          // formatowanie zachowane
+            ->assertDontSee('Czytaj więcej')                       // brak linku „więcej"
+            ->assertDontSee('href="'.$shop->aboutPath().'"', false); // brak linku „więcej" ORAZ pozycji w menu
+    }
+
+    public function test_long_about_shows_excerpt_with_more_link_and_menu_on_home(): void
+    {
+        // Opis POWYŻEJ progu: na głównej wycinek + „Czytaj więcej" i pozycja
+        // w menu (link do /informacje/o-sklepie obecny).
+        $threshold = (int) config('pages.about.menu_threshold');
+        $shop = Shop::factory()->active()->create([
+            'description' => '<p>'.str_repeat('rower ', $threshold).'</p>',
+        ]);
+        $this->assertTrue($shop->aboutInMenu());
+
+        $this->get($this->host($shop).'/')
+            ->assertOk()
+            ->assertSee('Czytaj więcej')
+            ->assertSee('href="'.$shop->aboutPath().'"', false);
+    }
 }
