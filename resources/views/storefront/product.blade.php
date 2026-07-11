@@ -6,9 +6,13 @@
             ['label' => $product->name],
         ]" />
 
-        <div class="mt-6 grid gap-8 md:grid-cols-2">
-            {{-- Galeria --}}
-            <div>
+        <h1 class="st-brand mt-4 font-serif text-4xl leading-tight tracking-tight">{{ $product->name }}</h1>
+
+        <div class="st-border mt-8 border-t"></div>
+
+        <div class="mt-8 grid gap-8 md:grid-cols-5">
+            {{-- Galeria — szersza kolumna (3/5) --}}
+            <div class="md:col-span-3">
                 @php($main = $product->mainImage())
                 {{-- Karta produktu: zdjęcie takie, jak dodał sprzedawca — naturalne
                      proporcje, bez przycinania i bez wypełniania. --}}
@@ -34,27 +38,42 @@
                 @endif
             </div>
 
-            {{-- Szczegóły --}}
-            <div>
-                <h1 class="st-brand text-3xl font-bold tracking-tight">{{ $product->name }}</h1>
-
-                <p class="mt-4 text-3xl font-bold">{{ \App\Support\Money::pln($product->price_gross) }}@if ($product->sale_unit->isWeight())<span class="text-lg font-medium opacity-60"> / {{ $product->sale_unit->abbreviation() }}</span>@endif</p>
+            {{-- Zakup — węższa kolumna po prawej (2/5) --}}
+            <div class="md:col-span-2">
+                <p class="text-3xl font-bold"><span class="text-lg font-medium opacity-60">Cena:</span> {{ \App\Support\Money::pln($product->price_gross) }}@if ($product->sale_unit->isWeight())<span class="text-lg font-medium opacity-60"> / {{ $product->sale_unit->abbreviation() }}</span>@endif</p>
                 @php($lowest = $product->lowestPriceLast30Days())
                 @if ($lowest !== null)
                     <p class="mt-1 text-sm opacity-70">Najniższa cena z 30 dni: {{ \App\Support\Money::pln($lowest) }}</p>
                 @endif
 
-                <div class="mt-6">
-                    <livewire:add-to-cart :product="$product" />
-                </div>
-
-                @if (filled($product->description))
-                    <div class="st-border mt-8 border-t pt-6 leading-relaxed opacity-90">{!! $product->description !!}</div>
+                {{-- Dostępność jako dana produktu (statyczna); realny limit i tak pilnuje komponent koszyka. --}}
+                @if ($product->track_stock && $product->stock !== null)
+                    <p class="mt-3 text-sm opacity-70">Dostępne: {{ $product->sale_unit->formatAmount((float) $product->stock) }} {{ $product->sale_unit->abbreviation() }}</p>
                 @endif
 
-                <x-storefront.tag-cloud :tags="$productTags" label="Tagi:" />
+                {{-- Tylko przycisk „Do koszyka", wyrównany do prawej krawędzi kolumny
+                     (compact = komponent nie dubluje linii dostępności). --}}
+                <div class="mt-6 flex justify-end">
+                    <livewire:add-to-cart :product="$product" :compact="true" />
+                </div>
+
+                {{-- Tagi w kaflu jak na wykazie (Filtruj). --}}
+                @if (count($productTags))
+                    <div class="st-card st-border mt-8 rounded-3xl border p-6 text-left">
+                        <h2 class="st-brand font-serif text-xl font-normal tracking-tight">Podobne produkty</h2>
+                        <x-storefront.tag-cloud :tags="$productTags" label="" />
+                    </div>
+                @endif
             </div>
         </div>
+
+        {{-- Opis na całą szerokość pod galerią i zakupem. --}}
+        @if (filled($product->description))
+            <div class="mt-12">
+                <h2 class="st-brand font-serif text-2xl font-normal tracking-tight sm:text-3xl">O produkcie</h2>
+                <div class="st-prose st-border mt-6 border-t pt-6 opacity-90">{!! $product->description !!}</div>
+            </div>
+        @endif
     </div>
 
     {{-- Przełączanie zdjęcia głównego z miniatur (zero zależności). --}}
