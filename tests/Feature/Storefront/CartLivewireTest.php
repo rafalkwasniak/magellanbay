@@ -104,14 +104,20 @@ class CartLivewireTest extends TestCase
             ->assertSee('2');
     }
 
-    public function test_listing_and_home_expose_add_to_cart(): void
+    public function test_listing_sells_and_home_single_product_does_not(): void
     {
         $shop = Shop::factory()->active()->create();
         $this->product($shop);
         $base = 'http://'.$shop->slug.'.'.config('tenancy.central_domain');
 
+        // Wykaz sprzedaje — komponent add-to-cart na kaflach.
         $this->get($base.'/produkty')->assertOk()->assertSeeLivewire(AddToCart::class);
-        $this->get($base.'/')->assertOk()->assertSeeLivewire(AddToCart::class);
+
+        // Strona główna (widok 1 produktu) NIE sprzedaje — zamiast koszyka
+        // zachęta „Pokaż produkt" prowadząca do karty produktu.
+        $this->get($base.'/')->assertOk()
+            ->assertDontSeeLivewire(AddToCart::class)
+            ->assertSee('Pokaż produkt');
     }
 
     public function test_cart_page_renders_with_livewire_component(): void

@@ -39,7 +39,7 @@ class HomeProductsTest extends TestCase
         $this->get($this->url($shop))
             ->assertOk()
             ->assertSee($product->name)
-            ->assertSee('Zobacz szczegóły'); // link do szczegółów tylko w układzie hero (1 produkt)
+            ->assertSee($product->storefrontPath(), false); // nazwa w apli jest linkiem do produktu (ścieżka do szczegółów)
     }
 
     public function test_two_and_three_products_render_all(): void
@@ -68,8 +68,10 @@ class HomeProductsTest extends TestCase
 
     public function test_price_is_formatted_polish(): void
     {
+        // Cena widnieje na kaflach widoku wielo-produktowego; box z 1 produktem
+        // celowo BEZ ceny (główna nie sprzedaje). Format sprawdzamy na kaflu.
         $shop = Shop::factory()->active()->create();
-        $this->promote($shop, 1)->first()->update(['price_gross' => 49.99]);
+        $this->promote($shop, 2)->first()->update(['price_gross' => 49.99]);
 
         $this->get($this->url($shop))->assertSee('49,99 zł');
     }
@@ -106,7 +108,7 @@ class HomeProductsTest extends TestCase
 
         $this->get($this->url($shop))
             ->assertOk()
-            ->assertSee('Przeglądaj po tagach')
+            ->assertSee('Zobacz produkty') // nagłówek kafla tagów
             ->assertSee('Komunia')
             ->assertSee('/produkty?tagi=komunia', false);
     }
