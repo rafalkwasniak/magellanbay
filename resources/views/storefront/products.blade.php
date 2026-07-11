@@ -13,7 +13,7 @@
              wąski select (mniej miejsca, niższy wiersz). Na wąskich ekranach
              kafle spadają pod siebie. --}}
         @if (count($tagCloud) || $products->isNotEmpty())
-            <div class="mt-8 flex flex-col gap-4 sm:flex-row sm:items-start">
+            <div class="mt-8 flex flex-col gap-4 sm:flex-row">
                 @if (count($tagCloud))
                     <div class="st-card st-border flex-1 rounded-3xl border p-6 text-left">
                         <h2 class="st-brand font-serif text-xl font-normal tracking-tight">Filtruj</h2>
