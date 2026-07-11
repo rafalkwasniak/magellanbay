@@ -203,6 +203,8 @@ Route::domain('{shop}.'.config('tenancy.central_domain'))
         // stały slug nie wpadł w /informacje/{page} (który szuka strony po id).
         Route::get('/informacje/'.config('pages.about.slug'), [StorefrontPage::class, 'about'])->name('storefront.about');
         Route::get('/informacje/{page}', [StorefrontPage::class, 'show'])->name('storefront.page');
+        // Nasza Polityka prywatności renderowana w motywie sklepu (footer linkuje tu).
+        Route::get('/polityka-prywatnosci', [StorefrontPage::class, 'privacy'])->name('storefront.privacy');
         Route::get('/koszyk', [StorefrontCart::class, 'show'])->name('storefront.cart');
         Route::get('/kasa', [StorefrontCheckout::class, 'show'])->name('storefront.checkout');
         Route::get('/kasa/dziekujemy', [StorefrontCheckout::class, 'confirmation'])->name('storefront.checkout.confirmation');

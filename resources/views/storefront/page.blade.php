@@ -12,7 +12,7 @@
             </div>
         @endunless
 
-        <h1 class="st-brand mt-4 text-3xl font-bold tracking-tight sm:text-4xl">{{ $page->title }}</h1>
+        <h1 class="st-brand mt-4 font-serif text-4xl leading-tight tracking-tight sm:text-5xl">{{ $page->title }}</h1>
 
         @if (filled($page->content))
             <div class="st-prose st-border mt-8 border-t pt-8">{!! $page->content !!}</div>

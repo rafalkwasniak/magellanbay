@@ -78,6 +78,19 @@ class CartLivewireTest extends TestCase
         $this->assertSame(1, app(CartService::class)->count($shop->id));
     }
 
+    public function test_counter_is_hidden_when_cart_is_empty(): void
+    {
+        $shop = Shop::factory()->create();
+
+        // Pusty koszyk → licznik nic nie renderuje (nie zaśmieca winiety).
+        Livewire::test(CartCounter::class, ['shopId' => $shop->id])
+            ->assertDontSee('Koszyk')
+            // …a po dodaniu pozycji pojawia się na zdarzenie cart-updated.
+            ->tap(fn () => app(CartService::class)->add($this->product($shop), 1))
+            ->dispatch('cart-updated')
+            ->assertSee('Koszyk');
+    }
+
     public function test_counter_reflects_cart_and_refreshes_on_event(): void
     {
         $shop = Shop::factory()->create();

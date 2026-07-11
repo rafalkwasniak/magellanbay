@@ -5,8 +5,7 @@
             ['label' => 'Produkty'],
         ]" />
 
-        <a href="/" class="mt-3 inline-block text-sm opacity-70 transition hover:opacity-100">← {{ $shop->name }}</a>
-        <h1 class="st-brand mt-4 text-3xl font-bold tracking-tight">Wszystkie produkty</h1>
+        <h1 class="st-brand mt-4 font-serif text-4xl leading-tight tracking-tight">Wszystkie produkty</h1>
 
         <x-storefront.tag-cloud :tags="$tagCloud" :clearUrl="$hasFilters ? $clearUrl : null" />
 

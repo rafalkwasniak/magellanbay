@@ -106,8 +106,9 @@ class ProductPageTest extends TestCase
 
         $this->get($this->host($shop).$product->storefrontPath().'?powrot='.urlencode($back))
             ->assertOk()
-            ->assertSee('Wróć do produktów')
-            ->assertSee('/produkty?tagi=srebro', false);
+            // Krótki „← Powrót" doklejony przy okruszkach; href = przefiltrowany wykaz.
+            ->assertSee('Powrót')
+            ->assertSee('href="/produkty?tagi=srebro', false);
     }
 
     public function test_back_link_rejects_external_url(): void
@@ -130,7 +131,9 @@ class ProductPageTest extends TestCase
         $this->get($this->host($shop).$product->storefrontPath())
             ->assertOk()
             ->assertSee($shop->name)
-            ->assertDontSee('Wróć do produktów');
+            // Bez `powrot` powrót prowadzi na główną sklepu (safeBack → "/").
+            ->assertSee('href="/" class="shrink-0', false)
+            ->assertSee('← Powrót', false);
     }
 
     public function test_canonical_redirect_preserves_return_url(): void

@@ -268,6 +268,29 @@ class Shop extends Model
     }
 
     /**
+     * Pozycje menu „Informacje" — jedno źródło dla nagłówka (rozwijane) i stopki.
+     * Wirtualna „O sklepie" jako PIERWSZA (tylko gdy opis przekracza próg), potem
+     * opublikowane strony wg `position` (Regulamin też — to strona). Jedna lista,
+     * jedna kolejność.
+     *
+     * @return list<array{label: string, url: string}>
+     */
+    public function informationMenu(): array
+    {
+        $items = [];
+
+        if ($this->aboutInMenu()) {
+            $items[] = ['label' => config('pages.about.title'), 'url' => $this->aboutPath()];
+        }
+
+        foreach ($this->pages()->published()->get() as $page) {
+            $items[] = ['label' => $page->title, 'url' => $page->storefrontPath()];
+        }
+
+        return $items;
+    }
+
+    /**
      * Przelicza i zapisuje status sklepu z liczby aktywnych produktów:
      * ≥1 → Aktywny (widoczny), 0 → Szkic (ukryty). Wołane automatycznie przy
      * każdej zmianie produktu. Zapis tylko gdy status faktycznie się zmienia.

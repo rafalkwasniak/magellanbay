@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Storefront;
 
+use App\Enums\LegalDocumentType;
 use App\Http\Controllers\Controller;
+use App\Models\LegalDocument;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -33,6 +35,22 @@ class PageController extends Controller
         return view('storefront.about', [
             'shop' => $shop,
             'title' => config('pages.about.title'),
+        ]);
+    }
+
+    /**
+     * Polityka prywatności — treść należy do Kramio (administrator danych), ale
+     * renderujemy ją W MOTYWIE sklepu, żeby wizualnie spinała się z resztą
+     * storefrontu (footer linkuje tu lokalnie zamiast na centralę). To NASZA
+     * strona, więc nie wchodzi do menu „Informacje" sprzedawcy — tylko stopka.
+     * Zawsze dostępna (strona prawna) — bez bramki „już wkrótce".
+     */
+    public function privacy(Request $request): View
+    {
+        return view('storefront.privacy', [
+            'shop' => $request->attributes->get('shop'),
+            'title' => 'Polityka prywatności',
+            'document' => LegalDocument::current(LegalDocumentType::Privacy),
         ]);
     }
 
