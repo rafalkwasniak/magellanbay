@@ -44,6 +44,9 @@ import './tags.js';
 // Galeria zdjęć produktu: kolejność przez drag & drop i strzałki.
 import './product-gallery.js';
 
+// Kolejność stron „Informacje": drag & drop na liście w panelu.
+import './page-order.js';
+
 // Nawigacja mobilna: hamburger + wysuwany panel menu (poniżej lg).
 import './mobile-nav.js';
 

@@ -16,6 +16,7 @@ use App\Http\Controllers\Seller\CompanyLookupController;
 use App\Http\Controllers\Seller\DashboardController as SellerDashboard;
 use App\Http\Controllers\Seller\IntegrationController;
 use App\Http\Controllers\Seller\OrderController;
+use App\Http\Controllers\Seller\PageController;
 use App\Http\Controllers\Seller\ProductController;
 use App\Http\Controllers\Seller\ProductImageController;
 use App\Http\Controllers\Seller\ShopProfileController;
@@ -23,6 +24,7 @@ use App\Http\Controllers\Seller\ShopSettingsController;
 use App\Http\Controllers\Storefront\CartController as StorefrontCart;
 use App\Http\Controllers\Storefront\CheckoutController as StorefrontCheckout;
 use App\Http\Controllers\Storefront\HomeController as StorefrontHome;
+use App\Http\Controllers\Storefront\PageController as StorefrontPage;
 use App\Http\Controllers\Storefront\ProductController as StorefrontProduct;
 use Illuminate\Support\Facades\Route;
 
@@ -134,6 +136,16 @@ Route::middleware(['auth', 'role:seller', 'ensure.consents'])
         Route::get('/zamowienia', [OrderController::class, 'index'])->name('orders.index');
         Route::get('/zamowienia/{order}', [OrderController::class, 'show'])->name('orders.show');
 
+        // Informacje (strony tekstowe storefrontu). Edycja/usuwanie przez POST;
+        // kolejność (drag & drop) zapisywana AJAX-em przez POST.
+        Route::get('/informacje', [PageController::class, 'index'])->name('pages.index');
+        Route::get('/informacje/nowa', [PageController::class, 'create'])->name('pages.create');
+        Route::post('/informacje', [PageController::class, 'store'])->name('pages.store');
+        Route::post('/informacje/kolejnosc', [PageController::class, 'reorder'])->name('pages.reorder');
+        Route::get('/informacje/{page}/edycja', [PageController::class, 'edit'])->name('pages.edit');
+        Route::post('/informacje/{page}', [PageController::class, 'update'])->name('pages.update');
+        Route::post('/informacje/{page}/usun', [PageController::class, 'destroy'])->name('pages.destroy');
+
         // Produkty (edycja/usuwanie przez POST — FOUNDATION sek. 5).
         Route::get('/produkty', [ProductController::class, 'index'])->name('products.index');
         Route::get('/produkty/nowy', [ProductController::class, 'create'])->name('products.create');
@@ -187,6 +199,10 @@ Route::domain('{shop}.'.config('tenancy.central_domain'))
         Route::get('/', [StorefrontHome::class, 'show'])->name('storefront.home');
         Route::get('/produkty', [StorefrontProduct::class, 'index'])->name('storefront.products');
         Route::get('/produkt/{product}', [StorefrontProduct::class, 'show'])->name('storefront.product');
+        // Wirtualna „O sklepie" (treść z shop.description) — PRZED wildcardem, by
+        // stały slug nie wpadł w /informacje/{page} (który szuka strony po id).
+        Route::get('/informacje/'.config('pages.about.slug'), [StorefrontPage::class, 'about'])->name('storefront.about');
+        Route::get('/informacje/{page}', [StorefrontPage::class, 'show'])->name('storefront.page');
         Route::get('/koszyk', [StorefrontCart::class, 'show'])->name('storefront.cart');
         Route::get('/kasa', [StorefrontCheckout::class, 'show'])->name('storefront.checkout');
         Route::get('/kasa/dziekujemy', [StorefrontCheckout::class, 'confirmation'])->name('storefront.checkout.confirmation');

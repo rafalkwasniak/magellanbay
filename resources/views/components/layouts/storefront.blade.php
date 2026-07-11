@@ -34,6 +34,23 @@
         .st-border { border-color: color-mix(in srgb, var(--ink) 12%, transparent); }
         /* Panel karty — wyliczany z tokenów, czytelny na jasnym i ciemnym tle. */
         .st-card { background: color-mix(in srgb, var(--ink) 4%, var(--surface)); }
+
+        /* Typografia treści stron „Informacje" (HTML z bazy). Bliźniak
+           .legal-content, ale kolor DZIEDZICZY z motywu (--ink) — czytelny na
+           jasnym i ciemnym szablonie; akcenty (marker listy, link) na --brand. */
+        .st-prose { line-height: 1.75; }
+        .st-prose h2 { margin-top: 2rem; margin-bottom: 0.75rem; font-size: 1.25rem; font-weight: 600; letter-spacing: -0.01em; }
+        .st-prose h3 { margin-top: 1.5rem; margin-bottom: 0.5rem; font-size: 1.05rem; font-weight: 600; }
+        .st-prose :is(h2, h3):first-child { margin-top: 0; }
+        .st-prose p { margin-bottom: 1rem; }
+        .st-prose ul, .st-prose ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        .st-prose ul { list-style: disc; }
+        .st-prose ol { list-style: decimal; }
+        .st-prose li { margin-bottom: 0.4rem; }
+        .st-prose li::marker { color: var(--brand); }
+        .st-prose strong { font-weight: 600; }
+        .st-prose a { color: var(--brand); text-decoration: underline; text-underline-offset: 2px; }
+        .st-prose a:hover { opacity: 0.8; }
         [x-cloak] { display: none !important; }
     </style>
 

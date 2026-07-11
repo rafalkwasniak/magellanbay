@@ -6,9 +6,11 @@ use App\Enums\IntegrationType;
 use App\Enums\SaleUnit;
 use App\Enums\ShopStatus;
 use App\Enums\VatRate;
+use App\Observers\ShopObserver;
 use App\Support\Color;
 use Database\Factories\ShopFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -19,6 +21,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * `domain` = opcjonalna dedykowana domena (np. mojsklep.pl). `owner_id` nie jest
  * mass-assignable — sklep tworzymy przez relację usera.
  */
+#[ObservedBy(ShopObserver::class)]
 #[Fillable([
     'name', 'slug', 'domain', 'status', 'description', 'company_name', 'nip', 'logo_path',
     'contact_email', 'contact_phone',
@@ -76,6 +79,17 @@ class Shop extends Model
     public function tags(): HasMany
     {
         return $this->hasMany(Tag::class);
+    }
+
+    /**
+     * Strony tekstowe sklepu („Informacje") — Regulamin i strony sprzedawcy.
+     * Jedna wspólna kolejność (position) dla menu i stopki.
+     *
+     * @return HasMany<Page, $this>
+     */
+    public function pages(): HasMany
+    {
+        return $this->hasMany(Page::class);
     }
 
     /**
@@ -211,6 +225,46 @@ class Shop extends Model
     public function isVisible(): bool
     {
         return $this->status === ShopStatus::Active;
+    }
+
+    /**
+     * Opis sklepu jako czysty tekst (bez HTML, ze zwiniętymi białymi znakami) —
+     * do liczenia długości progu „O sklepie". `<br>` i tagi nie zawyżają wyniku.
+     */
+    public function aboutPlainText(): string
+    {
+        $text = html_entity_decode(strip_tags((string) $this->description), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        return trim((string) preg_replace('/\s+/u', ' ', $text));
+    }
+
+    /**
+     * Czy istnieje wirtualna strona „O sklepie" — tzn. opis sklepu jest niepusty.
+     * Strona renderuje zawsze, gdy jest jakakolwiek treść (długość rządzi tylko
+     * obecnością w menu, nie istnieniem strony).
+     */
+    public function hasAbout(): bool
+    {
+        return $this->aboutPlainText() !== '';
+    }
+
+    /**
+     * Czy „O sklepie" zasługuje na własną pozycję w menu „Informacje" (i wycinek
+     * + „czytaj więcej" na głównej): opis dłuższy niż próg czystego tekstu z
+     * configu. Poniżej progu pełny opis pokazujemy na stronie głównej.
+     */
+    public function aboutInMenu(): bool
+    {
+        return mb_strlen($this->aboutPlainText()) >= (int) config('pages.about.menu_threshold');
+    }
+
+    /**
+     * Kanoniczny adres wirtualnej strony „O sklepie" na storefroncie (względny —
+     * storefront to jeden host). Slug z configu, w rodzinie /informacje/….
+     */
+    public function aboutPath(): string
+    {
+        return '/informacje/'.config('pages.about.slug');
     }
 
     /**
