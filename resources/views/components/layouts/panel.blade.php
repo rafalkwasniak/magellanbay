@@ -6,6 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ ($title ?? 'Panel') . ' · ' . config('app.name') }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @livewireStyles
 </head>
 <body class="h-full bg-stone-100 text-stone-800 antialiased">
     <x-toasts />
@@ -143,5 +144,7 @@
             </div>
         </aside>
     </div>
+
+    @livewireScripts
 </body>
 </html>
