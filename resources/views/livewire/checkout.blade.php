@@ -181,9 +181,26 @@
 
                     <label class="mt-5 flex items-start gap-3 text-sm">
                         <input type="checkbox" wire:model="accept_terms" class="st-border mt-0.5 h-5 w-5 shrink-0 rounded border" style="accent-color: var(--brand);">
-                        <span>Akceptuję regulamin sklepu i zasady przetwarzania danych.</span>
+                        <span>
+                            Akceptuję
+                            @if ($termsUrl)
+                                <a href="{{ $termsUrl }}" target="_blank" rel="noopener" class="underline underline-offset-2 hover:opacity-80">regulamin sklepu</a>.
+                            @else
+                                regulamin sklepu.
+                            @endif
+                        </span>
                     </label>
                     @error('accept_terms') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
+
+                    <label class="mt-3 flex items-start gap-3 text-sm">
+                        <input type="checkbox" wire:model="accept_privacy" class="st-border mt-0.5 h-5 w-5 shrink-0 rounded border" style="accent-color: var(--brand);">
+                        <span>
+                            Akceptuję
+                            <a href="{{ $privacyUrl }}" target="_blank" rel="noopener" class="underline underline-offset-2 hover:opacity-80">politykę prywatności</a>
+                            i zasady przetwarzania danych.
+                        </span>
+                    </label>
+                    @error('accept_privacy') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
 
                     <button type="submit" wire:loading.attr="disabled" wire:target="place"
                         class="st-btn mt-6 w-full rounded-full px-8 py-3 text-sm font-semibold shadow-sm transition hover:brightness-105 disabled:opacity-60">

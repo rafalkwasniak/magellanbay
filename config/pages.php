@@ -16,6 +16,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Maksymalna liczba pozycji w kolumnie „Informacje" w STOPCE
+    |--------------------------------------------------------------------------
+    |
+    | Górny limit linków w kolumnie „Informacje" w stopce storefrontu, łącznie
+    | z zawsze doklejaną „Polityką prywatności". Chroni stopkę przed rozjechaniem,
+    | gdy sprzedawca opublikuje dużo stron. Nadmiarowe strony sprzedawcy są
+    | obcinane; menu w NAGŁÓWKU pokazuje pełną listę (limit dotyczy tylko stopki).
+    |
+    */
+
+    'footer_menu_max' => 5,
+
+    /*
+    |--------------------------------------------------------------------------
     | Wirtualna strona „O sklepie"
     |--------------------------------------------------------------------------
     |

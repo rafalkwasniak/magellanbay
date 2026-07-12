@@ -47,6 +47,8 @@ class Checkout extends Component
     public string $note = '';
     public bool $accept_terms = false;
 
+    public bool $accept_privacy = false;
+
     /** Komunikaty z finalnej weryfikacji (auto-korekta koszyka). */
     public array $reviewMessages = [];
 
@@ -114,6 +116,7 @@ class Checkout extends Component
             'payment_method' => ['required', Rule::in(array_keys($this->paymentOptions()))],
             'note' => ['nullable', 'string', 'max:1000'],
             'accept_terms' => ['accepted'],
+            'accept_privacy' => ['accepted'],
             'is_company' => ['boolean'],
         ];
 
@@ -174,6 +177,7 @@ class Checkout extends Component
     {
         return [
             'accept_terms.accepted' => 'Zaakceptuj regulamin, aby złożyć zamówienie.',
+            'accept_privacy.accepted' => 'Zaakceptuj politykę prywatności, aby złożyć zamówienie.',
             'buyer_phone.regex' => PhoneService::RULE_MESSAGE,
         ];
     }
@@ -195,6 +199,7 @@ class Checkout extends Component
             'payment_method' => 'sposób płatności',
             'note' => 'uwagi',
             'accept_terms' => 'regulamin',
+            'accept_privacy' => 'polityka prywatności',
             'company_name' => 'nazwa firmy',
             'company_nip' => 'NIP',
             'company_street' => 'ulica',
@@ -243,6 +248,8 @@ class Checkout extends Component
 
         $shop = $this->shop();
 
+        $termsPage = $shop->pages()->where('is_system', true)->first();
+
         return view('livewire.checkout', [
             'lines' => $lines,
             'formattedTotal' => Money::pln($gross),
@@ -251,6 +258,8 @@ class Checkout extends Component
             'pickupAddress' => $this->pickupAddress($shop),
             'deliveryOptions' => $this->deliveryOptions(),
             'paymentOptions' => $this->paymentOptions(),
+            'termsUrl' => $termsPage?->storefrontPath(),
+            'privacyUrl' => '/polityka-prywatnosci',
         ]);
     }
 

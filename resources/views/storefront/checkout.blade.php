@@ -1,10 +1,15 @@
 <x-layouts.storefront :shop="$shop" title="Kasa">
-    <main class="mx-auto max-w-6xl px-6 py-12">
-        <div class="mb-8 flex items-baseline justify-between gap-4">
-            <h1 class="st-brand text-2xl font-bold tracking-tight sm:text-3xl">Kasa</h1>
-            <a href="/koszyk" wire:navigate class="text-sm underline underline-offset-4 opacity-70 hover:opacity-100">← Wróć do koszyka</a>
-        </div>
+    <main class="mx-auto max-w-6xl px-6 pt-10 pb-16">
+        <x-storefront.breadcrumbs :items="[
+            ['label' => $shop->name, 'url' => '/'],
+            ['label' => 'Koszyk', 'url' => '/koszyk'],
+            ['label' => 'Kasa'],
+        ]" />
 
-        <livewire:checkout :shop-id="$shop->id" />
+        <h1 class="st-brand mt-4 font-serif text-4xl leading-tight tracking-tight sm:text-5xl">Kasa</h1>
+
+        <div class="st-border mt-8 border-t pt-8">
+            <livewire:checkout :shop-id="$shop->id" />
+        </div>
     </main>
 </x-layouts.storefront>

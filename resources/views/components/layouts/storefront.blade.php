@@ -191,8 +191,11 @@
             {{-- Informacje --}}
             <div>
                 <h3 class="text-sm font-semibold">Informacje</h3>
+                {{-- Limit pozycji stopki (config), łącznie z Polityką prywatności:
+                     zostawiamy miejsce na Politykę (zawsze ostatnia), resztę
+                     wypełniają pozycje menu wg kolejności; nadmiar odpada. --}}
                 <ul class="mt-3 space-y-2 text-sm opacity-80">
-                    @foreach ($infoMenu as $item)
+                    @foreach (array_slice($infoMenu, 0, (int) config('pages.footer_menu_max') - 1) as $item)
                         <li><a href="{{ $item['url'] }}" wire:navigate class="transition hover:opacity-100">{{ $item['label'] }}</a></li>
                     @endforeach
                     <li><a href="/polityka-prywatnosci" wire:navigate class="transition hover:opacity-100">Polityka prywatności</a></li>

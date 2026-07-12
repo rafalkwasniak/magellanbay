@@ -103,6 +103,7 @@ class CheckoutTest extends TestCase
             ->set('delivery_method', 'pickup')
             ->set('payment_method', 'bank_transfer')
             ->set('accept_terms', true)
+            ->set('accept_privacy', true)
             ->call('place')
             ->assertRedirect('/kasa/dziekujemy');
 
@@ -137,6 +138,7 @@ class CheckoutTest extends TestCase
             ->set('delivery_method', 'pickup')
             ->set('payment_method', 'bank_transfer')
             ->set('accept_terms', true)
+            ->set('accept_privacy', true)
             ->call('place')
             ->assertRedirect('/kasa/dziekujemy');
 

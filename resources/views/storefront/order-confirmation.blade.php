@@ -1,14 +1,23 @@
 @php use App\Enums\PaymentMethod; use App\Enums\DeliveryMethod; @endphp
 <x-layouts.storefront :shop="$shop" title="Dziękujemy za zamówienie">
-    <main class="mx-auto max-w-6xl px-6 py-12">
-        {{-- Nagłówek --}}
-        <div class="st-card st-border rounded-3xl border p-8 text-center">
-            <div class="st-btn mx-auto flex h-14 w-14 items-center justify-center rounded-full">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-7 w-7" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+    <main class="mx-auto max-w-6xl px-6 pt-10 pb-16">
+        <x-storefront.breadcrumbs :items="[
+            ['label' => $shop->name, 'url' => '/'],
+            ['label' => 'Zamówienie #'.$order->number],
+        ]" />
+
+        <h1 class="st-brand mt-4 font-serif text-4xl leading-tight tracking-tight sm:text-5xl">Dziękujemy za zamówienie</h1>
+
+        <div class="st-border mt-8 border-t pt-8">
+            {{-- Potwierdzenie: ptaszek + numer zamówienia --}}
+            <div class="st-card st-border rounded-3xl border p-8 text-center">
+                <div class="st-btn mx-auto flex h-14 w-14 items-center justify-center rounded-full">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-7 w-7" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+                </div>
+                <p class="mt-5 text-lg font-semibold">Zamówienie zostało złożone!</p>
+                <p class="mt-2 opacity-70">Numer zamówienia: <span class="st-brand font-bold">#{{ $order->number }}</span></p>
+                <p class="mt-1 text-sm opacity-70">Potwierdzenie wysłaliśmy na {{ $order->buyer_email }}.</p>
             </div>
-            <h1 class="mt-5 text-2xl font-bold">Dziękujemy za zamówienie!</h1>
-            <p class="mt-2 opacity-70">Numer zamówienia: <span class="st-brand font-bold">#{{ $order->number }}</span></p>
-            <p class="mt-1 text-sm opacity-70">Potwierdzenie wysłaliśmy na {{ $order->buyer_email }}.</p>
         </div>
 
         <div class="mt-6 grid gap-6 md:grid-cols-2">
