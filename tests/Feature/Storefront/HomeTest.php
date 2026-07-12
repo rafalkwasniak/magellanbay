@@ -30,7 +30,7 @@ class HomeTest extends TestCase
             ->assertOk()
             ->assertSee('Kwiaciarnia Bukiet')
             ->assertSee('--brand', false)          // paleta wstrzyknięta w :root
-            ->assertDontSee('już wkrótce');
+            ->assertDontSee('Zapraszamy wkrótce');
     }
 
     public function test_unknown_subdomain_returns_404(): void
@@ -46,7 +46,7 @@ class HomeTest extends TestCase
 
         $this->get($this->url($shop))
             ->assertOk()
-            ->assertSee('już wkrótce')
+            ->assertSee('Zapraszamy wkrótce')
             ->assertSee('Sklep W Budowie');
     }
 
@@ -59,7 +59,7 @@ class HomeTest extends TestCase
             ->get($this->url($shop))
             ->assertOk()
             ->assertSee('Podgląd Właściciela')
-            ->assertDontSee('już wkrótce');
+            ->assertDontSee('Zapraszamy wkrótce');
     }
 
     public function test_admin_can_preview_draft_shop(): void
@@ -70,7 +70,7 @@ class HomeTest extends TestCase
         $this->actingAs($admin)
             ->get($this->url($shop))
             ->assertOk()
-            ->assertDontSee('już wkrótce');
+            ->assertDontSee('Zapraszamy wkrótce');
     }
 
     public function test_other_seller_does_not_preview_foreign_draft(): void
@@ -81,6 +81,6 @@ class HomeTest extends TestCase
         $this->actingAs($intruder)
             ->get($this->url($shop))
             ->assertOk()
-            ->assertSee('już wkrótce');
+            ->assertSee('Zapraszamy wkrótce');
     }
 }

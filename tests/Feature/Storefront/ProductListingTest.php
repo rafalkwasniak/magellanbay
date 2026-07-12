@@ -262,7 +262,7 @@ class ProductListingTest extends TestCase
 
         $this->get($this->host($shop).'/produkty')
             ->assertOk()
-            ->assertSee('już wkrótce');
+            ->assertSee('Zapraszamy wkrótce');
     }
 
     public function test_home_links_to_catalog_via_menu(): void

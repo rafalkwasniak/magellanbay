@@ -1,4 +1,4 @@
-@props(['shop', 'title' => null])
+@props(['shop', 'title' => null, 'bare' => false])
 
 @php
     $tokens = $shop->themeTokens();
@@ -88,6 +88,7 @@
         <noscript><iframe src="https://www.googletagmanager.com/ns.html?id={{ $gaId }}" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     @endif
 
+    @unless ($bare)
     {{-- Nagłówek globalny — WINIETA. Mobile: kompaktowy pasek (hamburger · brand ·
          koszyk). Desktop: brand wyśrodkowany i duży (logo/serif), cienka linia,
          nav pod spodem. Rozwijane menu i menu mobilne na natywnym <details> —
@@ -158,9 +159,11 @@
             </nav>
         </div>
     </header>
+    @endunless
 
     {{ $slot }}
 
+    @unless ($bare)
     {{-- Stopka globalna: brand · Informacje (te same pozycje co w menu + NASZA
          Polityka prywatności) · Kontakt. Pasek „Sklep na Kramio" na dole.
          Lekki tint z --ink, żeby stopka nie zlewała się ze stroną (jak nagłówek). --}}
@@ -222,6 +225,7 @@
             Sklep zbudowany na <a href="https://{{ config('tenancy.central_domain') }}" class="font-semibold">Kramio</a>
         </div>
     </footer>
+    @endunless
 
     @livewireScripts
 </body>
