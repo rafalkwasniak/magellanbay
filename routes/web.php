@@ -21,9 +21,12 @@ use App\Http\Controllers\Seller\ProductController;
 use App\Http\Controllers\Seller\ProductImageController;
 use App\Http\Controllers\Seller\ShopProfileController;
 use App\Http\Controllers\Seller\ShopSettingsController;
+use App\Http\Controllers\Storefront\ActivationController as StorefrontActivation;
+use App\Http\Controllers\Storefront\AuthController as StorefrontAuth;
 use App\Http\Controllers\Storefront\CartController as StorefrontCart;
 use App\Http\Controllers\Storefront\CheckoutController as StorefrontCheckout;
 use App\Http\Controllers\Storefront\HomeController as StorefrontHome;
+use App\Http\Controllers\Storefront\RegisterController as StorefrontRegister;
 use App\Http\Controllers\Storefront\PageController as StorefrontPage;
 use App\Http\Controllers\Storefront\ProductController as StorefrontProduct;
 use Illuminate\Support\Facades\Route;
@@ -208,4 +211,28 @@ Route::domain('{shop}.'.config('tenancy.central_domain'))
         Route::get('/koszyk', [StorefrontCart::class, 'show'])->name('storefront.cart');
         Route::get('/kasa', [StorefrontCheckout::class, 'show'])->name('storefront.checkout');
         Route::get('/kasa/dziekujemy', [StorefrontCheckout::class, 'confirmation'])->name('storefront.checkout.confirmation');
+
+        /*
+        |----------------------------------------------------------------------
+        | Konta klientów (guard `customer`, w obrębie sklepu)
+        |----------------------------------------------------------------------
+        | Rejestracja bez hasła → podpisany link aktywacyjny mailem → ustawienie
+        | hasła + przypięcie wcześniejszych zamówień + auto-login. Logowanie i
+        | wylogowanie scope'owane do sklepu. Aktywacja pod `signed` (link z maila).
+        */
+        Route::get('/rejestracja', [StorefrontRegister::class, 'create'])->name('storefront.register');
+        Route::post('/rejestracja', [StorefrontRegister::class, 'store'])
+            ->middleware('throttle:10,1')->name('storefront.register.store');
+        Route::get('/rejestracja/potwierdzenie', [StorefrontRegister::class, 'registered'])
+            ->name('storefront.register.confirmation');
+
+        Route::get('/aktywacja/{customer}', [StorefrontActivation::class, 'create'])
+            ->middleware('signed')->name('storefront.activation');
+        Route::post('/aktywacja/{customer}', [StorefrontActivation::class, 'store'])
+            ->middleware('signed')->name('storefront.activation.store');
+
+        Route::get('/logowanie', [StorefrontAuth::class, 'create'])->name('storefront.login');
+        Route::post('/logowanie', [StorefrontAuth::class, 'store'])
+            ->middleware('throttle:10,1')->name('storefront.login.attempt');
+        Route::post('/wyloguj', [StorefrontAuth::class, 'destroy'])->name('storefront.logout');
     });

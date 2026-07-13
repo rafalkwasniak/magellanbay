@@ -107,6 +107,15 @@
                             @foreach ($infoMenu as $item)
                                 <a href="{{ $item['url'] }}" wire:navigate class="st-menu-item st-brand -mx-4 px-4 py-3">{{ $item['label'] }}</a>
                             @endforeach
+                            @auth('customer')
+                                <span class="-mx-4 px-4 pt-3 text-xs uppercase tracking-wide opacity-50">Cześć{{ filled(auth('customer')->user()->name) ? ', '.auth('customer')->user()->name : '' }}</span>
+                                <form method="POST" action="/wyloguj" class="-mx-4">
+                                    @csrf
+                                    <button type="submit" class="st-menu-item st-brand w-full px-4 py-3 text-left">Wyloguj się</button>
+                                </form>
+                            @else
+                                <a href="/logowanie" wire:navigate class="st-menu-item st-brand -mx-4 px-4 py-3">Zaloguj się</a>
+                            @endauth
                         </nav>
                     </div>
                 </details>
@@ -125,8 +134,16 @@
 
         {{-- DESKTOP: winieta wyśrodkowana --}}
         <div class="relative mx-auto hidden max-w-6xl flex-col items-center gap-3 px-6 py-5 md:flex">
-            {{-- Koszyk w prawym rogu --}}
-            <div class="absolute right-6 top-5">
+            {{-- Konto + koszyk w prawym rogu --}}
+            <div class="absolute right-6 top-5 flex items-center gap-5 text-sm font-medium">
+                @auth('customer')
+                    <form method="POST" action="/wyloguj">
+                        @csrf
+                        <button type="submit" class="st-brand transition hover:brightness-95">Wyloguj się</button>
+                    </form>
+                @else
+                    <a href="/logowanie" wire:navigate class="st-brand transition hover:brightness-95">Zaloguj się</a>
+                @endauth
                 <livewire:cart-counter :shop-id="$shop->id" />
             </div>
 

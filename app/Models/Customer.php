@@ -68,4 +68,20 @@ class Customer extends Authenticatable implements MustVerifyEmail
     {
         return $this->email_verified_at !== null && $this->password !== null;
     }
+
+    /**
+     * Przypina do tego konta wszystkie zamówienia gościa złożone na jego e-mail w
+     * jego sklepie (specyfikacja: „Powiązanie wcześniejszych zamówień" — działa
+     * wyłącznie w obrębie danego sklepu). Bierze tylko zamówienia bez właściciela
+     * (`customer_id` = null), dopasowanie e-maila bez względu na wielkość liter.
+     * Zwraca liczbę przypiętych zamówień. Wołane przy aktywacji i w kasie.
+     */
+    public function claimGuestOrders(): int
+    {
+        return Order::query()
+            ->where('shop_id', $this->shop_id)
+            ->whereNull('customer_id')
+            ->whereRaw('LOWER(buyer_email) = ?', [mb_strtolower($this->email)])
+            ->update(['customer_id' => $this->id]);
+    }
 }

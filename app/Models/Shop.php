@@ -120,6 +120,17 @@ class Shop extends Model
     }
 
     /**
+     * Klienci tego sklepu (konta storefrontu). Odseparowani między sklepami —
+     * ten sam e-mail bywa klientem wielu sklepów niezależnie.
+     *
+     * @return HasMany<Customer, $this>
+     */
+    public function customers(): HasMany
+    {
+        return $this->hasMany(Customer::class);
+    }
+
+    /**
      * Alokuje kolejny numer zamówienia tego sklepu — atomowo, przez blokadę
      * wiersza sklepu (unika kolizji przy równoczesnych zamówieniach). Numeracja
      * jest ciągła i nieodzyskiwana: licznik rośnie niezależnie od anulowania czy
