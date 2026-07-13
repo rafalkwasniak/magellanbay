@@ -60,6 +60,18 @@ class Order extends Model
     }
 
     /**
+     * Konto klienta, do którego przypięto zamówienie (lub null dla gościa).
+     * Przypięcie następuje po e-mailu w obrębie sklepu — przy aktywacji konta
+     * lub w kasie, gdy e-mail ma już konto.
+     *
+     * @return BelongsTo<Customer, $this>
+     */
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class);
+    }
+
+    /**
      * @return HasMany<OrderItem, $this>
      */
     public function items(): HasMany
