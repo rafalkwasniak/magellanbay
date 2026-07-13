@@ -21,6 +21,7 @@ use App\Http\Controllers\Seller\ProductController;
 use App\Http\Controllers\Seller\ProductImageController;
 use App\Http\Controllers\Seller\ShopProfileController;
 use App\Http\Controllers\Seller\ShopSettingsController;
+use App\Http\Controllers\Storefront\AccountController as StorefrontAccount;
 use App\Http\Controllers\Storefront\ActivationController as StorefrontActivation;
 use App\Http\Controllers\Storefront\AuthController as StorefrontAuth;
 use App\Http\Controllers\Storefront\CartController as StorefrontCart;
@@ -235,4 +236,15 @@ Route::domain('{shop}.'.config('tenancy.central_domain'))
         Route::post('/logowanie', [StorefrontAuth::class, 'store'])
             ->middleware('throttle:10,1')->name('storefront.login.attempt');
         Route::post('/wyloguj', [StorefrontAuth::class, 'destroy'])->name('storefront.logout');
+
+        // Moje konto — tylko zalogowany klient (guard `customer`): historia
+        // zamówień, dane profilu, zmiana hasła, usunięcie konta (RODO).
+        Route::middleware('auth.customer')->prefix('moje-konto')->name('storefront.account.')->group(function () {
+            Route::get('/', [StorefrontAccount::class, 'index'])->name('index');
+            Route::get('/zamowienia/{order}', [StorefrontAccount::class, 'order'])->name('order');
+            Route::get('/dane', [StorefrontAccount::class, 'edit'])->name('edit');
+            Route::post('/dane', [StorefrontAccount::class, 'update'])->name('update');
+            Route::post('/haslo', [StorefrontAccount::class, 'password'])->name('password');
+            Route::post('/usun', [StorefrontAccount::class, 'destroy'])->name('destroy');
+        });
     });

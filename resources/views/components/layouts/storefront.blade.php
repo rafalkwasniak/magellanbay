@@ -109,6 +109,7 @@
                             @endforeach
                             @auth('customer')
                                 <span class="-mx-4 px-4 pt-3 text-xs uppercase tracking-wide opacity-50">Cześć{{ filled(auth('customer')->user()->name) ? ', '.auth('customer')->user()->name : '' }}</span>
+                                <a href="/moje-konto" wire:navigate class="st-menu-item st-brand -mx-4 px-4 py-3">Moje konto</a>
                                 <form method="POST" action="/wyloguj" class="-mx-4">
                                     @csrf
                                     <button type="submit" class="st-menu-item st-brand w-full px-4 py-3 text-left">Wyloguj się</button>
@@ -169,10 +170,7 @@
                      większym odstępem (margines na separatorze ponad gap nawigacji). --}}
                 <span aria-hidden="true" style="width:1px; height:1.35rem; margin:0 0.5rem; background: color-mix(in srgb, var(--ink) 20%, transparent);"></span>
                 @auth('customer')
-                    <form method="POST" action="/wyloguj">
-                        @csrf
-                        <button type="submit" class="st-brand transition hover:brightness-95">Wyloguj się</button>
-                    </form>
+                    <a href="/moje-konto" wire:navigate class="st-brand transition hover:brightness-95">Moje konto</a>
                 @else
                     <a href="/logowanie" wire:navigate class="st-brand transition hover:brightness-95">Zaloguj się</a>
                 @endauth

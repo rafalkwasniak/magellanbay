@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\AuthenticateCustomer;
 use App\Http\Middleware\EnsureConsentsAreCurrent;
 use App\Http\Middleware\EnsureUserHasRole;
 use App\Http\Middleware\ResolveShop;
@@ -20,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => EnsureUserHasRole::class,
             'ensure.consents' => EnsureConsentsAreCurrent::class,
             'tenant' => ResolveShop::class,
+            'auth.customer' => AuthenticateCustomer::class,
         ]);
 
         // Niezalogowani trafiają na ekran logowania.
