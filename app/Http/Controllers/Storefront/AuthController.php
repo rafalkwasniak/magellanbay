@@ -55,7 +55,9 @@ class AuthController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended('/');
+        // Domyślnie prosto do panelu klienta; jeśli klient trafił na logowanie
+        // z chronionej strony, `intended` ma pierwszeństwo i wraca tam.
+        return redirect()->intended('/moje-konto');
     }
 
     public function destroy(Request $request): RedirectResponse

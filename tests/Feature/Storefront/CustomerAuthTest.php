@@ -146,7 +146,7 @@ class CustomerAuthTest extends TestCase
         $this->post($this->host($shop).'/logowanie', [
             'email' => 'log@example.com',
             'password' => 'haslo123!',
-        ])->assertRedirect('/');
+        ])->assertRedirect('/moje-konto');
         $this->assertAuthenticatedAs($customer, 'customer');
 
         $this->post($this->host($shop).'/wyloguj')->assertRedirect('/');

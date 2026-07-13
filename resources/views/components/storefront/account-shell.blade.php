@@ -32,10 +32,10 @@
                                 'st-border border hover:brightness-95' => $active !== $item['key'],
                             ])>{{ $item['label'] }}</a>
                     @endforeach
-                    <form method="POST" action="/wyloguj" class="st-border mt-2 border-t pt-3">
+                    <form method="POST" action="/wyloguj" class="mt-1">
                         @csrf
                         <button type="submit"
-                            class="w-full rounded-xl px-4 py-2.5 text-left opacity-70 transition hover:opacity-100">Wyloguj mnie</button>
+                            class="st-brand w-full rounded-xl px-4 py-2.5 text-left font-medium transition hover:brightness-95">Wyloguj mnie</button>
                     </form>
                 </nav>
             </aside>
