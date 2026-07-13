@@ -134,16 +134,8 @@
 
         {{-- DESKTOP: winieta wyśrodkowana --}}
         <div class="relative mx-auto hidden max-w-6xl flex-col items-center gap-3 px-6 py-5 md:flex">
-            {{-- Konto + koszyk w prawym rogu --}}
-            <div class="absolute right-6 top-5 flex items-center gap-5 text-sm font-medium">
-                @auth('customer')
-                    <form method="POST" action="/wyloguj">
-                        @csrf
-                        <button type="submit" class="st-brand transition hover:brightness-95">Wyloguj się</button>
-                    </form>
-                @else
-                    <a href="/logowanie" wire:navigate class="st-brand transition hover:brightness-95">Zaloguj się</a>
-                @endauth
+            {{-- Koszyk w prawym rogu --}}
+            <div class="absolute right-6 top-5">
                 <livewire:cart-counter :shop-id="$shop->id" />
             </div>
 
@@ -173,6 +165,18 @@
                         </div>
                     </details>
                 @endif
+
+                {{-- Konto — za „Informacje", oddzielone smukłą pionową linią z nieco
+                     większym odstępem (margines na separatorze ponad gap nawigacji). --}}
+                <span aria-hidden="true" style="width:1px; height:1.35rem; margin:0 0.5rem; background: color-mix(in srgb, var(--ink) 20%, transparent);"></span>
+                @auth('customer')
+                    <form method="POST" action="/wyloguj">
+                        @csrf
+                        <button type="submit" class="st-brand transition hover:brightness-95">Wyloguj się</button>
+                    </form>
+                @else
+                    <a href="/logowanie" wire:navigate class="st-brand transition hover:brightness-95">Zaloguj się</a>
+                @endauth
             </nav>
         </div>
     </header>
