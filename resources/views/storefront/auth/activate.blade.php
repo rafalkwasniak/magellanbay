@@ -1,11 +1,11 @@
-<x-layouts.storefront :shop="$shop" title="Aktywacja konta">
+<x-layouts.storefront :shop="$shop" title="Aktywuj konto">
     <main class="mx-auto max-w-6xl px-6 pt-10 pb-16">
         <x-storefront.breadcrumbs :items="[
             ['label' => $shop->name, 'url' => '/'],
-            ['label' => 'Aktywacja konta'],
+            ['label' => 'Aktywuj konto'],
         ]" />
 
-        <h1 class="st-brand mt-4 font-serif text-4xl leading-tight tracking-tight sm:text-5xl">Ustaw hasło</h1>
+        <h1 class="st-brand mt-4 font-serif text-4xl leading-tight tracking-tight sm:text-5xl">Aktywuj konto</h1>
 
         <div class="st-border mt-8 border-t pt-8">
             <div class="mx-auto max-w-md">
