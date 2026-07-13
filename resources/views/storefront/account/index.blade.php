@@ -1,45 +1,74 @@
-<x-layouts.storefront :shop="$shop" title="Moje konto">
-    <main class="mx-auto max-w-6xl px-6 pt-10 pb-16">
-        <x-storefront.breadcrumbs :items="[
-            ['label' => $shop->name, 'url' => '/'],
-            ['label' => 'Moje konto'],
-        ]" />
-
-        <h1 class="st-brand mt-4 font-serif text-4xl leading-tight tracking-tight sm:text-5xl">Moje konto</h1>
-
-        @include('storefront.account.nav', ['active' => 'orders'])
-
-        @if (session('status'))
-            <div class="st-card st-border mt-6 rounded-xl border p-4 text-sm">{{ session('status') }}</div>
-        @endif
-
-        <div class="st-border mt-8 border-t pt-8">
-            <h2 class="font-semibold">Historia zamówień</h2>
-
-            @if ($orders->isEmpty())
-                <div class="st-card st-border mt-4 rounded-3xl border p-10 text-center">
-                    <p class="opacity-70">Nie masz jeszcze zamówień.</p>
-                    <a href="/produkty" wire:navigate class="st-brand mt-2 inline-block text-sm underline underline-offset-2">Przejdź do produktów</a>
+<x-storefront.account-shell :shop="$shop" active="overview" heading="Moje konto" :crumbs="[
+    ['label' => $shop->name, 'url' => '/'],
+    ['label' => 'Moje konto'],
+]">
+    {{-- Dane klienta --}}
+    <div class="st-card st-border rounded-3xl border p-6">
+        <h2 class="font-semibold">Cześć{{ $customer->name ? ', '.$customer->name : '' }}!</h2>
+        <dl class="mt-4 grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
+            <div class="flex justify-between gap-3 sm:block">
+                <dt class="opacity-60">Imię i nazwisko</dt>
+                <dd class="font-medium sm:mt-0.5">{{ trim($customer->name.' '.$customer->surname) ?: '—' }}</dd>
+            </div>
+            <div class="flex justify-between gap-3 sm:block">
+                <dt class="opacity-60">E-mail</dt>
+                <dd class="font-medium sm:mt-0.5">{{ $customer->email }}</dd>
+            </div>
+            @if ($customer->phone)
+                <div class="flex justify-between gap-3 sm:block">
+                    <dt class="opacity-60">Telefon</dt>
+                    <dd class="font-medium sm:mt-0.5">{{ $customer->phone }}</dd>
                 </div>
-            @else
-                <ul class="mt-4 space-y-3">
-                    @foreach ($orders as $order)
-                        <li>
-                            <a href="/moje-konto/zamowienia/{{ $order->id }}" wire:navigate
-                                class="st-card st-border flex flex-wrap items-center justify-between gap-4 rounded-2xl border p-4 transition hover:brightness-[0.98]">
-                                <div>
-                                    <span class="font-semibold">Zamówienie #{{ $order->number }}</span>
-                                    <span class="block text-xs opacity-60">{{ $order->created_at->format('d.m.Y') }} · {{ $order->items_count }} poz.</span>
-                                </div>
-                                <div class="flex items-center gap-4">
-                                    <span class="rounded-full px-2.5 py-1 text-xs font-medium {{ $order->status->badgeClasses() }}">{{ $order->status->label() }}</span>
-                                    <span class="font-bold tabular-nums">{{ \App\Support\Money::pln($order->total_gross) }}</span>
-                                </div>
-                            </a>
-                        </li>
-                    @endforeach
-                </ul>
             @endif
+        </dl>
+    </div>
+
+    {{-- Statystyki --}}
+    <div class="mt-6 grid gap-4 sm:grid-cols-2">
+        <div class="st-card st-border rounded-2xl border p-5">
+            <p class="text-xs uppercase tracking-wide opacity-50">Złożone zamówienia</p>
+            <p class="mt-1 text-3xl font-bold tabular-nums">{{ $ordersCount }}</p>
         </div>
-    </main>
-</x-layouts.storefront>
+        <div class="st-card st-border rounded-2xl border p-5">
+            <p class="text-xs uppercase tracking-wide opacity-50">Łączna wartość zamówień</p>
+            <p class="mt-1 text-3xl font-bold tabular-nums">{{ \App\Support\Money::pln($totalSpent) }}</p>
+        </div>
+    </div>
+
+    {{-- Ostatnie zamówienie --}}
+    @if ($lastOrder)
+        <div class="mt-8">
+            <h2 class="font-semibold">Ostatnie zamówienie</h2>
+            <a href="/moje-konto/zamowienia/{{ $lastOrder->id }}" wire:navigate
+                class="st-card st-border mt-3 flex flex-wrap items-center justify-between gap-4 rounded-2xl border p-4 transition hover:brightness-[0.98]">
+                <div>
+                    <span class="font-semibold">Zamówienie #{{ $lastOrder->number }}</span>
+                    <span class="block text-xs opacity-60">{{ $lastOrder->created_at->format('d.m.Y') }} · {{ $lastOrder->items_count }} poz.</span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <span class="rounded-full px-2.5 py-1 text-xs font-medium {{ $lastOrder->status->badgeClasses() }}">{{ $lastOrder->status->label() }}</span>
+                    <span class="font-bold tabular-nums">{{ \App\Support\Money::pln($lastOrder->total_gross) }}</span>
+                </div>
+            </a>
+        </div>
+    @else
+        <div class="st-card st-border mt-8 rounded-3xl border p-10 text-center">
+            <p class="opacity-70">Nie masz jeszcze żadnych zamówień.</p>
+            <a href="/produkty" wire:navigate class="st-brand mt-2 inline-block text-sm underline underline-offset-2">Przejdź do produktów</a>
+        </div>
+    @endif
+
+    {{-- Usunięcie konta (RODO) — cichy „danger zone" na dole --}}
+    <div class="mt-12 rounded-3xl border border-rose-300 p-6">
+        <h2 class="font-semibold text-rose-700">Usuń konto</h2>
+        <p class="mt-1 max-w-xl text-sm opacity-70">
+            Trwale usuniemy Twoje konto i dane profilu. Złożone zamówienia pozostaną u sprzedawcy
+            (na potrzeby rozliczeń), ale nie będą już powiązane z kontem. Tej operacji nie można cofnąć.
+        </p>
+        <form method="POST" action="/moje-konto/usun" class="mt-4"
+            onsubmit="return confirm('Na pewno usunąć konto? Tej operacji nie można cofnąć.');">
+            @csrf
+            <button type="submit" class="rounded-xl border border-rose-400 px-5 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-50">Usuń konto na zawsze</button>
+        </form>
+    </div>
+</x-storefront.account-shell>

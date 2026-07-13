@@ -241,6 +241,7 @@ Route::domain('{shop}.'.config('tenancy.central_domain'))
         // zamówień, dane profilu, zmiana hasła, usunięcie konta (RODO).
         Route::middleware('auth.customer')->prefix('moje-konto')->name('storefront.account.')->group(function () {
             Route::get('/', [StorefrontAccount::class, 'index'])->name('index');
+            Route::get('/zamowienia', [StorefrontAccount::class, 'orders'])->name('orders');
             Route::get('/zamowienia/{order}', [StorefrontAccount::class, 'order'])->name('order');
             Route::get('/dane', [StorefrontAccount::class, 'edit'])->name('edit');
             Route::post('/dane', [StorefrontAccount::class, 'update'])->name('update');

@@ -48,6 +48,47 @@ class CustomerAccountAreaTest extends TestCase
             ->assertDontSee('#303');
     }
 
+    public function test_orders_list_shows_all_customer_orders(): void
+    {
+        $shop = Shop::factory()->create();
+        $customer = Customer::factory()->for($shop)->create();
+        $other = Customer::factory()->for($shop)->create();
+
+        Order::factory()->for($shop)->create(['customer_id' => $customer->id, 'number' => 101]);
+        Order::factory()->for($shop)->create(['customer_id' => $customer->id, 'number' => 102]);
+        Order::factory()->for($shop)->create(['customer_id' => $other->id, 'number' => 202]);
+
+        $this->actingAs($customer, 'customer')
+            ->get($this->host($shop).'/moje-konto/zamowienia')
+            ->assertOk()
+            ->assertSee('#101')
+            ->assertSee('#102')
+            ->assertDontSee('#202');
+    }
+
+    public function test_orders_list_paginates_by_ten(): void
+    {
+        $shop = Shop::factory()->create();
+        $customer = Customer::factory()->for($shop)->create();
+
+        // 11 zamówień (numery bez kolizji podłańcuchów): najnowsze (#1011) na
+        // 1. stronie, najstarsze (#1001) spycha się na 2. — dowód podziału po 10.
+        for ($n = 1001; $n <= 1011; $n++) {
+            Order::factory()->for($shop)->create(['customer_id' => $customer->id, 'number' => $n]);
+        }
+
+        $this->actingAs($customer, 'customer');
+
+        $this->get($this->host($shop).'/moje-konto/zamowienia')
+            ->assertOk()
+            ->assertSee('Zamówienie #1011')
+            ->assertDontSee('Zamówienie #1001');
+
+        $this->get($this->host($shop).'/moje-konto/zamowienia?page=2')
+            ->assertOk()
+            ->assertSee('Zamówienie #1001');
+    }
+
     public function test_order_detail_is_scoped_to_customer(): void
     {
         $shop = Shop::factory()->create();
@@ -61,6 +102,30 @@ class CustomerAccountAreaTest extends TestCase
 
         $this->get($this->host($shop).'/moje-konto/zamowienia/'.$mine->id)->assertOk()->assertSee('#'.$mine->number);
         $this->get($this->host($shop).'/moje-konto/zamowienia/'.$theirs->id)->assertNotFound();
+    }
+
+    public function test_order_detail_back_link_remembers_listing_page(): void
+    {
+        $shop = Shop::factory()->create();
+        $customer = Customer::factory()->for($shop)->create();
+        $order = Order::factory()->for($shop)->create(['customer_id' => $customer->id]);
+
+        $this->actingAs($customer, 'customer')
+            ->get($this->host($shop).'/moje-konto/zamowienia/'.$order->id.'?powrot='.urlencode('/moje-konto/zamowienia?page=3'))
+            ->assertOk()
+            ->assertSee('/moje-konto/zamowienia?page=3');
+    }
+
+    public function test_order_detail_back_link_rejects_external_url(): void
+    {
+        $shop = Shop::factory()->create();
+        $customer = Customer::factory()->for($shop)->create();
+        $order = Order::factory()->for($shop)->create(['customer_id' => $customer->id]);
+
+        $this->actingAs($customer, 'customer')
+            ->get($this->host($shop).'/moje-konto/zamowienia/'.$order->id.'?powrot='.urlencode('https://evil.example/phish'))
+            ->assertOk()
+            ->assertDontSee('evil.example');
     }
 
     public function test_profile_can_be_updated(): void

@@ -32,23 +32,33 @@ class AccountController extends Controller
     {
         $customer = $this->customer();
 
-        $orders = $customer->orders()
-            ->withCount('items')
-            ->latest('id')
-            ->get();
-
         return view('storefront.account.index', [
             'customer' => $customer,
+            'ordersCount' => $customer->orders()->count(),
+            'totalSpent' => $customer->orders()->sum('total_gross'),
+            'lastOrder' => $customer->orders()->withCount('items')->latest('id')->first(),
+        ]);
+    }
+
+    public function orders(): Renderable
+    {
+        $orders = $this->customer()->orders()
+            ->withCount('items')
+            ->latest('id')
+            ->paginate(10);
+
+        return view('storefront.account.orders', [
             'orders' => $orders,
         ]);
     }
 
-    public function order(Order $order): Renderable
+    public function order(Order $order, Request $request): Renderable
     {
         $this->authorizeOrder($order);
 
         return view('storefront.account.order', [
             'order' => $order->load('items'),
+            'back' => $this->safeBack($request->query('powrot')),
         ]);
     }
 
@@ -99,5 +109,22 @@ class AccountController extends Controller
     private function authorizeOrder(Order $order): void
     {
         abort_unless($order->customer_id === $this->customer()->id, 404);
+    }
+
+    /**
+     * Cel „← Powrót" ze szczegółu zamówienia = URL listy zapamiętany przy wejściu
+     * (z paginacją: `?page=2`). Tylko ścieżka lokalna — obcina open-redirect
+     * (`//host`, `/\host`, `http://…`). Brak/nieprawidłowy → lista zamówień.
+     */
+    private function safeBack(mixed $back): string
+    {
+        if (is_string($back)
+            && str_starts_with($back, '/')
+            && ! str_starts_with($back, '//')
+            && ! str_starts_with($back, '/\\')) {
+            return $back;
+        }
+
+        return '/moje-konto/zamowienia';
     }
 }
