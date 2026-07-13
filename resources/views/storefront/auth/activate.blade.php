@@ -1,12 +1,20 @@
 <x-layouts.storefront :shop="$shop" title="Aktywacja konta">
-    <main class="mx-auto max-w-md px-6 pt-10 pb-16">
-        <h1 class="st-brand font-serif text-4xl leading-tight tracking-tight sm:text-5xl">Ustaw hasło</h1>
-        <p class="mt-3 text-sm leading-relaxed opacity-70">
-            Kończysz zakładanie konta dla <strong class="st-brand">{{ $customer->email }}</strong>.
-            Ustaw hasło — dane poniżej możesz uzupełnić teraz albo później w profilu.
-        </p>
+    <main class="mx-auto max-w-6xl px-6 pt-10 pb-16">
+        <x-storefront.breadcrumbs :items="[
+            ['label' => $shop->name, 'url' => '/'],
+            ['label' => 'Aktywacja konta'],
+        ]" />
 
-        <div class="st-card st-border mt-8 rounded-2xl border p-6">
+        <h1 class="st-brand mt-4 font-serif text-4xl leading-tight tracking-tight sm:text-5xl">Ustaw hasło</h1>
+
+        <div class="st-border mt-8 border-t pt-8">
+            <div class="mx-auto max-w-md">
+                <p class="text-sm leading-relaxed opacity-70">
+                    Kończysz zakładanie konta dla <strong class="st-brand">{{ $customer->email }}</strong>.
+                    Ustaw hasło — dane poniżej możesz uzupełnić teraz albo później w profilu.
+                </p>
+
+                <div class="st-card st-border mt-6 rounded-2xl border p-6">
             <form method="POST" action="{{ $actionUrl }}" class="space-y-4">
                 @csrf
 
@@ -51,6 +59,8 @@
                     Aktywuj konto
                 </button>
             </form>
+                </div>
+            </div>
         </div>
     </main>
 </x-layouts.storefront>
