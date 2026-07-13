@@ -5,7 +5,7 @@
             ['label' => 'Produkty'],
         ]" />
 
-        <h1 class="st-brand mt-4 font-serif text-4xl leading-tight tracking-tight">Produkty</h1>
+        <h1 class="st-brand mt-4 font-serif text-4xl leading-tight tracking-tight sm:text-5xl">Produkty</h1>
 
         <div class="st-border mt-8 border-t"></div>
 
