@@ -148,8 +148,7 @@
                 @endif
             </a>
 
-            {{-- Cienka linia + nawigacja --}}
-            <span class="h-px w-14" style="background: color-mix(in srgb, var(--ink) 18%, transparent);"></span>
+            {{-- Nawigacja --}}
             <nav class="flex items-center gap-8 text-base font-medium">
                 <a href="/produkty" wire:navigate class="st-brand transition hover:brightness-95">Produkty</a>
                 @if (count($infoMenu))
