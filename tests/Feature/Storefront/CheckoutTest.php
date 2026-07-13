@@ -3,6 +3,7 @@
 namespace Tests\Feature\Storefront;
 
 use App\Livewire\Checkout;
+use App\Models\Customer;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\Shop;
@@ -147,6 +148,104 @@ class CheckoutTest extends TestCase
         $this->assertSame('jan@example.com', $order->buyer_email);
         $this->assertSame(1, $order->number);
         $this->assertSame($order->id, session()->get('recent_order_id'));
+        // Gość bez „załóż konto" — brak powiązania z kontem.
+        $this->assertNull($order->customer_id);
+    }
+
+    private function fillValidCheckout(Shop $shop): \Livewire\Features\SupportTesting\Testable
+    {
+        return Livewire::test(Checkout::class, ['shopId' => $shop->id])
+            ->set('buyer_name', 'Jan')
+            ->set('buyer_surname', 'Kowalski')
+            ->set('buyer_email', 'jan@example.com')
+            ->set('buyer_phone', '123456789')
+            ->set('delivery_method', 'pickup')
+            ->set('payment_method', 'bank_transfer')
+            ->set('accept_terms', true)
+            ->set('accept_privacy', true);
+    }
+
+    public function test_create_account_makes_unactivated_customer_and_links_order(): void
+    {
+        $shop = $this->shopReadyForOrders();
+        $this->cartProduct($shop);
+
+        $this->fillValidCheckout($shop)
+            ->set('create_account', true)
+            ->call('place')
+            ->assertRedirect('/kasa/dziekujemy');
+
+        $customer = Customer::where('shop_id', $shop->id)->where('email', 'jan@example.com')->first();
+        $this->assertNotNull($customer);
+        $this->assertFalse($customer->isActivated());
+        $this->assertSame('Jan', $customer->name);
+        // Telefon zapisany w formie kanonicznej (48 + 9 cyfr), jak w zamówieniu.
+        $this->assertSame('48123456789', $customer->phone);
+        $this->assertSame($customer->id, Order::first()->customer_id);
+
+        // Link aktywacyjny „od sklepu" w kolejce.
+        $this->assertDatabaseHas('email_messages', [
+            'to_email' => 'jan@example.com',
+            'subject' => 'Aktywuj swoje konto — '.$shop->name,
+        ]);
+    }
+
+    public function test_order_silently_links_to_existing_account_without_activation(): void
+    {
+        $shop = $this->shopReadyForOrders();
+        $this->cartProduct($shop);
+        $existing = Customer::factory()->for($shop)->create(['email' => 'jan@example.com']);
+
+        // Nawet z zaznaczonym „załóż konto" — konto istnieje, więc tylko dopięcie.
+        $this->fillValidCheckout($shop)
+            ->set('create_account', true)
+            ->call('place')
+            ->assertRedirect('/kasa/dziekujemy');
+
+        $this->assertSame($existing->id, Order::first()->customer_id);
+        $this->assertSame(1, Customer::where('shop_id', $shop->id)->count());
+        $this->assertDatabaseMissing('email_messages', [
+            'to_email' => 'jan@example.com',
+            'subject' => 'Aktywuj swoje konto — '.$shop->name,
+        ]);
+    }
+
+    public function test_matching_is_case_insensitive(): void
+    {
+        $shop = $this->shopReadyForOrders();
+        $this->cartProduct($shop);
+        $existing = Customer::factory()->for($shop)->create(['email' => 'jan@example.com']);
+
+        $this->fillValidCheckout($shop)
+            ->set('buyer_email', 'JAN@Example.com')
+            ->call('place')
+            ->assertRedirect('/kasa/dziekujemy');
+
+        $this->assertSame($existing->id, Order::first()->customer_id);
+        $this->assertSame(1, Customer::where('shop_id', $shop->id)->count());
+    }
+
+    public function test_logged_in_customer_order_links_to_their_account(): void
+    {
+        $shop = $this->shopReadyForOrders();
+        $this->cartProduct($shop);
+        $customer = Customer::factory()->for($shop)->create([
+            'name' => 'Ala', 'surname' => 'Nowak', 'email' => 'ala@example.com', 'phone' => '48500600700',
+        ]);
+
+        $this->actingAs($customer, 'customer');
+
+        Livewire::test(Checkout::class, ['shopId' => $shop->id])
+            // dane wypełnione z konta w mount() — dokładamy tylko metody i zgody
+            ->assertSet('buyer_email', 'ala@example.com')
+            ->set('delivery_method', 'pickup')
+            ->set('payment_method', 'bank_transfer')
+            ->set('accept_terms', true)
+            ->set('accept_privacy', true)
+            ->call('place')
+            ->assertRedirect('/kasa/dziekujemy');
+
+        $this->assertSame($customer->id, Order::first()->customer_id);
     }
 
     public function test_nip_lookup_fills_company_fields(): void

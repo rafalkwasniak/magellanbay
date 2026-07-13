@@ -6,6 +6,7 @@ use App\Enums\DeliveryMethod;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Exceptions\CartNeedsReviewException;
+use App\Models\Customer;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\Shop;
@@ -24,14 +25,21 @@ class OrderService
         private CartService $cart,
         private OrderMailer $mailer,
         private OrderTotals $totals,
+        private CustomerActivationMailer $activationMailer,
     ) {}
 
     /**
      * @param  array<string, mixed>  $data  zwalidowane dane kupującego + metody
+     * @param  ?Customer  $authCustomer  zalogowany klient (jeśli jest) — do niego
+     *                                   przypinamy zamówienie bez pytania o e-mail
      */
-    public function place(Shop $shop, array $data): Order
+    public function place(Shop $shop, array $data, ?Customer $authCustomer = null): Order
     {
-        $order = DB::transaction(function () use ($shop, $data): Order {
+        // Ustalone w transakcji, użyte po commicie (mail aktywacyjny dla nowego konta).
+        $customer = null;
+        $needsActivation = false;
+
+        $order = DB::transaction(function () use ($shop, $data, $authCustomer, &$customer, &$needsActivation): Order {
             $raw = $this->cart->raw($shop->id);
 
             if ($raw === []) {
@@ -82,7 +90,13 @@ class OrderService
                 throw new CartNeedsReviewException(array_values(array_unique($messages)));
             }
 
-            $order = $this->createOrder($shop, $data, $lines);
+            // Rozwiązanie konta klienta (po uzgodnieniu koszyka, bo tylko gdy
+            // zamówienie faktycznie powstaje): zalogowany → jego konto; e-mail z
+            // kontem → cicho dopisz; „załóż konto" na wolnym e-mailu → nowe konto
+            // nieaktywne (mail aktywacyjny po commicie); inaczej gość.
+            [$customer, $needsActivation] = $this->resolveCustomer($shop, $data, $authCustomer);
+
+            $order = $this->createOrder($shop, $data, $lines, $customer);
 
             // Powiadomienie „nowe zamówienie" dla sprzedawcy — licznik na sklepie
             // rośnie atomowo (UPDATE … + 1), zeruje wejście na listę Zamówień.
@@ -99,7 +113,53 @@ class OrderService
         $this->mailer->confirmToCustomer($order);
         $this->mailer->notifySeller($order);
 
+        // Nowe konto z kasy: link aktywacyjny „od sklepu" (double-opt-in), by klient
+        // ustawił hasło. Zamówienie jest już przypięte do tego konta (customer_id).
+        if ($needsActivation && $customer !== null) {
+            $this->activationMailer->send($customer);
+        }
+
         return $order;
+    }
+
+    /**
+     * Ustala konto klienta dla zamówienia i czy trzeba wysłać link aktywacyjny.
+     * Kolejność: (1) zalogowany klient tego sklepu wygrywa; (2) istniejące konto
+     * na ten e-mail w tym sklepie — cicha migawka do historii (bez maila); (3)
+     * zaznaczono „załóż konto" na wolnym e-mailu — nowe konto NIEAKTYWNE z danymi
+     * z kasy (mail aktywacyjny po commicie); (4) w innym razie gość (null).
+     *
+     * @param  array<string, mixed>  $data
+     * @return array{0: ?Customer, 1: bool}
+     */
+    private function resolveCustomer(Shop $shop, array $data, ?Customer $authCustomer): array
+    {
+        if ($authCustomer !== null && $authCustomer->shop_id === $shop->id) {
+            return [$authCustomer, false];
+        }
+
+        $email = (string) ($data['buyer_email'] ?? '');
+
+        $existing = $shop->customers()
+            ->whereRaw('LOWER(email) = ?', [mb_strtolower($email)])
+            ->first();
+
+        if ($existing !== null) {
+            return [$existing, false];
+        }
+
+        if (! empty($data['create_account']) && filled($email)) {
+            $customer = $shop->customers()->create([
+                'email' => $email,
+                'name' => $data['buyer_name'] ?? null,
+                'surname' => $data['buyer_surname'] ?? null,
+                'phone' => $data['buyer_phone'] ?? null,
+            ]);
+
+            return [$customer, true];
+        }
+
+        return [null, false];
     }
 
     /**
@@ -108,7 +168,7 @@ class OrderService
      * @param  array<string, mixed>  $data
      * @param  list<array{product: Product, quantity: float}>  $lines
      */
-    private function createOrder(Shop $shop, array $data, array $lines): Order
+    private function createOrder(Shop $shop, array $data, array $lines, ?Customer $customer = null): Order
     {
         $itemRows = [];
 
@@ -135,6 +195,7 @@ class OrderService
 
         $order = $shop->orders()->create([
             'number' => $shop->allocateOrderNumber(),
+            'customer_id' => $customer?->id,
             'status' => OrderStatus::New,
             'buyer_name' => $data['buyer_name'],
             'buyer_surname' => $data['buyer_surname'],

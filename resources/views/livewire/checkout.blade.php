@@ -46,7 +46,7 @@
                         </div>
                         <div>
                             <label for="buyer_email" class="block text-sm opacity-80">E-mail</label>
-                            <input type="email" id="buyer_email" wire:model="buyer_email" class="st-border mt-1 block w-full rounded-xl border bg-transparent px-3 py-2.5 text-sm focus:outline-none">
+                            <input type="email" id="buyer_email" wire:model.blur="buyer_email" class="st-border mt-1 block w-full rounded-xl border bg-transparent px-3 py-2.5 text-sm focus:outline-none">
                             @error('buyer_email') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
                         </div>
                         <div>
@@ -55,6 +55,24 @@
                             @error('buyer_phone') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
                         </div>
                     </div>
+
+                    {{-- Konto klienta: zalogowany → info; e-mail z kontem → dopiszemy do
+                         historii; wolny e-mail → opcja założenia konta (mail aktywacyjny). --}}
+                    @if ($this->authCustomer)
+                        <p class="mt-4 text-sm opacity-70">
+                            Zamawiasz jako <strong class="st-brand">{{ $this->authCustomer->email }}</strong> — zamówienie trafi do historii Twojego konta.
+                        </p>
+                    @elseif ($this->accountExists)
+                        <p class="mt-4 text-sm opacity-70">
+                            Ten e-mail ma już konto w tym sklepie — dopiszemy zamówienie do jego historii.
+                            <a href="/logowanie" class="st-brand underline underline-offset-2">Zaloguj się</a>
+                        </p>
+                    @else
+                        <label class="mt-4 flex items-start gap-3 text-sm">
+                            <input type="checkbox" wire:model="create_account" class="st-border mt-0.5 h-5 w-5 rounded border" style="accent-color: var(--brand);">
+                            <span>Załóż konto na ten e-mail — po zamówieniu wyślemy link do ustawienia hasła. Zobaczysz historię zamówień i szybciej złożysz kolejne.</span>
+                        </label>
+                    @endif
 
                     {{-- Kupuję jako firma --}}
                     <label class="mt-5 flex items-center gap-3 text-sm">

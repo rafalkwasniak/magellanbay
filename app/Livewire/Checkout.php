@@ -5,6 +5,7 @@ namespace App\Livewire;
 use App\Enums\DeliveryMethod;
 use App\Enums\PaymentMethod;
 use App\Exceptions\CartNeedsReviewException;
+use App\Models\Customer;
 use App\Models\Shop;
 use App\Services\CartService;
 use App\Services\CompanyLookup;
@@ -12,7 +13,9 @@ use App\Services\NipService;
 use App\Services\OrderService;
 use App\Services\PhoneService;
 use App\Support\Money;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
+use Livewire\Attributes\Computed;
 use Livewire\Component;
 
 /**
@@ -49,6 +52,9 @@ class Checkout extends Component
 
     public bool $accept_privacy = false;
 
+    /** „Załóż konto" — działa tylko dla gościa z wolnym e-mailem (patrz resolveCustomer). */
+    public bool $create_account = false;
+
     /** Komunikaty z finalnej weryfikacji (auto-korekta koszyka). */
     public array $reviewMessages = [];
 
@@ -58,11 +64,44 @@ class Checkout extends Component
 
         $this->delivery_method = array_key_first($this->deliveryOptions()) ?? '';
         $this->payment_method = array_key_first($this->paymentOptions()) ?? '';
+
+        // Zalogowany klient tego sklepu: uzupełnij dane z konta (edytowalne).
+        if (($customer = $this->authCustomer()) !== null) {
+            $this->buyer_name = $customer->name ?? '';
+            $this->buyer_surname = $customer->surname ?? '';
+            $this->buyer_email = $customer->email;
+            $this->buyer_phone = $customer->phone ?? '';
+        }
     }
 
     private function shop(): Shop
     {
         return Shop::findOrFail($this->shopId);
+    }
+
+    /**
+     * Zalogowany klient TEGO sklepu (lub null). Do niego przypniemy zamówienie i
+     * jego danymi wypełniamy kasę; guard `customer` jest scope'owany per sklep.
+     */
+    #[Computed]
+    public function authCustomer(): ?Customer
+    {
+        $customer = Auth::guard('customer')->user();
+
+        return $customer instanceof Customer && $customer->shop_id === $this->shopId ? $customer : null;
+    }
+
+    /**
+     * Czy wpisany e-mail ma już konto w tym sklepie — wtedy zamiast „załóż konto"
+     * pokazujemy informację, że zamówienie trafi do historii istniejącego konta.
+     */
+    #[Computed]
+    public function accountExists(): bool
+    {
+        return filled($this->buyer_email)
+            && $this->shop()->customers()
+                ->whereRaw('LOWER(email) = ?', [mb_strtolower($this->buyer_email)])
+                ->exists();
     }
 
     /**
@@ -118,6 +157,7 @@ class Checkout extends Component
             'accept_terms' => ['accepted'],
             'accept_privacy' => ['accepted'],
             'is_company' => ['boolean'],
+            'create_account' => ['boolean'],
         ];
 
         if ($this->is_company) {
@@ -221,7 +261,7 @@ class Checkout extends Component
         $data = $this->validate();
 
         try {
-            $order = $orders->place($this->shop(), $data);
+            $order = $orders->place($this->shop(), $data, $this->authCustomer());
         } catch (CartNeedsReviewException $e) {
             $this->reviewMessages = $e->messages;
             $this->dispatch('cart-updated');   // licznik i koszyk odświeżone
