@@ -18,4 +18,18 @@ enum PaymentMethod: string
             self::PayOnPickup => 'Płatność przy odbiorze',
         };
     }
+
+    /**
+     * Czy pieniądze mają wpłynąć PRZED wydaniem towaru. To rozstrzyga o ścieżce
+     * statusów (`OrderFlow`): przedpłata zaczyna od „Oczekuje na płatność" i ma
+     * krok „Opłacone", płatność przy odbiorze nie ma czego potwierdzać. Płatności
+     * online (operator) dojdą jako przedpłata z auto-przejściem z webhooka.
+     */
+    public function isPrepaid(): bool
+    {
+        return match ($this) {
+            self::BankTransfer => true,
+            self::PayOnPickup => false,
+        };
+    }
 }

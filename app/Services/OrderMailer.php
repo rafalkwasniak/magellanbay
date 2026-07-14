@@ -4,19 +4,20 @@ namespace App\Services;
 
 use App\Enums\DeliveryMethod;
 use App\Enums\MailPriority;
+use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Models\EmailMessage;
 use App\Models\Order;
+use App\Models\OrderStatusEvent;
 use App\Models\Shop;
 use App\Support\Money;
 
 /**
- * Kolejkuje maile związane ze złożeniem zamówienia (outbox → cron): potwierdzenie
- * dla klienta i powiadomienie dla sprzedawcy. Priorytet Mid (potwierdzenie, nie
- * pilna sprawa jak reset hasła, ale nie newsletter). Treść budowana w blokach —
- * każda pozycja i sekcja w osobnej linii, dla czytelności. Maile o zmianie
- * statusu oraz „Realizuj zamówienie" dojdą w module statusów. `shop_id` niesie
- * branding (per-sklep do podłączenia — patrz pamięć).
+ * Kolejkuje maile zamówienia (outbox → cron): potwierdzenie dla klienta,
+ * powiadomienie dla sprzedawcy i informacja o każdej zmianie statusu. Priorytet
+ * Mid (potwierdzenie, nie pilna sprawa jak reset hasła, ale nie newsletter).
+ * Treść budowana w blokach — każda pozycja i sekcja w osobnej linii, dla
+ * czytelności. `shop_id` niesie branding per-sklep.
  */
 class OrderMailer
 {
@@ -55,6 +56,89 @@ class OrderMailer
             'action_url' => 'https://'.$shop->host(),
             'outro_lines' => [
                 'O kolejnych krokach (przygotowanie, gotowość do odbioru) poinformujemy Cię osobnym e-mailem.',
+            ],
+        ]);
+    }
+
+    /**
+     * Mail do kupującego o KAŻDEJ zmianie statusu — bez wyjątków i bez opcji
+     * wyłączenia. Także przy cofnięciu statusu: klient musi wiedzieć, bo inaczej
+     * przyjedzie odebrać coś, czego nie ma. Niesie całe zamówienie, nowy status,
+     * datę jego ustawienia i notatkę sprzedawcy (jeśli była).
+     */
+    public function statusChanged(Order $order, OrderStatusEvent $event): void
+    {
+        $order->loadMissing(['items', 'shop']);
+        $shop = $order->shop;
+        $status = $event->to_status;
+
+        EmailMessage::create($this->senderIdentity($shop) + [
+            'priority' => MailPriority::Mid,
+            'shop_id' => $shop->id,
+            'to_email' => $order->buyer_email,
+            'to_name' => trim($order->buyer_name.' '.$order->buyer_surname),
+            'subject' => 'Zamówienie #'.$order->number.': '.$status->label().' — '.$shop->name,
+            'preheader' => 'Nowy status Twojego zamówienia: '.$status->label().'.',
+            'heading' => $status->label(),
+            'greeting' => 'Cześć '.$order->buyer_name.',',
+            'intro_lines' => $this->blocks([
+                [
+                    'Status Twojego **zamówienia #'.$order->number.'** w sklepie **'.$shop->name.'** zmienił się na: **'.$status->label().'**.',
+                    'Data zmiany: '.$event->created_at->format('d.m.Y, H:i').'.',
+                ],
+                $this->eventNoteBlock($event),
+                array_merge(
+                    ['**Twoje zamówienie:**'],
+                    $this->productLines($order),
+                    ['Razem: **'.Money::pln($order->total_gross).'**'],
+                ),
+                // Pełne dane do przelewu tylko wtedy, gdy pieniądze wciąż są
+                // oczekiwane — w mailu o „Zrealizowane" numer konta to szum.
+                $status === OrderStatus::AwaitingPayment
+                    ? $this->paymentBlock($order, $shop)
+                    : ['Sposób płatności: '.$order->payment_method->label()],
+                $this->deliveryBlock($order, $shop),
+            ]),
+            'action_text' => 'Wróć do sklepu',
+            'action_url' => 'https://'.$shop->host(),
+        ]);
+    }
+
+    /**
+     * Mail o anulowaniu — osobny od `statusChanged`, choć anulowanie też jest
+     * zmianą statusu. Powód: tamten niesie „co dalej" (adres odbioru, dane do
+     * przelewu), a tu nie ma żadnego „dalej". Zapraszanie po odbiór zamówienia,
+     * które właśnie anulowaliśmy, byłoby okrutne. Zostaje sucha informacja: co
+     * anulowano, za ile i dlaczego — plus wskazanie, gdzie pytać, gdy to pomyłka.
+     */
+    public function cancelled(Order $order, OrderStatusEvent $event): void
+    {
+        $order->loadMissing(['items', 'shop']);
+        $shop = $order->shop;
+
+        EmailMessage::create($this->senderIdentity($shop) + [
+            'priority' => MailPriority::Mid,
+            'shop_id' => $shop->id,
+            'to_email' => $order->buyer_email,
+            'to_name' => trim($order->buyer_name.' '.$order->buyer_surname),
+            'subject' => 'Zamówienie #'.$order->number.' zostało anulowane — '.$shop->name,
+            'preheader' => 'Twoje zamówienie #'.$order->number.' zostało anulowane.',
+            'heading' => 'Zamówienie anulowane',
+            'greeting' => 'Cześć '.$order->buyer_name.',',
+            'intro_lines' => $this->blocks([
+                [
+                    'Twoje **zamówienie #'.$order->number.'** w sklepie **'.$shop->name.'** zostało anulowane.',
+                    'Data anulowania: '.$event->created_at->format('d.m.Y, H:i').'.',
+                ],
+                $this->cancelReasonBlock($event),
+                array_merge(
+                    ['**Anulowane zamówienie obejmowało:**'],
+                    $this->productLines($order),
+                    ['Na kwotę: **'.Money::pln($order->total_gross).'**'],
+                ),
+            ]),
+            'outro_lines' => [
+                'Jeśli to pomyłka lub masz pytania — odpowiedz na tego e-maila, trafi wprost do sklepu.',
             ],
         ]);
     }
@@ -99,7 +183,7 @@ class OrderMailer
                 $this->noteBlock($order, 'Uwagi klienta:'),
             ]),
             'outro_lines' => [
-                'Obsługę statusów zamówienia udostępnimy wkrótce w panelu.',
+                'Zamówienie znajdziesz w panelu, w zakładce Zamówienia — tam ustawisz jego status.',
             ],
         ]);
     }
@@ -144,6 +228,36 @@ class OrderMailer
         }
 
         return ['**'.$label.'**', $order->note];
+    }
+
+    /**
+     * Notatka sprzedawcy dopięta do konkretnej zmiany statusu (nie mylić z
+     * uwagami klienta z kasy — `noteBlock`). Pomijana, gdy pusta.
+     *
+     * @return list<string>
+     */
+    private function eventNoteBlock(OrderStatusEvent $event): array
+    {
+        if (! filled($event->note)) {
+            return [];
+        }
+
+        return ['**Wiadomość od sklepu:**', $event->note];
+    }
+
+    /**
+     * Powód anulowania (notatka zdarzenia). Sprzedawca może go nie podać —
+     * wtedy blok znika i mail nie udaje, że wyjaśnia.
+     *
+     * @return list<string>
+     */
+    private function cancelReasonBlock(OrderStatusEvent $event): array
+    {
+        if (! filled($event->note)) {
+            return [];
+        }
+
+        return ['**Powód anulowania:**', $event->note];
     }
 
     /**

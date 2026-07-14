@@ -3,18 +3,22 @@
 namespace Tests\Feature\Seller;
 
 use App\Enums\OrderStatus;
+use App\Enums\PaymentMethod;
 use App\Livewire\Seller\OrderStatusManager;
+use App\Models\EmailMessage;
 use App\Models\Order;
 use App\Models\Shop;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Tests\TestCase;
 
 /**
- * Zmiana statusu zamówienia w panelu (komponent OrderStatusManager): przejścia
- * są wybaczające, każda zmiana dopisuje zdarzenie do osi czasu, a sprzedawca
- * może ruszać wyłącznie zamówienia własnego sklepu.
+ * Zmiana statusu zamówienia w panelu (komponent OrderStatusManager): wolno
+ * poruszać się wyłącznie po ścieżce zamówienia (`OrderFlow`) — i to twardo, nie
+ * tylko w UI. Każda zmiana dopisuje zdarzenie do osi czasu, anulowane jest
+ * zamrożone, a sprzedawca może ruszać tylko zamówienia własnego sklepu.
  */
 class OrderStatusChangeTest extends TestCase
 {
@@ -38,18 +42,18 @@ class OrderStatusChangeTest extends TestCase
 
         Livewire::actingAs($seller)
             ->test(OrderStatusManager::class, ['order' => $order])
-            ->set('note', 'Zapłacone gotówką')
-            ->call('changeTo', OrderStatus::Paid->value)
+            ->set('note', 'Pakuję dzisiaj')
+            ->call('changeTo', OrderStatus::Processing->value)
             ->assertOk();
 
         $order->refresh();
-        $this->assertSame(OrderStatus::Paid, $order->status);
+        $this->assertSame(OrderStatus::Processing, $order->status);
         $this->assertCount(1, $order->statusEvents);
 
         $event = $order->statusEvents->first();
         $this->assertSame(OrderStatus::New, $event->from_status);
-        $this->assertSame(OrderStatus::Paid, $event->to_status);
-        $this->assertSame('Zapłacone gotówką', $event->note);
+        $this->assertSame(OrderStatus::Processing, $event->to_status);
+        $this->assertSame('Pakuję dzisiaj', $event->note);
     }
 
     public function test_setting_same_status_is_a_no_op(): void
@@ -89,34 +93,162 @@ class OrderStatusChangeTest extends TestCase
         $this->assertSame(OrderStatus::New, $foreign->refresh()->status);
     }
 
-    public function test_pickup_order_recommends_ready_for_pickup_not_shipped(): void
+    public function test_status_outside_the_flow_is_rejected_by_the_backend(): void
     {
-        // Odbiór osobisty (fabryka): „prawdopodobne" prowadzą do „Gotowe do odbioru",
-        // a „Wysłane" ląduje wśród mniej prawdopodobnych. Cancelled nigdy w wyborach.
-        $choices = OrderStatus::Processing->transitionChoices(\App\Enums\DeliveryMethod::Pickup);
+        // Płatność przy odbiorze (fabryka) nie zna „Opłacone" — nie ma czego
+        // potwierdzać. Blokada jest twarda, nie sprowadza się do ukrycia guzika.
+        [$seller, $shop] = $this->sellerWithShop();
+        $order = Order::factory()->for($shop)->create(['status' => OrderStatus::New]);
 
-        $this->assertContains(OrderStatus::ReadyForPickup, $choices['likely']);
-        $this->assertNotContains(OrderStatus::Shipped, $choices['likely']);
-        $this->assertContains(OrderStatus::Shipped, $choices['others']);
-        $this->assertNotContains(OrderStatus::Cancelled, $choices['likely']);
-        $this->assertNotContains(OrderStatus::Cancelled, $choices['others']);
+        Livewire::actingAs($seller)
+            ->test(OrderStatusManager::class, ['order' => $order])
+            ->call('changeTo', OrderStatus::Paid->value);
+
+        $order->refresh();
+        $this->assertSame(OrderStatus::New, $order->status);
+        $this->assertCount(0, $order->statusEvents);
     }
 
-    public function test_recommended_next_step_is_first_in_likely(): void
+    public function test_same_status_is_allowed_on_the_prepaid_flow(): void
     {
-        // Zalecany = pierwszy w „likely" (kolejny krok kanonicznej ścieżki).
-        $choices = OrderStatus::New->transitionChoices(\App\Enums\DeliveryMethod::Pickup);
+        // Kontrola do testu wyżej: „Opłacone" blokuje ścieżka, nie sam status.
+        [$seller, $shop] = $this->sellerWithShop();
+        $order = Order::factory()->for($shop)->create([
+            'status' => OrderStatus::AwaitingPayment,
+            'payment_method' => PaymentMethod::BankTransfer,
+        ]);
 
-        $this->assertSame(OrderStatus::AwaitingPayment, $choices['likely'][0]);
+        Livewire::actingAs($seller)
+            ->test(OrderStatusManager::class, ['order' => $order])
+            ->call('changeTo', OrderStatus::Paid->value);
+
+        $this->assertSame(OrderStatus::Paid, $order->refresh()->status);
     }
 
-    public function test_completed_has_no_forward_steps_but_others_available(): void
+    public function test_cancelled_order_is_frozen(): void
     {
-        // Status końcowy: brak kroków naprzód, ale UI wybaczające — reszta w „others".
-        $choices = OrderStatus::Completed->transitionChoices(\App\Enums\DeliveryMethod::Pickup);
+        // Anulowanie jest nieodwracalne — z „Anulowane" nie ma wyjścia.
+        [$seller, $shop] = $this->sellerWithShop();
+        $order = Order::factory()->for($shop)->create(['status' => OrderStatus::Cancelled]);
 
-        $this->assertSame([], $choices['likely']);
-        $this->assertNotEmpty($choices['others']);
-        $this->assertNotContains(OrderStatus::Cancelled, $choices['others']);
+        Livewire::actingAs($seller)
+            ->test(OrderStatusManager::class, ['order' => $order])
+            ->call('changeTo', OrderStatus::Processing->value);
+
+        $order->refresh();
+        $this->assertSame(OrderStatus::Cancelled, $order->status);
+        $this->assertCount(0, $order->statusEvents);
+    }
+
+    public function test_every_status_change_mails_the_buyer(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+        $order = Order::factory()->for($shop)->create([
+            'status' => OrderStatus::New,
+            'buyer_email' => 'kupujacy@example.com',
+        ]);
+
+        Livewire::actingAs($seller)
+            ->test(OrderStatusManager::class, ['order' => $order])
+            ->set('note', 'Odbiór do piątku')
+            ->call('changeTo', OrderStatus::Processing->value);
+
+        $this->assertSame(1, EmailMessage::count());
+
+        $mail = EmailMessage::first();
+        $this->assertSame('kupujacy@example.com', $mail->to_email);
+        $this->assertSame('Zamówienie #'.$order->number.': W realizacji — '.$shop->name, $mail->subject);
+        $this->assertSame($shop->name, $mail->from_name);       // tożsamość „od sklepu"
+        $this->assertSame($shop->id, $mail->shop_id);           // branding per sklep
+
+        // Notatka sprzedawcy trafia do kupującego wraz ze statusem.
+        $this->assertStringContainsString('Odbiór do piątku', json_encode($mail->intro_lines, JSON_UNESCAPED_UNICODE));
+    }
+
+    public function test_buyer_is_mailed_even_when_status_goes_backwards(): void
+    {
+        // Cofnięcie też leci mailem — inaczej klient przyjedzie po coś, czego nie ma.
+        [$seller, $shop] = $this->sellerWithShop();
+        $order = Order::factory()->for($shop)->create(['status' => OrderStatus::ReadyForPickup]);
+
+        Livewire::actingAs($seller)
+            ->test(OrderStatusManager::class, ['order' => $order])
+            ->call('changeTo', OrderStatus::Processing->value);
+
+        $this->assertSame(OrderStatus::Processing, $order->refresh()->status);
+        $this->assertSame(1, EmailMessage::count());
+    }
+
+    public function test_no_op_and_rejected_changes_send_no_mail(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+        $order = Order::factory()->for($shop)->create(['status' => OrderStatus::New]);
+
+        Livewire::actingAs($seller)
+            ->test(OrderStatusManager::class, ['order' => $order])
+            ->call('changeTo', OrderStatus::New->value)          // ten sam status
+            ->call('changeTo', OrderStatus::Paid->value);        // spoza ścieżki
+
+        // Ani pustego przejścia w historii, ani śmiecia w skrzynce kupującego.
+        $this->assertCount(0, $order->refresh()->statusEvents);
+        $this->assertSame(0, EmailMessage::count());
+    }
+
+    public function test_timeline_shows_the_initial_status_of_a_fresh_order(): void
+    {
+        // Status początkowy nie jest zdarzeniem (nikt go nie zmieniał), więc oś
+        // czasu musi go dołożyć — inaczej świeże zamówienie ma tylko „Złożone".
+        [$seller, $shop] = $this->sellerWithShop();
+        $order = Order::factory()->for($shop)->create([
+            'status' => OrderStatus::AwaitingPayment,
+            'payment_method' => PaymentMethod::BankTransfer,
+        ]);
+
+        Livewire::actingAs($seller)
+            ->test(OrderStatusManager::class, ['order' => $order])
+            ->assertSee('Złożone')
+            ->assertSee('Oczekuje na płatność');
+    }
+
+    public function test_timeline_keeps_the_initial_status_after_it_changes(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+        $order = Order::factory()->for($shop)->create([
+            'status' => OrderStatus::AwaitingPayment,
+            'payment_method' => PaymentMethod::BankTransfer,
+        ]);
+
+        $html = Livewire::actingAs($seller)
+            ->test(OrderStatusManager::class, ['order' => $order])
+            ->call('changeTo', OrderStatus::Paid->value)
+            ->html();
+
+        // Sedno: początkowy „Oczekuje na płatność" NIE znika z osi po zmianie —
+        // wcześniej oś zaczynała się dopiero od pierwszej ZMIANY, więc go zjadała.
+        $timeline = Str::between($html, '<ol', '</ol>');
+        $this->assertStringContainsString('Złożone', $timeline);
+        $this->assertStringContainsString('Oczekuje na płatność', $timeline);
+        $this->assertStringContainsString('Opłacone', $timeline);
+        $this->assertLessThan(
+            strpos($timeline, 'Opłacone'),
+            strpos($timeline, 'Oczekuje na płatność'),
+            'Status początkowy musi stać na osi PRZED tym, na który go zmieniono.',
+        );
+    }
+
+    public function test_panel_lists_only_statuses_from_the_orders_flow(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+        $order = Order::factory()->for($shop)->create([
+            'status' => OrderStatus::AwaitingPayment,
+            'payment_method' => PaymentMethod::BankTransfer,
+        ]);
+
+        Livewire::actingAs($seller)
+            ->test(OrderStatusManager::class, ['order' => $order])
+            ->assertSee('Opłacone')
+            ->assertSee('Gotowe do odbioru')
+            // „Nowe" nie należy do ścieżki przelewu — nie jest chowane, nie istnieje.
+            ->assertDontSee('Nowe');
     }
 }

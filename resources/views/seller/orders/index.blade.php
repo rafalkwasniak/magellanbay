@@ -152,7 +152,9 @@
                      liczone ze wszystkich stron, nie tylko z bieżącej. --}}
                 <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
                     <h2 class="text-sm font-medium text-stone-500">Twoja sprzedaż</h2>
-                    <p class="mt-1 text-xs text-stone-400">{{ $hasFilters ? 'Z wyświetlonych zamówień' : 'Ze wszystkich zamówień' }}</p>
+                    {{-- „bez anulowanych" mówimy wprost: lista niżej je pokazuje, więc
+                         inaczej kafelki wyglądałyby na niezgodne z tym, co widać. --}}
+                    <p class="mt-1 text-xs text-stone-400">{{ $hasFilters ? 'Z wyświetlonych zamówień' : 'Ze wszystkich zamówień' }}, bez anulowanych</p>
                     @php($qty = $stats['products'])
                     <dl class="mt-4 space-y-3">
                         @foreach ([

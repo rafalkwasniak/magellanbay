@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Seller;
 
-use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
 use Illuminate\Contracts\Support\Renderable;
 use Illuminate\Http\Request;
@@ -22,7 +21,7 @@ class DashboardController extends Controller
         $recentOrders = $shop
             ? $shop->orders()
                 ->where('created_at', '>=', now()->subDays(30))
-                ->where('status', '!=', OrderStatus::Cancelled->value)
+                ->countedAsSale()
                 ->get(['id', 'total_gross'])
             : collect();
 

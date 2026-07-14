@@ -76,6 +76,24 @@ class OrderPlacementTest extends TestCase
         $this->assertSame(0, app(CartService::class)->count($shop->id));
     }
 
+    public function test_prepaid_order_starts_awaiting_payment_not_new(): void
+    {
+        $shop = $this->shop();
+        $product = Product::factory()->create([
+            'shop_id' => $shop->id, 'is_active' => true, 'track_stock' => false,
+        ]);
+
+        app(CartService::class)->add($product, 1);
+
+        $order = app(OrderService::class)->place($shop, [
+            ...$this->buyerData(),
+            'payment_method' => 'bank_transfer',
+        ]);
+
+        // Ścieżka przelewu nie zna „Nowego" — od razu czekamy na wpłatę.
+        $this->assertSame(OrderStatus::AwaitingPayment, $order->status);
+    }
+
     public function test_place_aborts_and_adjusts_when_stock_dropped(): void
     {
         $shop = $this->shop();

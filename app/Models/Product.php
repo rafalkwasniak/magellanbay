@@ -57,6 +57,16 @@ class Product extends Model
     }
 
     /**
+     * Czy produkt faktycznie podlega kontroli stanu. Jedno źródło tej bramki dla
+     * koszyka, składania, edycji i zwrotu przy anulowaniu — sam `track_stock` nie
+     * wystarcza, bo bez `stock` nie ma czego liczyć.
+     */
+    public function tracksStock(): bool
+    {
+        return $this->track_stock && $this->stock !== null;
+    }
+
+    /**
      * Zdjęcia produktu w kolejności (najniższa pozycja = główne).
      *
      * @return HasMany<ProductImage, $this>

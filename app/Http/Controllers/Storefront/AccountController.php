@@ -34,8 +34,10 @@ class AccountController extends Controller
 
         return view('storefront.account.index', [
             'customer' => $customer,
-            'ordersCount' => $customer->orders()->count(),
-            'totalSpent' => $customer->orders()->sum('total_gross'),
+            // Anulowane nie są zakupem — nie podbijają ani licznika, ani kwoty
+            // (historia zamówień pokazuje je dalej, patrz `orders()` niżej).
+            'ordersCount' => $customer->orders()->countedAsSale()->count(),
+            'totalSpent' => $customer->orders()->countedAsSale()->sum('total_gross'),
             'lastOrder' => $customer->orders()->withCount('items')->latest('id')->first(),
         ]);
     }

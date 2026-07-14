@@ -60,10 +60,14 @@ class OrderController extends Controller
 
             // Statystyki z CAŁEGO przefiltrowanego zbioru (wszystkie strony, nie tylko
             // bieżąca) — „Twoja sprzedaż" pokazuje to, co realnie wybrały filtry.
-            $orderIds = $this->filteredOrders($shop, $filters)->pluck('orders.id');
+            // Anulowane odpadają (`countedAsSale`), mimo że LISTA je pokazuje: to
+            // karta sprzedaży, a anulowane zamówienie zakupem nie jest. Dlatego
+            // liczba zamówień to własne zapytanie, a nie `$orders->total()` z
+            // paginatora — ten liczy wiersze listy, więc razem z anulowanymi.
+            $orderIds = $this->filteredOrders($shop, $filters)->countedAsSale()->pluck('orders.id');
             $stats = [
-                'orders' => $orders->total(),
-                'revenue' => (float) $this->filteredOrders($shop, $filters)->sum('total_gross'),
+                'orders' => $this->filteredOrders($shop, $filters)->countedAsSale()->count(),
+                'revenue' => (float) $this->filteredOrders($shop, $filters)->countedAsSale()->sum('total_gross'),
                 'products' => (float) DB::table('order_items')->whereIn('order_id', $orderIds)->sum('quantity'),
             ];
         }

@@ -1,15 +1,22 @@
 <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
     <div class="flex items-center justify-between gap-3">
         <h2 class="font-semibold text-stone-900">Pozycje</h2>
-        <button
-            type="button"
-            wire:click="toggleEditing"
-            @class([
-                'inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition',
-                'bg-amber-600 text-white shadow-sm hover:bg-amber-700' => $editing,
-                'border border-amber-200 bg-amber-100 text-amber-800 hover:bg-amber-200' => ! $editing,
-            ])
-        >{{ $editing ? 'Gotowe' : 'Edytuj zamówienie' }}</button>
+        {{-- Anulowane zamówienie jest zamrożone: towar wrócił już na stan, więc
+             edycja pozycji rozjechałaby magazyn. Zamiast martwego guzika mówimy
+             wprost, dlaczego go nie ma. --}}
+        @if ($this->editable())
+            <button
+                type="button"
+                wire:click="toggleEditing"
+                @class([
+                    'inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition',
+                    'bg-amber-600 text-white shadow-sm hover:bg-amber-700' => $editing,
+                    'border border-amber-200 bg-amber-100 text-amber-800 hover:bg-amber-200' => ! $editing,
+                ])
+            >{{ $editing ? 'Gotowe' : 'Edytuj zamówienie' }}</button>
+        @else
+            <span class="rounded-full bg-stone-100 px-3 py-1 text-xs font-medium text-stone-500">Anulowane — tylko podgląd</span>
+        @endif
     </div>
 
     <div class="mt-4 divide-y divide-stone-100">

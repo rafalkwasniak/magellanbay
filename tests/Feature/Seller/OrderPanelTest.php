@@ -122,12 +122,12 @@ class OrderPanelTest extends TestCase
     {
         [$seller, $shop] = $this->sellerWithShop();
         Order::factory()->for($shop)->create(['number' => 1, 'buyer_name' => 'Nowezam', 'status' => \App\Enums\OrderStatus::New]);
-        Order::factory()->for($shop)->create(['number' => 2, 'buyer_name' => 'Wyslanezam', 'status' => \App\Enums\OrderStatus::Shipped]);
+        Order::factory()->for($shop)->create(['number' => 2, 'buyer_name' => 'Gotowezam', 'status' => \App\Enums\OrderStatus::ReadyForPickup]);
 
         $this->actingAs($seller)
-            ->get(route('seller.orders.index', ['status' => 'shipped']))
+            ->get(route('seller.orders.index', ['status' => 'ready_for_pickup']))
             ->assertOk()
-            ->assertSee('Wyslanezam')
+            ->assertSee('Gotowezam')
             ->assertDontSee('Nowezam');
     }
 

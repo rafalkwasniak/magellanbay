@@ -3,9 +3,13 @@
 namespace App\Enums;
 
 /**
- * Statusy zamówień (spec „Statusy zamówień"). Wspólny zestaw dla wszystkich
- * pakietów; maszynę przejść i powiadomienia budujemy w module statusów. Nowe
- * zamówienie startuje w `New`.
+ * Statusy zamówień. Płaska lista wszystkich możliwych stanów — o tym, KTÓRE z
+ * nich dotyczą konkretnego zamówienia i w jakiej kolejności, rozstrzyga ścieżka
+ * (`App\Support\OrderFlow`), bo zależy to od metody płatności i dostawy.
+ *
+ * Nie ma tu „Wysłane": jeśli sklep zrealizował zamówienie, to znaczy, że je
+ * wysłał — para „Wysłane → Zrealizowane" byłaby krokiem bez treści. Wysyłka
+ * dołoży „Gotowe do wysyłki" jako odpowiednik „Gotowe do odbioru".
  */
 enum OrderStatus: string
 {
@@ -14,7 +18,6 @@ enum OrderStatus: string
     case Paid = 'paid';
     case Processing = 'processing';
     case ReadyForPickup = 'ready_for_pickup';
-    case Shipped = 'shipped';
     case Completed = 'completed';
     case Cancelled = 'cancelled';
 
@@ -26,52 +29,19 @@ enum OrderStatus: string
             self::Paid => 'Opłacone',
             self::Processing => 'W realizacji',
             self::ReadyForPickup => 'Gotowe do odbioru',
-            self::Shipped => 'Wysłane',
             self::Completed => 'Zrealizowane',
             self::Cancelled => 'Anulowane',
         };
     }
 
     /**
-     * Wszystkie sensowne przejścia z bieżącego statusu, pogrupowane wg
-     * prawdopodobieństwa dla karty „Zmień status". Wszystkie statusy są od razu
-     * widoczne (bez chowania), tylko poukładane:
-     *  - `likely`  = kroki naprzód po kanonicznej ścieżce; PIERWSZY to zalecany
-     *                kolejny krok. Rozwidlenie odbiór/wysyłka rozstrzyga metoda
-     *                dostawy (`Shipped` vs `ReadyForPickup`).
-     *  - `others`  = mniej prawdopodobne: korekty wstecz i wariant rozwidlenia
-     *                niepasujący do dostawy.
-     * `Cancelled` celowo pomijamy — to wrażliwy status, widok renderuje go osobno
-     * na końcu, z potwierdzeniem.
-     *
-     * @return array{likely: array<int, self>, others: array<int, self>}
+     * Anulowanie to jedyny status nieodwracalny: oddaje towar na stan, więc
+     * powrót musiałby zdjąć go ponownie — a mogło go w międzyczasie zabraknąć.
+     * Anulowane zamówienie zostaje w systemie wyłącznie informacyjnie.
      */
-    public function transitionChoices(DeliveryMethod $delivery): array
+    public function isTerminal(): bool
     {
-        $fork = $delivery->isShipped() ? self::Shipped : self::ReadyForPickup;
-
-        // Kanoniczna ścieżka „szczęśliwa".
-        $pipeline = [
-            self::New,
-            self::AwaitingPayment,
-            self::Paid,
-            self::Processing,
-            $fork,
-            self::Completed,
-        ];
-
-        $index = array_search($this, $pipeline, true);
-        $likely = $index === false ? [] : array_slice($pipeline, $index + 1);
-        $likelyValues = array_map(fn (self $s) => $s->value, $likely);
-
-        $others = array_values(array_filter(
-            self::cases(),
-            fn (self $s) => $s !== $this
-                && $s !== self::Cancelled
-                && ! in_array($s->value, $likelyValues, true),
-        ));
-
-        return ['likely' => $likely, 'others' => $others];
+        return $this === self::Cancelled;
     }
 
     /**
@@ -86,7 +56,6 @@ enum OrderStatus: string
             self::Paid => 'bg-emerald-100 text-emerald-800',
             self::Processing => 'bg-sky-100 text-sky-800',
             self::ReadyForPickup => 'bg-violet-100 text-violet-800',
-            self::Shipped => 'bg-indigo-100 text-indigo-800',
             self::Completed => 'bg-green-100 text-green-800',
             self::Cancelled => 'bg-stone-200 text-stone-600',
         };

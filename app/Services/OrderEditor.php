@@ -33,6 +33,8 @@ class OrderEditor
     public function changeQuantity(OrderItem $item, float $newQuantity): void
     {
         DB::transaction(function () use ($item, $newQuantity): void {
+            $this->guardEditable($item->order()->first());
+
             $product = $this->lockedProduct($item->product_id);
             $newQuantity = $item->sale_unit->normalizeQuantity($newQuantity);
 
@@ -61,6 +63,8 @@ class OrderEditor
         }
 
         DB::transaction(function () use ($item, $newUnitGross): void {
+            $this->guardEditable($item->order()->first());
+
             $item->unit_price_gross = round($newUnitGross, 2);
             $item->save();
 
@@ -76,6 +80,8 @@ class OrderEditor
     public function addProduct(Order $order, int $productId, float $quantity): void
     {
         DB::transaction(function () use ($order, $productId, $quantity): void {
+            $this->guardEditable($order);
+
             $product = Product::where('shop_id', $order->shop_id)
                 ->where('is_active', true)
                 ->whereKey($productId)
@@ -133,12 +139,27 @@ class OrderEditor
             $product = $this->lockedProduct($item->product_id);
             $order = $item->order()->first();
 
+            $this->guardEditable($order);
+
             $this->applyStockDelta($product, (float) $item->quantity, 0.0);
 
             $item->delete();
 
             $this->totals->recalculate($order->load('items'));
         });
+    }
+
+    /**
+     * Anulowane zamówienie jest zamrożone — zostaje w systemie wyłącznie
+     * informacyjnie. To nie jest kosmetyka UI: anulowanie oddało już towar na
+     * stan, więc usunięcie pozycji po fakcie oddałoby go DRUGI raz i rozjechało
+     * magazyn. Bramka siedzi w serwisie, żeby złapać każde wejście.
+     */
+    private function guardEditable(?Order $order): void
+    {
+        if ($order !== null && $order->status->isTerminal()) {
+            throw new OrderEditException('Zamówienie jest anulowane — nie można go już edytować.');
+        }
     }
 
     /**
@@ -156,10 +177,11 @@ class OrderEditor
 
     /**
      * Czy produkt faktycznie śledzi stan (ta sama bramka co w koszyku/składaniu).
+     * Pozycja osierocona (produkt usunięty) — brak kontroli stanu.
      */
     private function tracksStock(?Product $product): bool
     {
-        return $product !== null && $product->track_stock && $product->stock !== null;
+        return $product !== null && $product->tracksStock();
     }
 
     /**

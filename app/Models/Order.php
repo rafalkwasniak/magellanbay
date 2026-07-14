@@ -5,8 +5,11 @@ namespace App\Models;
 use App\Enums\DeliveryMethod;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
+use App\Support\OrderFlow;
 use Database\Factories\OrderFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -91,26 +94,55 @@ class Order extends Model
     }
 
     /**
-     * Zmienia status i dopisuje zdarzenie do osi czasu. No-op (false), gdy status
-     * się nie zmienia — nie zaśmiecamy historii pustym przejściem. Jedyne miejsce,
-     * które modyfikuje `status`, więc historia zawsze jest kompletna.
+     * Zamówienia liczone jako ZAKUP — do wszystkich ilości i kwot (przychód,
+     * liczba zamówień, liczba sztuk). Anulowane odpadają: zostają w systemie
+     * wyłącznie informacyjnie, jako ślad, że tak było — bo zamówienie mogło być
+     * opłacone i dopiero potem anulowane, więc nie wolno go wymazać. Ale zakupem
+     * nie jest, więc nie może podbijać żadnej statystyki.
+     *
+     * Nie mylić z „czy pokazać na liście" — listy pokazują też anulowane. Ten
+     * scope dotyczy wyłącznie liczenia.
      */
-    public function changeStatus(OrderStatus $to, ?string $note = null): bool
+    #[Scope]
+    protected function countedAsSale(Builder $query): void
+    {
+        $query->where('status', '!=', OrderStatus::Cancelled->value);
+    }
+
+    /**
+     * Ścieżka statusów TEGO zamówienia — wynika z migawki metody płatności i
+     * dostawy, więc jest stała przez całe życie zamówienia (zmiana ustawień
+     * sklepu nie przestawia ścieżki już złożonym zamówieniom).
+     */
+    public function flow(): OrderFlow
+    {
+        return OrderFlow::forOrder($this);
+    }
+
+    /**
+     * PRYMITYW: zmienia status i dopisuje zdarzenie do osi czasu. Zwraca to
+     * zdarzenie albo null, gdy status się nie zmienia — pustym przejściem nie
+     * zaśmiecamy historii. Jedyne miejsce, które modyfikuje `status`, więc oś
+     * czasu zawsze jest kompletna.
+     *
+     * Nie sprawdza ścieżki, nie rusza magazynu i NIE WYSYŁA MAILI — z panelu
+     * wołaj `OrderStatusChanger`, który dokłada te trzy rzeczy. Bezpośrednio
+     * tylko tam, gdzie świadomie chcesz sam zapis (np. migracje danych).
+     */
+    public function changeStatus(OrderStatus $to, ?string $note = null): ?OrderStatusEvent
     {
         if ($to === $this->status) {
-            return false;
+            return null;
         }
 
         $from = $this->status;
         $this->status = $to;
         $this->save();
 
-        $this->statusEvents()->create([
+        return $this->statusEvents()->create([
             'from_status' => $from,
             'to_status' => $to,
             'note' => $note,
         ]);
-
-        return true;
     }
 }

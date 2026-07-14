@@ -3,13 +3,13 @@
 namespace App\Services;
 
 use App\Enums\DeliveryMethod;
-use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Exceptions\CartNeedsReviewException;
 use App\Models\Customer;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\Shop;
+use App\Support\OrderFlow;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -170,6 +170,9 @@ class OrderService
      */
     private function createOrder(Shop $shop, array $data, array $lines, ?Customer $customer = null): Order
     {
+        $delivery = DeliveryMethod::from($data['delivery_method']);
+        $payment = PaymentMethod::from($data['payment_method']);
+
         $itemRows = [];
 
         foreach ($lines as $line) {
@@ -196,7 +199,9 @@ class OrderService
         $order = $shop->orders()->create([
             'number' => $shop->allocateOrderNumber(),
             'customer_id' => $customer?->id,
-            'status' => OrderStatus::New,
+            // Pierwszy krok ścieżki, nie sztywne „Nowe": przy przedpłacie
+            // zamówienie startuje od razu w „Oczekuje na płatność".
+            'status' => OrderFlow::for($payment, $delivery)->initial(),
             'buyer_name' => $data['buyer_name'],
             'buyer_surname' => $data['buyer_surname'],
             'buyer_email' => $data['buyer_email'],
@@ -209,9 +214,9 @@ class OrderService
             'company_apartment_number' => $this->companyField($data, 'company_apartment_number'),
             'company_postal_code' => $this->companyField($data, 'company_postal_code'),
             'company_city' => $this->companyField($data, 'company_city'),
-            'delivery_method' => DeliveryMethod::from($data['delivery_method']),
+            'delivery_method' => $delivery,
             'delivery_cost' => 0.0,    // MVP: odbiór osobisty bez kosztu
-            'payment_method' => PaymentMethod::from($data['payment_method']),
+            'payment_method' => $payment,
             'items_total' => 0,
             'total_net' => 0,
             'total_vat' => 0,

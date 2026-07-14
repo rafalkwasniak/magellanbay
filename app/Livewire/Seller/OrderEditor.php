@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Services\OrderEditor as OrderEditorService;
 use Illuminate\Support\Collection;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 /**
@@ -46,8 +47,39 @@ class OrderEditor extends Component
 
     public function toggleEditing(): void
     {
+        // Anulowanego nie da się edytować (patrz OrderEditor::guardEditable) —
+        // nie odsłaniamy kontrolek, które i tak odbiłyby się od serwisu.
+        if (! $this->editable()) {
+            return;
+        }
+
         $this->editing = ! $this->editing;
         $this->reset('addProductId', 'addQuantity', 'itemErrors', 'addError');
+    }
+
+    /**
+     * Czy zamówienie w ogóle wolno edytować. Serwis pilnuje tego twardo — tu
+     * decydujemy tylko, czy pokazywać kontrolki.
+     */
+    public function editable(): bool
+    {
+        return ! $this->order->status->isTerminal();
+    }
+
+    /**
+     * Status zmienił się w sąsiedniej karcie (osobny komponent). Gdy zamówienie
+     * właśnie anulowano, trzeba natychmiast zwinąć tryb edycji — inaczej zostałby
+     * odsłonięty formularz, który i tak odbije się od serwisu.
+     */
+    #[On('order-status-changed')]
+    public function syncWithStatus(): void
+    {
+        $this->order->refresh();
+
+        if (! $this->editable()) {
+            $this->editing = false;
+            $this->reset('addProductId', 'addQuantity', 'itemErrors', 'addError');
+        }
     }
 
     public function incQuantity(int $itemId): void
