@@ -59,13 +59,15 @@ return [
     | Application Timezone
     |--------------------------------------------------------------------------
     |
-    | Here you may specify the default timezone for your application, which
-    | will be used by the PHP date and date-time functions. The timezone
-    | is set to "UTC" by default as it is suitable for most use cases.
+    | Strefa czasowa aplikacji. Kramio jest z decyzji produktowej jednokrajowe
+    | (pl-first), a sprzedawcy i kupujący są w Polsce — więc `now()` ma znaczyć
+    | „teraz w Polsce". Domyślne UTC dawało daty młodsze o godzinę (zimą) lub
+    | dwie (latem) w mailach i na osi czasu zamówienia, bo PHP i MySQL na tym
+    | hostingu i tak chodzą na Europe/Warsaw — jedynym odstającym był Laravel.
     |
     */
 
-    'timezone' => 'UTC',
+    'timezone' => 'Europe/Warsaw',
 
     /*
     |--------------------------------------------------------------------------
