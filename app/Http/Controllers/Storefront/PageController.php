@@ -24,6 +24,23 @@ class PageController extends Controller
      * → 404. Sklep-szkic widzi wyłącznie właściciel/administrator (podgląd).
      * O obecności w menu decyduje długość opisu (Shop::aboutInMenu) — nie tutaj.
      */
+    /**
+     * Landing działu „Informacje" (/informacje) — sam dział nie ma treści, więc
+     * przekierowujemy na PIERWSZĄ pozycję menu (wg Shop::informationMenu). Cel
+     * zależy od kolejności ustawionej przez sprzedawcę, więc redirect jest
+     * tymczasowy (302), nie 301 — inaczej przeglądarka zapamiętałaby nieaktualny
+     * cel po zmianie kolejności stron. Puste menu (teoretycznie) → 404.
+     */
+    public function index(Request $request): RedirectResponse
+    {
+        $shop = $request->attributes->get('shop');
+
+        $menu = $shop->informationMenu();
+        abort_if($menu === [], 404);
+
+        return redirect()->to($menu[0]['url'], 302);
+    }
+
     public function about(Request $request): View
     {
         $shop = $request->attributes->get('shop');
@@ -41,9 +58,10 @@ class PageController extends Controller
     /**
      * Polityka prywatności — treść należy do Kramio (administrator danych), ale
      * renderujemy ją W MOTYWIE sklepu, żeby wizualnie spinała się z resztą
-     * storefrontu (footer linkuje tu lokalnie zamiast na centralę). To NASZA
-     * strona, więc nie wchodzi do menu „Informacje" sprzedawcy — tylko stopka.
-     * Zawsze dostępna (strona prawna) — bez bramki „już wkrótce".
+     * storefrontu. Treść jest NASZA (Kramio, administrator danych), ale wpięta w
+     * dział „Informacje" jako ostatnia pozycja (menu skorupy + stopka), pod
+     * adresem /informacje/{slug}. Zawsze dostępna (strona prawna) — bez bramki
+     * „już wkrótce".
      */
     public function privacy(Request $request): View
     {

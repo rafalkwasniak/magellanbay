@@ -12,6 +12,12 @@
         ['key' => 'orders', 'label' => 'Zamówienia', 'url' => '/moje-konto/zamowienia'],
         ['key' => 'data', 'label' => 'Edycja danych', 'url' => '/moje-konto/dane'],
     ];
+    // Offset przyklejenia lewego menu = wysokość nagłówka-winiety (sticky top-0) +
+    // oddech, żeby menu zatrzymywało się TUŻ POD belką, a nie chowało się pod nią.
+    // Jedyna zmienna wysokości winiety to obecność logo (h-28). Zgodne z
+    // components/storefront/information-shell. Inline `top` działa tylko przy
+    // lg:sticky (na mobile bez echa).
+    $stickyTop = filled($shop->logo_path) ? '13rem' : '8.5rem';
 @endphp
 
 <x-layouts.storefront :shop="$shop" :title="$heading">
@@ -22,7 +28,7 @@
 
         <div class="st-border mt-8 grid gap-8 border-t pt-8 lg:grid-cols-[220px_minmax(0,1fr)]">
             {{-- Lewe submenu --}}
-            <aside class="lg:sticky lg:top-24 lg:self-start">
+            <aside class="lg:sticky lg:self-start" style="top: {{ $stickyTop }};">
                 <nav class="flex flex-col gap-1 text-sm font-medium">
                     @foreach ($menu as $item)
                         <a href="{{ $item['url'] }}" wire:navigate

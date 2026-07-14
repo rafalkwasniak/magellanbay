@@ -71,8 +71,25 @@ class NavigationTest extends TestCase
         $this->get($this->host($shop))
             ->assertOk()
             ->assertSee('Polityka prywatności')
-            // Link lokalny (w motywie sklepu), NIE na centralę.
-            ->assertSee('href="/polityka-prywatnosci"', false);
+            // Link lokalny (w motywie sklepu, rodzina /informacje), NIE na centralę.
+            ->assertSee('href="/informacje/polityka-prywatnosci"', false);
+    }
+
+    public function test_privacy_is_last_information_menu_item(): void
+    {
+        $shop = Shop::factory()->active()->create();
+        $menu = $shop->informationMenu();
+
+        $this->assertSame($shop->privacyPath(), end($menu)['url']);
+        $this->assertSame('Polityka prywatności', end($menu)['label']);
+    }
+
+    public function test_old_privacy_url_redirects_to_information_family(): void
+    {
+        $shop = Shop::factory()->active()->create();
+
+        $this->get($this->host($shop).'/polityka-prywatnosci')
+            ->assertRedirect($shop->privacyPath());
     }
 
     public function test_privacy_page_renders_our_content_in_shop_theme(): void
@@ -86,7 +103,7 @@ class NavigationTest extends TestCase
             'published_at' => now(),
         ]);
 
-        $this->get($this->host($shop).'/polityka-prywatnosci')
+        $this->get($this->host($shop).$shop->privacyPath())
             ->assertOk()
             ->assertSee('Polityka prywatności')
             ->assertSee('Administratorem danych jest Kramio')

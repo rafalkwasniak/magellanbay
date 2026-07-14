@@ -37,6 +37,28 @@ class PageRenderTest extends TestCase
             ->assertSee('Wysyłamy w 24 godziny');
     }
 
+    public function test_information_landing_redirects_to_first_menu_item(): void
+    {
+        $shop = Shop::factory()->active()->create();
+        Page::factory()->for($shop)->create(['title' => 'Dostawa i zwroty']);
+
+        // Cel = pierwsza pozycja menu wg kolejności sprzedawcy (jedno źródło).
+        $this->get($this->host($shop).'/informacje')
+            ->assertRedirect($shop->informationMenu()[0]['url']);
+    }
+
+    public function test_page_shell_renders_left_submenu_with_active_item(): void
+    {
+        $shop = Shop::factory()->active()->create();
+        $page = Page::factory()->for($shop)->create(['title' => 'Dostawa i zwroty']);
+
+        $this->get($this->host($shop).$page->storefrontPath())
+            ->assertOk()
+            ->assertSee('Dostawa i zwroty') // pozycja submenu + tytuł
+            ->assertSee('Regulamin')        // inna pozycja submenu (strona systemowa)
+            ->assertSee('st-btn', false);   // aktywna pozycja podświetlona
+    }
+
     public function test_system_regulamin_page_renders(): void
     {
         $shop = Shop::factory()->active()->create();

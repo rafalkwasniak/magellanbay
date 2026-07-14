@@ -299,7 +299,7 @@ class Checkout extends Component
             'deliveryOptions' => $this->deliveryOptions(),
             'paymentOptions' => $this->paymentOptions(),
             'termsUrl' => $termsPage?->storefrontPath(),
-            'privacyUrl' => '/polityka-prywatnosci',
+            'privacyUrl' => $shop->privacyPath(),
         ]);
     }
 

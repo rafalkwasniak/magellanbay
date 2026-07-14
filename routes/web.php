@@ -203,12 +203,18 @@ Route::domain('{shop}.'.config('tenancy.central_domain'))
         Route::get('/', [StorefrontHome::class, 'show'])->name('storefront.home');
         Route::get('/produkty', [StorefrontProduct::class, 'index'])->name('storefront.products');
         Route::get('/produkt/{product}', [StorefrontProduct::class, 'show'])->name('storefront.product');
+        // Landing działu „Informacje" → 302 na pierwszą podstronę (lewe menu
+        // przejmuje dalszą nawigację). PRZED wildcardem, by nie wpadł w {page}.
+        Route::get('/informacje', [StorefrontPage::class, 'index'])->name('storefront.information');
         // Wirtualna „O sklepie" (treść z shop.description) — PRZED wildcardem, by
         // stały slug nie wpadł w /informacje/{page} (który szuka strony po id).
         Route::get('/informacje/'.config('pages.about.slug'), [StorefrontPage::class, 'about'])->name('storefront.about');
+        // Nasza Polityka prywatności renderowana w motywie sklepu, jako ostatnia
+        // pozycja działu „Informacje". Stały slug PRZED wildcardem {page}.
+        Route::get('/informacje/'.config('pages.privacy.slug'), [StorefrontPage::class, 'privacy'])->name('storefront.privacy');
         Route::get('/informacje/{page}', [StorefrontPage::class, 'show'])->name('storefront.page');
-        // Nasza Polityka prywatności renderowana w motywie sklepu (footer linkuje tu).
-        Route::get('/polityka-prywatnosci', [StorefrontPage::class, 'privacy'])->name('storefront.privacy');
+        // Stary adres → 301 na nowy kanoniczny (przeniesienie na stałe).
+        Route::redirect('/polityka-prywatnosci', '/informacje/'.config('pages.privacy.slug'), 301);
         Route::get('/koszyk', [StorefrontCart::class, 'show'])->name('storefront.cart');
         Route::get('/kasa', [StorefrontCheckout::class, 'show'])->name('storefront.checkout');
         Route::get('/kasa/dziekujemy', [StorefrontCheckout::class, 'confirmation'])->name('storefront.checkout.confirmation');

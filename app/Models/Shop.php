@@ -279,10 +279,21 @@ class Shop extends Model
     }
 
     /**
-     * Pozycje menu „Informacje" — jedno źródło dla nagłówka (rozwijane) i stopki.
-     * Wirtualna „O sklepie" jako PIERWSZA (tylko gdy opis przekracza próg), potem
-     * opublikowane strony wg `position` (Regulamin też — to strona). Jedna lista,
-     * jedna kolejność.
+     * Kanoniczny adres Polityki prywatności na storefroncie (w rodzinie
+     * /informacje/…). Treść jest NASZA (Kramio), ale adres i prezentacja spójne
+     * z resztą działu „Informacje".
+     */
+    public function privacyPath(): string
+    {
+        return '/informacje/'.config('pages.privacy.slug');
+    }
+
+    /**
+     * Pozycje menu „Informacje" — jedno źródło dla nagłówka, skorupy stron i
+     * stopki. Kolejność: wirtualna „O sklepie" jako PIERWSZA (tylko gdy opis
+     * przekracza próg), potem opublikowane strony wg `position` (Regulamin też —
+     * to strona), a Polityka prywatności ZAWSZE jako OSTATNIA. Jedna lista, jedna
+     * kolejność.
      *
      * @return list<array{label: string, url: string}>
      */
@@ -297,6 +308,8 @@ class Shop extends Model
         foreach ($this->pages()->published()->get() as $page) {
             $items[] = ['label' => $page->title, 'url' => $page->storefrontPath()];
         }
+
+        $items[] = ['label' => config('pages.privacy.title'), 'url' => $this->privacyPath()];
 
         return $items;
     }

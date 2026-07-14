@@ -50,6 +50,23 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Polityka prywatności (NASZA — Kramio)
+    |--------------------------------------------------------------------------
+    |
+    | Treść należy do Kramio (administrator danych), ale renderujemy ją w motywie
+    | sklepu i wpinamy jako OSTATNIĄ pozycję działu „Informacje" (menu + stopka).
+    | Adres w rodzinie /informacje/{slug} — spójnie z resztą działu. Stary adres
+    | /polityka-prywatnosci przekierowuje tu 301.
+    |
+    */
+
+    'privacy' => [
+        'slug' => 'polityka-prywatnosci',
+        'title' => 'Polityka prywatności',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Strona systemowa: Regulamin
     |--------------------------------------------------------------------------
     |

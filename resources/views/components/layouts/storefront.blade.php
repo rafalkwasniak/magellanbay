@@ -152,18 +152,10 @@
             {{-- Nawigacja --}}
             <nav class="flex items-center gap-8 text-base font-medium">
                 <a href="/produkty" wire:navigate class="st-brand transition hover:brightness-95">Produkty</a>
+                {{-- „Informacje" prowadzi na pierwszą podstronę; nawigację między
+                     stronami przejmuje lewe menu w skorupie (information-shell). --}}
                 @if (count($infoMenu))
-                    <details class="group relative">
-                        <summary class="st-brand flex cursor-pointer select-none list-none items-center gap-1 transition hover:brightness-95 [&::-webkit-details-marker]:hidden">
-                            Informacje
-                            <span class="text-[0.6rem] transition group-open:rotate-180">▾</span>
-                        </summary>
-                        <div class="st-menu st-border absolute left-1/2 z-40 mt-3 min-w-52 -translate-x-1/2 overflow-hidden rounded-2xl border shadow-xl">
-                            @foreach ($infoMenu as $item)
-                                <a href="{{ $item['url'] }}" wire:navigate class="st-menu-item block px-4 py-2.5 text-sm opacity-80 transition hover:opacity-100">{{ $item['label'] }}</a>
-                            @endforeach
-                        </div>
-                    </details>
+                    <a href="{{ $infoMenu[0]['url'] }}" wire:navigate class="st-brand transition hover:brightness-95">Informacje</a>
                 @endif
 
                 {{-- Konto — za „Informacje", oddzielone smukłą pionową linią z nieco
@@ -212,14 +204,18 @@
             {{-- Informacje --}}
             <div>
                 <h3 class="text-sm font-semibold">Informacje</h3>
-                {{-- Limit pozycji stopki (config), łącznie z Polityką prywatności:
-                     zostawiamy miejsce na Politykę (zawsze ostatnia), resztę
-                     wypełniają pozycje menu wg kolejności; nadmiar odpada. --}}
+                {{-- Polityka prywatności jest ZAWSZE ostatnią pozycją menu — pinujemy
+                     ją na końcu stopki, a limit (config) obcina tylko strony
+                     sprzedawcy przed nią, żeby stopka się nie rozjechała. --}}
+                @php
+                    $footerPrivacy = end($infoMenu);
+                    $footerPages = array_slice($infoMenu, 0, -1);
+                @endphp
                 <ul class="mt-3 space-y-2 text-sm opacity-80">
-                    @foreach (array_slice($infoMenu, 0, (int) config('pages.footer_menu_max') - 1) as $item)
+                    @foreach (array_slice($footerPages, 0, (int) config('pages.footer_menu_max') - 1) as $item)
                         <li><a href="{{ $item['url'] }}" wire:navigate class="transition hover:opacity-100">{{ $item['label'] }}</a></li>
                     @endforeach
-                    <li><a href="/polityka-prywatnosci" wire:navigate class="transition hover:opacity-100">Polityka prywatności</a></li>
+                    <li><a href="{{ $footerPrivacy['url'] }}" wire:navigate class="transition hover:opacity-100">{{ $footerPrivacy['label'] }}</a></li>
                 </ul>
             </div>
 

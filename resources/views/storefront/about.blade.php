@@ -1,12 +1,3 @@
-<x-layouts.storefront :shop="$shop" :title="$title">
-    <div class="mx-auto max-w-6xl px-6 pt-10 pb-16">
-        <x-storefront.breadcrumbs :items="[
-            ['label' => $shop->name, 'url' => '/'],
-            ['label' => $title],
-        ]" />
-
-        <h1 class="st-brand mt-4 font-serif text-4xl leading-tight tracking-tight sm:text-5xl">{{ $title }}</h1>
-
-        <div class="st-prose st-border mt-8 border-t pt-8">{!! $shop->description !!}</div>
-    </div>
-</x-layouts.storefront>
+<x-storefront.information-shell :shop="$shop" :heading="$title">
+    <div class="st-prose">{!! $shop->description !!}</div>
+</x-storefront.information-shell>
