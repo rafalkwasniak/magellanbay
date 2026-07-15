@@ -57,13 +57,13 @@
                         </td>
                     </tr>
 
-                    {{-- Stopka --}}
-                    <tr>
-                        <td align="center" style="padding:24px 16px 8px 16px; font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:12px; line-height:18px; color:{{ $brand['muted'] }};">
-                            {{ $brand['name'] }} · ta wiadomość została wysłana automatycznie<br>
-                            Jeśli nie spodziewałeś się tej wiadomości, możesz ją zignorować.
-                        </td>
-                    </tr>
+                    {{-- Bez stopki „ta wiadomość została wysłana automatycznie / możesz ją
+                         zignorować". Nigdzie nie mamy adresu noreply: maile sklepu niosą
+                         Reply-To na jego adres kontaktowy, a maile platformy wracają na
+                         From (sklep@kramio.pl). Na każdy z nich da się odpowiedzieć i ktoś
+                         to przeczyta, więc stopka zniechęcałaby do odpowiedzi wbrew
+                         prawdzie — najdotkliwiej pod ręczną wiadomością sprzedawcy, która
+                         wprost o odpowiedź prosi. Brand niesie nagłówek, więc nic nie ginie. --}}
 
                 </table>
 
