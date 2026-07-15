@@ -87,7 +87,10 @@
                                 <path d="M3 6h18M3 12h18M3 18h18" />
                             </svg>
                         </button>
-                        <h1 class="truncate text-lg font-semibold tracking-tight text-stone-900">{{ $heading ?? 'Dzień dobry, ' . $user->name }}</h1>
+                        @php
+                            $greetName = \App\Support\Vocative::of($user->name);
+                        @endphp
+                        <h1 class="truncate text-lg font-semibold tracking-tight text-stone-900">{{ $heading ?? ($greetName ? 'Dzień dobry, '.$greetName : 'Dzień dobry') }}</h1>
                     </div>
                     <div class="flex items-center gap-3">
                         {{ $actions ?? '' }}

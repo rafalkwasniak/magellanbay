@@ -11,6 +11,7 @@ use App\Models\Order;
 use App\Models\OrderStatusEvent;
 use App\Models\Shop;
 use App\Support\Money;
+use App\Support\Vocative;
 
 /**
  * Kolejkuje maile zamówienia (outbox → cron): potwierdzenie dla klienta,
@@ -36,7 +37,7 @@ class OrderMailer
             'subject' => 'Potwierdzenie zamówienia #'.$order->number.' — '.$shop->name,
             'preheader' => 'Otrzymaliśmy Twoje zamówienie. Dziękujemy!',
             'heading' => 'Dziękujemy za zamówienie!',
-            'greeting' => 'Cześć '.$order->buyer_name.',',
+            'greeting' => Vocative::greeting($order->buyer_name),
             'intro_lines' => $this->blocks([
                 [
                     'Otrzymaliśmy Twoje **zamówienie #'.$order->number.'** i już się nim zajmujemy.',
@@ -80,7 +81,7 @@ class OrderMailer
             'subject' => 'Zamówienie #'.$order->number.': '.$status->label().' — '.$shop->name,
             'preheader' => 'Nowy status Twojego zamówienia: '.$status->label().'.',
             'heading' => $status->label(),
-            'greeting' => 'Cześć '.$order->buyer_name.',',
+            'greeting' => Vocative::greeting($order->buyer_name),
             'intro_lines' => $this->blocks([
                 [
                     'Status Twojego **zamówienia #'.$order->number.'** w sklepie **'.$shop->name.'** zmienił się na: **'.$status->label().'**.',
@@ -124,7 +125,7 @@ class OrderMailer
             'subject' => 'Zamówienie #'.$order->number.' zostało anulowane — '.$shop->name,
             'preheader' => 'Twoje zamówienie #'.$order->number.' zostało anulowane.',
             'heading' => 'Zamówienie anulowane',
-            'greeting' => 'Cześć '.$order->buyer_name.',',
+            'greeting' => Vocative::greeting($order->buyer_name),
             'intro_lines' => $this->blocks([
                 [
                     'Twoje **zamówienie #'.$order->number.'** w sklepie **'.$shop->name.'** zostało anulowane.',
@@ -166,7 +167,7 @@ class OrderMailer
             'subject' => 'Wiadomość w sprawie zamówienia #'.$order->number.' — '.$shop->name,
             'preheader' => 'Masz wiadomość od sklepu '.$shop->name.'.',
             'heading' => 'Wiadomość od sklepu',
-            'greeting' => 'Cześć '.$order->buyer_name.',',
+            'greeting' => Vocative::greeting($order->buyer_name),
             'intro_lines' => $this->blocks($this->messageBlocks(
                 $order,
                 $body,
@@ -204,7 +205,7 @@ class OrderMailer
             'subject' => 'Kopia: wiadomość do klienta — zamówienie #'.$order->number,
             'preheader' => 'Kopia wiadomości wysłanej do '.$buyer.'.',
             'heading' => 'Kopia wysłanej wiadomości',
-            'greeting' => 'Cześć '.$owner->name.',',
+            'greeting' => Vocative::greeting($owner->name),
             'intro_lines' => $this->blocks(array_merge(
                 [[
                     'To kopia wiadomości wysłanej do **'.$buyer.'** ('.$order->buyer_email.') w sprawie **zamówienia #'.$order->number.'** w sklepie **'.$shop->name.'**.',
@@ -275,7 +276,7 @@ class OrderMailer
             'subject' => 'Nowe zamówienie #'.$order->number.' w '.$shop->name,
             'preheader' => 'Masz nowe zamówienie na kwotę '.Money::pln($order->total_gross).'.',
             'heading' => 'Nowe zamówienie #'.$order->number,
-            'greeting' => 'Cześć '.$owner->name.',',
+            'greeting' => Vocative::greeting($owner->name),
             'intro_lines' => $this->blocks([
                 ['W Twoim sklepie **'.$shop->name.'** pojawiło się nowe **zamówienie #'.$order->number.'**.'],
                 array_merge(

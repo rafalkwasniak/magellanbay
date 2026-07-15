@@ -4,7 +4,10 @@
 ]">
     {{-- Dane klienta --}}
     <div class="st-card st-border rounded-3xl border p-6">
-        <h2 class="font-semibold">Cześć{{ $customer->name ? ', '.$customer->name : '' }}!</h2>
+        @php
+            $greetName = \App\Support\Vocative::of($customer->name);
+        @endphp
+        <h2 class="font-semibold">Cześć{{ $greetName ? ', '.$greetName : '' }}!</h2>
         <dl class="mt-4 grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
             <div class="flex justify-between gap-3 sm:block">
                 <dt class="opacity-60">Imię i nazwisko</dt>

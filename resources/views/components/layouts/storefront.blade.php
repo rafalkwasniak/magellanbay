@@ -108,7 +108,10 @@
                                 <a href="{{ $item['url'] }}" wire:navigate class="st-menu-item st-brand -mx-4 px-4 py-3">{{ $item['label'] }}</a>
                             @endforeach
                             @auth('customer')
-                                <span class="-mx-4 px-4 pt-3 text-xs uppercase tracking-wide opacity-50">Cześć{{ filled(auth('customer')->user()->name) ? ', '.auth('customer')->user()->name : '' }}</span>
+                                @php
+                                    $greetName = \App\Support\Vocative::of(auth('customer')->user()->name);
+                                @endphp
+                                <span class="-mx-4 px-4 pt-3 text-xs uppercase tracking-wide opacity-50">Cześć{{ $greetName ? ', '.$greetName : '' }}</span>
                                 <a href="/moje-konto" wire:navigate class="st-menu-item st-brand -mx-4 px-4 py-3">Moje konto</a>
                                 <form method="POST" action="/wyloguj" class="-mx-4">
                                     @csrf

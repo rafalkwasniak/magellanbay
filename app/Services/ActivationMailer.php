@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\MailPriority;
 use App\Models\EmailMessage;
 use App\Models\User;
+use App\Support\Vocative;
 use Illuminate\Support\Facades\Password;
 
 /**
@@ -32,7 +33,7 @@ class ActivationMailer
             'subject' => 'Witaj w '.$app.' — dokończ zakładanie swojego sklepu',
             'preheader' => 'Ustaw hasło i otwórz swój sklep — to ostatni krok.',
             'heading' => 'Witaj w '.$app.'!',
-            'greeting' => 'Cześć '.$user->name.',',
+            'greeting' => Vocative::greeting($user->name),
             'intro_lines' => [
                 'Dziękujemy za rejestrację i gratulujemy decyzji — właśnie zrobiłeś pierwszy krok do sprzedaży własnych produktów w internecie.',
                 'W '.$app.' postawisz swój sklep w kilka minut, bez wiedzy technicznej: dostajesz własny adres, stronę gotową do sprzedaży i pełną kontrolę nad ofertą. O resztę — adres, koszyk, zamówienia — zadbamy my, żebyś Ty mógł skupić się na tym, co robisz najlepiej.',

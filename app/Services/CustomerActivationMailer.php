@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\MailPriority;
 use App\Models\Customer;
 use App\Models\EmailMessage;
+use App\Support\Vocative;
 use Illuminate\Support\Facades\URL;
 
 /**
@@ -37,7 +38,7 @@ class CustomerActivationMailer
             'subject' => 'Aktywuj swoje konto — '.$shop->name,
             'preheader' => 'Ustaw hasło i dokończ zakładanie konta.',
             'heading' => 'Witaj w '.$shop->name.'!',
-            'greeting' => filled($customer->name) ? 'Cześć '.$customer->name.',' : 'Cześć,',
+            'greeting' => Vocative::greeting($customer->name),
             'intro_lines' => [
                 'Dziękujemy za założenie konta w **'.$shop->name.'**.',
                 'Został ostatni krok: ustaw hasło do swojego konta. Zaraz potem zobaczysz historię swoich zamówień i szybciej złożysz kolejne.',
