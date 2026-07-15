@@ -94,7 +94,10 @@
                             </div>
                         </a>
                         <div class="flex flex-1 flex-col p-5">
-                            <h3 class="st-brand font-serif text-xl font-normal tracking-tight">
+                            {{-- Stopień jak w kafelku solo i w boxach treści — na
+                                 głównej wszystkie tytuły mówią jednym głosem.
+                                 (Wykaz /produkty ma własny kafel i własny rytm.) --}}
+                            <h3 class="st-brand font-serif text-2xl font-normal tracking-tight sm:text-3xl">
                                 <a href="{{ $p->storefrontPath() }}" wire:navigate class="transition hover:opacity-70">{{ $p->name }}</a>
                             </h3>
                             @if ($ex)
@@ -109,21 +112,45 @@
             </section>
         @endif
 
-        {{-- O sklepie — głos sklepu POD ofertą (nie na górze, gdzie psuł odbiór).
-             Długi opis (≥ próg) → wycinek + „czytaj więcej" na wirtualną podstronę;
-             krótki → cała treść tutaj, z zachowaniem formatowania. --}}
-        @if ($shop->hasAbout())
-            <section class="mt-16">
-                {{-- „O sklepie" w wizualnym kaflu (st-card), tekst do lewej. --}}
-                <div class="st-card st-border rounded-3xl border p-8 text-left">
-                    <h2 class="st-brand font-serif text-2xl font-normal tracking-tight sm:text-3xl">O sklepie</h2>
-                    @if ($shop->aboutInMenu())
-                        <p class="mt-5 leading-relaxed opacity-80">{{ \Illuminate\Support\Str::of($shop->aboutPlainText())->limit((int) config('pages.about.menu_threshold'), preserveWords: true) }}</p>
-                        <a href="{{ $shop->aboutPath() }}" wire:navigate class="st-brand mt-5 inline-block text-sm font-medium underline-offset-4 hover:underline">Czytaj więcej →</a>
-                    @else
-                        <div class="st-prose mt-5 opacity-90">{!! $shop->description !!}</div>
-                    @endif
-                </div>
+        {{-- Treści POD ofertą (nie na górze, gdzie psuły odbiór): głos sklepu i
+             strony wyróżnione przez sprzedawcę. „O sklepie" jest tu zwykłym
+             kafelkiem — pierwszym, ale bez wyjątków w układzie. Reguła jest jedna:
+             policz kafelki, ułóż 1/2/3 w rzędzie. Zawinąć się nie ma jak, bo sufit
+             (2 strony + „O sklepie") daje najwyżej 3.
+
+             Kafelki są JEDNOLITE: ten sam limit znaków, ten sam kształt, ta sama
+             typografia niezależnie od liczby. Stopień nagłówka NIE schodzi przy
+             2+ — to boxy (rodzeństwo „Zobacz produkty"), a nie kafle siatki
+             produktów, gdzie tytuł jest podpisem pod zdjęciem i może być mały.
+             Wszystkie boxy na tej stronie mówią jednym głosem. --}}
+        @php($tileCount = count($contentTiles))
+        @if ($tileCount)
+            <section @class([
+                'mt-16 grid gap-6',
+                'sm:grid-cols-2' => $tileCount >= 2,
+                'lg:grid-cols-3' => $tileCount >= 3,
+            ])>
+                @foreach ($contentTiles as $tile)
+                    <div class="st-card st-border flex flex-col rounded-3xl border p-8 text-left">
+                        <h2 class="st-brand font-serif text-2xl font-normal tracking-tight sm:text-3xl">{{ $tile['title'] }}</h2>
+
+                        @if ($tile['hasMore'])
+                            {{-- Treść UCIĘTA: czysty wycinek (skracanie HTML-a
+                                 rozjeżdża tagi) i droga po resztę. `mt-auto` trzyma
+                                 odnośniki w jednej linii u dołu, mimo różnej
+                                 długości zajawek. --}}
+                            <p class="mt-5 leading-relaxed opacity-80">{{ $tile['text'] }}</p>
+                            <div class="mt-auto pt-5">
+                                <a href="{{ $tile['url'] }}" wire:navigate class="st-brand inline-block text-sm font-medium underline-offset-4 hover:underline">Czytaj więcej →</a>
+                            </div>
+                        @else
+                            {{-- Treść się MIEŚCI: cała, z formatowaniem, bez
+                                 odnośnika — nie ma dokąd wejść, bo cel miałby to
+                                 samo. Linki w treści są klikalne wprost tutaj. --}}
+                            <div class="st-prose mt-5 opacity-90">{!! $tile['html'] !!}</div>
+                        @endif
+                    </div>
+                @endforeach
             </section>
         @endif
 

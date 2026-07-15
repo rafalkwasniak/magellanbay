@@ -8,6 +8,7 @@ use App\Enums\ShopStatus;
 use App\Enums\VatRate;
 use App\Observers\ShopObserver;
 use App\Support\Color;
+use App\Support\Excerpt;
 use Database\Factories\ShopFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
@@ -244,9 +245,17 @@ class Shop extends Model
      */
     public function aboutPlainText(): string
     {
-        $text = html_entity_decode(strip_tags((string) $this->description), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        return Excerpt::plainText($this->description);
+    }
 
-        return trim((string) preg_replace('/\s+/u', ' ', $text));
+    /**
+     * Zajawka „O sklepie" do kafelka na stronie głównej. Dokładnie ta sama reguła
+     * co dla promowanych stron (`Page::excerpt()`) — „O sklepie" jest tam zwykłym
+     * kafelkiem, różni się tylko tym, skąd bierze treść i że idzie pierwsze.
+     */
+    public function aboutExcerpt(): Excerpt
+    {
+        return Excerpt::fromHtml($this->description, (int) config('pages.excerpt_length'));
     }
 
     /**
@@ -260,9 +269,13 @@ class Shop extends Model
     }
 
     /**
-     * Czy „O sklepie" zasługuje na własną pozycję w menu „Informacje" (i wycinek
-     * + „czytaj więcej" na głównej): opis dłuższy niż próg czystego tekstu z
-     * configu. Poniżej progu pełny opis pokazujemy na stronie głównej.
+     * Czy „O sklepie" zasługuje na własną pozycję w menu „Informacje": opis
+     * dłuższy niż próg czystego tekstu z configu. Poniżej progu adres nadal
+     * działa, brakuje tylko pozycji w menu.
+     *
+     * Dotyczy WYŁĄCZNIE menu. Kafelkiem na stronie głównej rządzi `hasAbout()`
+     * (czy jest treść) i `aboutExcerpt()` (co pokazać) — próg nie ma tam nic
+     * do rzeczy, mimo że `pages.excerpt_length` ma dziś tę samą wartość.
      */
     public function aboutInMenu(): bool
     {

@@ -36,7 +36,10 @@ class PageController extends Controller
             return redirect()->route('seller.dashboard');
         }
 
-        return view('seller.pages.form', ['page' => new Page]);
+        return view('seller.pages.form', [
+            'page' => new Page,
+            'homepage' => $this->homepageInfo($request),
+        ]);
     }
 
     public function store(PageRequest $request): RedirectResponse
@@ -46,7 +49,7 @@ class PageController extends Controller
         // Nowa strona ląduje na końcu listy (najwyższa pozycja + 1).
         $position = (int) $shop->pages()->max('position') + 1;
 
-        $shop->pages()->create($request->safe()->only('title', 'slug', 'content', 'published') + [
+        $shop->pages()->create($request->safe()->only('title', 'slug', 'content', 'published', 'show_on_homepage') + [
             'position' => $position,
         ]);
 
@@ -57,7 +60,10 @@ class PageController extends Controller
     {
         $this->authorizePage($request, $page);
 
-        return view('seller.pages.form', ['page' => $page]);
+        return view('seller.pages.form', [
+            'page' => $page,
+            'homepage' => $this->homepageInfo($request),
+        ]);
     }
 
     public function update(PageRequest $request, Page $page): RedirectResponse
@@ -65,11 +71,13 @@ class PageController extends Controller
         $this->authorizePage($request, $page);
 
         if ($page->is_system) {
-            // Regulamin: wolno wypełnić treść, ale tytuł jest stały i zostaje
-            // opublikowany (nie da się go wyłączyć ani przemianować).
+            // Regulamin: wolno wypełnić treść, ale tytuł jest stały, strona zostaje
+            // opublikowana i nie da się jej wyróżnić na głównej (regulamin jako
+            // zajawka-witryna nie ma sensu). Formularz nie pokazuje tych pól, a tu
+            // i tak ich nie przyjmujemy — dwie zapory, nie jedna.
             $page->update($request->safe()->only('content'));
         } else {
-            $page->update($request->safe()->only('title', 'slug', 'content', 'published'));
+            $page->update($request->safe()->only('title', 'slug', 'content', 'published', 'show_on_homepage'));
         }
 
         return redirect()->route('seller.pages.edit', $page)->with('success', 'Zapisano zmiany.');
@@ -115,6 +123,24 @@ class PageController extends Controller
         });
 
         return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Stan wyróżnień na stronie głównej — do podpowiedzi „zajęte X z Y" na
+     * formularzu strony (bliźniak `ProductController::homepageInfo()`).
+     * Liczymy FLAGĘ, nie widoczność — tak samo jak walidacja w PageRequest, żeby
+     * licznik i komunikat błędu nigdy nie mówiły dwóch różnych rzeczy.
+     *
+     * @return array{count: int, limit: int}
+     */
+    private function homepageInfo(Request $request): array
+    {
+        $shop = $request->user()->shop;
+
+        return [
+            'count' => $shop ? $shop->pages()->where('show_on_homepage', true)->count() : 0,
+            'limit' => (int) config('pages.homepage_promoted_limit'),
+        ];
     }
 
     /**

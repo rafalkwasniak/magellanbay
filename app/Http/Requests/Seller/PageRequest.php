@@ -38,6 +38,7 @@ class PageRequest extends FormRequest
             'title' => $title,
             'slug' => app(SlugService::class)->make($title),
             'published' => $this->boolean('published'),
+            'show_on_homepage' => $this->boolean('show_on_homepage'),
         ];
 
         if ($this->has('content')) {
@@ -57,7 +58,52 @@ class PageRequest extends FormRequest
             'slug' => ['required', 'string'],
             'content' => ['nullable', 'string', 'max:'.config('pages.content_max')],
             'published' => ['boolean'],
+            'show_on_homepage' => ['boolean'],
         ];
+    }
+
+    /**
+     * Limit wyróżnień na stronie głównej — reguła zależna od stanu sklepu, więc
+     * poza tablicą `rules()` (bliźniak `ProductRequest::withValidator()`).
+     * Blokujemy dopiero PRZEKROCZENIE, a nie odznaczanie. Na edycji pomijamy samą
+     * stronę, żeby ponowny zapis już-wyróżnionej nie liczył jej podwójnie.
+     *
+     * Liczymy FLAGĘ, nie widoczność: strona wyróżniona, ale niepublikowana zajmuje
+     * slot. Gdybyśmy liczyli tylko opublikowane, dałoby się obejść sufit —
+     * wyróżnić szkice i opublikować je później.
+     *
+     * Pustej treści tu NIE pilnujemy: co sprzedawca pisze, to jego sprawa, a pusta
+     * strona i tak nie dostanie kafelka (Page::hasContent).
+     */
+    public function withValidator(\Illuminate\Validation\Validator $validator): void
+    {
+        $validator->after(function (\Illuminate\Validation\Validator $validator): void {
+            if (! $this->boolean('show_on_homepage')) {
+                return;
+            }
+
+            $shop = $this->user()?->shop;
+            if ($shop === null) {
+                return;
+            }
+
+            $limit = (int) config('pages.homepage_promoted_limit');
+            $current = $this->route('page');
+
+            $promoted = $shop->pages()
+                ->where('show_on_homepage', true)
+                ->when($current, fn ($query) => $query->whereKeyNot($current->getKey()))
+                ->count();
+
+            if ($promoted >= $limit) {
+                // Bez liczebnika przy rzeczowniku — komunikat ma zostać poprawny
+                // po polsku także wtedy, gdy ktoś zmieni sufit w configu na 5.
+                $validator->errors()->add(
+                    'show_on_homepage',
+                    'Limit stron wyróżnionych na stronie głównej to '.$limit.'. Odznacz inną, aby zwolnić miejsce.',
+                );
+            }
+        });
     }
 
     /**

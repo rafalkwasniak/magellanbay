@@ -46,13 +46,31 @@
                     @if ($page->is_system)
                         <p class="mt-3 text-sm text-stone-500">Regulamin jest zawsze widoczny w sklepie — nie można go ukryć.</p>
                     @else
-                        <label class="mt-4 flex items-start gap-3 text-sm text-stone-600">
-                            <input type="checkbox" name="published" value="1" class="mt-0.5 shrink-0"
-                                @checked(old('published', $page->exists ? $page->published : true))>
-                            <span>
-                                <span class="font-medium text-stone-800">Opublikowana</span> — widoczna w menu i stopce sklepu. Odznacz, aby ukryć stronę w przygotowaniu.
-                            </span>
-                        </label>
+                        <div class="mt-4 space-y-4">
+                            <label class="flex items-start gap-3 text-sm text-stone-600">
+                                <input type="checkbox" name="published" value="1" class="mt-0.5 shrink-0"
+                                    @checked(old('published', $page->exists ? $page->published : true))>
+                                <span>
+                                    <span class="font-medium text-stone-800">Opublikowana</span> — widoczna w menu i stopce sklepu. Odznacz, aby ukryć stronę w przygotowaniu.
+                                </span>
+                            </label>
+                            <label class="flex items-start gap-3 text-sm text-stone-600">
+                                <input type="checkbox" name="show_on_homepage" value="1" class="mt-0.5 shrink-0"
+                                    @checked(old('show_on_homepage', $page->show_on_homepage))>
+                                <span>
+                                    <span class="font-medium text-stone-800">Wyróżnij na stronie głównej</span> — pokaż zajawkę tej strony pod ofertą, obok innych wyróżnionych treści.
+                                    @isset($homepage)
+                                        @php($slotsFull = $homepage['count'] >= $homepage['limit'] && ! old('show_on_homepage', $page->show_on_homepage))
+                                        <span class="mt-1 block text-xs {{ $slotsFull ? 'text-rose-600' : 'text-stone-400' }}">
+                                            Zajęte {{ $homepage['count'] }} z {{ $homepage['limit'] }} miejsc na stronie głównej.@if ($slotsFull) Odznacz inną stronę, aby zwolnić miejsce.@endif
+                                        </span>
+                                    @endisset
+                                </span>
+                            </label>
+                            @error('show_on_homepage')
+                                <p class="text-sm text-rose-600">{{ $message }}</p>
+                            @enderror
+                        </div>
                     @endif
                 </div>
 
@@ -82,6 +100,13 @@
                         <span class="mt-0.5 shrink-0 text-amber-500">🔗</span>
                         <span>Adres strony powstaje z tytułu automatycznie — nie musisz się nim zajmować.</span>
                     </li>
+                    {{-- Regulaminu nie da się wyróżnić, więc nie kuśmy go tą wskazówką. --}}
+                    @unless ($page->is_system)
+                        <li class="flex gap-3">
+                            <span class="mt-0.5 shrink-0 text-amber-500">⭐</span>
+                            <span>Stronę, która opowiada o Tobie — wywiad, spotkanie autorskie, słowo o sobie — <span class="font-medium text-stone-700">wyróżnij na stronie głównej</span>. Zajawka stanie pod ofertą.</span>
+                        </li>
+                    @endunless
                 </ul>
             </div>
         </aside>
