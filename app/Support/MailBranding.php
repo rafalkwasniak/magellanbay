@@ -20,6 +20,9 @@ use Illuminate\Support\Facades\Storage;
  * mogą być null — dane firmowe sklepu są opcjonalne, a stopka składa się z tego,
  * co jest, i chowa w całości, gdy nie ma nic.
  *
+ * Bez NIP-u nadawcy — świadomie. Klient w mailu nie ma co z nim zrobić, a mylił się
+ * w tym samym mailu z `Order::company_nip`, czyli NIP-em KUPUJĄCEGO (ten zostaje).
+ *
  * Branding rozwiązuje się przy RENDERZE (OutboxMailable woła `for($shop_id)`), nie
  * jest zamrożony na wierszu outboxu — tak samo jak logo i kolory. Zmiana danych
  * firmy przerenderuje też stare maile w kolejce; dla stopki to zaleta.
@@ -64,7 +67,6 @@ class MailBranding
             'page_bg' => '#f5f5f4',     // stone-100
             'company_name' => config('company.name') ?: null,
             'company_address' => config('company.address') ?: null,
-            'company_nip' => config('company.nip') ?: null,
             'contact_email' => config('company.email') ?: null,
             'contact_phone' => config('company.phone') ?: null,
         ];
@@ -100,7 +102,6 @@ class MailBranding
             'page_bg' => $tokens['surface'] ?? $system['page_bg'],
             'company_name' => $shop->company_name ?: null,
             'company_address' => $shop->addressLine(),
-            'company_nip' => $shop->nip ?: null,
             'contact_email' => $shop->contact_email ?: null,
             'contact_phone' => $shop->formattedContactPhone() ?: null,
         ];

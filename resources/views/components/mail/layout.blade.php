@@ -75,7 +75,13 @@
                          Dane firmowe sklepu są OPCJONALNE (wymagany jest tylko kontakt),
                          a `config/company.php` może być niewypełniony — dlatego stopka
                          składa się z tego, co jest, i chowa w całości, gdy nie ma nic.
-                         Żadnych pustych linii ani sierocego „NIP".
+                         Żadnych pustych linii.
+
+                         BEZ NIP-u nadawcy — świadomie: klient nie ma co z nim zrobić,
+                         a mylił się w tym samym mailu z NIP-em KUPUJĄCEGO, który
+                         OrderMailer pokazuje w danych do faktury (tam ma sens — klient
+                         weryfikuje własne dane). Ta stopka mówi tyle samo, co stopka
+                         storefrontu: firma, adres, kontakt.
 
                          E-mail i telefon są linkami mimo stonowanego wyglądu: klienci
                          pocztowi i tak autolinkują gołe adresy własnym niebieskim, więc
@@ -84,7 +90,6 @@
                         $footerIdentity = array_values(array_filter([
                             $brand['company_name'] ?? null,
                             $brand['company_address'] ?? null,
-                            filled($brand['company_nip'] ?? null) ? 'NIP '.$brand['company_nip'] : null,
                         ]));
                         $footerLinkStyle = 'color:'.$brand['muted'].'; text-decoration:none;';
                     @endphp

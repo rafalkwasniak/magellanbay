@@ -218,6 +218,13 @@ class OrderPlacementTest extends TestCase
         // Nagłówki sekcji są pogrubiane zapisem **...**.
         $this->assertContains('**Dane kupującego:**', $lines);
         $this->assertContains('**Dane do faktury:**', $lines);
+        // NIP KUPUJĄCEGO w mailu zostaje — to jego dane do faktury, chce je
+        // zweryfikować. Nie mylić z NIP-em NADAWCY, którego stopka świadomie NIE
+        // pokazuje (patrz MailFooterTest::test_footer_never_shows_the_senders_nip).
+        // Ta asercja jest tam przeciwwagą: bez niej „sprzątanie NIP-ów z maili"
+        // wywaliłoby dane do faktury i nic by nie pisnęło.
+        $this->assertContains('Firma: ACME sp. z o.o.', $lines);
+        $this->assertContains('NIP: 5252248481', $lines);
         // Fraza „zamówienie #N" w zdaniu jest pogrubiona w całości, nie samo #N.
         $order = $shop->orders()->firstOrFail();
         $this->assertContains('W Twoim sklepie **'.$shop->name.'** pojawiło się nowe **zamówienie #'.$order->number.'**.', $lines);

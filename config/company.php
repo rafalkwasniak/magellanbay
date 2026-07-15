@@ -22,14 +22,19 @@ return [
     | Wartości trzymamy w postaci GOTOWEJ DO WYŚWIETLENIA (adres jako jedna linia,
     | telefon ze spacjami) — to plik pisany ręcznie przez człowieka, a nie wejście
     | z formularza, więc nie ma czego normalizować ani składać z osobnych kolumn.
-    | NIP bez myślników, tak jak w kolumnie `shops.nip` — oba warianty zapisu są
-    | poprawne, a spójność w obrębie jednego szablonu maila jest ważniejsza.
+    |
+    | Bez NIP-u — świadomie. Klient w mailu o zamówieniu nie ma co z nim zrobić:
+    | nazwa i adres mówią mu, KTO wysłał, a kontakt — JAK odpisać. NIP nadawcy nie
+    | odpowiada na żadne pytanie, które klient w tej chwili ma, a mylił się w tym
+    | samym mailu z `Order::company_nip`, czyli NIP-em KUPUJĄCEGO (ten zostaje —
+    | klient chce zweryfikować własne dane do faktury). Dane identyfikacyjne firmy
+    | mają być dostępne na SERWISIE, nie w każdym mailu. Gdy dojdą faktury, NIP
+    | wróci tutaj razem z nimi.
     |
     */
 
     'name' => 'Red Paprika Rafał Kwaśniak',
     'address' => 'Okrzei 73, 42-582 Rogoźnik',
-    'nip' => '6252118589',
     'email' => 'rafal@kwasniak.org',
     'phone' => '+48 668 196 229',
 

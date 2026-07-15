@@ -85,9 +85,11 @@ class MailFooterTest extends TestCase
 
         $this->assertSame('Red Paprika Rafał Kwaśniak', $brand['company_name']);
         $this->assertSame('Okrzei 73, 42-582 Rogoźnik', $brand['company_address']);
-        $this->assertSame('6252118589', $brand['company_nip']);
         $this->assertSame('kontakt@example.com', $brand['contact_email']);
         $this->assertSame('+48 668 196 229', $brand['contact_phone']);
+
+        // NIP nadawcy świadomie nie jest częścią brandingu — patrz test poniżej.
+        $this->assertArrayNotHasKey('company_nip', $brand);
     }
 
     /**
@@ -96,13 +98,13 @@ class MailFooterTest extends TestCase
      */
     public function test_shop_without_company_data_does_not_borrow_kramio_data(): void
     {
-        config(['company.name' => 'Kramio Sp. z o.o.', 'company.nip' => '1234567890']);
+        config(['company.name' => 'Kramio Sp. z o.o.', 'company.address' => 'Przykładowa 1']);
 
-        $shop = Shop::factory()->create(['company_name' => null, 'nip' => null]);
+        $shop = Shop::factory()->create(['company_name' => null, 'street' => null, 'city' => null]);
         $brand = MailBranding::for($shop->id);
 
         $this->assertNull($brand['company_name']);
-        $this->assertNull($brand['company_nip']);
+        $this->assertNull($brand['company_address']);
     }
 
     public function test_footer_shows_full_company_block(): void
@@ -111,9 +113,22 @@ class MailFooterTest extends TestCase
 
         $this->assertStringContainsString('Red Paprika Rafał Kwaśniak', $html);
         $this->assertStringContainsString('Okrzei 73, 42-582 Rogoźnik', $html);
-        $this->assertStringContainsString('NIP 6252118589', $html);
         $this->assertStringContainsString('mailto:kontakt@example.com', $html);
         $this->assertStringContainsString('+48 668 196 229', $html);
+    }
+
+    /**
+     * NIP NADAWCY nie leci do klienta: nie ma z nim co zrobić, a w tym samym mailu
+     * mylił się z NIP-em KUPUJĄCEGO (`Order::company_nip`), który OrderMailer
+     * pokazuje w danych do faktury — tam ma sens, bo klient weryfikuje swoje dane.
+     * Stopka maila mówi dokładnie tyle, co stopka storefrontu: firma, adres, kontakt.
+     */
+    public function test_footer_never_shows_the_senders_nip(): void
+    {
+        $html = $this->render($this->shopWithCompanyData()->id);
+
+        $this->assertStringNotContainsString('NIP', $html);
+        $this->assertStringNotContainsString('6252118589', $html);
     }
 
     /** Świeży sklep: kontaktu wymagamy, danych firmowych nie — stopka ma sam kontakt. */
@@ -139,20 +154,18 @@ class MailFooterTest extends TestCase
      */
     public function test_platform_mail_hides_the_footer_when_config_is_empty(): void
     {
-        config(['company.name' => '', 'company.address' => '', 'company.nip' => '', 'company.email' => '', 'company.phone' => '']);
+        config(['company.name' => '', 'company.address' => '', 'company.email' => '', 'company.phone' => '']);
 
         $html = $this->render(null);
 
         $this->assertStringNotContainsString('font-size:12px', $html);
-        $this->assertStringNotContainsString('NIP', $html);
     }
 
-    public function test_platform_mail_shows_the_footer_once_config_is_filled(): void
+    public function test_platform_mail_shows_the_footer_from_config(): void
     {
         config([
             'company.name' => 'Kramio Sp. z o.o.',
             'company.address' => 'Przykładowa 1, 00-001 Warszawa',
-            'company.nip' => '1234567890',
             'company.email' => 'kontakt@kramio.pl',
             'company.phone' => '+48 600 000 000',
         ]);
@@ -161,7 +174,6 @@ class MailFooterTest extends TestCase
 
         $this->assertStringContainsString('Kramio Sp. z o.o.', $html);
         $this->assertStringContainsString('Przykładowa 1, 00-001 Warszawa', $html);
-        $this->assertStringContainsString('NIP 1234567890', $html);
         $this->assertStringContainsString('mailto:kontakt@kramio.pl', $html);
     }
 
