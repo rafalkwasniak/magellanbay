@@ -70,7 +70,7 @@
              odwoływalne oświadczenie woli (art. 10 uśude). --}}
         <div class="st-card st-border rounded-3xl border p-6 xl:col-span-2">
             <h2 class="font-semibold">Wiadomości od sklepu</h2>
-            <p class="mt-1 text-sm opacity-60">Decydujesz, czy chcesz dostawać e-maile o nowościach. Potwierdzenia zamówień wysyłamy zawsze.</p>
+            <p class="mt-1 text-sm opacity-60">Decydujesz, czy chcesz dostawać od nas e-maile o produktach. Potwierdzenia zamówień wysyłamy zawsze.</p>
             <form method="POST" action="/moje-konto/zgody" class="mt-4 space-y-4">
                 @csrf
                 <label for="marketing_email" class="flex cursor-pointer items-start gap-3">

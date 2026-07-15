@@ -94,9 +94,12 @@ class AccountController extends Controller
             $customer->setConsent(ConsentChannel::Email, $wants, $request->ip());
         }
 
+        // Komunikat mówi ogólnie „o produktach", a nie wylicza zakresu zgody —
+        // wyliczanie duplikowałoby `config('legal.marketing_consent.text')` i
+        // rozjeżdżało się z nim przy każdej zmianie treści.
         return redirect('/moje-konto/dane')->with('status', $wants
-            ? 'Będziemy informować Cię o nowościach.'
-            : 'Nie będziemy już wysyłać Ci wiadomości o nowościach.');
+            ? 'Będziemy informować Cię o produktach.'
+            : 'Nie będziemy już wysyłać Ci wiadomości o produktach.');
     }
 
     public function password(PasswordUpdateRequest $request): RedirectResponse
