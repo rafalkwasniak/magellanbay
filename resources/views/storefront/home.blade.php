@@ -100,8 +100,14 @@
                                  nagłówka, więc h3 skakałby o poziom zaraz po h1
                                  (nazwie sklepu). Poziom nagłówka jest niewidoczny —
                                  rozmiar niosą klasy — więc pilnuje go test
-                                 HeadingHierarchyTest. --}}
-                            <h2 class="st-brand font-serif text-2xl font-normal tracking-tight sm:text-3xl">
+                                 HeadingHierarchyTest.
+
+                                 Limit dwóch linii jak na wykazie (product-card): kafle
+                                 stoją obok siebie, więc długa nazwa rozpychałaby jeden
+                                 z nich. Dwie linie, nie jedna — nazwa rozróżnia produkty,
+                                 a ucięcie po ~22 znakach zjadałoby końcówki wariantów
+                                 („Shima OpenAir Brown" vs „…Black"). --}}
+                            <h2 class="st-brand font-serif text-2xl font-normal tracking-tight line-clamp-2 sm:text-3xl">
                                 <a href="{{ $p->storefrontPath() }}" wire:navigate class="transition hover:opacity-70">{{ $p->name }}</a>
                             </h2>
                             @if ($ex)
