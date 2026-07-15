@@ -251,6 +251,7 @@ Route::domain('{shop}.'.config('tenancy.central_domain'))
             Route::get('/zamowienia/{order}', [StorefrontAccount::class, 'order'])->name('order');
             Route::get('/dane', [StorefrontAccount::class, 'edit'])->name('edit');
             Route::post('/dane', [StorefrontAccount::class, 'update'])->name('update');
+            Route::post('/zgody', [StorefrontAccount::class, 'consents'])->name('consents');
             Route::post('/haslo', [StorefrontAccount::class, 'password'])->name('password');
             Route::post('/usun', [StorefrontAccount::class, 'destroy'])->name('destroy');
         });

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Storefront;
 
+use App\Enums\ConsentChannel;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Storefront\ActivationRequest;
 use App\Models\Customer;
@@ -55,6 +56,12 @@ class ActivationController extends Controller
             'email_verified_at' => now(),
             'remember_token' => Str::random(60),
         ])->save();
+
+        // Zgodę zapisujemy tylko gdy zaznaczona — brak checkboxa to brak zgody,
+        // a nie wycofanie (nie tworzymy wiersza dla kogoś, kto nigdy się nie zgodził).
+        if ($request->boolean('marketing_email')) {
+            $customer->setConsent(ConsentChannel::Email, true, $request->ip());
+        }
 
         $claimed = $customer->claimGuestOrders();
 

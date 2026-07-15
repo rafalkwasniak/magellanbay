@@ -54,6 +54,20 @@
                     </div>
                 </div>
 
+                {{-- Zgoda marketingowa: osobno od danych i od regulaminu, domyślnie
+                     niezaznaczona — musi być uprzednia i dobrowolna (art. 10 uśude). --}}
+                <div class="st-border mt-2 border-t pt-4">
+                    <label for="marketing_email" class="flex cursor-pointer items-start gap-3">
+                        <input type="checkbox" id="marketing_email" name="marketing_email" value="1"
+                            @checked(old('marketing_email'))
+                            class="st-border mt-0.5 h-4 w-4 shrink-0 rounded border bg-transparent">
+                        <span class="text-sm leading-relaxed opacity-80">
+                            {{ config('legal.marketing_consent.text') }}
+                            <span class="block text-xs opacity-60">Możesz to zmienić w każdej chwili w swoim profilu.</span>
+                        </span>
+                    </label>
+                </div>
+
                 <button type="submit"
                     class="st-btn w-full rounded-xl px-4 py-3 text-sm font-semibold transition hover:brightness-95">
                     Aktywuj konto

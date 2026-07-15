@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Storefront;
 
+use App\Enums\ConsentChannel;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Storefront\MarketingConsentRequest;
 use App\Http\Requests\Storefront\PasswordUpdateRequest;
 use App\Http\Requests\Storefront\ProfileUpdateRequest;
 use App\Models\Customer;
@@ -76,6 +78,25 @@ class AccountController extends Controller
         $this->customer()->update($request->safe()->only('name', 'surname', 'phone'));
 
         return redirect('/moje-konto/dane')->with('status', 'Zapisaliśmy Twoje dane.');
+    }
+
+    /**
+     * Zgody marketingowe. Zapisujemy TYLKO gdy stan faktycznie się zmienił —
+     * inaczej każde kliknięcie „Zapisz" odświeżałoby datę i IP zgody, niszcząc
+     * dowód, KIEDY klient jej naprawdę udzielił.
+     */
+    public function consents(MarketingConsentRequest $request): RedirectResponse
+    {
+        $customer = $this->customer();
+        $wants = $request->boolean('marketing_email');
+
+        if ($wants !== $customer->hasConsent(ConsentChannel::Email)) {
+            $customer->setConsent(ConsentChannel::Email, $wants, $request->ip());
+        }
+
+        return redirect('/moje-konto/dane')->with('status', $wants
+            ? 'Będziemy informować Cię o nowościach.'
+            : 'Nie będziemy już wysyłać Ci wiadomości o nowościach.');
     }
 
     public function password(PasswordUpdateRequest $request): RedirectResponse
