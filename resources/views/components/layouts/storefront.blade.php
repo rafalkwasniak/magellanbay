@@ -181,11 +181,15 @@
         <div class="mx-auto grid max-w-6xl gap-8 px-6 py-12 sm:grid-cols-2 md:grid-cols-3">
             {{-- Brand + dane firmowe (jeśli sprzedawca uzupełnił) --}}
             <div>
+                {{-- `max-w` idzie w parze z `h`: przy zbyt ciasnym limicie szerokości
+                     object-contain ściąga logo poziome z powrotem w dół i wzrost
+                     wysokości jest pozorny. 14rem przy h-16 mieści proporcje do ~3,5:1
+                     bez duszenia (nagłówek-winieta ma h-28 / max-w-18rem). --}}
                 <a href="/" wire:navigate class="inline-flex items-center gap-2">
                     @if ($logoUrl)
-                        <img src="{{ $logoUrl }}" alt="{{ $shop->name }}" class="h-9 w-auto max-w-[10rem] object-contain">
+                        <img src="{{ $logoUrl }}" alt="{{ $shop->name }}" class="h-16 w-auto max-w-[14rem] object-contain">
                     @else
-                        <span class="st-brand font-serif text-xl">{{ $shop->name }}</span>
+                        <span class="st-brand font-serif text-2xl">{{ $shop->name }}</span>
                     @endif
                 </a>
                 @if (filled($shop->company_name) || filled($shop->street))
