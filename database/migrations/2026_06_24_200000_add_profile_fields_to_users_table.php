@@ -4,9 +4,9 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-// Platform users are admins and sellers. `name` holds the first name (Laravel
-// default), `surname` the last name. Phone and surname are nullable here and
-// enforced by validation at the step that requires them (e.g. shop activation).
+// Użytkownicy platformy to administratorzy i sprzedawcy. `name` trzyma imię
+// (domyślka Laravela), `surname` nazwisko. Telefon i nazwisko są tu nullable —
+// wymusza je walidacja na tym kroku, który ich potrzebuje (np. aktywacja sklepu).
 return new class extends Migration
 {
     public function up(): void

@@ -6,9 +6,9 @@ use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Writes any database query slower than the configured threshold to a dedicated
- * log channel, together with the SQL, bindings and the application origin
- * (file:line) so a slow query can be traced back to the code that issued it.
+ * Zapisuje do osobnego kanału logu każde zapytanie wolniejsze niż próg z configu
+ * — razem z SQL-em, bindings i miejscem w kodzie (plik:linia), żeby dało się
+ * wrócić od wolnego zapytania do tego, co je wywołało.
  */
 class SlowQueryLogger
 {
@@ -30,9 +30,9 @@ class SlowQueryLogger
     }
 
     /**
-     * The application frame that issued the query. The query event fires through
-     * the framework, so the real caller sits *after* the vendor frames — the
-     * listener closure and this service run before them and must be skipped.
+     * Miejsce w kodzie aplikacji, które wywołało zapytanie. Zdarzenie leci przez
+     * framework, więc prawdziwy wywołujący siedzi *za* ramkami vendora —
+     * domknięcie listenera i ten serwis są przed nimi i trzeba je pominąć.
      */
     private function origin(): string
     {

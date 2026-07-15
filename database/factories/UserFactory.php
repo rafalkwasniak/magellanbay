@@ -15,13 +15,12 @@ use Illuminate\Support\Str;
 class UserFactory extends Factory
 {
     /**
-     * The current password being used by the factory.
+     * Hash hasła liczony RAZ na cały przebieg testów. Bcrypt jest z założenia
+     * wolny, więc hashowanie per użytkownik potrafiłoby zdominować czas suity.
      */
     protected static ?string $password;
 
     /**
-     * Define the model's default state.
-     *
      * @return array<string, mixed>
      */
     public function definition(): array
@@ -38,9 +37,6 @@ class UserFactory extends Factory
         ];
     }
 
-    /**
-     * Indicate that the model's email address should be unverified.
-     */
     public function unverified(): static
     {
         return $this->state(fn (array $attributes) => [
@@ -48,9 +44,6 @@ class UserFactory extends Factory
         ]);
     }
 
-    /**
-     * Indicate that the user is a platform administrator.
-     */
     public function admin(): static
     {
         return $this->state(fn (array $attributes) => [

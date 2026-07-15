@@ -13,7 +13,7 @@ Uniwersalna podstawa współpracy przy projektach API Rafała Kwaśniaka.
 ## 1. Komunikacja
 
 - **Z Rafałem rozmawiamy po polsku.**
-- **Kod, komentarze, nazwy, commity, PR-y i dokumentacja techniczna — po angielsku.**
+- **Nazwy — po angielsku. Proza — po polsku.** Po angielsku: klasy, metody, zmienne, kolumny, nazwy tras i testów. Po polsku: komentarze, docblocki, commity (subject i ciało — patrz sek. 3), PR-y i dokumentacja techniczna. Powód podziału: nazwy to warstwa techniczna, która i tak mówi frameworkiem, a proza tłumaczy **dlaczego** — i niuans oddaje się celniej w swoim języku.
 - **Bez emoji i bez ozdobników** w kodzie, commitach, PR-ach i dokumentacji technicznej. Czysto i rzeczowo.
 - **Komentarze tylko wtedy, gdy „dlaczego" nie jest oczywiste.** Żadnych docblocków powtarzających sygnaturę metody.
 - Ton: konkretnie, bez lania wody. Raportuj uczciwie — jeśli test pada, mów wprost i pokaż wynik; jeśli krok pominięty, powiedz to.

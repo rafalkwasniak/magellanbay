@@ -43,7 +43,7 @@ class DiscordErrorReportingTest extends TestCase
         config(['services.discord.webhook' => 'https://discord.test/webhook']);
         Http::fake(fn () => throw new \Exception('connection down'));
 
-        // Must not throw — error reporting can never break the request.
+        // Nie może rzucić — raportowanie błędu nigdy nie może wywrócić requestu.
         app(DiscordErrorReporter::class)->report(new RuntimeException('x'));
 
         $this->assertTrue(true);

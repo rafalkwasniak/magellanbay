@@ -21,7 +21,7 @@ Specyfika projektu **Kramio** (`kramio.pl`). Plik czytany przez asystenta na sta
 ## 2. Stos i środowisko
 
 - **Laravel Framework 13.17** (`laravel/framework: ^13.8`).
-- **PHP 8.5.6** na stronie WWW (`/opt/alt/php85`). To jest runtime docelowy.
+- **PHP 8.5.7** na stronie WWW (`/opt/alt/php85`). To jest runtime docelowy.
 - **UWAGA na CLI:** domyślne `php` w shellu to `/usr/local/bin/php` = **PHP 8.3**, nie 8.5. Aby zachować parytet z webem, `artisan`, `composer` i skrypty PHP uruchamiamy jawnie przez:
   ```bash
   /opt/alt/php85/usr/bin/php artisan ...

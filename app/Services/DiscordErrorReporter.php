@@ -7,9 +7,9 @@ use Illuminate\Support\Str;
 use Throwable;
 
 /**
- * Posts reportable exceptions to a Discord channel via an incoming webhook as a
- * rich embed. No-ops when no webhook is configured, and never lets a delivery
- * failure escape — that would loop back into the exception handler.
+ * Wysyła reportowalne wyjątki na kanał Discorda przez webhook, jako natywny embed.
+ * Nic nie robi, gdy webhook nie jest skonfigurowany, i nigdy nie wypuszcza na
+ * zewnątrz błędu dostarczenia — ten wróciłby do handlera wyjątków i zapętliłby go.
  */
 class DiscordErrorReporter
 {
@@ -26,7 +26,7 @@ class DiscordErrorReporter
         try {
             Http::timeout(5)->post($webhook, ['embeds' => [$this->embed($e)]]);
         } catch (Throwable) {
-            // Reporting must never break the request or recurse.
+            // Raportowanie nie może wywrócić requestu ani się zapętlić.
         }
     }
 

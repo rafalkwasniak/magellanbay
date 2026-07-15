@@ -13,7 +13,8 @@ use Illuminate\Support\Str;
 class CustomerFactory extends Factory
 {
     /**
-     * The current password being used by the factory.
+     * Hash hasła liczony RAZ na cały przebieg testów. Bcrypt jest z założenia
+     * wolny, więc hashowanie per klient potrafiłoby zdominować czas suity.
      */
     protected static ?string $password;
 

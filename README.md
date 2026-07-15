@@ -1,58 +1,81 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Kramio
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Platforma sklepowa SaaS (`kramio.pl`). Centrala pod domeną główną — tam sprzedawca
+zakłada konto i zarządza sklepem. Sam sklep żyje na subdomenie (`{sklep}.kramio.pl`)
+i to ją widzi klient. Jedna baza, wszystko scope'owane po `shop_id`.
 
-## About Laravel
+Repozytorium prywatne. Dokumentacja i komentarze po polsku, nazwy w kodzie po
+angielsku — szczegóły w [`FOUNDATION.md`](FOUNDATION.md) sek. 1.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Uwaga: `php` w shellu to NIE jest PHP serwisu
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+Najczęstsza pułapka tego repo. Serwis chodzi na **PHP 8.5**, a domyślne `php`
+w powłoce to **8.3**:
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
-
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
-
-```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+```
+php                        → 8.3.31   ← NIE tego używamy
+/opt/alt/php85/usr/bin/php → 8.5.7    ← runtime docelowy
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+Dlatego `artisan`, `composer` i skrypty PHP wołamy zawsze jawnie:
 
-## Contributing
+```bash
+/opt/alt/php85/usr/bin/php artisan test
+/opt/alt/php85/usr/bin/php artisan migrate --force
+/opt/alt/php85/usr/bin/php $(which composer) install
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Odpalenie przez samo `php` może przejść, a potem wywalić się na produkcji na
+składni albo zachowaniu, którego 8.3 nie zna. Parytet z webem trzymamy zawsze.
 
-## Code of Conduct
+## Stos
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+| | |
+|---|---|
+| Laravel | 13.17 |
+| PHP | 8.5.7 (web), 8.3.31 (domyślny w shellu — patrz wyżej) |
+| Composer | 2.9.7 |
+| Node / npm | 20.20 / 10.8 |
+| Baza | MySQL, połączenie `mysql` |
+| Sesje / kolejka / cache | sterownik `database` |
+| Front | Blade + Livewire. Panele w pełni na Livewire, storefront Blade-first z Livewire punktowo (koszyk). Bez publicznego JSON API. |
 
-## Security Vulnerabilities
+## Codzienna praca
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```bash
+# testy (pełny przebieg to ~10 s)
+/opt/alt/php85/usr/bin/php artisan test
+/opt/alt/php85/usr/bin/php artisan test --filter=NazwaTestu
 
-## License
+# migracje
+/opt/alt/php85/usr/bin/php artisan migrate --force
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+# build front-endu — RAYON_NUM_THREADS=1 jest OBOWIĄZKOWE
+RAYON_NUM_THREADS=1 npm run build
+```
+
+Bez `RAYON_NUM_THREADS=1` build wywraca się na puli wątków Rolldown i potrafi
+zostawić wiszące procesy, które zjadają `fork()` na całym hostingu.
+
+**Nowa klasa Tailwinda działa tylko wtedy, gdy jest w zbudowanym CSS.** Klasa
+spoza buildu nie krzyczy — po prostu po cichu nic nie robi. Sprawdzaj przed
+wypuszczeniem (uwaga na escapowany dwukropek w CSS):
+
+```bash
+grep -F ".sm\:text-2xl" public/build/assets/*.css
+```
+
+## Baza produkcyjna
+
+Pracujemy **na żywej bazie**. Komendy niszczące (`migrate:fresh`, `db:wipe`) są
+zablokowane na poziomie aplikacji i testów — zasady i uzasadnienie w
+[`DB_SECURITY.md`](DB_SECURITY.md). Nie obchodź tych bramek.
+
+## Dokumenty
+
+| Plik | Co zawiera |
+|---|---|
+| [`FOUNDATION.md`](FOUNDATION.md) | Uniwersalne zasady współpracy: komunikacja, tryb pracy, Git, standardy implementacji. Te same w każdym projekcie. |
+| [`CLAUDE.md`](CLAUDE.md) | Specyfika Kramio: domena, stos, decyzje produktowe i techniczne, stan środowiska. W sprawach projektowych ma pierwszeństwo. |
+| [`DB_SECURITY.md`](DB_SECURITY.md) | Ochrona produkcyjnej bazy przed przypadkowym wyczyszczeniem. |
+| [`docs/specyfikacja.md`](docs/specyfikacja.md) | Punkt wyjścia projektu. Uwaga: żywe ustalenia z `CLAUDE.md` są nadrzędne — spec nie jest wyrocznią. |
