@@ -406,6 +406,30 @@ class Shop extends Model
     }
 
     /**
+     * Adres siedziby w jednej linii: „Okrzei 73/5, 42-582 Rogoźnik". Null, gdy nie
+     * ma z czego złożyć — dane firmowe są OPCJONALNE (wymagany jest tylko kontakt,
+     * patrz ShopProfileRequest), więc sklep bez adresu to normalny stan, nie błąd.
+     *
+     * Kod pocztowy bierzemy jak stoi: obie ścieżki zapisu (formularz profilu oraz
+     * podpowiedź z GUS) normalizują go do postaci NN-NNN.
+     */
+    public function addressLine(): ?string
+    {
+        $house = trim((string) $this->building_number);
+
+        if (filled($this->apartment_number)) {
+            $house .= '/'.trim((string) $this->apartment_number);
+        }
+
+        $parts = array_filter([
+            trim(trim((string) $this->street).' '.$house),
+            trim(trim((string) $this->postal_code).' '.trim((string) $this->city)),
+        ]);
+
+        return $parts === [] ? null : implode(', ', $parts);
+    }
+
+    /**
      * Numer konta w czytelnej postaci — grupy po 4 cyfry (NN NNNN NNNN …).
      * Przechowujemy same cyfry; formatujemy dopiero do wyświetlenia.
      */

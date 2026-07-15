@@ -14,6 +14,15 @@ use Illuminate\Support\Facades\Storage;
  * Kramio mają być spójne. Sklep dostaje kolory swojego motywu (`themeTokens`),
  * nazwę i logo; gdy nie ma logo, w miejscu logo pokazujemy nazwę sklepu (`glyph`
  * = null → sama nazwa, bez znaku ◐ zarezerwowanego dla Kramio).
+ *
+ * Poza wyglądem niesiemy DANE FIRMOWE nadawcy (`company_*`, `contact_*`) do stopki.
+ * Dla sklepu idą z `shops`, dla maili platformy z `config/company.php`. Wszystkie
+ * mogą być null — dane firmowe sklepu są opcjonalne, a stopka składa się z tego,
+ * co jest, i chowa w całości, gdy nie ma nic.
+ *
+ * Branding rozwiązuje się przy RENDERZE (OutboxMailable woła `for($shop_id)`), nie
+ * jest zamrożony na wierszu outboxu — tak samo jak logo i kolory. Zmiana danych
+ * firmy przerenderuje też stare maile w kolejce; dla stopki to zaleta.
  */
 class MailBranding
 {
@@ -35,7 +44,9 @@ class MailBranding
     }
 
     /**
-     * Paleta systemowa (Kramio): amber na płasko, znak ◐ w miejscu logo.
+     * Paleta systemowa (Kramio): amber na płasko, znak ◐ w miejscu logo. Dane
+     * firmowe do stopki bierzemy z `config/company.php` — maile platformy nie mają
+     * sklepu, więc nie ma ich skąd wziąć z bazy.
      *
      * @return array<string, string|null>
      */
@@ -51,6 +62,11 @@ class MailBranding
             'text' => '#1c1917',        // stone-900
             'muted' => '#78716c',       // stone-500
             'page_bg' => '#f5f5f4',     // stone-100
+            'company_name' => config('company.name') ?: null,
+            'company_address' => config('company.address') ?: null,
+            'company_nip' => config('company.nip') ?: null,
+            'contact_email' => config('company.email') ?: null,
+            'contact_phone' => config('company.phone') ?: null,
         ];
     }
 
@@ -58,6 +74,12 @@ class MailBranding
      * Paleta konkretnego sklepu: kolory z jego motywu (`brand`/`brand_ink`/`ink`/
      * `surface`), nazwa i logo. Drugorzędny tekst (`muted`) zostaje neutralny dla
      * czytelności. Brak tokenu → fallback do wartości systemowych.
+     *
+     * Dane firmowe do stopki idą z `shops` i mogą być puste — `company_name`, `nip`
+     * i adres są opcjonalne w panelu. Kontakt (`contact_*`) jest tam wymagany, ale
+     * sklepy sprzed tej reguły mogą go nie mieć, więc też traktujemy jak opcjonalny.
+     * Dane Kramio z `system()` świadomie NIE służą tu za fallback: stopka maila
+     * „od sklepu" z adresem platformy wprowadzałaby klienta w błąd.
      *
      * @return array<string, string|null>
      */
@@ -76,6 +98,11 @@ class MailBranding
             'text' => $tokens['ink'] ?? $system['text'],
             'muted' => $system['muted'],
             'page_bg' => $tokens['surface'] ?? $system['page_bg'],
+            'company_name' => $shop->company_name ?: null,
+            'company_address' => $shop->addressLine(),
+            'company_nip' => $shop->nip ?: null,
+            'contact_email' => $shop->contact_email ?: null,
+            'contact_phone' => $shop->formattedContactPhone() ?: null,
         ];
     }
 
