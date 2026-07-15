@@ -143,6 +143,120 @@ class OrderMailer
         ]);
     }
 
+    /**
+     * Wiadomość od sprzedawcy do kupującego, pisana z ręki w panelu. Do treści
+     * dokładamy pozycje zamówienia z kwotami: wiadomość zwykle dotyczy któregoś
+     * z produktów, a klient nie musi wtedy szukać po skrzynce potwierdzenia,
+     * żeby wiedzieć, o czym mowa.
+     *
+     * Reply-To niesie adres kontaktowy sklepu (`senderIdentity`), więc zachęta
+     * do odpowiadania na końcu jest obietnicą z pokryciem — odpowiedź faktycznie
+     * trafi do sprzedawcy, a nie w próżnię.
+     */
+    public function messageToCustomer(Order $order, string $body): void
+    {
+        $order->loadMissing(['items', 'shop']);
+        $shop = $order->shop;
+
+        EmailMessage::create($this->senderIdentity($shop) + [
+            'priority' => MailPriority::Mid,
+            'shop_id' => $shop->id,
+            'to_email' => $order->buyer_email,
+            'to_name' => trim($order->buyer_name.' '.$order->buyer_surname),
+            'subject' => 'Wiadomość w sprawie zamówienia #'.$order->number.' — '.$shop->name,
+            'preheader' => 'Masz wiadomość od sklepu '.$shop->name.'.',
+            'heading' => 'Wiadomość od sklepu',
+            'greeting' => 'Cześć '.$order->buyer_name.',',
+            'intro_lines' => $this->blocks($this->messageBlocks(
+                $order,
+                $body,
+                'Twoje zamówienie #'.$order->number.':',
+            )),
+            'outro_lines' => [
+                'Chcesz o coś dopytać? Odpowiedz na tę wiadomość przyciskiem „Odpowiedz" w swojej skrzynce — dzięki temu cała nasza rozmowa zostanie w jednym wątku.',
+            ],
+        ]);
+    }
+
+    /**
+     * Kopia wiadomości na skrzynkę sprzedawcy — tylko na jego wyraźne życzenie
+     * („Wyślij kopię do mnie"). Od pierwszej linii mówi, że to kopia: bez tego
+     * sprzedawca zobaczyłby w skrzynce własny tekst i musiał zgadywać, czy to
+     * przypadkiem nie odpowiedź klienta.
+     */
+    public function messageCopyToSeller(Order $order, string $body): void
+    {
+        $order->loadMissing(['items', 'shop.owner']);
+        $shop = $order->shop;
+        $owner = $shop->owner;
+
+        if ($owner === null) {
+            return;
+        }
+
+        $buyer = trim($order->buyer_name.' '.$order->buyer_surname);
+
+        EmailMessage::create($this->senderIdentity($shop) + [
+            'priority' => MailPriority::Mid,
+            'shop_id' => $shop->id,
+            'to_email' => $owner->email,
+            'to_name' => trim($owner->name.' '.$owner->surname),
+            'subject' => 'Kopia: wiadomość do klienta — zamówienie #'.$order->number,
+            'preheader' => 'Kopia wiadomości wysłanej do '.$buyer.'.',
+            'heading' => 'Kopia wysłanej wiadomości',
+            'greeting' => 'Cześć '.$owner->name.',',
+            'intro_lines' => $this->blocks(array_merge(
+                [[
+                    'To kopia wiadomości wysłanej do **'.$buyer.'** ('.$order->buyer_email.') w sprawie **zamówienia #'.$order->number.'** w sklepie **'.$shop->name.'**.',
+                    'Odpowiedź klienta trafi na adres kontaktowy sklepu.',
+                ]],
+                $this->messageBlocks($order, $body, 'Zamówienie #'.$order->number.':'),
+            )),
+        ]);
+    }
+
+    /**
+     * Wspólny trzon wiadomości od sprzedawcy: jego tekst, a pod nim pozycje
+     * zamówienia z sumą. Kopia dla sprzedawcy używa tego samego trzonu co mail
+     * klienta — kopia ma pokazywać to, co klient dostał, a nie streszczenie.
+     *
+     * @return list<list<string>>
+     */
+    private function messageBlocks(Order $order, string $body, string $productsLabel): array
+    {
+        return array_merge(
+            $this->bodyBlocks($body),
+            [array_merge(
+                ['**'.$productsLabel.'**'],
+                $this->productLines($order),
+                ['Razem: **'.Money::pln($order->total_gross).'**'],
+            )],
+        );
+    }
+
+    /**
+     * Tekst z textarei na bloki maila: pusta linia rozdziela akapity, a pojedyncze
+     * złamanie zostaje wewnątrz akapitu (komponent sklei je `<br>`). Dzięki temu
+     * wiadomość dociera w takim kształcie, w jakim sprzedawca ją napisał.
+     *
+     * Treść jest escapowana dopiero przy renderowaniu (`MailMarkup::inline`), więc
+     * tekst sprzedawcy nie wstrzyknie HTML-u — najwyżej pokaże dosłowne `**`.
+     *
+     * @return list<list<string>>
+     */
+    private function bodyBlocks(string $body): array
+    {
+        $paragraphs = preg_split('/\R\s*\R/', trim($body)) ?: [];
+
+        return array_values(array_filter(array_map(
+            fn (string $paragraph): array => array_values(array_filter(
+                array_map(trim(...), preg_split('/\R/', $paragraph) ?: []),
+                fn (string $line): bool => $line !== '',
+            )),
+            $paragraphs,
+        ), fn (array $block): bool => $block !== []));
+    }
+
     public function notifySeller(Order $order): void
     {
         $order->loadMissing(['items', 'shop.owner']);
