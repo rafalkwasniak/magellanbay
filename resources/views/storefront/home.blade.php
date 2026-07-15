@@ -94,12 +94,16 @@
                             </div>
                         </a>
                         <div class="flex flex-1 flex-col p-5">
-                            {{-- Stopień jak w kafelku solo i w boxach treści — na
-                                 głównej wszystkie tytuły mówią jednym głosem.
-                                 (Wykaz /produkty ma własny kafel i własny rytm.) --}}
-                            <h3 class="st-brand font-serif text-2xl font-normal tracking-tight sm:text-3xl">
+                            {{-- Stopień pisma jak w kafelku solo i w boxach treści —
+                                 na głównej wszystkie tytuły mówią jednym głosem.
+                                 h2, nie h3: sekcja produktów nie ma nad sobą żadnego
+                                 nagłówka, więc h3 skakałby o poziom zaraz po h1
+                                 (nazwie sklepu). Poziom nagłówka jest niewidoczny —
+                                 rozmiar niosą klasy — więc pilnuje go test
+                                 HeadingHierarchyTest. --}}
+                            <h2 class="st-brand font-serif text-2xl font-normal tracking-tight sm:text-3xl">
                                 <a href="{{ $p->storefrontPath() }}" wire:navigate class="transition hover:opacity-70">{{ $p->name }}</a>
-                            </h3>
+                            </h2>
                             @if ($ex)
                                 <p class="hpc-excerpt mt-2 text-sm leading-relaxed opacity-80">{{ $ex }}</p>
                             @endif

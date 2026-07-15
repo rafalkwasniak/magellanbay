@@ -25,7 +25,10 @@
             @endif
         </div>
         <div class="px-4 pt-4">
-            <h3 class="font-semibold leading-snug">{{ $product->name }}</h3>
+            {{-- h2, nie h3: na wykazie nazwy produktów wiszą bezpośrednio pod h1
+                 („Produkty") — nie ma nad nimi h2, więc h3 skakałby o poziom.
+                 Stopień pisma niosą klasy, nie poziom nagłówka. --}}
+            <h2 class="font-semibold leading-snug">{{ $product->name }}</h2>
             <p class="st-brand mt-1 text-lg font-bold">{{ \App\Support\Money::pln($product->price_gross) }}@if ($product->sale_unit->isWeight())<span class="text-sm font-medium opacity-60"> / {{ $product->sale_unit->abbreviation() }}</span>@endif</p>
         </div>
     </a>

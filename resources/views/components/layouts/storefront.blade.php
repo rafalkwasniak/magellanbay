@@ -203,7 +203,10 @@
 
             {{-- Informacje --}}
             <div>
-                <h3 class="text-sm font-semibold">Informacje</h3>
+                {{-- h2, nie h3: kolumny stopki to sekcje dokumentu tuż pod h1
+                     strony — nie ma między nimi żadnego h2, więc h3 skakałby
+                     o poziom, i to na KAŻDEJ podstronie storefrontu. --}}
+                <h2 class="text-sm font-semibold">Informacje</h2>
                 {{-- Polityka prywatności jest ZAWSZE ostatnią pozycją menu — pinujemy
                      ją na końcu stopki, a limit (config) obcina tylko strony
                      sprzedawcy przed nią, żeby stopka się nie rozjechała. --}}
@@ -222,7 +225,7 @@
             {{-- Kontakt --}}
             @if (filled($shop->contact_email) || filled($shop->contact_phone))
                 <div>
-                    <h3 class="text-sm font-semibold">Kontakt</h3>
+                    <h2 class="text-sm font-semibold">Kontakt</h2>
                     <ul class="mt-3 space-y-2 text-sm opacity-80">
                         @if (filled($shop->contact_email))
                             <li><a href="mailto:{{ $shop->contact_email }}" class="transition hover:opacity-100">{{ $shop->contact_email }}</a></li>
