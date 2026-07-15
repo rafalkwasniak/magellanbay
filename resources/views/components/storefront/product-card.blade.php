@@ -27,9 +27,18 @@
         <div class="px-4 pt-4">
             {{-- h2, nie h3: na wykazie nazwy produktów wiszą bezpośrednio pod h1
                  („Produkty") — nie ma nad nimi h2, więc h3 skakałby o poziom.
-                 Stopień pisma niosą klasy, nie poziom nagłówka. --}}
-            <h2 class="font-semibold leading-snug">{{ $product->name }}</h2>
-            <p class="st-brand mt-1 text-lg font-bold">{{ \App\Support\Money::pln($product->price_gross) }}@if ($product->sale_unit->isWeight())<span class="text-sm font-medium opacity-60"> / {{ $product->sale_unit->abbreviation() }}</span>@endif</p>
+                 Stopień pisma niosą klasy, nie poziom nagłówka.
+
+                 Typografia identyczna jak w kafelku strony głównej: cały storefront
+                 mówi szeryfem w kolorze marki (h1 karty produktu, „O produkcie",
+                 „Podobne produkty") — wykaz był jedynym miejscem z bezszeryfowym,
+                 półgrubym tytułem i wypadał z rytmu. --}}
+            <h2 class="st-brand font-serif text-2xl font-normal tracking-tight sm:text-3xl">{{ $product->name }}</h2>
+            {{-- Cena w kolorze tekstu, NIE w kolorze marki — jak na karcie produktu
+                 (tam też `font-bold` bez `st-brand`). Odkąd tytuł niesie kolor marki,
+                 cena w tym samym kolorze robiła z kafla dwa akcenty jeden pod drugim.
+                 Akcentem zostaje przycisk koszyka. --}}
+            <p class="mt-1 text-lg font-bold">{{ \App\Support\Money::pln($product->price_gross) }}@if ($product->sale_unit->isWeight())<span class="text-sm font-medium opacity-60"> / {{ $product->sale_unit->abbreviation() }}</span>@endif</p>
         </div>
     </a>
 
