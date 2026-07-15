@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Administrator;
 
 use App\Http\Controllers\Controller;
 use App\Support\MailBranding;
+use App\Support\Vocative;
 use Illuminate\Contracts\Support\Renderable;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -40,7 +41,7 @@ class MailPreviewController extends Controller
             'aktywacja' => [
                 'preheader' => 'Dokończ zakładanie konta — ustaw hasło.',
                 'heading' => 'Witaj w '.config('app.name').'!',
-                'greeting' => 'Cześć Anno,',
+                'greeting' => Vocative::greeting('Anna'),
                 'lines' => [
                     'Dziękujemy za rejestrację. Cieszymy się, że chcesz prowadzić swój sklep właśnie u nas.',
                     'Aby dokończyć zakładanie konta, ustaw hasło i uzupełnij dane — zajmie to chwilę.',
