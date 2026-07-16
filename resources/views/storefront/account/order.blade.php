@@ -11,7 +11,8 @@
     </div>
 
     <div class="mt-6 grid gap-6 md:grid-cols-2">
-        {{-- Pozycje + sumy --}}
+        {{-- Lewa kolumna: podsumowanie + faktura --}}
+        <div class="space-y-6">
         <div class="st-card st-border rounded-3xl border p-6">
             <h2 class="st-brand st-box-title">Podsumowanie</h2>
             <ul class="mt-4 space-y-3">
@@ -33,6 +34,25 @@
                 <span class="text-xl font-bold tabular-nums">{{ \App\Support\Money::pln($order->total_gross) }}</span>
             </div>
             <p class="mt-1 text-right text-xs opacity-60">{{ \App\Support\Money::pln($order->total_net) }} netto</p>
+        </div>
+
+        @if ($order->hasInvoice() && $order->invoicePdfUrl())
+            {{-- Faktura VAT pod podsumowaniem: pobranie wprost z publicznego PDF-a w Fakturowni. --}}
+            <div class="st-card st-border rounded-3xl border p-6">
+                <h2 class="st-brand st-box-title">Faktura VAT</h2>
+                <p class="mt-2 text-sm opacity-70">
+                    @if (filled($order->invoice_number))
+                        Faktura nr <span class="font-medium">{{ $order->invoice_number }}</span> do tego zamówienia jest gotowa.
+                    @else
+                        Faktura do tego zamówienia jest gotowa.
+                    @endif
+                </p>
+                <a href="{{ $order->invoicePdfUrl() }}" target="_blank" rel="noopener"
+                    class="st-btn mt-4 inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold shadow-sm transition hover:brightness-105">
+                    <span aria-hidden="true">⬇</span> Pobierz fakturę VAT
+                </a>
+            </div>
+        @endif
         </div>
 
         {{-- Płatność + dostawa --}}

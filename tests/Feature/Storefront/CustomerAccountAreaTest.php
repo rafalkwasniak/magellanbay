@@ -66,6 +66,22 @@ class CustomerAccountAreaTest extends TestCase
             ->assertDontSee('#202');
     }
 
+    public function test_orders_list_shows_fv_badge_only_for_invoiced_orders(): void
+    {
+        $shop = Shop::factory()->create();
+        $customer = Customer::factory()->for($shop)->create();
+
+        Order::factory()->for($shop)->create(['customer_id' => $customer->id, 'number' => 101])
+            ->forceFill(['invoice_id' => 555])->save();
+        Order::factory()->for($shop)->create(['customer_id' => $customer->id, 'number' => 102]); // bez FV
+
+        $response = $this->actingAs($customer, 'customer')
+            ->get($this->host($shop).'/moje-konto/zamowienia')
+            ->assertOk();
+
+        $this->assertSame(1, substr_count($response->getContent(), '>FV<'));
+    }
+
     public function test_orders_list_paginates_by_ten(): void
     {
         $shop = Shop::factory()->create();
@@ -102,6 +118,33 @@ class CustomerAccountAreaTest extends TestCase
 
         $this->get($this->host($shop).'/moje-konto/zamowienia/'.$mine->id)->assertOk()->assertSee('#'.$mine->number);
         $this->get($this->host($shop).'/moje-konto/zamowienia/'.$theirs->id)->assertNotFound();
+    }
+
+    public function test_order_detail_offers_invoice_download_when_invoiced(): void
+    {
+        $shop = Shop::factory()->create();
+        $shop->integrations()->create([
+            'type' => \App\Enums\IntegrationType::Invoicing,
+            'enabled' => true,
+            'config' => ['account_url' => 'https://sklep.fakturownia.pl', 'api_token' => 'SECRET'],
+        ]);
+        $customer = Customer::factory()->for($shop)->create();
+
+        $invoiced = Order::factory()->for($shop)->create(['customer_id' => $customer->id]);
+        $invoiced->forceFill(['invoice_id' => 555, 'invoice_number' => '9/2026', 'invoice_token' => 'tok'])->save();
+        $plain = Order::factory()->for($shop)->create(['customer_id' => $customer->id]);
+
+        $this->actingAs($customer, 'customer');
+
+        $this->get($this->host($shop).'/moje-konto/zamowienia/'.$invoiced->id)
+            ->assertOk()
+            ->assertSee('Pobierz fakturę VAT')
+            ->assertSee('https://sklep.fakturownia.pl/invoice/tok.pdf', false)
+            ->assertSee('9/2026');
+
+        $this->get($this->host($shop).'/moje-konto/zamowienia/'.$plain->id)
+            ->assertOk()
+            ->assertDontSee('Pobierz fakturę VAT');
     }
 
     public function test_order_detail_back_link_remembers_listing_page(): void

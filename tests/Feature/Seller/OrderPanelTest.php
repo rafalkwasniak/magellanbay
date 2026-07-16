@@ -66,6 +66,22 @@ class OrderPanelTest extends TestCase
             ->assertDontSee('Obca Firma');
     }
 
+    public function test_list_shows_fv_badge_only_for_invoiced_orders(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+        Order::factory()->for($shop)->create(['number' => 7])
+            ->forceFill(['invoice_id' => 555])->save();
+        Order::factory()->for($shop)->create(['number' => 8]); // bez faktury
+
+        $response = $this->actingAs($seller)
+            ->get(route('seller.orders.index'))
+            ->assertOk();
+
+        // Jedna plakietka „FV" — dla zamówienia #7, nie dla #8.
+        $this->assertSame(1, substr_count($response->getContent(), '>FV<'));
+        $response->assertSee('Faktura VAT wystawiona');
+    }
+
     public function test_detail_shows_snapshot_with_weight_formatting(): void
     {
         [$seller, $shop] = $this->sellerWithShop();

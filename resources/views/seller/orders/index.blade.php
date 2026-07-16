@@ -59,9 +59,15 @@
                                 {{-- Prawa: wartość + aktualny status --}}
                                 <div class="flex shrink-0 flex-col items-end gap-1.5 text-right">
                                     <span class="font-bold tabular-nums text-stone-900">{{ \App\Support\Money::pln($order->total_gross) }}</span>
-                                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium {{ $order->status->badgeClasses() }}">
-                                        {{ $order->status->label() }}
-                                    </span>
+                                    <div class="flex items-center gap-1.5">
+                                        @if ($order->hasInvoice())
+                                            {{-- Plakietka „FV" (tylko marker) — pokazuje, że do zamówienia jest już faktura. --}}
+                                            <span class="inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800" title="Faktura VAT wystawiona">FV</span>
+                                        @endif
+                                        <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium {{ $order->status->badgeClasses() }}">
+                                            {{ $order->status->label() }}
+                                        </span>
+                                    </div>
                                 </div>
                             </a>
                         @endforeach

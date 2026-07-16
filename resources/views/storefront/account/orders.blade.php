@@ -19,7 +19,13 @@
                             <span class="block text-xs opacity-60">{{ $order->created_at->format('d.m.Y') }} · {{ $order->items_count }} poz.</span>
                         </div>
                         <div class="flex items-center gap-4">
-                            <span class="rounded-full px-2.5 py-1 text-xs font-medium {{ $order->status->badgeClasses() }}">{{ $order->status->label() }}</span>
+                            <div class="flex items-center gap-1.5">
+                                @if ($order->hasInvoice())
+                                    {{-- Plakietka „FV" (marker) — to zamówienie ma wystawioną fakturę. --}}
+                                    <span class="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800" title="Faktura VAT wystawiona">FV</span>
+                                @endif
+                                <span class="rounded-full px-2.5 py-1 text-xs font-medium {{ $order->status->badgeClasses() }}">{{ $order->status->label() }}</span>
+                            </div>
                             <span class="font-bold tabular-nums">{{ \App\Support\Money::pln($order->total_gross) }}</span>
                         </div>
                     </a>

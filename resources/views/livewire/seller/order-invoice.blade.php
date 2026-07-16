@@ -58,6 +58,9 @@
                         <li>• Fakturę utworzymy w Twojej <span class="font-medium">Fakturowni</span>.</li>
                         <li>• Klient dostanie ją mailem z linkiem do pobrania PDF.</li>
                         <li>• Fakturę wystawiasz raz — potem będzie tu do pobrania.</li>
+                        @unless ($order->is_company)
+                            <li>• Klient nie podał danych firmy — będzie to <span class="font-medium">faktura imienna</span> na dane kupującego (bez NIP).</li>
+                        @endunless
                     </ul>
 
                     <div class="mt-3 flex flex-wrap gap-2">
@@ -80,7 +83,11 @@
                         class="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-br from-amber-500 to-rose-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:brightness-105">
                         <span aria-hidden="true">🧾</span> Stwórz fakturę VAT
                     </button>
-                    <p class="mt-1.5 text-xs text-stone-400">Powstanie w Twojej Fakturowni; klient dostanie ją mailem z linkiem do PDF.</p>
+                    @if ($order->is_company)
+                        <p class="mt-1.5 text-xs text-stone-400">Powstanie w Twojej Fakturowni; klient dostanie ją mailem z linkiem do PDF.</p>
+                    @else
+                        <p class="mt-1.5 text-xs text-stone-400">Klient nie podał danych do faktury — zostanie wystawiona faktura imienna na dane kupującego.</p>
+                    @endif
                 </div>
             @endif
         </div>

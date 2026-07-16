@@ -51,6 +51,31 @@ class OrderInvoiceComponentTest extends TestCase
             ->assertDontSee('Tak, wystaw fakturę');
     }
 
+    public function test_consumer_order_shows_imienna_invoice_hint(): void
+    {
+        [$seller, $shop] = $this->sellerWithFakturownia();
+        $order = Order::factory()->for($shop)->create(['is_company' => false]);
+
+        Livewire::actingAs($seller)
+            ->test(OrderInvoice::class, ['order' => $order])
+            ->assertSee('faktura imienna');
+    }
+
+    public function test_company_order_has_no_imienna_hint(): void
+    {
+        [$seller, $shop] = $this->sellerWithFakturownia();
+        $order = Order::factory()->for($shop)->create([
+            'is_company' => true,
+            'company_name' => 'Firma Sp. z o.o.',
+            'company_nip' => '5252445429',
+        ]);
+
+        Livewire::actingAs($seller)
+            ->test(OrderInvoice::class, ['order' => $order])
+            ->assertSee('Stwórz fakturę VAT')
+            ->assertDontSee('faktura imienna');
+    }
+
     public function test_ask_create_opens_in_place_confirmation(): void
     {
         [$seller, $shop] = $this->sellerWithFakturownia();
