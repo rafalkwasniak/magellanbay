@@ -38,9 +38,12 @@
                 @endif
             </div>
 
-            {{-- Zakup — węższa kolumna po prawej (2/5) --}}
-            <div class="md:col-span-2">
-                <p class="text-3xl font-bold"><span class="text-lg font-medium opacity-60">Cena:</span> {{ \App\Support\Money::pln($product->price_gross) }}@if ($product->sale_unit->isWeight())<span class="text-lg font-medium opacity-60"> / {{ $product->sale_unit->abbreviation() }}</span>@endif</p>
+            {{-- Zakup — węższa kolumna po prawej (2/5). Całość wyrównana do prawej
+                 krawędzi: zdjęcie trzyma lewą stronę, panel zakupu domyka prawą. --}}
+            <div class="md:col-span-2 text-right">
+                {{-- Kwota w kolorze przewodnim sklepu (jak nazwa produktu / nagłówki);
+                     etykieta „Cena" i ewentualne „/kg" pozostają wyciszone. --}}
+                <p class="text-3xl font-bold"><span class="text-lg font-medium opacity-60">Cena:</span> <span class="st-brand">{{ \App\Support\Money::pln($product->price_gross) }}</span>@if ($product->sale_unit->isWeight())<span class="text-lg font-medium opacity-60"> / {{ $product->sale_unit->abbreviation() }}</span>@endif</p>
                 @php($lowest = $product->lowestPriceLast30Days())
                 @if ($lowest !== null)
                     <p class="mt-1 text-sm opacity-70">Najniższa cena z 30 dni: {{ \App\Support\Money::pln($lowest) }}</p>
@@ -51,8 +54,13 @@
                     <p class="mt-3 text-sm opacity-70">Dostępne: {{ $product->sale_unit->formatAmount((float) $product->stock) }} {{ $product->sale_unit->abbreviation() }}</p>
                 @endif
 
-                {{-- Tylko przycisk „Do koszyka", wyrównany do prawej krawędzi kolumny
-                     (compact = komponent nie dubluje linii dostępności). --}}
+                {{-- Koszt wysyłki i możliwe metody dostawy/płatności jako info
+                     (nie formularz) — wypełnia prawą kolumnę i zdejmuje klientowi
+                     niepewność „ile wyjdzie wysyłka" jeszcze przed koszykiem. --}}
+                <x-storefront.delivery-summary :shop="$shop" class="mt-6" />
+
+                {{-- Przycisk „Do koszyka" pod tabelką, wyrównany do prawej krawędzi
+                     kolumny (compact = komponent nie dubluje linii dostępności). --}}
                 <div class="mt-6 flex justify-end">
                     <livewire:add-to-cart :product="$product" :compact="true" />
                 </div>
@@ -60,7 +68,7 @@
                 {{-- Tagi w kaflu jak na wykazie (Filtruj). --}}
                 @if (count($productTags))
                     <div class="st-card st-border mt-8 rounded-3xl border p-6 text-left">
-                        <h2 class="st-brand font-serif text-xl font-normal tracking-tight">Podobne produkty</h2>
+                        <h2 class="st-brand st-box-title">Podobne produkty</h2>
                         <x-storefront.tag-cloud :tags="$productTags" label="" />
                     </div>
                 @endif

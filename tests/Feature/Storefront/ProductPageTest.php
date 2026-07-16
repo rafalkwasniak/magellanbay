@@ -43,6 +43,42 @@ class ProductPageTest extends TestCase
             ->assertSeeLivewire(\App\Livewire\AddToCart::class);
     }
 
+    public function test_product_page_shows_delivery_and_payment_summary(): void
+    {
+        $shop = Shop::factory()->active()->create([
+            'street' => 'Kwiatowa', 'building_number' => '5', 'postal_code' => '00-001',
+            'city' => 'Warszawa', 'province' => 'mazowieckie',
+            'pickup_enabled' => true, 'pay_on_pickup_enabled' => true,
+            'courier_enabled' => true, 'courier_cost' => 15.00, 'courier_free_from' => 200.00,
+            'bank_account_number' => '12345678901234567890123456', 'bank_transfer_enabled' => true,
+        ]);
+        $product = $this->product($shop, ['price_gross' => 499.00]);
+
+        $this->get($this->host($shop).$product->storefrontPath())
+            ->assertOk()
+            ->assertSee('Dostawa i płatność')
+            ->assertSee('Odbiór osobisty')
+            ->assertSee('Kurier')
+            ->assertSee('15,00 zł')
+            ->assertSee('gratis od 200,00 zł')
+            ->assertSee('Przelew na konto')
+            ->assertSee('Płatność przy odbiorze');
+    }
+
+    public function test_delivery_summary_hidden_when_shop_offers_no_methods(): void
+    {
+        // Sklep bez żadnej metody dostawy/płatności → box nie ma czego pokazać.
+        $shop = Shop::factory()->active()->create([
+            'pickup_enabled' => false, 'pay_on_pickup_enabled' => false,
+            'courier_enabled' => false, 'bank_transfer_enabled' => false,
+        ]);
+        $product = $this->product($shop);
+
+        $this->get($this->host($shop).$product->storefrontPath())
+            ->assertOk()
+            ->assertDontSee('Dostawa i płatność');
+    }
+
     public function test_wrong_slug_redirects_to_canonical(): void
     {
         $shop = Shop::factory()->active()->create();
