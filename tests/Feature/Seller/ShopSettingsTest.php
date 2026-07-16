@@ -28,7 +28,8 @@ class ShopSettingsTest extends TestCase
         $this->actingAs($seller)
             ->get(route('seller.settings.edit'))
             ->assertOk()
-            ->assertSee('Domyślna stawka VAT');
+            ->assertSee('Domyślna stawka VAT')
+            ->assertSee('Dostawa kurierem');
     }
 
     public function test_seller_can_change_default_vat_rate(): void
@@ -226,5 +227,100 @@ class ShopSettingsTest extends TestCase
             ->assertSessionHas('success');
 
         $this->assertFalse($shop->fresh()->pay_on_pickup_enabled);
+    }
+
+    public function test_seller_can_enable_courier_with_cost_and_threshold(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop(['courier_enabled' => false]);
+
+        $this->actingAs($seller)
+            ->post(route('seller.settings.update'), [
+                'default_vat_rate' => '23',
+                'courier_enabled' => '1',
+                'courier_cost' => '15,99',          // przecinek → kropka
+                'courier_free_from' => '200',
+            ])
+            ->assertSessionHas('success');
+
+        $fresh = $shop->fresh();
+        $this->assertTrue($fresh->courier_enabled);
+        $this->assertTrue($fresh->courierAvailable());
+        $this->assertSame('15.99', $fresh->courier_cost);
+        $this->assertSame('200.00', $fresh->courier_free_from);
+    }
+
+    public function test_courier_cost_is_required_when_enabled(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop(['courier_enabled' => false]);
+
+        $this->actingAs($seller)
+            ->post(route('seller.settings.update'), [
+                'default_vat_rate' => '23',
+                'courier_enabled' => '1',
+                'courier_cost' => '',
+            ])
+            ->assertSessionHasErrors('courier_cost');
+
+        $this->assertFalse($shop->fresh()->courier_enabled);
+    }
+
+    public function test_seller_can_offer_free_courier_with_zero_cost(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop(['courier_enabled' => false]);
+
+        // Koszt 0 jest dozwolony (kurier gratis), próg pusty = brak darmowej dostawy.
+        $this->actingAs($seller)
+            ->post(route('seller.settings.update'), [
+                'default_vat_rate' => '23',
+                'courier_enabled' => '1',
+                'courier_cost' => '0',
+            ])
+            ->assertSessionHas('success');
+
+        $fresh = $shop->fresh();
+        $this->assertTrue($fresh->courier_enabled);
+        $this->assertSame('0.00', $fresh->courier_cost);
+        $this->assertNull($fresh->courier_free_from);
+    }
+
+    public function test_seller_can_disable_courier(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop([
+            'courier_enabled' => true,
+            'courier_cost' => 15.99,
+        ]);
+
+        // Checkbox odznaczony = brak klucza w POST; fiszka schodzi na false.
+        $this->actingAs($seller)
+            ->post(route('seller.settings.update'), ['default_vat_rate' => '23'])
+            ->assertSessionHas('success');
+
+        $this->assertFalse($shop->fresh()->courier_enabled);
+    }
+
+    public function test_courier_cost_reflects_free_shipping_threshold(): void
+    {
+        [, $shop] = $this->sellerWithShop([
+            'courier_enabled' => true,
+            'courier_cost' => 15.99,
+            'courier_free_from' => 200,
+        ]);
+
+        // Poniżej progu — pełny koszt; na/powyżej progu — gratis.
+        $this->assertSame(15.99, $shop->courierCostFor(199.99));
+        $this->assertSame(0.0, $shop->courierCostFor(200.0));
+        $this->assertSame(0.0, $shop->courierCostFor(250.0));
+    }
+
+    public function test_courier_cost_ignores_threshold_when_not_set(): void
+    {
+        [, $shop] = $this->sellerWithShop([
+            'courier_enabled' => true,
+            'courier_cost' => 15.99,
+            'courier_free_from' => null,
+        ]);
+
+        // Brak progu = darmowej dostawy nie ma, choćby koszyk był duży.
+        $this->assertSame(15.99, $shop->courierCostFor(10_000.0));
     }
 }

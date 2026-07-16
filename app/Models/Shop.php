@@ -31,6 +31,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'default_vat_rate', 'default_sale_unit',
     'bank_account_number', 'bank_account_holder', 'bank_name', 'bank_transfer_enabled',
     'pickup_enabled', 'pay_on_pickup_enabled',
+    'courier_enabled', 'courier_cost', 'courier_free_from',
     'package', 'entitlements', 'subscription_ends_at', 'comped',
 ])]
 class Shop extends Model
@@ -51,6 +52,9 @@ class Shop extends Model
             'bank_transfer_enabled' => 'boolean',
             'pickup_enabled' => 'boolean',
             'pay_on_pickup_enabled' => 'boolean',
+            'courier_enabled' => 'boolean',
+            'courier_cost' => 'decimal:2',
+            'courier_free_from' => 'decimal:2',
             'entitlements' => 'array',
             'subscription_ends_at' => 'datetime',
             'comped' => 'boolean',
@@ -371,6 +375,34 @@ class Shop extends Model
     public function payOnPickupAvailable(): bool
     {
         return $this->pay_on_pickup_enabled && $this->pickupAvailable();
+    }
+
+    /**
+     * Czy sklep oferuje dostawę kurierem (Poziom 1 — bez integracji). W
+     * przeciwieństwie do odbioru NIE wymaga adresu sklepu: paczkę wysyła
+     * sprzedawca do klienta, więc do pokazania metody w kasie wystarczy włączona
+     * fiszka. Koszt bywa 0 (kurier gratis) — dlatego warunkiem jest sam włącznik,
+     * a nie „koszt > 0". Analogia do bankTransferAvailable(): stan efektywny.
+     */
+    public function courierAvailable(): bool
+    {
+        return $this->courier_enabled;
+    }
+
+    /**
+     * Efektywny koszt dostawy kurierem dla danej wartości koszyka (brutto). Zwraca
+     * 0, gdy sklep ustawił próg darmowej dostawy i wartość produktów go osiąga —
+     * w innym wypadku ustalony koszt kuriera. Próg NULL = brak darmowej dostawy.
+     */
+    public function courierCostFor(float $itemsGross): float
+    {
+        $freeFrom = $this->courier_free_from;
+
+        if ($freeFrom !== null && $itemsGross >= (float) $freeFrom) {
+            return 0.0;
+        }
+
+        return (float) ($this->courier_cost ?? 0);
     }
 
     /**

@@ -29,11 +29,29 @@ class ShopSettingsRequest extends FormRequest
             'bank_transfer_enabled' => $this->boolean('bank_transfer_enabled'),
             'pickup_enabled' => $this->boolean('pickup_enabled'),
             'pay_on_pickup_enabled' => $this->boolean('pay_on_pickup_enabled'),
+            'courier_enabled' => $this->boolean('courier_enabled'),
+            // Kwoty kuriera: przecinek → kropka, spacje out (jak cena produktu).
+            // Puste = null: koszt dopiero wymusimy regułą, gdy kurier włączony, a
+            // próg pusty to świadomy „brak darmowej dostawy".
+            'courier_cost' => $this->normalizeAmount($this->input('courier_cost')),
+            'courier_free_from' => $this->normalizeAmount($this->input('courier_free_from')),
             'google_analytics_enabled' => $this->boolean('google_analytics_enabled'),
             // Nowe pole — gdy formularz go nie przyśle (starszy submit), zostawiamy
             // bieżącą jednostkę sklepu, żeby częściowy zapis jej nie wyzerował.
             'default_sale_unit' => $this->input('default_sale_unit', $this->user()?->shop?->default_sale_unit?->value ?? 'piece'),
         ]);
+    }
+
+    /**
+     * Kwota z pola tekstowego → format akceptowany przez `numeric` (kropka
+     * dziesiętna, bez spacji). Puste pole → null (kolumna nullable). Wzorzec z
+     * ProductRequest, żeby „19,90" i „19.90" znaczyły to samo.
+     */
+    private function normalizeAmount(mixed $value): ?string
+    {
+        $normalized = str_replace([' ', "\u{a0}", ','], ['', '', '.'], trim((string) $value));
+
+        return $normalized === '' ? null : $normalized;
     }
 
     /**
@@ -47,6 +65,11 @@ class ShopSettingsRequest extends FormRequest
             'bank_transfer_enabled' => ['boolean'],
             'pickup_enabled' => ['boolean'],
             'pay_on_pickup_enabled' => ['boolean'],
+            'courier_enabled' => ['boolean'],
+            // Koszt wymagany dopiero, gdy kurier włączony (0 jest OK = gratis).
+            'courier_cost' => [Rule::requiredIf($this->boolean('courier_enabled')), 'nullable', 'numeric', 'min:0', 'max:99999.99'],
+            // Próg opcjonalny (null = brak darmowej dostawy).
+            'courier_free_from' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
             'google_analytics_enabled' => ['boolean'],
         ];
     }
@@ -62,7 +85,22 @@ class ShopSettingsRequest extends FormRequest
             'bank_transfer_enabled' => 'przelew na konto',
             'pickup_enabled' => 'odbiór osobisty',
             'pay_on_pickup_enabled' => 'płatność przy odbiorze',
+            'courier_enabled' => 'dostawa kurierem',
+            'courier_cost' => 'koszt dostawy kurierem',
+            'courier_free_from' => 'próg darmowej dostawy',
             'google_analytics_enabled' => 'Google Analytics',
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'courier_cost.required' => 'Podaj koszt dostawy kurierem (może być 0).',
+            'courier_cost.numeric' => 'Podaj koszt liczbą, np. 15,99.',
+            'courier_free_from.numeric' => 'Podaj kwotę progu liczbą, np. 200.',
         ];
     }
 }
