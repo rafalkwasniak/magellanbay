@@ -331,18 +331,14 @@ class OrderMailer
 
     /**
      * Blok „Uwagi" z notatką klienta (gdy podana). Nagłówek pogrubiony, treść
-     * notatki w osobnej linii. Etykieta różni się między mailem klienta a
+     * notatki z zachowaniem akapitów. Etykieta różni się między mailem klienta a
      * sprzedawcy.
      *
      * @return list<string>
      */
     private function noteBlock(Order $order, string $label): array
     {
-        if (! filled($order->note)) {
-            return [];
-        }
-
-        return ['**'.$label.'**', $order->note];
+        return $this->multilineBlock($label, $order->note);
     }
 
     /**
@@ -353,11 +349,7 @@ class OrderMailer
      */
     private function eventNoteBlock(OrderStatusEvent $event): array
     {
-        if (! filled($event->note)) {
-            return [];
-        }
-
-        return ['**Wiadomość od sklepu:**', $event->note];
+        return $this->multilineBlock('Wiadomość od sklepu:', $event->note);
     }
 
     /**
@@ -368,11 +360,39 @@ class OrderMailer
      */
     private function cancelReasonBlock(OrderStatusEvent $event): array
     {
-        if (! filled($event->note)) {
+        return $this->multilineBlock('Powód anulowania:', $event->note);
+    }
+
+    /**
+     * Blok „nagłówek + wieloliniowa treść użytkownika" (uwagi, wiadomość sklepu,
+     * powód anulowania). Treść bez wpisu → blok znika. Kluczowe: rozbijamy tekst
+     * na osobne linie, bo komponent skleja je przez `<br>` — inaczej znaki nowej
+     * linii zjada HTML i wielolinijkowa notatka zlewa się w jedną ścianę tekstu.
+     *
+     * @return list<string>
+     */
+    private function multilineBlock(string $label, ?string $text): array
+    {
+        if (! filled($text)) {
             return [];
         }
 
-        return ['**Powód anulowania:**', $event->note];
+        return array_merge(['**'.$label.'**'], $this->textLines((string) $text));
+    }
+
+    /**
+     * Wieloliniowy tekst użytkownika → linie bloku maila. Pojedyncze przejścia do
+     * nowej linii i JEDNA pusta linia między akapitami zostają (pusta linia daje
+     * `<br><br>` = odstęp akapitu); nadmiarowe puste linie i te na brzegach
+     * zwijamy, żeby mail nie dostał wielkich dziur.
+     *
+     * @return list<string>
+     */
+    private function textLines(string $text): array
+    {
+        $normalized = preg_replace(["/\r\n?/", "/\n{3,}/"], ["\n", "\n\n"], trim($text));
+
+        return explode("\n", (string) $normalized);
     }
 
     /**
@@ -444,14 +464,32 @@ class OrderMailer
     {
         $lines = ['Sposób dostawy: '.$order->delivery_method->label()];
 
-        $address = trim(
-            trim($shop->street.' '.$shop->building_number.($shop->apartment_number ? '/'.$shop->apartment_number : ''))
-            .', '.trim($shop->postal_code.' '.$shop->city),
-            ', '
-        );
+        if ($order->delivery_method === DeliveryMethod::Pickup) {
+            $address = trim(
+                trim($shop->street.' '.$shop->building_number.($shop->apartment_number ? '/'.$shop->apartment_number : ''))
+                .', '.trim($shop->postal_code.' '.$shop->city),
+                ', '
+            );
 
-        if ($order->delivery_method === DeliveryMethod::Pickup && $address !== '') {
-            $lines[] = 'Adres odbioru: '.$address;
+            if ($address !== '') {
+                $lines[] = 'Adres odbioru: '.$address;
+            }
+
+            return $lines;
+        }
+
+        if ($order->delivery_method->isShipped()) {
+            $address = trim(
+                trim($order->ship_street.' '.$order->ship_building_number.($order->ship_apartment_number ? '/'.$order->ship_apartment_number : ''))
+                .', '.trim($order->ship_postal_code.' '.$order->ship_city),
+                ', '
+            );
+
+            if ($address !== '') {
+                $lines[] = 'Adres dostawy: '.$address;
+            }
+
+            $lines[] = 'Koszt dostawy: '.((float) $order->delivery_cost > 0 ? Money::pln($order->delivery_cost) : 'gratis');
         }
 
         return $lines;

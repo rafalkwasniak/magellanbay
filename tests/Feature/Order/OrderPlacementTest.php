@@ -2,8 +2,10 @@
 
 namespace Tests\Feature\Order;
 
+use App\Enums\DeliveryMethod;
 use App\Enums\OrderStatus;
 use App\Exceptions\CartNeedsReviewException;
+use App\Support\OrderFlow;
 use App\Models\EmailMessage;
 use App\Models\Product;
 use App\Models\Shop;
@@ -276,5 +278,121 @@ class OrderPlacementTest extends TestCase
 
         $this->assertNull($order->company_name);
         $this->assertNull($order->company_street);
+    }
+
+    private function courierShop(?float $freeFrom = null): Shop
+    {
+        $shop = $this->shop();
+        $shop->update([
+            'courier_enabled' => true, 'courier_cost' => 15.00, 'courier_free_from' => $freeFrom,
+            'bank_transfer_enabled' => true, 'bank_account_number' => '12345678901234567890123456',
+        ]);
+
+        return $shop;
+    }
+
+    private function courierData(): array
+    {
+        return array_merge($this->buyerData(), [
+            'delivery_method' => 'courier',
+            'payment_method' => 'bank_transfer',
+            'ship_street' => 'Leśna',
+            'ship_building_number' => '12',
+            'ship_apartment_number' => '3',
+            'ship_postal_code' => '30-001',
+            'ship_city' => 'Kraków',
+        ]);
+    }
+
+    public function test_courier_order_adds_cost_and_stores_ship_address(): void
+    {
+        $shop = $this->courierShop();
+        $product = Product::factory()->create([
+            'shop_id' => $shop->id, 'is_active' => true, 'track_stock' => false, 'stock' => null,
+            'price_gross' => 100.00, 'vat_rate' => '23',
+        ]);
+        app(CartService::class)->add($product, 1);
+
+        $order = app(OrderService::class)->place($shop, $this->courierData());
+
+        $this->assertSame(DeliveryMethod::Courier, $order->delivery_method);
+        $this->assertSame('15.00', $order->delivery_cost);
+        // Suma brutto = produkty (100) + dostawa (15); netto/VAT liczone z produktów.
+        $this->assertSame('115.00', $order->total_gross);
+        $this->assertSame('81.30', $order->total_net);
+
+        // Migawka adresu dostawy.
+        $this->assertSame('Leśna', $order->ship_street);
+        $this->assertSame('12', $order->ship_building_number);
+        $this->assertSame('3', $order->ship_apartment_number);
+        $this->assertSame('30-001', $order->ship_postal_code);
+        $this->assertSame('Kraków', $order->ship_city);
+
+        // Ścieżka statusów wysyłki: „Gotowe do wysyłki" zamiast „Gotowe do odbioru".
+        $flow = OrderFlow::forOrder($order);
+        $this->assertTrue($flow->includes(OrderStatus::ReadyForShipment));
+        $this->assertFalse($flow->includes(OrderStatus::ReadyForPickup));
+    }
+
+    public function test_courier_free_shipping_threshold_zeroes_cost(): void
+    {
+        $shop = $this->courierShop(freeFrom: 100.00);
+        $product = Product::factory()->create([
+            'shop_id' => $shop->id, 'is_active' => true, 'track_stock' => false, 'stock' => null,
+            'price_gross' => 120.00, 'vat_rate' => '23',
+        ]);
+        app(CartService::class)->add($product, 1);
+
+        $order = app(OrderService::class)->place($shop, $this->courierData());
+
+        // Koszyk 120 ≥ próg 100 → dostawa gratis, suma = same produkty.
+        $this->assertSame('0.00', $order->delivery_cost);
+        $this->assertSame('120.00', $order->total_gross);
+    }
+
+    public function test_multiline_note_keeps_paragraphs_in_email(): void
+    {
+        $shop = $this->shop();
+        $product = Product::factory()->create([
+            'shop_id' => $shop->id, 'is_active' => true, 'track_stock' => false, 'stock' => null, 'price_gross' => 10.00,
+        ]);
+        app(CartService::class)->add($product, 1);
+
+        $note = "Pierwszy akapit.\n\nDrugi akapit.\nDruga linia drugiego akapitu.";
+
+        app(OrderService::class)->place($shop, array_merge($this->buyerData(), ['note' => $note]));
+
+        $sellerEmail = EmailMessage::where('to_email', $shop->owner->email)->firstOrFail();
+
+        // Blok uwag: nagłówek + akapity jako OSOBNE linie (pusta linia = odstęp
+        // akapitu po sklejeniu <br>), a nie jedna zlana ściana tekstu.
+        $noteBlock = collect($sellerEmail->intro_lines)
+            ->first(fn ($block): bool => is_array($block) && ($block[0] ?? null) === '**Uwagi klienta:**');
+
+        $this->assertSame([
+            '**Uwagi klienta:**',
+            'Pierwszy akapit.',
+            '',
+            'Drugi akapit.',
+            'Druga linia drugiego akapitu.',
+        ], $noteBlock);
+    }
+
+    public function test_ship_address_ignored_for_pickup(): void
+    {
+        $shop = $this->shop();
+        $product = Product::factory()->create([
+            'shop_id' => $shop->id, 'is_active' => true, 'track_stock' => false, 'stock' => null, 'price_gross' => 10.00,
+        ]);
+        app(CartService::class)->add($product, 1);
+
+        // Adres wysyłki podany, ale metoda to odbiór → nie zapisujemy go, koszt 0.
+        $order = app(OrderService::class)->place($shop, array_merge($this->buyerData(), [
+            'ship_street' => 'Nie zapisać', 'ship_city' => 'Nie zapisać',
+        ]));
+
+        $this->assertNull($order->ship_street);
+        $this->assertNull($order->ship_city);
+        $this->assertSame('0.00', $order->delivery_cost);
     }
 }
