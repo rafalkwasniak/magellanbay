@@ -146,4 +146,42 @@ class Order extends Model
             'note' => $note,
         ]);
     }
+
+    /**
+     * Czy zamówienie ma już wystawioną fakturę VAT. `invoice_id` (identyfikator w
+     * Fakturowni) jest zarazem gardem idempotencji — FV wystawiamy tylko raz.
+     */
+    public function hasInvoice(): bool
+    {
+        return filled($this->invoice_id);
+    }
+
+    /**
+     * Publiczny link do PDF faktury w Fakturowni: `{konto}/invoice/{token}.pdf`.
+     * Token nie wymaga naszej autoryzacji ani api_token — ściąga wprost. null,
+     * gdy FV jeszcze nie ma tokenu albo sklep stracił konfigurację adresu.
+     */
+    public function invoicePdfUrl(): ?string
+    {
+        $accountUrl = $this->shop?->fakturowniaAccountUrl();
+
+        if (blank($this->invoice_token) || blank($accountUrl)) {
+            return null;
+        }
+
+        return rtrim($accountUrl, '/').'/invoice/'.$this->invoice_token.'.pdf';
+    }
+
+    /**
+     * Czy z tego zamówienia można teraz wystawić fakturę VAT. Pełna bramka:
+     * pakiet daje uprawnienie, Fakturownia jest włączona i skonfigurowana, a FV
+     * jeszcze nie było (idempotencja). Świadomie BEZ progu statusu — sprzedawca
+     * decyduje sam z karty zamówienia (ustalone: „od dowolnego statusu").
+     */
+    public function canBeInvoiced(): bool
+    {
+        return ! $this->hasInvoice()
+            && $this->shop?->entitlement('invoices') === true
+            && $this->shop->invoicingEnabled();
+    }
 }
