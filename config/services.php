@@ -59,4 +59,12 @@ return [
         'base_url' => env('GUS_REGON_URL', 'https://wyszukiwarkaregon.stat.gov.pl'),
     ],
 
+    'fakturownia' => [
+        // Faktury VAT. `url` = adres konta (np. https://twojadomena.fakturownia.pl).
+        // Ten wpis to globalna/platformowa integracja; token per-sklep i tak trafi
+        // do shop_integrations (zaszyfrowany). Na razie nieużywane — miejsce na token.
+        'url' => env('FAKTUROWNIA_URL'),
+        'token' => env('FAKTUROWNIA_TOKEN'),
+    ],
+
 ];
