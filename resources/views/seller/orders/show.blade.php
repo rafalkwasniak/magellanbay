@@ -37,6 +37,10 @@
                             @endif
                         </div>
                     @endif
+
+                    {{-- Akcja przy danych do faktury: zlecenie FV. Postęp/wynik pokazuje
+                         karta „Faktura VAT" w kolumnie bocznej. --}}
+                    <livewire:seller.order-invoice-trigger :order="$order" />
                 </div>
 
                 <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
@@ -71,6 +75,7 @@
         {{-- Kolumna boczna: status + kontakt z klientem --}}
         <aside class="space-y-6 lg:col-span-4">
             <livewire:seller.order-status-manager :order="$order" />
+            <livewire:seller.order-invoice :order="$order" />
             <livewire:seller.order-messenger :order="$order" />
         </aside>
     </div>

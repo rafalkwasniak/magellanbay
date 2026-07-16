@@ -192,6 +192,36 @@ class Order extends Model
     }
 
     /**
+     * Oznacza zamówienie jako „FV w przygotowaniu" — ustawiane synchronicznie
+     * przy zleceniu (zanim job ruszy), żeby UI od razu pokazało stan i nie dało
+     * zlecić drugi raz. Job wyczyści to pole (sukces) albo zmieni na `failed`.
+     */
+    public function markInvoicePending(): void
+    {
+        $this->forceFill(['invoice_status' => \App\Enums\InvoiceStatus::Pending])->save();
+    }
+
+    /**
+     * Zleca wystawienie faktury: oznacza „w przygotowaniu" i wrzuca job do
+     * kolejki (robota w tle). Wspólny punkt dla obu wejść w UI (przycisk przy
+     * danych kupującego i „Spróbuj ponownie" w karcie stanu), żeby zlecenie
+     * wyglądało identycznie niezależnie skąd padło. Guard `canBeInvoiced()`
+     * chroni przed dublem i zleceniem bez konfiguracji. Zwraca, czy zlecono.
+     */
+    public function requestInvoice(): bool
+    {
+        if (! $this->canBeInvoiced()) {
+            return false;
+        }
+
+        $this->markInvoicePending();
+        \App\Jobs\GenerateInvoice::dispatch($this);
+        $this->refresh();
+
+        return true;
+    }
+
+    /**
      * Czy z tego zamówienia można teraz wystawić fakturę VAT. Pełna bramka:
      * pakiet daje uprawnienie, Fakturownia jest włączona i skonfigurowana, FV
      * jeszcze nie było (idempotencja) i nie trwa już generowanie. Świadomie BEZ
