@@ -2,13 +2,16 @@
 
 namespace App\Http\Requests\Seller;
 
+use App\Enums\IntegrationType;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
 
 /**
- * Walidacja konfiguracji integracji. Na razie identyfikator Google Analytics 4
- * (G-…) lub Google Tag Managera (GTM-…). Pole jest opcjonalne — puste znaczy
- * „usuń integrację". Regex pełni podwójną rolę: kształt ID + bezpieczeństwo
- * (wartość trafia do <script> storefrontu, więc dopuszczamy tylko [A-Z0-9-]).
+ * Walidacja konfiguracji integracji: identyfikator Google Analytics (G-…/GTM-…)
+ * oraz dane Fakturowni (adres konta + token API). Wszystkie pola opcjonalne —
+ * puste znaczy „usuń/nie zmieniaj" (szczegóły w kontrolerze). Regex GA pełni
+ * podwójną rolę: kształt ID + bezpieczeństwo (wartość trafia do <script>
+ * storefrontu, więc dopuszczamy tylko [A-Z0-9-]).
  */
 class IntegrationRequest extends FormRequest
 {
@@ -21,17 +24,25 @@ class IntegrationRequest extends FormRequest
     }
 
     /**
-     * Identyfikator normalizujemy: trim + wielkie litery (G-/GTM- są
-     * case-insensitive u Google, a my trzymamy je kanonicznie wielkimi).
-     * Pusty string sprowadzamy do null, żeby reguła `nullable` puszczała
-     * „wyczyszczenie" pola.
+     * Normalizacja wejścia. GA: trim + wielkie litery (G-/GTM- są case-insensitive
+     * u Google, trzymamy kanonicznie wielkimi). Fakturownia: adres dostaje schemat
+     * https:// gdy go brak i traci końcowy ukośnik (kanoniczna baza do API i PDF);
+     * token tylko trim. Puste stringi → null, by `nullable` puszczało czyszczenie.
      */
     protected function prepareForValidation(): void
     {
         $id = trim((string) $this->input('google_analytics_id'));
+        $url = trim((string) $this->input('fakturownia_url'));
+        $token = trim((string) $this->input('fakturownia_token'));
+
+        if ($url !== '' && ! preg_match('#^https?://#i', $url)) {
+            $url = 'https://'.$url;
+        }
 
         $this->merge([
             'google_analytics_id' => $id === '' ? null : strtoupper($id),
+            'fakturownia_url' => $url === '' ? null : rtrim($url, '/'),
+            'fakturownia_token' => $token === '' ? null : $token,
         ]);
     }
 
@@ -42,7 +53,28 @@ class IntegrationRequest extends FormRequest
     {
         return [
             'google_analytics_id' => ['nullable', 'string', 'regex:'.self::GA_PATTERN],
+            'fakturownia_url' => ['nullable', 'string', 'url', 'max:255'],
+            'fakturownia_token' => ['nullable', 'string', 'max:255'],
         ];
+    }
+
+    /**
+     * Reguła między-polowa: adres Fakturowni bez tokenu jest dopuszczalny TYLKO
+     * wtedy, gdy token jest już zapisany (puste pole = „zostaw token bez zmian").
+     * Gdy sklep tokenu nie ma, sam adres nie wystarczy — nie da się wystawić FV
+     * bez tokenu, więc żądamy go od razu.
+     */
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator): void {
+            $url = $this->input('fakturownia_url');
+            $token = $this->input('fakturownia_token');
+            $storedToken = $this->user()?->shop?->integration(IntegrationType::Invoicing)?->config['api_token'] ?? null;
+
+            if (filled($url) && blank($token) && blank($storedToken)) {
+                $validator->errors()->add('fakturownia_token', 'Podaj token API Fakturowni, aby połączyć konto.');
+            }
+        });
     }
 
     /**
@@ -52,6 +84,7 @@ class IntegrationRequest extends FormRequest
     {
         return [
             'google_analytics_id.regex' => 'Podaj poprawny identyfikator w formacie G-XXXXXXXXXX (GA4) lub GTM-XXXXXXX (Tag Manager).',
+            'fakturownia_url.url' => 'Podaj poprawny adres konta Fakturowni, np. https://twojadomena.fakturownia.pl.',
         ];
     }
 
@@ -62,6 +95,8 @@ class IntegrationRequest extends FormRequest
     {
         return [
             'google_analytics_id' => 'identyfikator Google Analytics',
+            'fakturownia_url' => 'adres konta Fakturowni',
+            'fakturownia_token' => 'token API Fakturowni',
         ];
     }
 }

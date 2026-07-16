@@ -175,6 +175,25 @@
                     <p class="mt-1 text-sm text-stone-500">Włączasz i wyłączasz usługi skonfigurowane w zakładce <a href="{{ route('seller.integrations.edit') }}" class="font-medium text-stone-700 underline decoration-amber-300 underline-offset-2">Integracje</a>.</p>
 
                     <div class="mt-6 space-y-4">
+                        {{-- Ważniejsze integracje na górze; Google Analytics zawsze na dole. --}}
+                        @if ($shop->entitlement('invoices'))
+                            <div class="flex items-start gap-4 rounded-2xl border border-stone-200 bg-white/60 p-5 sm:p-6 {{ $fakturowniaConfigured ? '' : 'opacity-60' }}">
+                                {{-- hidden = wartość bazowa; bez konfiguracji checkbox jest disabled i nic nie wysyła --}}
+                                <input type="hidden" name="fakturownia_enabled" value="{{ $fakturowniaConfigured ? '0' : ($fakturowniaEnabled ? '1' : '0') }}">
+                                <input type="checkbox" id="fakturownia_enabled" name="fakturownia_enabled" value="1"
+                                    @checked(old('fakturownia_enabled', $fakturowniaEnabled)) @disabled(! $fakturowniaConfigured)
+                                    class="mt-0.5 h-5 w-5 shrink-0 rounded-md border-stone-300 text-amber-600 focus:ring-4 focus:ring-amber-500/20 disabled:cursor-not-allowed">
+                                <label for="fakturownia_enabled" class="flex-1 {{ $fakturowniaConfigured ? 'cursor-pointer' : 'cursor-not-allowed' }}">
+                                    <span class="block text-sm font-medium text-stone-800">Fakturownia (faktury VAT)</span>
+                                    <span class="mt-0.5 block text-sm text-stone-500">Włącza przycisk „Stwórz fakturę VAT" na karcie zamówienia — faktury wystawiasz przez swoje konto w Fakturowni.</span>
+                                    <span class="mt-1.5 block text-xs text-stone-400">Fakturownia to usługa zewnętrzna, która może być płatna — sprawdź limity i warunki swojego konta w <a href="https://fakturownia.pl" target="_blank" rel="noopener" class="font-medium text-stone-500 underline decoration-amber-300 underline-offset-2">Fakturowni</a>.</span>
+                                    @unless($fakturowniaConfigured)
+                                        <span class="mt-1.5 block text-xs text-amber-700">Aby móc włączyć, najpierw podaj adres konta i token w <a href="{{ route('seller.integrations.edit') }}" class="font-medium underline decoration-amber-300 underline-offset-2">Integracjach</a>.</span>
+                                    @endunless
+                                </label>
+                            </div>
+                        @endif
+
                         @php($gaConfigured = filled($googleAnalyticsId))
                         <div class="flex items-start gap-4 rounded-2xl border border-stone-200 bg-white/60 p-5 sm:p-6 {{ $gaConfigured ? '' : 'opacity-60' }}">
                             {{-- hidden = wartość bazowa; bez ID checkbox jest disabled i nic nie wysyła --}}

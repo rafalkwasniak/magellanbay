@@ -428,6 +428,48 @@ class Shop extends Model
     }
 
     /**
+     * Adres konta Fakturowni (np. „https://twojadomena.fakturownia.pl") — baza
+     * zarówno dla wywołań API, jak i publicznego linku do PDF faktury. null, gdy
+     * integracji nie ma lub nie ma adresu.
+     */
+    public function fakturowniaAccountUrl(): ?string
+    {
+        return $this->integration(IntegrationType::Invoicing)?->config['account_url'] ?? null;
+    }
+
+    /**
+     * Token API Fakturowni (sekret, przechowywany zaszyfrowany w config). Używany
+     * przez usługę wystawiającą FV; w UI nigdy nie odbijamy go z powrotem. null,
+     * gdy brak integracji lub tokenu.
+     */
+    public function fakturowniaToken(): ?string
+    {
+        return $this->integration(IntegrationType::Invoicing)?->config['api_token'] ?? null;
+    }
+
+    /**
+     * Czy Fakturownia jest w pełni skonfigurowana (adres + token). Nie sprawdza
+     * uprawnienia pakietu ani statusu zamówienia — to sama gotowość integracji.
+     * Pełna bramka „czy można wystawić FV" łączy to z entitlement('invoices').
+     */
+    public function invoicingConfigured(): bool
+    {
+        return filled($this->fakturowniaAccountUrl()) && filled($this->fakturowniaToken());
+    }
+
+    /**
+     * Stan efektywny Fakturowni: włącznik z Ustawień ORAZ komplet konfiguracji
+     * (adres + token). To warunek, pod którym w karcie zamówienia pokazujemy
+     * przycisk „Stwórz fakturę VAT" — w połączeniu z entitlement('invoices').
+     * Analogia do tracksWithGoogleAnalytics(): sam włącznik bez konfiguracji nic
+     * nie znaczy.
+     */
+    public function invoicingEnabled(): bool
+    {
+        return $this->integration(IntegrationType::Invoicing)?->enabled === true && $this->invoicingConfigured();
+    }
+
+    /**
      * Telefon kontaktowy w czytelnej postaci („+48 668 196 229"). Przechowujemy
      * kanonicznie (48 + 9 cyfr); formatujemy dopiero do wyświetlenia — stopka,
      * maile, storefront. Null, gdy sklep nie ma jeszcze numeru.

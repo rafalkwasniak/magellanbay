@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Seller;
 use App\Enums\IntegrationType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Seller\IntegrationRequest;
+use App\Models\Shop;
 use Illuminate\Contracts\Support\Renderable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -12,7 +13,7 @@ use Illuminate\Http\Request;
 /**
  * Integracje sklepu (kategoria 3 z plan-shop-settings-storage). Tu sprzedawca
  * KONFIGURUJE usługi (wpisuje identyfikatory/klucze); WŁĄCZA/wyłącza je w
- * Ustawieniach. Na razie jedna integracja: Google Analytics / Tag Manager.
+ * Ustawieniach. Obecnie: Google Analytics / Tag Manager oraz Fakturownia (FV).
  * Edycja przez POST (FOUNDATION sek. 5).
  */
 class IntegrationController extends Controller
@@ -28,33 +29,82 @@ class IntegrationController extends Controller
         return view('seller.integrations.edit', [
             'shop' => $shop,
             'googleAnalyticsId' => $shop->googleAnalyticsId(),
+            'fakturowniaUrl' => $shop->fakturowniaAccountUrl(),
+            'fakturowniaConfigured' => $shop->invoicingConfigured(),
+            'fakturowniaEnabled' => $shop->invoicingEnabled(),
         ]);
     }
 
     public function update(IntegrationRequest $request): RedirectResponse
     {
         $shop = $request->user()->shop;
-        $id = $request->validated()['google_analytics_id'] ?? null;
+        $data = $request->validated();
 
+        $this->saveGoogleAnalytics($shop, $data['google_analytics_id'] ?? null);
+
+        // Fakturownia bramkowana uprawnieniem pakietu — bez niego pola i tak nie
+        // renderują się w formularzu, ale nie ufamy widokowi: zapis tylko gdy wolno.
+        if ($shop->entitlement('invoices')) {
+            $this->saveFakturownia($shop, $data['fakturownia_url'] ?? null, $data['fakturownia_token'] ?? null);
+        }
+
+        return redirect()
+            ->route('seller.integrations.edit')
+            ->with('success', 'Zapisano ustawienia integracji.');
+    }
+
+    /**
+     * Zapis identyfikatora GA: puste = usunięcie integracji (z nią znika włącznik),
+     * inaczej aktualizacja lub pierwsza konfiguracja (od razu włączona — mniej
+     * klikania; sprzedawca i tak może ją wyłączyć w Ustawieniach).
+     */
+    private function saveGoogleAnalytics(Shop $shop, ?string $id): void
+    {
         $integration = $shop->integration(IntegrationType::GoogleAnalytics);
 
         if (blank($id)) {
-            // Wyczyszczenie ID = usunięcie integracji (z nią znika też włącznik).
             $integration?->delete();
         } elseif ($integration !== null) {
             $integration->update(['config' => ['tracking_id' => $id]]);
         } else {
-            // Pierwsza konfiguracja: od razu włączona (mniej klikania — analogia
-            // do przelewu; sprzedawca i tak może ją wyłączyć w Ustawieniach).
             $shop->integrations()->create([
                 'type' => IntegrationType::GoogleAnalytics,
                 'enabled' => true,
                 'config' => ['tracking_id' => $id],
             ]);
         }
+    }
 
-        return redirect()
-            ->route('seller.integrations.edit')
-            ->with('success', 'Zapisano ustawienia integracji.');
+    /**
+     * Zapis konfiguracji Fakturowni. Reguła odłączania trzyma się adresu: pusty
+     * adres = usunięcie integracji. Przy obecnym adresie pusty token znaczy
+     * „zostaw dotychczasowy" (sekretu nie odbijamy w formularzu, więc nie każemy
+     * go przepisywać przy każdej edycji) — FormRequest pilnuje, by token istniał,
+     * gdy konfigurujemy od zera.
+     */
+    private function saveFakturownia(Shop $shop, ?string $url, ?string $token): void
+    {
+        $integration = $shop->integration(IntegrationType::Invoicing);
+
+        if (blank($url)) {
+            $integration?->delete();
+
+            return;
+        }
+
+        $config = [
+            'account_url' => $url,
+            'api_token' => filled($token) ? $token : ($integration?->config['api_token'] ?? null),
+        ];
+
+        if ($integration !== null) {
+            $integration->update(['config' => $config]);
+        } else {
+            $shop->integrations()->create([
+                'type' => IntegrationType::Invoicing,
+                'enabled' => true,
+                'config' => $config,
+            ]);
+        }
     }
 }

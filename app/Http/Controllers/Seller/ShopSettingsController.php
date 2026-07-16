@@ -32,6 +32,8 @@ class ShopSettingsController extends Controller
             'saleUnits' => SaleUnit::cases(),
             'googleAnalyticsId' => $shop->googleAnalyticsId(),
             'googleAnalyticsEnabled' => (bool) $shop->integration(IntegrationType::GoogleAnalytics)?->enabled,
+            'fakturowniaConfigured' => $shop->invoicingConfigured(),
+            'fakturowniaEnabled' => (bool) $shop->integration(IntegrationType::Invoicing)?->enabled,
         ]);
     }
 
@@ -39,15 +41,18 @@ class ShopSettingsController extends Controller
     {
         $shop = $request->user()->shop;
 
-        // Pola typowane sklepu (VAT, przelew) — bez włącznika GA, który żyje na
-        // wierszu integracji, nie na kolumnie shops.
-        $shop->fill($request->safe()->except('google_analytics_enabled'));
+        // Pola typowane sklepu (VAT, przelew) — bez włączników integracji, które
+        // żyją na wierszach shop_integrations, nie na kolumnach shops.
+        $shop->fill($request->safe()->except(['google_analytics_enabled', 'fakturownia_enabled']));
         $shop->save();
 
-        // Włącznik GA działa tylko, gdy integracja jest skonfigurowana (istnieje
-        // wiersz). Bez ID checkbox jest wyłączony i nie ma czego przełączać.
+        // Włączniki działają tylko, gdy integracja jest skonfigurowana (istnieje
+        // wiersz). Bez konfiguracji checkbox jest wyłączony i nie ma czego przełączać.
         $shop->integration(IntegrationType::GoogleAnalytics)
             ?->update(['enabled' => $request->boolean('google_analytics_enabled')]);
+
+        $shop->integration(IntegrationType::Invoicing)
+            ?->update(['enabled' => $request->boolean('fakturownia_enabled')]);
 
         return redirect()
             ->route('seller.settings.edit')

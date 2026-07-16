@@ -7,7 +7,76 @@
             <form method="POST" action="{{ route('seller.integrations.update') }}" class="space-y-6" novalidate data-validate>
                 @csrf
 
-                {{-- Google Analytics --}}
+                {{-- Fakturownia (faktury VAT) — tylko gdy pakiet daje to uprawnienie.
+                     Ważniejsze integracje idą na górę; Google Analytics zostaje na dole. --}}
+                @if ($shop->entitlement('invoices'))
+                    <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                        <div class="flex items-start gap-4">
+                            <span class="mt-0.5 shrink-0 text-2xl">🧾</span>
+                            <div class="flex-1">
+                                <h2 class="font-semibold text-stone-900">Fakturownia</h2>
+                                <p class="mt-1 text-sm text-stone-500">
+                                    Wystawiaj klientom faktury VAT wprost z karty zamówienia. Potrzebujesz konta w
+                                    <a href="https://fakturownia.pl" target="_blank" rel="noopener" class="font-medium text-stone-600 underline decoration-amber-300 underline-offset-2">Fakturowni</a>
+                                    oraz tokenu API z tego konta.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 space-y-5">
+                            <div class="grid gap-5 sm:grid-cols-2">
+                                <div>
+                                    <label for="fakturownia_url" class="block text-sm font-medium text-stone-700">Adres konta</label>
+                                    <input type="text" id="fakturownia_url" name="fakturownia_url"
+                                        value="{{ old('fakturownia_url', $fakturowniaUrl) }}"
+                                        placeholder="https://twojadomena.fakturownia.pl"
+                                        autocomplete="off" spellcheck="false"
+                                        class="mt-1.5 block w-full rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 font-mono text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
+                                    @error('fakturownia_url')
+                                        <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
+                                    @enderror
+                                    <p class="mt-1.5 text-xs text-stone-400">Adres Twojego konta w Fakturowni. Wyczyść to pole, aby odłączyć integrację.</p>
+                                </div>
+
+                                <div>
+                                    <label for="fakturownia_token" class="block text-sm font-medium text-stone-700">Token API</label>
+                                    <input type="password" id="fakturownia_token" name="fakturownia_token"
+                                        value=""
+                                        placeholder="{{ $fakturowniaConfigured ? '•••••••• (zapisany)' : 'Wklej token z Fakturowni' }}"
+                                        autocomplete="off" spellcheck="false"
+                                        class="mt-1.5 block w-full rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 font-mono text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
+                                    @error('fakturownia_token')
+                                        <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
+                                    @enderror
+                                    <p class="mt-1.5 text-xs text-stone-400">
+                                        Znajdziesz go w Fakturowni → <span class="text-stone-500">Ustawienia → Ustawienia konta → Integracja / API</span>.
+                                        @if ($fakturowniaConfigured)
+                                            Token jest zapisany — zostaw pole puste, aby go nie zmieniać.
+                                        @endif
+                                    </p>
+                                </div>
+                            </div>
+
+                            @if ($fakturowniaConfigured)
+                                <div class="flex items-start gap-3 rounded-2xl border border-stone-200 bg-white/60 p-4 text-sm">
+                                    <span class="mt-0.5 shrink-0 font-semibold {{ $fakturowniaEnabled ? 'text-emerald-600' : 'text-rose-600' }}">
+                                        {{ $fakturowniaEnabled ? '✓' : '✕' }}
+                                    </span>
+                                    <p class="text-stone-600">
+                                        @if ($fakturowniaEnabled)
+                                            Fakturownia jest połączona i <span class="font-medium text-stone-800">aktywna</span> — na karcie zamówienia możesz wystawić fakturę VAT.
+                                        @else
+                                            Dane są zapisane, ale integracja jest <span class="font-medium text-stone-800">wyłączona</span>. Włącz ją w
+                                            <a href="{{ route('seller.settings.edit') }}" class="font-medium underline decoration-amber-300 underline-offset-2">Ustawieniach</a>, aby wystawiać faktury.
+                                        @endif
+                                    </p>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                @endif
+
+                {{-- Google Analytics — najmniej istotna integracja, zawsze na dole. --}}
                 <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
                     <div class="flex items-start gap-4">
                         <span class="mt-0.5 shrink-0 text-2xl">📈</span>
