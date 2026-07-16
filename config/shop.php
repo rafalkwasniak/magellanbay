@@ -138,6 +138,11 @@ return [
     | wszystkich, więc NIE są uprawnieniem. `price_yearly` to placeholder (kwoty
     | nieustalone). `max_products` 24/48/96 dzieli się na pełne rzędy siatki.
     |
+    | `invoices` (faktury VAT / Fakturownia) jest CELOWO `true` we wszystkich
+    | pakietach — na start dostępne dla każdego. Bramka w kodzie już stoi
+    | (Shop::entitlement('invoices')), więc gdy zapadnie decyzja o płatności,
+    | wystarczy przełączyć `stall` na `false` — bez dorabiania mechanizmu.
+    |
     */
 
     'packages' => [
@@ -152,6 +157,7 @@ return [
                 'courier_shipping' => false,
                 'discount_codes' => false,
                 'custom_domain' => false,
+                'invoices' => true,
             ],
         ],
         'booth' => [
@@ -165,6 +171,7 @@ return [
                 'courier_shipping' => true,
                 'discount_codes' => true,
                 'custom_domain' => false,
+                'invoices' => true,
             ],
         ],
         'pavilion' => [
@@ -178,6 +185,7 @@ return [
                 'courier_shipping' => true,
                 'discount_codes' => true,
                 'custom_domain' => true,
+                'invoices' => true,
             ],
         ],
     ],

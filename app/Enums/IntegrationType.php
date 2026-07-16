@@ -10,6 +10,7 @@ namespace App\Enums;
 enum IntegrationType: string
 {
     case GoogleAnalytics = 'google_analytics';
+    case Invoicing = 'invoicing';
 
     /**
      * Czytelna nazwa (do UI).
@@ -18,6 +19,7 @@ enum IntegrationType: string
     {
         return match ($this) {
             self::GoogleAnalytics => 'Google Analytics',
+            self::Invoicing => 'Fakturownia',
         };
     }
 }
