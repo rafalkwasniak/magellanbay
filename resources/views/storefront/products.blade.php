@@ -16,14 +16,14 @@
             <div class="mt-8 flex flex-col gap-4 sm:flex-row">
                 @if (count($tagCloud))
                     <div class="st-card st-border flex-1 rounded-3xl border p-6 text-left">
-                        <h2 class="st-brand font-serif text-xl font-normal tracking-tight">Filtruj</h2>
+                        <h2 class="st-brand st-box-title">Filtruj</h2>
                         <x-storefront.tag-cloud :tags="$tagCloud" label="" :clearUrl="$hasFilters ? $clearUrl : null" />
                     </div>
                 @endif
 
                 @if ($products->isNotEmpty())
                     <div class="st-card st-border rounded-3xl border p-6 text-left sm:w-64 sm:shrink-0">
-                        <h2 class="st-brand font-serif text-xl font-normal tracking-tight">Sortuj</h2>
+                        <h2 class="st-brand st-box-title">Sortuj</h2>
                         <select onchange="if (this.value) window.location.href = this.value"
                             class="st-border mt-4 w-full rounded-xl border bg-transparent px-4 py-2 text-sm">
                             @foreach ($sortOptions as $option)

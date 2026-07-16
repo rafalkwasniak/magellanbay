@@ -36,6 +36,12 @@
 
         body { background: var(--surface); color: var(--ink); }
         .st-brand { color: var(--brand); }
+        /* Nagłówek boxu/karty na storefroncie — jedno źródło kroju i ROZMIARU
+           tytułów kart, żeby wszystkie były spójne i regulowane z jednego miejsca.
+           Serif (Instrument Serif) czyta się optycznie mniej niż sans, więc
+           trzymamy go odrobinę większym niż text-xl. Kolor NIE tu — zostaje na
+           .st-brand (lub np. rose dla strefy „danger”). */
+        .st-box-title { font-family: var(--font-serif); font-size: 1.375rem; font-weight: 400; letter-spacing: -0.025em; line-height: 1.3; }
         .st-btn { background: var(--brand); color: var(--brand-ink); }
         .st-border { border-color: color-mix(in srgb, var(--ink) 12%, transparent); }
         /* Panel karty — wyliczany z tokenów, czytelny na jasnym i ciemnym tle. */
