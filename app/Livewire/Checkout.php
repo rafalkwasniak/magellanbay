@@ -78,6 +78,58 @@ class Checkout extends Component
             $this->buyer_surname = $customer->surname ?? '';
             $this->buyer_email = $customer->email;
             $this->buyer_phone = $customer->phone ?? '';
+
+            $this->prefillFromLastOrder($customer);
+        }
+    }
+
+    /**
+     * Podpowiedzi z OSTATNIEGO zamówienia klienta: dane do faktury (firma), adres
+     * wysyłki oraz metody dostawy/płatności. To wygoda, nie ustalenie — klient może
+     * wszystko zmienić. Bierzemy najświeższe zamówienie (także anulowane: adres i
+     * dane firmy są w nim wciąż poprawne). Metodę podpowiadamy tylko, gdy sklep
+     * nadal ją oferuje; adres wysyłki kopiujemy tylko, gdy WYBRANA dostawa jest
+     * kurierska (czyli tamto zamówienie szło kurierem i sklep dalej to daje).
+     */
+    private function prefillFromLastOrder(Customer $customer): void
+    {
+        $last = $customer->orders()->latest()->first();
+
+        if ($last === null) {
+            return;
+        }
+
+        // Dane do faktury (FV).
+        $this->is_company = $last->is_company;
+        if ($last->is_company) {
+            $this->company_name = $last->company_name ?? '';
+            $this->company_nip = $last->company_nip ?? '';
+            $this->company_street = $last->company_street ?? '';
+            $this->company_building_number = $last->company_building_number ?? '';
+            $this->company_apartment_number = $last->company_apartment_number ?? '';
+            $this->company_postal_code = $last->company_postal_code ?? '';
+            $this->company_city = $last->company_city ?? '';
+        }
+
+        // Metoda dostawy — tylko jeśli sklep dalej ją oferuje.
+        $lastDelivery = $last->delivery_method?->value;
+        if ($lastDelivery !== null && array_key_exists($lastDelivery, $this->deliveryOptions())) {
+            $this->delivery_method = $lastDelivery;
+        }
+
+        // Adres wysyłki — po ustaleniu dostawy, tylko gdy jest kurierska.
+        if ($this->shippedDelivery()) {
+            $this->ship_street = $last->ship_street ?? '';
+            $this->ship_building_number = $last->ship_building_number ?? '';
+            $this->ship_apartment_number = $last->ship_apartment_number ?? '';
+            $this->ship_postal_code = $last->ship_postal_code ?? '';
+            $this->ship_city = $last->ship_city ?? '';
+        }
+
+        // Metoda płatności — po dostawie (jej opcje zależą od wyboru dostawy).
+        $lastPayment = $last->payment_method?->value;
+        if ($lastPayment !== null && array_key_exists($lastPayment, $this->paymentOptions())) {
+            $this->payment_method = $lastPayment;
         }
     }
 

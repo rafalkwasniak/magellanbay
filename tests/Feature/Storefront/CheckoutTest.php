@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Storefront;
 
+use App\Enums\DeliveryMethod;
+use App\Enums\PaymentMethod;
 use App\Livewire\Checkout;
 use App\Models\Customer;
 use App\Models\Order;
@@ -246,6 +248,74 @@ class CheckoutTest extends TestCase
             ->assertRedirect('/kasa/dziekujemy');
 
         $this->assertSame($customer->id, Order::first()->customer_id);
+    }
+
+    public function test_prefills_from_customers_last_order(): void
+    {
+        $shop = $this->shopReadyForOrders();
+        $shop->update(['courier_enabled' => true, 'courier_cost' => 15.00]);
+        $this->cartProduct($shop);
+
+        $customer = Customer::factory()->for($shop)->create([
+            'name' => 'Ala', 'surname' => 'Nowak', 'email' => 'ala@example.com', 'phone' => '48500600700',
+        ]);
+
+        // Starsze zamówienie (odbiór) — nie może wygrać z nowszym.
+        Order::factory()->for($shop)->for($customer)->create([
+            'delivery_method' => DeliveryMethod::Pickup,
+            'payment_method' => PaymentMethod::PayOnPickup,
+            'created_at' => now()->subDays(10),
+        ]);
+
+        // Najświeższe zamówienie: firma (FV) + kurier + adres + przelew.
+        Order::factory()->for($shop)->for($customer)->create([
+            'is_company' => true,
+            'company_name' => 'ACME sp. z o.o.',
+            'company_nip' => '5252248481',
+            'company_street' => 'Firmowa', 'company_building_number' => '7',
+            'company_postal_code' => '00-002', 'company_city' => 'Warszawa',
+            'delivery_method' => DeliveryMethod::Courier,
+            'payment_method' => PaymentMethod::BankTransfer,
+            'ship_street' => 'Dostawcza', 'ship_building_number' => '9', 'ship_apartment_number' => '3',
+            'ship_postal_code' => '00-003', 'ship_city' => 'Kraków',
+        ]);
+
+        $this->actingAs($customer, 'customer');
+
+        Livewire::test(Checkout::class, ['shopId' => $shop->id])
+            ->assertSet('is_company', true)
+            ->assertSet('company_name', 'ACME sp. z o.o.')
+            ->assertSet('company_nip', '5252248481')
+            ->assertSet('company_city', 'Warszawa')
+            ->assertSet('delivery_method', 'courier')
+            ->assertSet('payment_method', 'bank_transfer')
+            ->assertSet('ship_street', 'Dostawcza')
+            ->assertSet('ship_building_number', '9')
+            ->assertSet('ship_apartment_number', '3')
+            ->assertSet('ship_postal_code', '00-003')
+            ->assertSet('ship_city', 'Kraków');
+    }
+
+    public function test_does_not_prefill_method_the_shop_no_longer_offers(): void
+    {
+        // Sklep bez kuriera; ostatnie zamówienie klienta szło jednak kurierem.
+        $shop = $this->shopReadyForOrders();
+        $this->cartProduct($shop);
+
+        $customer = Customer::factory()->for($shop)->create();
+
+        Order::factory()->for($shop)->for($customer)->create([
+            'delivery_method' => DeliveryMethod::Courier,
+            'payment_method' => PaymentMethod::BankTransfer,
+            'ship_street' => 'Dostawcza', 'ship_building_number' => '9',
+            'ship_postal_code' => '00-003', 'ship_city' => 'Kraków',
+        ]);
+
+        $this->actingAs($customer, 'customer');
+
+        Livewire::test(Checkout::class, ['shopId' => $shop->id])
+            ->assertSet('delivery_method', 'pickup')   // fallback do pierwszej oferowanej
+            ->assertSet('ship_street', '');            // adres nie skopiowany (dostawa nie kurierska)
     }
 
     public function test_nip_lookup_fills_company_fields(): void
