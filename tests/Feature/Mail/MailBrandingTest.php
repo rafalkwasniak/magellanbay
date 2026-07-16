@@ -76,28 +76,15 @@ class MailBrandingTest extends TestCase
         $this->assertSame($shop->themeTokens()['ink'], $brand['text']);
     }
 
-    public function test_heading_uses_brand_colour_darkened_to_stay_legible(): void
+    public function test_heading_uses_raw_brand_colour_like_storefront(): void
     {
-        // Jasny „kolor przewodni" sklepu na białej karcie → przyciemniony do
-        // czytelności (próg WCAG AA), zamiast zniknąć.
+        // Tytuł maila = surowy „kolor przewodni" sklepu, dokładnie jak nazwy
+        // produktów i nagłówki na storefroncie (`.st-brand { color: var(--brand) }`).
+        // Spójność dekoru wybrana świadomie ponad przyciemnianie do WCAG na bieli.
         $shop = Shop::factory()->create(['theme' => ['palette' => 'custom', 'brand_color' => '#FCE7A2']]);
 
         $brand = MailBranding::for($shop->id);
 
-        $this->assertGreaterThanOrEqual(4.5, $this->contrastOnWhite($brand['heading']));
-    }
-
-    private function contrastOnWhite(string $hex): float
-    {
-        $hex = ltrim($hex, '#');
-        $channels = array_map(static function (string $pair): float {
-            $v = hexdec($pair) / 255;
-
-            return $v <= 0.03928 ? $v / 12.92 : (($v + 0.055) / 1.055) ** 2.4;
-        }, [substr($hex, 0, 2), substr($hex, 2, 2), substr($hex, 4, 2)]);
-
-        $luminance = 0.2126 * $channels[0] + 0.7152 * $channels[1] + 0.0722 * $channels[2];
-
-        return (1.0 + 0.05) / ($luminance + 0.05);   // biel = jasność 1.0
+        $this->assertSame($shop->themeTokens()['brand'], $brand['heading']);
     }
 }

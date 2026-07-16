@@ -104,10 +104,11 @@ class MailBranding
             // białej karcie: przy ciemnym motywie ink jest jasny i znika na bieli.
             'text' => $tokens['ink'] ?? $system['text'],
             // Karta maila jest zawsze biała, więc tekst NA niej musi być ciemny
-            // niezależnie od motywu. Tytuł barwimy kolorem przewodnim sklepu, ale
-            // przyciemnionym do czytelności na bieli (`readableOn`); powitanie i
-            // treść — neutralnie ciemne (nie tusz motywu).
-            'heading' => Color::readableOn($tokens['brand'] ?? $system['brand']),
+            // niezależnie od motywu. Tytuł barwimy SUROWYM kolorem przewodnim sklepu
+            // — dokładnie tak jak nazwy produktów i nagłówki na storefroncie
+            // (`.st-brand { color: var(--brand) }`). Spójność dekoru ważniejsza niż
+            // przyciemnianie do WCAG na bieli. Powitanie i treść — neutralnie ciemne.
+            'heading' => $tokens['brand'] ?? $system['brand'],
             'ink_card' => $system['text'],
             'muted' => $system['muted'],
             'page_bg' => $tokens['surface'] ?? $system['page_bg'],
