@@ -119,11 +119,18 @@
                     <div class="mt-4 space-y-2">
                         @foreach ($deliveryOptions as $value => $label)
                             <label class="st-border flex cursor-pointer items-center gap-3 rounded-xl border p-4 text-sm">
-                                <input type="radio" wire:model="delivery_method" value="{{ $value }}" class="h-5 w-5 shrink-0" style="accent-color: var(--brand);">
-                                <span>
-                                    <span class="font-medium">{{ $label }}</span>
+                                <input type="radio" wire:model.live="delivery_method" value="{{ $value }}" class="h-5 w-5 shrink-0" style="accent-color: var(--brand);">
+                                <span class="flex-1">
+                                    <span class="flex items-baseline justify-between gap-3">
+                                        <span class="font-medium">{{ $label }}</span>
+                                        @if ($value === 'courier')
+                                            <span class="shrink-0 text-sm tabular-nums opacity-80">{{ $courierCostForCart > 0 ? \App\Support\Money::pln($courierCostForCart) : 'Gratis' }}</span>
+                                        @endif
+                                    </span>
                                     @if ($value === 'pickup' && filled($pickupAddress))
                                         <span class="block text-xs opacity-60">{{ $pickupAddress }}</span>
+                                    @elseif ($value === 'courier' && $courierFreeFrom && $courierCostForCart > 0)
+                                        <span class="block text-xs opacity-60">Darmowa dostawa od {{ \App\Support\Money::pln($courierFreeFrom) }}</span>
                                     @endif
                                 </span>
                             </label>
@@ -131,6 +138,41 @@
                     </div>
                     @error('delivery_method') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
                 </div>
+
+                {{-- Adres dostawy — tylko przy wysyłce (kurier). --}}
+                @if ($shippedDelivery)
+                    <div class="st-card st-border rounded-3xl border p-6">
+                        <h2 class="font-semibold">Adres dostawy</h2>
+                        <div class="mt-4 grid grid-cols-6 gap-3">
+                            <div class="col-span-6 sm:col-span-4">
+                                <label for="ship_street" class="block text-sm opacity-80">Ulica</label>
+                                <input type="text" id="ship_street" wire:model="ship_street" class="st-border mt-1 block w-full rounded-xl border bg-transparent px-3 py-2.5 text-sm focus:outline-none">
+                                @error('ship_street') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
+                            </div>
+                            <div class="col-span-3 sm:col-span-1">
+                                <label for="ship_building_number" class="block text-sm opacity-80">Nr</label>
+                                <input type="text" id="ship_building_number" wire:model="ship_building_number" class="st-border mt-1 block w-full rounded-xl border bg-transparent px-3 py-2.5 text-sm focus:outline-none">
+                                @error('ship_building_number') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
+                            </div>
+                            <div class="col-span-3 sm:col-span-1">
+                                <label for="ship_apartment_number" class="block text-sm opacity-80">Lok.</label>
+                                <input type="text" id="ship_apartment_number" wire:model="ship_apartment_number" class="st-border mt-1 block w-full rounded-xl border bg-transparent px-3 py-2.5 text-sm focus:outline-none">
+                                @error('ship_apartment_number') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
+                            </div>
+                            <div class="col-span-3 sm:col-span-2">
+                                <label for="ship_postal_code" class="block text-sm opacity-80">Kod</label>
+                                <input type="text" id="ship_postal_code" wire:model="ship_postal_code" class="st-border mt-1 block w-full rounded-xl border bg-transparent px-3 py-2.5 text-sm focus:outline-none">
+                                @error('ship_postal_code') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
+                            </div>
+                            <div class="col-span-3 sm:col-span-4">
+                                <label for="ship_city" class="block text-sm opacity-80">Miejscowość</label>
+                                <input type="text" id="ship_city" wire:model="ship_city" class="st-border mt-1 block w-full rounded-xl border bg-transparent px-3 py-2.5 text-sm focus:outline-none">
+                                @error('ship_city') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
+                            </div>
+                        </div>
+                        <p class="mt-3 text-xs opacity-60">Adres, pod który wyślemy zamówienie.</p>
+                    </div>
+                @endif
 
                 {{-- Płatność --}}
                 <div class="st-card st-border rounded-3xl border p-6">
@@ -173,7 +215,13 @@
                             </li>
                         @endforeach
                     </ul>
-                    <div class="st-border mt-4 flex items-baseline justify-between border-t pt-4">
+                    @if ($shippedDelivery)
+                        <div class="st-border mt-4 flex items-baseline justify-between border-t pt-4 text-sm">
+                            <span class="opacity-70">Dostawa (kurier)</span>
+                            <span class="shrink-0 tabular-nums">{{ $formattedDelivery }}</span>
+                        </div>
+                    @endif
+                    <div class="st-border flex items-baseline justify-between {{ $shippedDelivery ? 'mt-3' : 'mt-4 border-t pt-4' }}">
                         <span class="opacity-70">Razem (brutto)</span>
                         <span class="text-xl font-bold tabular-nums">{{ $formattedTotal }}</span>
                     </div>

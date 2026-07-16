@@ -9,11 +9,13 @@ namespace App\Enums;
 enum DeliveryMethod: string
 {
     case Pickup = 'pickup';
+    case Courier = 'courier';
 
     public function label(): string
     {
         return match ($this) {
             self::Pickup => 'Odbiór osobisty',
+            self::Courier => 'Kurier',
         };
     }
 
@@ -27,6 +29,7 @@ enum DeliveryMethod: string
     {
         return match ($this) {
             self::Pickup => false,
+            self::Courier => true,
         };
     }
 }

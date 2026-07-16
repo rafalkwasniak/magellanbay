@@ -274,6 +274,74 @@ class CheckoutTest extends TestCase
             ->assertHasNoErrors();
     }
 
+    public function test_courier_option_requires_shipping_address(): void
+    {
+        $shop = $this->shopReadyForOrders();
+        $shop->update(['courier_enabled' => true, 'courier_cost' => 15.00]);
+        $this->cartProduct($shop);
+
+        Livewire::test(Checkout::class, ['shopId' => $shop->id])
+            ->assertSee('Kurier')
+            ->set('buyer_name', 'Jan')
+            ->set('buyer_surname', 'Kowalski')
+            ->set('buyer_email', 'jan@example.com')
+            ->set('buyer_phone', '123456789')
+            ->set('delivery_method', 'courier')
+            ->set('payment_method', 'bank_transfer')
+            ->set('accept_terms', true)
+            ->set('accept_privacy', true)
+            ->call('place')
+            ->assertHasErrors(['ship_street', 'ship_building_number', 'ship_postal_code', 'ship_city']);
+
+        $this->assertSame(0, Order::count());
+    }
+
+    public function test_choosing_courier_drops_pay_on_pickup_payment(): void
+    {
+        $shop = $this->shopReadyForOrders();
+        $shop->update(['courier_enabled' => true, 'courier_cost' => 15.00]);
+        $this->cartProduct($shop);
+
+        Livewire::test(Checkout::class, ['shopId' => $shop->id])
+            ->set('delivery_method', 'pickup')
+            ->set('payment_method', 'pay_on_pickup')
+            // Przełączenie na kuriera zdejmuje „płatność przy odbiorze" i przełącza
+            // wybór na pierwszą dostępną metodę (przelew).
+            ->set('delivery_method', 'courier')
+            ->assertDontSee('Płatność przy odbiorze')
+            ->assertSet('payment_method', 'bank_transfer');
+    }
+
+    public function test_guest_places_courier_order_with_cost_and_address(): void
+    {
+        $shop = $this->shopReadyForOrders();
+        $shop->update(['courier_enabled' => true, 'courier_cost' => 15.00]);
+        $this->cartProduct($shop);   // produkt 40 zł
+
+        Livewire::test(Checkout::class, ['shopId' => $shop->id])
+            ->set('buyer_name', 'Jan')
+            ->set('buyer_surname', 'Kowalski')
+            ->set('buyer_email', 'jan@example.com')
+            ->set('buyer_phone', '123456789')
+            ->set('delivery_method', 'courier')
+            ->set('payment_method', 'bank_transfer')
+            ->set('ship_street', 'Leśna')
+            ->set('ship_building_number', '12')
+            ->set('ship_postal_code', '30-001')
+            ->set('ship_city', 'Kraków')
+            ->set('accept_terms', true)
+            ->set('accept_privacy', true)
+            ->call('place')
+            ->assertRedirect('/kasa/dziekujemy');
+
+        $order = Order::first();
+        $this->assertSame(\App\Enums\DeliveryMethod::Courier, $order->delivery_method);
+        $this->assertSame('15.00', $order->delivery_cost);
+        $this->assertSame('55.00', $order->total_gross);   // 40 produkty + 15 dostawa
+        $this->assertSame('Leśna', $order->ship_street);
+        $this->assertSame('Kraków', $order->ship_city);
+    }
+
     public function test_confirmation_page_shows_order_number(): void
     {
         $shop = $this->shopReadyForOrders();

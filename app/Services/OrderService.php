@@ -174,12 +174,14 @@ class OrderService
         $payment = PaymentMethod::from($data['payment_method']);
 
         $itemRows = [];
+        $itemsGross = 0.0;
 
         foreach ($lines as $line) {
             $product = $line['product'];
             $quantity = $line['quantity'];
 
             [$lineGross] = $this->totals->lineAmounts((float) $product->price_gross, $quantity, $product->vat_rate);
+            $itemsGross += $lineGross;
 
             $itemRows[] = [
                 'product_id' => $product->id,
@@ -195,6 +197,10 @@ class OrderService
                 $product->decrement('stock', $quantity);
             }
         }
+
+        // Koszt dostawy = konfiguracja kuriera per sklep (z progiem darmowej
+        // dostawy liczonym od wartości produktów). Odbiór osobisty: 0.
+        $deliveryCost = $delivery->isShipped() ? $shop->courierCostFor($itemsGross) : 0.0;
 
         $order = $shop->orders()->create([
             'number' => $shop->allocateOrderNumber(),
@@ -214,8 +220,14 @@ class OrderService
             'company_apartment_number' => $this->companyField($data, 'company_apartment_number'),
             'company_postal_code' => $this->companyField($data, 'company_postal_code'),
             'company_city' => $this->companyField($data, 'company_city'),
+            // Migawka adresu dostawy — tylko przy wysyłce (odbiór: pusty).
+            'ship_street' => $this->shipField($data, 'ship_street', $delivery),
+            'ship_building_number' => $this->shipField($data, 'ship_building_number', $delivery),
+            'ship_apartment_number' => $this->shipField($data, 'ship_apartment_number', $delivery),
+            'ship_postal_code' => $this->shipField($data, 'ship_postal_code', $delivery),
+            'ship_city' => $this->shipField($data, 'ship_city', $delivery),
             'delivery_method' => $delivery,
-            'delivery_cost' => 0.0,    // MVP: odbiór osobisty bez kosztu
+            'delivery_cost' => $deliveryCost,
             'payment_method' => $payment,
             'items_total' => 0,
             'total_net' => 0,
@@ -240,6 +252,23 @@ class OrderService
     private function companyField(array $data, string $key): ?string
     {
         if (! ($data['is_company'] ?? false)) {
+            return null;
+        }
+
+        $value = $data[$key] ?? null;
+
+        return filled($value) ? (string) $value : null;
+    }
+
+    /**
+     * Pole adresu dostawy: wartość tylko przy metodzie z wysyłką (kurier), puste
+     * → null. Przy odbiorze osobistym adres nie istnieje.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function shipField(array $data, string $key, DeliveryMethod $delivery): ?string
+    {
+        if (! $delivery->isShipped()) {
             return null;
         }
 

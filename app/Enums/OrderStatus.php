@@ -18,6 +18,7 @@ enum OrderStatus: string
     case Paid = 'paid';
     case Processing = 'processing';
     case ReadyForPickup = 'ready_for_pickup';
+    case ReadyForShipment = 'ready_for_shipment';
     case Completed = 'completed';
     case Cancelled = 'cancelled';
 
@@ -29,6 +30,7 @@ enum OrderStatus: string
             self::Paid => 'Opłacone',
             self::Processing => 'W realizacji',
             self::ReadyForPickup => 'Gotowe do odbioru',
+            self::ReadyForShipment => 'Gotowe do wysyłki',
             self::Completed => 'Zrealizowane',
             self::Cancelled => 'Anulowane',
         };
@@ -56,6 +58,9 @@ enum OrderStatus: string
             self::Paid => 'bg-emerald-100 text-emerald-800',
             self::Processing => 'bg-sky-100 text-sky-800',
             self::ReadyForPickup => 'bg-violet-100 text-violet-800',
+            // Wysyłka i odbiór nigdy nie występują w jednym zamówieniu — ten sam
+            // fiolet „gotowe do wydania" jest tu bezpieczny i spójny znaczeniowo.
+            self::ReadyForShipment => 'bg-violet-100 text-violet-800',
             self::Completed => 'bg-green-100 text-green-800',
             self::Cancelled => 'bg-stone-200 text-stone-600',
         };

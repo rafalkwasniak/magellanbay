@@ -32,7 +32,13 @@
                         </li>
                     @endforeach
                 </ul>
-                <div class="st-border mt-4 flex items-baseline justify-between border-t pt-4">
+                @if ($order->delivery_method->isShipped())
+                    <div class="st-border mt-4 flex items-baseline justify-between border-t pt-4 text-sm">
+                        <span class="opacity-70">Dostawa</span>
+                        <span class="shrink-0 tabular-nums">{{ (float) $order->delivery_cost > 0 ? \App\Support\Money::pln($order->delivery_cost) : 'Gratis' }}</span>
+                    </div>
+                @endif
+                <div class="st-border flex items-baseline justify-between {{ $order->delivery_method->isShipped() ? 'mt-3' : 'mt-4 border-t pt-4' }}">
                     <span class="opacity-70">Razem (brutto)</span>
                     <span class="text-xl font-bold tabular-nums">{{ \App\Support\Money::pln($order->total_gross) }}</span>
                 </div>
@@ -69,6 +75,13 @@
                             {{ $shop->postal_code }} {{ $shop->city }}
                         </p>
                         <p class="mt-2 text-xs opacity-60">Poinformujemy Cię, gdy zamówienie będzie gotowe do odbioru.</p>
+                    @elseif ($order->delivery_method->isShipped())
+                        <p class="mt-2 text-sm opacity-70">Wyślemy na adres:</p>
+                        <p class="mt-1 text-sm font-medium">
+                            {{ $order->ship_street }} {{ $order->ship_building_number }}{{ $order->ship_apartment_number ? '/'.$order->ship_apartment_number : '' }},
+                            {{ $order->ship_postal_code }} {{ $order->ship_city }}
+                        </p>
+                        <p class="mt-2 text-xs opacity-60">Poinformujemy Cię, gdy zamówienie będzie gotowe do wysyłki.</p>
                     @endif
                 </div>
             </div>

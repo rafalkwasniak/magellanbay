@@ -44,6 +44,13 @@ class Checkout extends Component
     public string $company_postal_code = '';
     public string $company_city = '';
 
+    // Adres dostawy (wypełniany tylko przy wysyłce — patrz shippedDelivery()).
+    public string $ship_street = '';
+    public string $ship_building_number = '';
+    public string $ship_apartment_number = '';
+    public string $ship_postal_code = '';
+    public string $ship_city = '';
+
     // Metody i uwagi.
     public string $delivery_method = '';
     public string $payment_method = '';
@@ -111,13 +118,27 @@ class Checkout extends Component
      */
     public function deliveryOptions(): array
     {
+        $shop = $this->shop();
         $options = [];
 
-        if ($this->shop()->pickupAvailable()) {
+        if ($shop->pickupAvailable()) {
             $options[DeliveryMethod::Pickup->value] = DeliveryMethod::Pickup->label();
         }
 
+        if ($shop->courierAvailable()) {
+            $options[DeliveryMethod::Courier->value] = DeliveryMethod::Courier->label();
+        }
+
         return $options;
+    }
+
+    /**
+     * Czy WYBRANA metoda dostawy wiąże się z wysyłką pod adres (kurier). Rozstrzyga
+     * o widoczności i wymagalności bloku adresu oraz o kosztach dostawy.
+     */
+    public function shippedDelivery(): bool
+    {
+        return DeliveryMethod::tryFrom($this->delivery_method)?->isShipped() ?? false;
     }
 
     /**
@@ -134,11 +155,27 @@ class Checkout extends Component
             $options[PaymentMethod::BankTransfer->value] = PaymentMethod::BankTransfer->label();
         }
 
-        if ($shop->payOnPickupAvailable()) {
+        // Płatność przy odbiorze ma sens tylko przy odbiorze osobistym — przy
+        // wysyłce nie ma „odbioru", pod którym klient zapłaci. Kurier ⇒ przelew.
+        if ($shop->payOnPickupAvailable() && ! $this->shippedDelivery()) {
             $options[PaymentMethod::PayOnPickup->value] = PaymentMethod::PayOnPickup->label();
         }
 
         return $options;
+    }
+
+    /**
+     * Zmiana metody dostawy może zawęzić dostępne płatności (wybór kuriera zdejmuje
+     * „płatność przy odbiorze"). Gdy bieżąca płatność wypadła z listy — przełącz na
+     * pierwszą dostępną, żeby nie zostać z zaznaczeniem spoza opcji.
+     */
+    public function updatedDeliveryMethod(): void
+    {
+        $available = array_keys($this->paymentOptions());
+
+        if (! in_array($this->payment_method, $available, true)) {
+            $this->payment_method = $available[0] ?? '';
+        }
     }
 
     /**
@@ -159,6 +196,14 @@ class Checkout extends Component
             'is_company' => ['boolean'],
             'create_account' => ['boolean'],
         ];
+
+        if ($this->shippedDelivery()) {
+            $rules['ship_street'] = ['required', 'string', 'max:255'];
+            $rules['ship_building_number'] = ['required', 'string', 'max:30'];
+            $rules['ship_apartment_number'] = ['nullable', 'string', 'max:30'];
+            $rules['ship_postal_code'] = ['required', 'string', 'max:12'];
+            $rules['ship_city'] = ['required', 'string', 'max:120'];
+        }
 
         if ($this->is_company) {
             $rules['company_name'] = ['required', 'string', 'max:255'];
@@ -237,6 +282,11 @@ class Checkout extends Component
             'buyer_phone' => 'telefon',
             'delivery_method' => 'sposób dostawy',
             'payment_method' => 'sposób płatności',
+            'ship_street' => 'ulica',
+            'ship_building_number' => 'numer budynku',
+            'ship_apartment_number' => 'numer lokalu',
+            'ship_postal_code' => 'kod pocztowy',
+            'ship_city' => 'miejscowość',
             'note' => 'uwagi',
             'accept_terms' => 'regulamin',
             'accept_privacy' => 'polityka prywatności',
@@ -288,11 +338,21 @@ class Checkout extends Component
 
         $shop = $this->shop();
 
+        // Koszt dostawy zależny od wybranej metody (kurier: koszt z progiem
+        // darmowej dostawy od wartości produktów; odbiór: 0). Suma = produkty + dostawa.
+        $shipped = $this->shippedDelivery();
+        $deliveryCost = $shipped ? $shop->courierCostFor($gross) : 0.0;
+
         $termsPage = $shop->pages()->where('is_system', true)->first();
 
         return view('livewire.checkout', [
             'lines' => $lines,
-            'formattedTotal' => Money::pln($gross),
+            'shippedDelivery' => $shipped,
+            'deliveryCost' => $deliveryCost,
+            'formattedDelivery' => $deliveryCost > 0 ? Money::pln($deliveryCost) : 'Gratis',
+            'courierFreeFrom' => $shop->courier_free_from !== null ? (float) $shop->courier_free_from : null,
+            'courierCostForCart' => $shop->courierAvailable() ? $shop->courierCostFor($gross) : null,
+            'formattedTotal' => Money::pln($gross + $deliveryCost),
             'formattedNet' => Money::pln($net),
             'bankName' => $shop->bank_name,
             'pickupAddress' => $this->pickupAddress($shop),
