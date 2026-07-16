@@ -80,7 +80,7 @@ class OrderMailer
             'to_name' => trim($order->buyer_name.' '.$order->buyer_surname),
             'subject' => 'Faktura VAT'.$numberSuffix.' do zamówienia #'.$order->number.' — '.$shop->name,
             'preheader' => 'Twoja faktura VAT do zamówienia #'.$order->number.' jest gotowa.',
-            'heading' => 'Faktura VAT gotowa',
+            'heading' => 'Twoja Faktura VAT',
             'greeting' => Vocative::greeting($order->buyer_name),
             'intro_lines' => $this->blocks([
                 [

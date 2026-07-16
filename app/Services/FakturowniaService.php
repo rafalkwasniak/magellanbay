@@ -169,6 +169,7 @@ class FakturowniaService
             'name' => $item->name,
             'tax' => $this->tax($item->vat_rate),
             'quantity' => (float) $item->quantity,
+            'quantity_unit' => $item->sale_unit->abbreviation(),
             'total_price_gross' => (float) $item->line_total_gross,
         ])->values()->all();
 
@@ -177,6 +178,7 @@ class FakturowniaService
                 'name' => 'Dostawa: '.$order->delivery_method->label(),
                 'tax' => self::DELIVERY_TAX,
                 'quantity' => 1,
+                'quantity_unit' => 'szt.',
                 'total_price_gross' => (float) $order->delivery_cost,
             ];
         }

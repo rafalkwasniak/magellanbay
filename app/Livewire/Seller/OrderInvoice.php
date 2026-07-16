@@ -3,58 +3,66 @@
 namespace App\Livewire\Seller;
 
 use App\Models\Order;
-use Livewire\Attributes\On;
 use Livewire\Component;
 
 /**
- * Karta stanu faktury VAT w kolumnie bocznej szczegółu zamówienia. Pokazuje
- * WYNIK/POSTĘP: w przygotowaniu / gotowa (link do PDF) / błąd (z ponowieniem).
- * Samo ZLECENIE po raz pierwszy robi kompaktowy przycisk przy danych kupującego
- * ({@see OrderInvoiceTrigger}); tutaj zostaje ponowienie po błędzie.
+ * Faktura VAT przy danych kupującego na szczególe zamówienia. JEDEN komponent na
+ * cały cykl w JEDNYM miejscu (obok danych do faktury): przycisk „Stwórz fakturę
+ * VAT" z potwierdzeniem w miejscu → „w przygotowaniu" → „Pobierz fakturę VAT",
+ * a przy błędzie ponowienie. Bez rozbijania na osobną kartę w kolumnie bocznej —
+ * sprzedawca prowadzi całą sprawę tam, gdzie na nią patrzy.
  *
- * W stanie „idle" (można wystawić, ale jeszcze nie zlecono) karta się NIE
- * pokazuje — całą uwagę bierze wtedy przycisk przy danych. Gdy przycisk zleci
- * FV, wysyła event `invoice-status-changed`, a ta karta odświeża się i od razu
- * pokazuje „w przygotowaniu" (bez przeładowania strony).
+ * Sama robota (wołanie Fakturowni, mail „Pobierz FV") dzieje się w tle w jobie
+ * {@see \App\Jobs\GenerateInvoice}; „w przygotowaniu" odświeża się `wire:poll`,
+ * aż kolejka (cron) domknie fakturę.
  */
 class OrderInvoice extends Component
 {
     public Order $order;
+
+    /** Czy pokazujemy potwierdzenie w miejscu (zamiast natywnego dymka). */
+    public bool $confirming = false;
 
     public function mount(Order $order): void
     {
         $this->order = $order;
     }
 
-    /**
-     * Nasłuch zlecenia z przycisku przy danych kupującego — odświeża zamówienie,
-     * dzięki czemu karta natychmiast przełącza się na „w przygotowaniu".
-     */
-    #[On('invoice-status-changed')]
-    public function syncInvoice(): void
+    public function askCreate(): void
     {
-        $this->order->refresh();
+        $this->authorizeOwnership();
+
+        $this->confirming = true;
+    }
+
+    public function dismiss(): void
+    {
+        $this->confirming = false;
     }
 
     /**
-     * Ponowienie po nieudanej próbie (stan `failed` znów przepuszcza gard).
-     * Pierwsze zlecenie idzie przez przycisk przy danych kupującego.
+     * Zleca wystawienie FV (pierwsza próba lub ponowienie po błędzie). Guard w
+     * `requestInvoice()` chroni przed dublem i zleceniem bez konfiguracji.
      */
     public function create(): void
     {
-        abort_unless($this->order->shop_id === auth()->user()?->shop?->id, 403);
+        $this->authorizeOwnership();
 
+        $this->confirming = false;
         $this->order->requestInvoice();
+    }
+
+    private function authorizeOwnership(): void
+    {
+        abort_unless($this->order->shop_id === auth()->user()?->shop?->id, 403);
     }
 
     public function render()
     {
-        // Karta pokazuje tylko realny stan: FV gotowa, w toku albo nieudana próba.
-        // Idle (można wystawić, nic jeszcze nie zlecono) obsługuje przycisk przy
-        // danych kupującego, więc tutaj karta zostaje ukryta.
+        // Widoczne, gdy sklep używa Fakturowni albo faktura już istnieje (żeby
+        // link do PDF został nawet po późniejszym wyłączeniu integracji).
         $visible = $this->order->hasInvoice()
-            || $this->order->isInvoicePending()
-            || $this->order->invoiceFailed();
+            || ($this->order->shop?->entitlement('invoices') === true && $this->order->shop->invoicingEnabled());
 
         return view('livewire.seller.order-invoice', [
             'visible' => $visible,

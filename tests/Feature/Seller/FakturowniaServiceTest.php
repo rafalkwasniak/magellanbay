@@ -80,8 +80,8 @@ class FakturowniaServiceTest extends TestCase
         $this->assertSame('transfer', $invoice['payment_type']);
 
         $this->assertCount(2, $invoice['positions']);
-        $this->assertSame(['name' => 'Bukiet róż', 'tax' => 23, 'quantity' => 2.0, 'total_price_gross' => 200.0], $invoice['positions'][0]);
-        $this->assertSame(['name' => 'Usługa zwolniona', 'tax' => 'zw', 'quantity' => 1.0, 'total_price_gross' => 50.0], $invoice['positions'][1]);
+        $this->assertSame(['name' => 'Bukiet róż', 'tax' => 23, 'quantity' => 2.0, 'quantity_unit' => 'szt.', 'total_price_gross' => 200.0], $invoice['positions'][0]);
+        $this->assertSame(['name' => 'Usługa zwolniona', 'tax' => 'zw', 'quantity' => 1.0, 'quantity_unit' => 'szt.', 'total_price_gross' => 50.0], $invoice['positions'][1]);
     }
 
     public function test_delivery_cost_becomes_its_own_position(): void
@@ -99,6 +99,27 @@ class FakturowniaServiceTest extends TestCase
         $this->assertSame('Dostawa: '.DeliveryMethod::Courier->label(), $delivery['name']);
         $this->assertSame(23, $delivery['tax']);
         $this->assertSame(15.0, $delivery['total_price_gross']);
+    }
+
+    public function test_weight_item_carries_kg_unit(): void
+    {
+        $shop = $this->shopWithFakturownia();
+        $order = Order::factory()->for($shop)->create(['delivery_cost' => 0]);
+        OrderItem::factory()->for($order)->create([
+            'name' => 'Truskawki',
+            'unit_price_gross' => 20.00,
+            'vat_rate' => VatRate::R5,
+            'quantity' => 2.5,
+            'sale_unit' => SaleUnit::Weight,
+            'line_total_gross' => 50.00,
+        ]);
+
+        $positions = app(FakturowniaService::class)->buildInvoicePayload($order->fresh())['invoice']['positions'];
+
+        // Ostatnia pozycja to nasze truskawki na wagę.
+        $strawberries = collect($positions)->firstWhere('name', 'Truskawki');
+        $this->assertSame('kg', $strawberries['quantity_unit']);
+        $this->assertSame(2.5, $strawberries['quantity']);
     }
 
     public function test_free_delivery_adds_no_position(): void

@@ -15,9 +15,10 @@ use Livewire\Livewire;
 use Tests\TestCase;
 
 /**
- * Karta STANU faktury w kolumnie bocznej: pokazuje wynik/postęp (gotowa /
- * w przygotowaniu / błąd + ponowienie), a w stanie idle jest ukryta (zlecenie
- * robi wtedy przycisk przy danych kupującego — {@see OrderInvoiceTriggerTest}).
+ * Faktura VAT przy danych kupującego — jeden komponent na cały cykl: przycisk
+ * z potwierdzeniem w miejscu, „w przygotowaniu", „Pobierz PDF" i ponowienie po
+ * błędzie. Sama robota jest w tle (job), więc tu sprawdzamy zlecanie, stany i
+ * autoryzację.
  */
 class OrderInvoiceComponentTest extends TestCase
 {
@@ -39,17 +40,75 @@ class OrderInvoiceComponentTest extends TestCase
         return [$seller, $shop->fresh()];
     }
 
-    public function test_card_is_hidden_when_idle(): void
+    public function test_shows_button_when_order_can_be_invoiced(): void
     {
         [$seller, $shop] = $this->sellerWithFakturownia();
         $order = Order::factory()->for($shop)->create();
 
         Livewire::actingAs($seller)
             ->test(OrderInvoice::class, ['order' => $order])
-            ->assertDontSee('Faktura VAT');
+            ->assertSee('Stwórz fakturę VAT')
+            ->assertDontSee('Tak, wystaw fakturę');
     }
 
-    public function test_card_shows_download_link_when_invoice_exists(): void
+    public function test_ask_create_opens_in_place_confirmation(): void
+    {
+        [$seller, $shop] = $this->sellerWithFakturownia();
+        $order = Order::factory()->for($shop)->create();
+
+        Livewire::actingAs($seller)
+            ->test(OrderInvoice::class, ['order' => $order])
+            ->call('askCreate')
+            ->assertSet('confirming', true)
+            ->assertSee('Wystawić fakturę VAT')
+            ->assertSee('Tak, wystaw fakturę');
+    }
+
+    public function test_dismiss_closes_confirmation_without_dispatch(): void
+    {
+        Bus::fake();
+        [$seller, $shop] = $this->sellerWithFakturownia();
+        $order = Order::factory()->for($shop)->create();
+
+        Livewire::actingAs($seller)
+            ->test(OrderInvoice::class, ['order' => $order])
+            ->call('askCreate')
+            ->call('dismiss')
+            ->assertSet('confirming', false);
+
+        Bus::assertNotDispatched(GenerateInvoice::class);
+    }
+
+    public function test_create_dispatches_job_and_marks_pending(): void
+    {
+        Bus::fake();
+        [$seller, $shop] = $this->sellerWithFakturownia();
+        $order = Order::factory()->for($shop)->create();
+
+        Livewire::actingAs($seller)
+            ->test(OrderInvoice::class, ['order' => $order])
+            ->call('create')
+            ->assertSet('confirming', false);
+
+        $this->assertSame(InvoiceStatus::Pending, $order->fresh()->invoice_status);
+        Bus::assertDispatched(GenerateInvoice::class);
+    }
+
+    public function test_create_is_blocked_when_already_invoiced(): void
+    {
+        Bus::fake();
+        [$seller, $shop] = $this->sellerWithFakturownia();
+        $order = Order::factory()->for($shop)->create();
+        $order->forceFill(['invoice_id' => 123])->save();
+
+        Livewire::actingAs($seller)
+            ->test(OrderInvoice::class, ['order' => $order->fresh()])
+            ->call('create');
+
+        Bus::assertNotDispatched(GenerateInvoice::class);
+    }
+
+    public function test_shows_download_link_when_invoice_exists(): void
     {
         [$seller, $shop] = $this->sellerWithFakturownia();
         $order = Order::factory()->for($shop)->create();
@@ -59,20 +118,22 @@ class OrderInvoiceComponentTest extends TestCase
             ->test(OrderInvoice::class, ['order' => $order->fresh()])
             ->assertSee('Pobierz fakturę VAT')
             ->assertSee('https://sklep.fakturownia.pl/invoice/tok.pdf', false)
-            ->assertSee('nr 9/2026');
+            ->assertSee('nr 9/2026')
+            ->assertDontSee('Stwórz fakturę VAT');
     }
 
-    public function test_card_shows_pending_state(): void
+    public function test_shows_pending_state(): void
     {
         [$seller, $shop] = $this->sellerWithFakturownia();
         $order = Order::factory()->for($shop)->create(['invoice_status' => InvoiceStatus::Pending]);
 
         Livewire::actingAs($seller)
             ->test(OrderInvoice::class, ['order' => $order])
-            ->assertSee('w przygotowaniu');
+            ->assertSee('w przygotowaniu')
+            ->assertDontSee('Stwórz fakturę VAT');
     }
 
-    public function test_card_shows_failed_state_with_retry(): void
+    public function test_shows_failed_state_with_retry(): void
     {
         [$seller, $shop] = $this->sellerWithFakturownia();
         $order = Order::factory()->for($shop)->create(['invoice_status' => InvoiceStatus::Failed]);
@@ -95,5 +156,34 @@ class OrderInvoiceComponentTest extends TestCase
 
         $this->assertSame(InvoiceStatus::Pending, $order->fresh()->invoice_status);
         Bus::assertDispatched(GenerateInvoice::class);
+    }
+
+    public function test_hidden_when_shop_does_not_use_fakturownia(): void
+    {
+        $seller = User::factory()->consented()->create();
+        $shop = Shop::factory()->create(['owner_id' => $seller->id]); // bez integracji
+        $order = Order::factory()->for($shop)->create();
+
+        Livewire::actingAs($seller)
+            ->test(OrderInvoice::class, ['order' => $order])
+            ->assertDontSee('Faktura VAT')
+            ->assertDontSee('Stwórz fakturę VAT');
+    }
+
+    public function test_create_is_forbidden_for_foreign_shop(): void
+    {
+        Bus::fake();
+        [, $shop] = $this->sellerWithFakturownia();
+        $order = Order::factory()->for($shop)->create();
+
+        $intruder = User::factory()->consented()->create();
+        Shop::factory()->create(['owner_id' => $intruder->id]);
+
+        Livewire::actingAs($intruder)
+            ->test(OrderInvoice::class, ['order' => $order])
+            ->call('create')
+            ->assertForbidden();
+
+        Bus::assertNotDispatched(GenerateInvoice::class);
     }
 }
