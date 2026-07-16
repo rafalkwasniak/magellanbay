@@ -57,7 +57,7 @@ class GenerateInvoiceJobTest extends TestCase
 
         $order = $this->orderReadyForInvoice();
 
-        (new GenerateInvoice($order))->handle(app(FakturowniaService::class));
+        app()->call([new GenerateInvoice($order), 'handle']);
 
         $order->refresh();
         $this->assertSame(555, (int) $order->invoice_id);
@@ -66,6 +66,12 @@ class GenerateInvoiceJobTest extends TestCase
         $this->assertNotNull($order->invoiced_at);
         $this->assertNull($order->invoice_status);
         $this->assertTrue($order->hasInvoice());
+
+        // Nasz mail „Pobierz FV" trafił do outboxu, z przyciskiem na publiczny PDF.
+        $this->assertDatabaseHas('email_messages', [
+            'to_email' => $order->buyer_email,
+            'action_url' => 'https://sklep.fakturownia.pl/invoice/tok-abc.pdf',
+        ]);
     }
 
     public function test_api_error_marks_failed_without_invoice_id(): void
@@ -74,12 +80,15 @@ class GenerateInvoiceJobTest extends TestCase
 
         $order = $this->orderReadyForInvoice();
 
-        (new GenerateInvoice($order))->handle(app(FakturowniaService::class));
+        app()->call([new GenerateInvoice($order), 'handle']);
 
         $order->refresh();
         $this->assertNull($order->invoice_id);
         $this->assertSame(InvoiceStatus::Failed, $order->invoice_status);
         $this->assertTrue($order->invoiceFailed());
+
+        // Bez faktury nie ma czego wysyłać — mail się nie kolejkuje.
+        $this->assertDatabaseCount('email_messages', 0);
     }
 
     public function test_job_is_idempotent_when_invoice_already_exists(): void
@@ -89,7 +98,7 @@ class GenerateInvoiceJobTest extends TestCase
         $order = $this->orderReadyForInvoice();
         $order->forceFill(['invoice_id' => 999, 'invoice_status' => null])->save();
 
-        (new GenerateInvoice($order->fresh()))->handle(app(FakturowniaService::class));
+        app()->call([new GenerateInvoice($order->fresh()), 'handle']);
 
         $this->assertSame(999, (int) $order->fresh()->invoice_id);
         Http::assertNothingSent();

@@ -62,6 +62,42 @@ class OrderMailer
     }
 
     /**
+     * Mail z gotową fakturą VAT — wysyłany przez NASZ system (nie przez
+     * Fakturownię), dla spójności brandu. Przycisk prowadzi wprost do publicznego
+     * PDF-a w Fakturowni (link tokenowy, bez logowania). Wołany przez job po
+     * zapisaniu śladu FV, więc `invoicePdfUrl()` jest już zbudowany.
+     */
+    public function invoiceReady(Order $order): void
+    {
+        $order->loadMissing(['items', 'shop']);
+        $shop = $order->shop;
+        $numberSuffix = filled($order->invoice_number) ? ' nr '.$order->invoice_number : '';
+
+        EmailMessage::create($this->senderIdentity($shop) + [
+            'priority' => MailPriority::Mid,
+            'shop_id' => $shop->id,
+            'to_email' => $order->buyer_email,
+            'to_name' => trim($order->buyer_name.' '.$order->buyer_surname),
+            'subject' => 'Faktura VAT'.$numberSuffix.' do zamówienia #'.$order->number.' — '.$shop->name,
+            'preheader' => 'Twoja faktura VAT do zamówienia #'.$order->number.' jest gotowa.',
+            'heading' => 'Faktura VAT gotowa',
+            'greeting' => Vocative::greeting($order->buyer_name),
+            'intro_lines' => $this->blocks([
+                [
+                    'Do **zamówienia #'.$order->number.'** w sklepie **'.$shop->name.'** wystawiliśmy fakturę VAT'.($numberSuffix !== '' ? ' **'.trim($numberSuffix).'**' : '').'.',
+                    'Kwota: **'.Money::pln($order->total_gross).'**.',
+                ],
+                ['Fakturę pobierzesz przyciskiem poniżej — to bezpośredni link do pliku PDF.'],
+            ]),
+            'action_text' => 'Pobierz fakturę VAT',
+            'action_url' => $order->invoicePdfUrl(),
+            'outro_lines' => [
+                'Masz pytania do faktury? Odpowiedz na tego e-maila — trafi wprost do sklepu.',
+            ],
+        ]);
+    }
+
+    /**
      * Mail do kupującego o KAŻDEJ zmianie statusu — bez wyjątków i bez opcji
      * wyłączenia. Także przy cofnięciu statusu: klient musi wiedzieć, bo inaczej
      * przyjedzie odebrać coś, czego nie ma. Niesie całe zamówienie, nowy status,

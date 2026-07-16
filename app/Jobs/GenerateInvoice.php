@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Enums\InvoiceStatus;
 use App\Models\Order;
 use App\Services\FakturowniaService;
+use App\Services\OrderMailer;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -31,7 +32,7 @@ class GenerateInvoice implements ShouldQueue
 
     public function __construct(public readonly Order $order) {}
 
-    public function handle(FakturowniaService $fakturownia): void
+    public function handle(FakturowniaService $fakturownia, OrderMailer $mailer): void
     {
         $order = $this->order->fresh();
 
@@ -58,6 +59,8 @@ class GenerateInvoice implements ShouldQueue
             'invoice_status' => null,
         ])->save();
 
-        // (krok 7) mail „Pobierz FV" do klienta — dojdzie w następnym kroku.
+        // Mail „Pobierz FV" wysyła NASZ system (spójność brandu), nie Fakturownia.
+        // Kolejkujemy do outboxu — cron `email:dispatch` dostarczy jak każdy inny.
+        $mailer->invoiceReady($order);
     }
 }
