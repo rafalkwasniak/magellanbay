@@ -81,6 +81,17 @@ return [
             'replace_placeholders' => true,
         ],
 
+        // Audyt integracji z Fakturownią (żądanie + odpowiedź przy wystawianiu FV).
+        // Realne faktury idą do KSeF, więc ślad trzymamy znacznie dłużej niż zwykłe
+        // logi. Token API NIGDY tu nie trafia — logujemy payload bez sekretu.
+        'fakturownia' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/fakturownia.log'),
+            'level' => 'debug',
+            'days' => 365,
+            'replace_placeholders' => true,
+        ],
+
         'slack' => [
             'driver' => 'slack',
             'url' => env('LOG_SLACK_WEBHOOK_URL'),
