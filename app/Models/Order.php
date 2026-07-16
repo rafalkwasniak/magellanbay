@@ -52,6 +52,7 @@ class Order extends Model
             'total_vat' => 'decimal:2',
             'total_gross' => 'decimal:2',
             'invoiced_at' => 'datetime',
+            'invoice_status' => \App\Enums\InvoiceStatus::class,
         ];
     }
 
@@ -173,14 +174,33 @@ class Order extends Model
     }
 
     /**
+     * Czy w tej chwili trwa generowanie FV (job w kolejce/robocie). UI pokazuje
+     * wtedy „FV w przygotowaniu" i blokuje przycisk, by nie zlecić drugi raz.
+     */
+    public function isInvoicePending(): bool
+    {
+        return $this->invoice_status === \App\Enums\InvoiceStatus::Pending;
+    }
+
+    /**
+     * Czy ostatnia próba wystawienia FV się nie powiodła. FV nie ma (`invoice_id`
+     * pusty), więc sprzedawca może ponowić — `canBeInvoiced()` znów przepuszcza.
+     */
+    public function invoiceFailed(): bool
+    {
+        return $this->invoice_status === \App\Enums\InvoiceStatus::Failed;
+    }
+
+    /**
      * Czy z tego zamówienia można teraz wystawić fakturę VAT. Pełna bramka:
-     * pakiet daje uprawnienie, Fakturownia jest włączona i skonfigurowana, a FV
-     * jeszcze nie było (idempotencja). Świadomie BEZ progu statusu — sprzedawca
-     * decyduje sam z karty zamówienia (ustalone: „od dowolnego statusu").
+     * pakiet daje uprawnienie, Fakturownia jest włączona i skonfigurowana, FV
+     * jeszcze nie było (idempotencja) i nie trwa już generowanie. Świadomie BEZ
+     * progu statusu — sprzedawca decyduje sam (ustalone: „od dowolnego statusu").
      */
     public function canBeInvoiced(): bool
     {
         return ! $this->hasInvoice()
+            && ! $this->isInvoicePending()
             && $this->shop?->entitlement('invoices') === true
             && $this->shop->invoicingEnabled();
     }

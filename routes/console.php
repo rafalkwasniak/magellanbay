@@ -11,3 +11,11 @@ Artisan::command('inspire', function () {
 // Outbox maili: krótki proces co minutę (bezpieczne na shared-hoście, nie demon).
 // Wymaga wpisu crona na serwerze: * * * * * php artisan schedule:run
 Schedule::command('email:dispatch')->everyMinute()->withoutOverlapping();
+
+// Kolejka zadań w tle (na razie: wystawianie faktur VAT). Świadomie NIE demon
+// `queue:work`, lecz krótki bieg, który KOŃCZY się, gdy kolejka pusta — na idle
+// wychodzi natychmiast, obciążając LVE tylko realną robotą. `--max-time` domyka
+// proces przed kolejną minutą; `withoutOverlapping` nie pozwala się nakładać.
+Schedule::command('queue:work database --stop-when-empty --max-time=50 --tries=1')
+    ->everyMinute()
+    ->withoutOverlapping();
