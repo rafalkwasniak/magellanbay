@@ -61,4 +61,43 @@ class MailBrandingTest extends TestCase
         $this->assertSame(config('app.name'), $brand['name']);
         $this->assertSame('◐', $brand['glyph']);
     }
+
+    public function test_card_text_stays_dark_regardless_of_theme(): void
+    {
+        // Karta maila jest zawsze biała, więc powitanie/treść na niej muszą być
+        // ciemne NAWET gdy motyw sklepu jest ciemny (jego `ink` jest wtedy jasny i
+        // znikał na bieli — to była zgłoszona usterka). `text` to osobne miejsce:
+        // nazwa w nagłówku leży na tle motywu, więc dalej bierze tusz motywu.
+        $shop = Shop::factory()->create();
+
+        $brand = MailBranding::for($shop->id);
+
+        $this->assertSame('#1c1917', $brand['ink_card']);
+        $this->assertSame($shop->themeTokens()['ink'], $brand['text']);
+    }
+
+    public function test_heading_uses_brand_colour_darkened_to_stay_legible(): void
+    {
+        // Jasny „kolor przewodni" sklepu na białej karcie → przyciemniony do
+        // czytelności (próg WCAG AA), zamiast zniknąć.
+        $shop = Shop::factory()->create(['theme' => ['palette' => 'custom', 'brand_color' => '#FCE7A2']]);
+
+        $brand = MailBranding::for($shop->id);
+
+        $this->assertGreaterThanOrEqual(4.5, $this->contrastOnWhite($brand['heading']));
+    }
+
+    private function contrastOnWhite(string $hex): float
+    {
+        $hex = ltrim($hex, '#');
+        $channels = array_map(static function (string $pair): float {
+            $v = hexdec($pair) / 255;
+
+            return $v <= 0.03928 ? $v / 12.92 : (($v + 0.055) / 1.055) ** 2.4;
+        }, [substr($hex, 0, 2), substr($hex, 2, 2), substr($hex, 4, 2)]);
+
+        $luminance = 0.2126 * $channels[0] + 0.7152 * $channels[1] + 0.0722 * $channels[2];
+
+        return (1.0 + 0.05) / ($luminance + 0.05);   // biel = jasność 1.0
+    }
 }

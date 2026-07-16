@@ -62,7 +62,9 @@ class MailBranding
             'brand' => '#f59e0b',       // amber-500 — przycisk/akcent (płaski, dawniej gradient amber→rose)
             'brand_ink' => '#ffffff',   // tekst na kolorze brand (np. na przycisku)
             'accent' => '#b45309',      // amber-700 — linki
-            'text' => '#1c1917',        // stone-900
+            'text' => '#1c1917',        // stone-900 — nazwa w nagłówku (na page_bg)
+            'heading' => '#1c1917',     // stone-900 — tytuł na białej karcie (Kramio: ciemny, bez zmian)
+            'ink_card' => '#1c1917',    // stone-900 — powitanie/tekst na białej karcie
             'muted' => '#78716c',       // stone-500
             'page_bg' => '#f5f5f4',     // stone-100
             'company_name' => config('company.name') ?: null,
@@ -97,7 +99,16 @@ class MailBranding
             'brand' => $tokens['brand'] ?? $system['brand'],
             'brand_ink' => $tokens['brand_ink'] ?? $system['brand_ink'],
             'accent' => $tokens['brand'] ?? $system['accent'],   // linki w kolorze marki sklepu
+            // `text` = tusz motywu, używany dla nazwy w nagłówku NA tle motywu
+            // (`page_bg`) — tam ciemny/jasny ink pasuje do tła. NIE używać go na
+            // białej karcie: przy ciemnym motywie ink jest jasny i znika na bieli.
             'text' => $tokens['ink'] ?? $system['text'],
+            // Karta maila jest zawsze biała, więc tekst NA niej musi być ciemny
+            // niezależnie od motywu. Tytuł barwimy kolorem przewodnim sklepu, ale
+            // przyciemnionym do czytelności na bieli (`readableOn`); powitanie i
+            // treść — neutralnie ciemne (nie tusz motywu).
+            'heading' => Color::readableOn($tokens['brand'] ?? $system['brand']),
+            'ink_card' => $system['text'],
             'muted' => $system['muted'],
             'page_bg' => $tokens['surface'] ?? $system['page_bg'],
             'company_name' => $shop->company_name ?: null,

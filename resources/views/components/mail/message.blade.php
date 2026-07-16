@@ -15,11 +15,11 @@
 
 <x-mail.layout :brand="$brand" :preheader="$preheader">
     @isset($heading)
-        <h1 style="margin:0 0 16px 0; font-size:24px; line-height:1.25; font-weight:700; letter-spacing:-0.02em; color:{{ $brand['text'] }};">{{ $heading }}</h1>
+        <h1 style="margin:0 0 16px 0; font-size:24px; line-height:1.25; font-weight:700; letter-spacing:-0.02em; color:{{ $brand['heading'] }};">{{ $heading }}</h1>
     @endisset
 
     @isset($greeting)
-        <p style="margin:0 0 16px 0; font-size:15px; line-height:1.65; color:{{ $brand['text'] }};">{{ $greeting }}</p>
+        <p style="margin:0 0 16px 0; font-size:15px; line-height:1.65; color:{{ $brand['ink_card'] }};">{{ $greeting }}</p>
     @endisset
 
     @foreach ($lines as $block)
