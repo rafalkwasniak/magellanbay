@@ -7,7 +7,7 @@
         @php
             $greetName = \App\Support\Vocative::of($customer->name);
         @endphp
-        <h2 class="font-semibold">Cześć{{ $greetName ? ', '.$greetName : '' }}!</h2>
+        <h2 class="st-brand st-box-title">Cześć{{ $greetName ? ', '.$greetName : '' }}!</h2>
         <dl class="mt-4 grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
             <div class="flex justify-between gap-3 sm:block">
                 <dt class="opacity-60">Imię i nazwisko</dt>
@@ -41,7 +41,7 @@
     {{-- Ostatnie zamówienie --}}
     @if ($lastOrder)
         <div class="mt-8">
-            <h2 class="font-semibold">Ostatnie zamówienie</h2>
+            <h2 class="st-brand st-box-title">Ostatnie zamówienie</h2>
             <a href="/moje-konto/zamowienia/{{ $lastOrder->id }}" wire:navigate
                 class="st-card st-border mt-3 flex flex-wrap items-center justify-between gap-4 rounded-2xl border p-4 transition hover:brightness-[0.98]">
                 <div>
@@ -63,7 +63,7 @@
 
     {{-- Usunięcie konta (RODO) — cichy „danger zone" na dole --}}
     <div class="mt-12 rounded-3xl border border-rose-300 p-6">
-        <h2 class="font-semibold text-rose-700">Usuń konto</h2>
+        <h2 class="st-box-title text-rose-700">Usuń konto</h2>
         <p class="mt-1 max-w-xl text-sm opacity-70">
             Trwale usuniemy Twoje konto i dane profilu. Złożone zamówienia pozostaną u sprzedawcy
             (na potrzeby rozliczeń), ale nie będą już powiązane z kontem. Tej operacji nie można cofnąć.

@@ -13,7 +13,7 @@
     <div class="mt-6 grid gap-6 md:grid-cols-2">
         {{-- Pozycje + sumy --}}
         <div class="st-card st-border rounded-3xl border p-6">
-            <h2 class="font-semibold">Podsumowanie</h2>
+            <h2 class="st-brand st-box-title">Podsumowanie</h2>
             <ul class="mt-4 space-y-3">
                 @foreach ($order->items as $item)
                     <li class="flex justify-between gap-3 text-sm">
@@ -38,7 +38,7 @@
         {{-- Płatność + dostawa --}}
         <div class="space-y-6">
             <div class="st-card st-border rounded-3xl border p-6">
-                <h2 class="font-semibold">Płatność — {{ $order->payment_method->label() }}</h2>
+                <h2 class="st-brand st-box-title">Płatność — {{ $order->payment_method->label() }}</h2>
                 @if ($order->payment_method === PaymentMethod::BankTransfer)
                     <dl class="mt-4 space-y-1.5 text-sm">
                         @if ($shop->bankAccountHolderName())
@@ -56,7 +56,7 @@
             </div>
 
             <div class="st-card st-border rounded-3xl border p-6">
-                <h2 class="font-semibold">Dostawa — {{ $order->delivery_method->label() }}</h2>
+                <h2 class="st-brand st-box-title">Dostawa — {{ $order->delivery_method->label() }}</h2>
                 @if ($order->delivery_method === DeliveryMethod::Pickup)
                     <p class="mt-2 text-sm opacity-70">Odbiór pod adresem sklepu:</p>
                     <p class="mt-1 text-sm font-medium">
@@ -74,7 +74,7 @@
 
             @if (filled($order->note))
                 <div class="st-card st-border rounded-3xl border p-6">
-                    <h2 class="font-semibold">Uwagi</h2>
+                    <h2 class="st-brand st-box-title">Uwagi</h2>
                     <p class="mt-2 whitespace-pre-line text-sm opacity-80">{{ $order->note }}</p>
                 </div>
             @endif

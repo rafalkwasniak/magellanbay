@@ -6,7 +6,7 @@
     <div class="grid gap-6 xl:grid-cols-2">
         {{-- Dane profilu --}}
         <div class="st-card st-border rounded-3xl border p-6">
-            <h2 class="font-semibold">Twoje dane</h2>
+            <h2 class="st-brand st-box-title">Twoje dane</h2>
             <p class="mt-1 text-sm opacity-60">Uzupełniamy nimi kasę przy kolejnych zamówieniach.</p>
             <form method="POST" action="/moje-konto/dane" class="mt-4 space-y-4">
                 @csrf
@@ -41,7 +41,7 @@
 
         {{-- Zmiana hasła --}}
         <div class="st-card st-border rounded-3xl border p-6">
-            <h2 class="font-semibold">Zmiana hasła</h2>
+            <h2 class="st-brand st-box-title">Zmiana hasła</h2>
             <p class="mt-1 text-sm opacity-60">Podaj obecne hasło i ustaw nowe.</p>
             <form method="POST" action="/moje-konto/haslo" class="mt-4 space-y-4">
                 @csrf
@@ -69,7 +69,7 @@
         {{-- Zgody — osobno od danych, bo to nie jest „dana do kasy", tylko
              odwoływalne oświadczenie woli (art. 10 uśude). --}}
         <div class="st-card st-border rounded-3xl border p-6 xl:col-span-2">
-            <h2 class="font-semibold">Wiadomości od sklepu</h2>
+            <h2 class="st-brand st-box-title">Wiadomości od sklepu</h2>
             <p class="mt-1 text-sm opacity-60">Decydujesz, czy chcesz dostawać od nas e-maile o produktach. Potwierdzenia zamówień wysyłamy zawsze.</p>
             <form method="POST" action="/moje-konto/zgody" class="mt-4 space-y-4">
                 @csrf
