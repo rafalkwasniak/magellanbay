@@ -51,6 +51,7 @@ class Order extends Model
             'total_net' => 'decimal:2',
             'total_vat' => 'decimal:2',
             'total_gross' => 'decimal:2',
+            'invoiced_at' => 'datetime',
         ];
     }
 
