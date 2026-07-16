@@ -7,7 +7,7 @@
     @endunless
 
     @if (filled($page->content))
-        <div class="st-prose">{!! $page->content !!}</div>
+        <div class="st-prose">{!! \App\Support\Prose::render($page->content ?? '') !!}</div>
     @else
         <p class="opacity-70">Treść tej strony jest w przygotowaniu.</p>
     @endif

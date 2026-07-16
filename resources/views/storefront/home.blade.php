@@ -157,7 +157,7 @@
                             {{-- Treść się MIEŚCI: cała, z formatowaniem, bez
                                  odnośnika — nie ma dokąd wejść, bo cel miałby to
                                  samo. Linki w treści są klikalne wprost tutaj. --}}
-                            <div class="st-prose mt-5 opacity-90">{!! $tile['html'] !!}</div>
+                            <div class="st-prose mt-5 opacity-90">{!! \App\Support\Prose::render($tile['html'] ?? '') !!}</div>
                         @endif
                     </div>
                 @endforeach

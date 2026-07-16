@@ -79,7 +79,7 @@
         @if (filled($product->description))
             <div class="mt-12">
                 <h2 class="st-brand font-serif text-2xl font-normal tracking-tight sm:text-3xl">O produkcie</h2>
-                <div class="st-prose st-border mt-6 border-t pt-6 opacity-90">{!! $product->description !!}</div>
+                <div class="st-prose st-border mt-6 border-t pt-6 opacity-90">{!! \App\Support\Prose::render($product->description ?? '') !!}</div>
             </div>
         @endif
     </div>
