@@ -36,7 +36,7 @@
                         @php($atMax = $product->track_stock && $product->stock !== null && $line['quantity'] >= $product->stock)
                         @php($atMin = $line['quantity'] <= $product->sale_unit->minQuantity())
                         <div class="min-w-0 flex-1">
-                            <a href="{{ $product->storefrontPath() }}" wire:navigate class="block truncate font-semibold hover:underline">{{ $product->name }}</a>
+                            <a href="{{ $product->storefrontPath() }}" wire:navigate class="block font-semibold break-words hover:underline">{{ $product->name }}</a>
                             <p class="mt-0.5 text-sm opacity-70">{{ \App\Support\Money::pln($line['unit_price']) }} / {{ $product->sale_unit->abbreviation() }}</p>
 
                             {{-- Ilość: krok +/− wg jednostki (1 szt. / 0,5 kg), pole wpisywane z palca.

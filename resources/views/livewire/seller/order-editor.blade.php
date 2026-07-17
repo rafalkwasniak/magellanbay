@@ -23,7 +23,7 @@
         @forelse ($items as $item)
             <div class="flex items-start justify-between gap-4 py-3" wire:key="item-{{ $item->id }}">
                 <div class="min-w-0 flex-1">
-                    <p class="truncate font-medium text-stone-800">{{ $item->name }}</p>
+                    <p class="font-medium text-stone-800 break-words">{{ $item->name }}</p>
 
                     @if ($editing)
                         <div class="mt-2 flex flex-wrap items-center gap-3">
