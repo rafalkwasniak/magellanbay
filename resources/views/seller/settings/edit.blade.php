@@ -119,7 +119,56 @@
                             </div>
                         </div>
 
-                        <p class="text-xs text-stone-400">Paczkomaty (wybór punktu na mapie) i automatyczne etykiety dojdą tu jako osobna integracja.</p>
+                        {{-- Paczkomat InPost — Poziom 1: bez konta sprzedawcy w InPoście.
+                             Bliźniak kuriera. Mapa (geowidget) dojdzie jako nakładka na
+                             pole kodu w kasie; do działania metody NIE jest potrzebna. --}}
+                        <div class="rounded-2xl border border-stone-200 bg-white/60 p-5 sm:p-6">
+                            <div class="flex items-start gap-4">
+                                <input type="hidden" name="parcel_locker_enabled" value="0">
+                                <input type="checkbox" id="parcel_locker_enabled" name="parcel_locker_enabled" value="1"
+                                    @checked(old('parcel_locker_enabled', $shop->parcel_locker_enabled))
+                                    class="mt-0.5 h-5 w-5 shrink-0 rounded-md border-stone-300 text-amber-600 focus:ring-4 focus:ring-amber-500/20">
+                                <label for="parcel_locker_enabled" class="flex-1 cursor-pointer">
+                                    <span class="block text-sm font-medium text-stone-800">Paczkomat InPost</span>
+                                    <span class="mt-0.5 block text-sm text-stone-500">Klient wybiera paczkomat, Ty nadajesz paczkę. Działa od razu — bez zakładania konta w InPoście.</span>
+                                    @unless($shop->bankTransferAvailable())
+                                        <span class="mt-1.5 block text-xs text-amber-700">Paczkomat łączy się z płatnością <a href="#" onclick="document.getElementById('bank_transfer_enabled').scrollIntoView({behavior:'smooth',block:'center'});return false;" class="font-medium underline decoration-amber-300 underline-offset-2">przelewem</a> — włącz ją, aby klient mógł opłacić przesyłkę.</span>
+                                    @endunless
+                                </label>
+                            </div>
+
+                            <div class="mt-5 grid grid-cols-12 gap-5">
+                                <div class="col-span-6 sm:col-span-4">
+                                    <label for="parcel_locker_cost" class="block text-sm font-medium text-stone-700">Koszt dostawy</label>
+                                    <div class="relative mt-1.5">
+                                        <input id="parcel_locker_cost" name="parcel_locker_cost" type="text" inputmode="decimal" placeholder="0,00"
+                                            value="{{ old('parcel_locker_cost', $shop->parcel_locker_cost) }}"
+                                            class="block w-full rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 pr-10 text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
+                                        <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm text-stone-400">zł</span>
+                                    </div>
+                                    @error('parcel_locker_cost')
+                                        <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
+                                    @enderror
+                                    <p class="mt-1.5 text-xs text-stone-400">Doliczany do zamówienia. Wpisz 0, jeśli wysyłasz na swój koszt.</p>
+                                </div>
+
+                                <div class="col-span-6 sm:col-span-4">
+                                    <label for="parcel_locker_free_from" class="block text-sm font-medium text-stone-700">Darmowa dostawa od <span class="font-normal text-stone-400">(opcjonalnie)</span></label>
+                                    <div class="relative mt-1.5">
+                                        <input id="parcel_locker_free_from" name="parcel_locker_free_from" type="text" inputmode="decimal" placeholder="np. 150"
+                                            value="{{ old('parcel_locker_free_from', $shop->parcel_locker_free_from) }}"
+                                            class="block w-full rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 pr-10 text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
+                                        <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm text-stone-400">zł</span>
+                                    </div>
+                                    @error('parcel_locker_free_from')
+                                        <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
+                                    @enderror
+                                    <p class="mt-1.5 text-xs text-stone-400">Powyżej tej wartości koszyka dostawa jest gratis. Puste = darmowej dostawy nie ma.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <p class="text-xs text-stone-400">Automatyczne etykiety i nadania dojdą tu jako osobna integracja.</p>
                     </div>
                 </div>
 

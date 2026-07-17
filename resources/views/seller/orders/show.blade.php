@@ -63,6 +63,17 @@
                                 <p>{{ $order->ship_postal_code }} {{ $order->ship_city }}</p>
                             </div>
                         @endif
+                        {{-- Kod paczkomatu: po nim sprzedawca nadaje paczkę, więc
+                             dostaje wagę i tabular-nums (przepisywany znak w znak). --}}
+                        @if (filled($order->parcel_locker_code))
+                            <div class="mt-2 border-t border-stone-100 pt-2">
+                                <p class="text-xs font-medium uppercase tracking-wide text-stone-400">Paczkomat</p>
+                                <p class="mt-1 font-semibold tabular-nums text-stone-800">{{ $order->parcel_locker_code }}</p>
+                                @if (filled($order->parcel_locker_address))
+                                    <p class="text-stone-500">{{ $order->parcel_locker_address }}</p>
+                                @endif
+                            </div>
+                        @endif
                     </div>
                 </div>
             </div>

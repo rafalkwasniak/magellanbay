@@ -44,12 +44,19 @@ class Checkout extends Component
     public string $company_postal_code = '';
     public string $company_city = '';
 
-    // Adres dostawy (wypełniany tylko przy wysyłce — patrz shippedDelivery()).
+    // Adres dostawy (wypełniany tylko przy dostawie pod adres — addressDelivery()).
     public string $ship_street = '';
     public string $ship_building_number = '';
     public string $ship_apartment_number = '';
     public string $ship_postal_code = '';
     public string $ship_city = '';
+
+    // Wskazany paczkomat. Kod klient wpisuje z palca; mapa (geowidget) dojdzie
+    // jako nakładka wypełniająca to pole — nie jest warunkiem złożenia zamówienia.
+    // `parcel_locker_address` uzupełni dopiero mapa (opis punktu); przy wpisie
+    // ręcznym zostaje pusty i zamówienie niesie sam kod.
+    public string $parcel_locker_code = '';
+    public string $parcel_locker_address = '';
 
     // Metody i uwagi.
     public string $delivery_method = '';
@@ -117,13 +124,22 @@ class Checkout extends Component
             $this->delivery_method = $lastDelivery;
         }
 
-        // Adres wysyłki — po ustaleniu dostawy, tylko gdy jest kurierska.
-        if ($this->shippedDelivery()) {
+        // Adres wysyłki — po ustaleniu dostawy, tylko gdy metoda go potrzebuje.
+        if ($this->addressDelivery()) {
             $this->ship_street = $last->ship_street ?? '';
             $this->ship_building_number = $last->ship_building_number ?? '';
             $this->ship_apartment_number = $last->ship_apartment_number ?? '';
             $this->ship_postal_code = $last->ship_postal_code ?? '';
             $this->ship_city = $last->ship_city ?? '';
+        }
+
+        // Paczkomat — ta sama zasada. Klient zwykle wraca do tego samego punktu
+        // (pod domem, przy pracy), więc przepisywanie kodu za każdym razem to
+        // czysta udręka. Adres punktu niesiemy razem z kodem, żeby podpowiedź
+        // dało się pokazać po ludzku, a nie samym „KRA01A".
+        if ($this->parcelDelivery()) {
+            $this->parcel_locker_code = $last->parcel_locker_code ?? '';
+            $this->parcel_locker_address = $last->parcel_locker_address ?? '';
         }
 
         // Metoda płatności — po dostawie (jej opcje zależą od wyboru dostawy).
@@ -181,16 +197,47 @@ class Checkout extends Component
             $options[DeliveryMethod::Courier->value] = DeliveryMethod::Courier->label();
         }
 
+        if ($shop->parcelLockerAvailable()) {
+            $options[DeliveryMethod::ParcelLocker->value] = DeliveryMethod::ParcelLocker->label();
+        }
+
         return $options;
     }
 
     /**
-     * Czy WYBRANA metoda dostawy wiąże się z wysyłką pod adres (kurier). Rozstrzyga
-     * o widoczności i wymagalności bloku adresu oraz o kosztach dostawy.
+     * WYBRANA metoda dostawy (null, gdy pole trzyma śmieć).
+     */
+    public function selectedDelivery(): ?DeliveryMethod
+    {
+        return DeliveryMethod::tryFrom($this->delivery_method);
+    }
+
+    /**
+     * Czy WYBRANA metoda to wysyłka (a więc jest koszt dostawy i nie ma
+     * płatności przy odbiorze). Obejmuje kuriera I paczkomat.
      */
     public function shippedDelivery(): bool
     {
-        return DeliveryMethod::tryFrom($this->delivery_method)?->isShipped() ?? false;
+        return $this->selectedDelivery()?->isShipped() ?? false;
+    }
+
+    /**
+     * Czy WYBRANA metoda potrzebuje adresu klienta — rozstrzyga o widoczności
+     * i wymagalności bloku adresu. Osobno od shippedDelivery(), bo paczkomat
+     * jest wysyłką BEZ adresu (paczka jedzie do skrytki, nie pod dom).
+     */
+    public function addressDelivery(): bool
+    {
+        return $this->selectedDelivery()?->requiresShippingAddress() ?? false;
+    }
+
+    /**
+     * Czy WYBRANA metoda potrzebuje wskazania paczkomatu — rozstrzyga o
+     * widoczności i wymagalności pola z kodem punktu.
+     */
+    public function parcelDelivery(): bool
+    {
+        return $this->selectedDelivery()?->requiresParcelLocker() ?? false;
     }
 
     /**
@@ -249,12 +296,21 @@ class Checkout extends Component
             'create_account' => ['boolean'],
         ];
 
-        if ($this->shippedDelivery()) {
+        if ($this->addressDelivery()) {
             $rules['ship_street'] = ['required', 'string', 'max:255'];
             $rules['ship_building_number'] = ['required', 'string', 'max:30'];
             $rules['ship_apartment_number'] = ['nullable', 'string', 'max:30'];
             $rules['ship_postal_code'] = ['required', 'string', 'max:12'];
             $rules['ship_city'] = ['required', 'string', 'max:120'];
+        }
+
+        if ($this->parcelDelivery()) {
+            // Kształt kodu celowo LUŹNY (litery i cyfry). InPost nie gwarantuje
+            // formatu na piśmie, a zbyt ostra reguła odrzuciłaby istniejący
+            // paczkomat i zablokowała zakup — gorzej niż przepuścić literówkę,
+            // którą sprzedawca zobaczy przed nadaniem.
+            $rules['parcel_locker_code'] = ['required', 'string', 'max:20', 'regex:/^[A-Z0-9]+$/'];
+            $rules['parcel_locker_address'] = ['nullable', 'string', 'max:255'];
         }
 
         if ($this->is_company) {
@@ -339,6 +395,7 @@ class Checkout extends Component
             'ship_apartment_number' => 'numer lokalu',
             'ship_postal_code' => 'kod pocztowy',
             'ship_city' => 'miejscowość',
+            'parcel_locker_code' => 'kod paczkomatu',
             'note' => 'uwagi',
             'accept_terms' => 'regulamin',
             'accept_privacy' => 'polityka prywatności',
@@ -359,6 +416,11 @@ class Checkout extends Component
         if ($this->is_company) {
             $this->company_nip = app(NipService::class)->normalize($this->company_nip);
         }
+
+        // Kod paczkomatu: InPost zapisuje go wersalikami (KRA01A), a klient
+        // przepisuje z pamięci albo maila — bywa „kra01a" i ze spacjami.
+        // Normalizujemy, zamiast odrzucać poprawny wybór za wielkość liter.
+        $this->parcel_locker_code = strtoupper(str_replace(' ', '', trim($this->parcel_locker_code)));
 
         $data = $this->validate();
 
@@ -390,26 +452,49 @@ class Checkout extends Component
 
         $shop = $this->shop();
 
-        // Koszt dostawy zależny od wybranej metody (kurier: koszt z progiem
-        // darmowej dostawy od wartości produktów; odbiór: 0). Suma = produkty + dostawa.
+        // Koszt dostawy z cennika WYBRANEJ metody (każda ma własny koszt i próg
+        // darmowej dostawy; odbiór: 0). Suma = produkty + dostawa.
         $shipped = $this->shippedDelivery();
-        $deliveryCost = $shipped ? $shop->courierCostFor($gross) : 0.0;
+        $method = $this->selectedDelivery();
+        $deliveryCost = $method !== null ? $shop->deliveryCostFor($method, $gross) : 0.0;
 
         $termsPage = $shop->pages()->where('is_system', true)->first();
+
+        // Cennik KAŻDEJ oferowanej metody wysyłki — kasa pokazuje przy opcji jej
+        // koszt i próg darmowej dostawy. Liczone przez metodę, nie zaszyte pod
+        // kuriera: kolejna metoda ma tu wejść bez dotykania widoku.
+        $deliveryMeta = [];
+        foreach (array_keys($this->deliveryOptions()) as $value) {
+            $option = DeliveryMethod::from($value);
+
+            if (! $option->isShipped()) {
+                continue;
+            }
+
+            $deliveryMeta[$value] = [
+                'cost' => $shop->deliveryCostFor($option, $gross),
+                'free_from' => $shop->deliveryFreeFrom($option),
+            ];
+        }
 
         return view('livewire.checkout', [
             'lines' => $lines,
             'shippedDelivery' => $shipped,
+            'addressDelivery' => $this->addressDelivery(),
+            'parcelDelivery' => $this->parcelDelivery(),
             'deliveryCost' => $deliveryCost,
             'formattedDelivery' => $deliveryCost > 0 ? Money::pln($deliveryCost) : 'Gratis',
-            'courierFreeFrom' => $shop->courier_free_from !== null ? (float) $shop->courier_free_from : null,
-            'courierCostForCart' => $shop->courierAvailable() ? $shop->courierCostFor($gross) : null,
+            'deliveryMeta' => $deliveryMeta,
             'formattedTotal' => Money::pln($gross + $deliveryCost),
             'formattedNet' => Money::pln($net),
             'bankName' => $shop->bank_name,
             'pickupAddress' => $this->pickupAddress($shop),
             'deliveryOptions' => $this->deliveryOptions(),
             'paymentOptions' => $this->paymentOptions(),
+            // Token mapy paczkomatów. Na razie platformowy (`*.kramio.pl`); token
+            // per-sklep z shop_integrations dojdzie osobno i weźmie pierwszeństwo.
+            // Pusty = brak mapy, ale pole kodu zostaje, więc zakup się dokończy.
+            'geowidgetToken' => config('services.inpost.geowidget_token'),
             'termsUrl' => $termsPage?->storefrontPath(),
             'privacyUrl' => $shop->privacyPath(),
         ]);

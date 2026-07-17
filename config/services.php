@@ -59,6 +59,16 @@ return [
         'base_url' => env('GUS_REGON_URL', 'https://wyszukiwarkaregon.stat.gov.pl'),
     ],
 
+    'inpost' => [
+        // Geowidget v5 — mapa wyboru paczkomatu. Token jest PUBLICZNY z natury
+        // (ląduje w HTML strony), chroni go dowiązanie do domeny: wygenerowany
+        // na `*.kramio.pl`, więc działa na wszystkich storefrontach i tylko tam.
+        // To token PLATFORMY (Poziom 1 — sprzedawca nie musi mieć konta InPost).
+        // Sprzedawca z własnym kontem wkleja swój do shop_integrations i ten ma
+        // pierwszeństwo; ten wpis jest zapasowy. Patrz pamięć „plan-shipping”.
+        'geowidget_token' => env('INPOST_GEOWIDGET_TOKEN'),
+    ],
+
     'fakturownia' => [
         // Faktury VAT. `url` = adres konta (np. https://twojadomena.fakturownia.pl).
         // Ten wpis to globalna/platformowa integracja; token per-sklep i tak trafi

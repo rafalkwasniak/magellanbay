@@ -350,6 +350,144 @@ class OrderPlacementTest extends TestCase
         $this->assertSame('120.00', $order->total_gross);
     }
 
+    private function parcelLockerShop(?float $freeFrom = null): Shop
+    {
+        $shop = $this->shop();
+        $shop->update([
+            'parcel_locker_enabled' => true, 'parcel_locker_cost' => 12.00, 'parcel_locker_free_from' => $freeFrom,
+            // Kurier włączony CELOWO z innym cennikiem — pilnuje, że paczkomat
+            // liczy się ze swojego, a nie podbiera kurierskiego (dawny zrost).
+            'courier_enabled' => true, 'courier_cost' => 15.00,
+            'bank_transfer_enabled' => true, 'bank_account_number' => '12345678901234567890123456',
+        ]);
+
+        return $shop;
+    }
+
+    private function parcelLockerData(): array
+    {
+        return array_merge($this->buyerData(), [
+            'delivery_method' => 'parcel_locker',
+            'payment_method' => 'bank_transfer',
+            'parcel_locker_code' => 'KRA01A',
+            'parcel_locker_address' => 'ul. Długa 5, 30-001 Kraków',
+        ]);
+    }
+
+    public function test_parcel_locker_order_adds_own_cost_and_stores_point(): void
+    {
+        $shop = $this->parcelLockerShop();
+        $product = Product::factory()->create([
+            'shop_id' => $shop->id, 'is_active' => true, 'track_stock' => false, 'stock' => null,
+            'price_gross' => 100.00, 'vat_rate' => '23',
+        ]);
+        app(CartService::class)->add($product, 1);
+
+        $order = app(OrderService::class)->place($shop, $this->parcelLockerData());
+
+        $this->assertSame(DeliveryMethod::ParcelLocker, $order->delivery_method);
+        // Koszt paczkomatu (12), NIE kuriera (15) — mimo że kurier też włączony.
+        $this->assertSame('12.00', $order->delivery_cost);
+        $this->assertSame('112.00', $order->total_gross);
+
+        // Migawka punktu.
+        $this->assertSame('KRA01A', $order->parcel_locker_code);
+        $this->assertSame('ul. Długa 5, 30-001 Kraków', $order->parcel_locker_address);
+
+        // Ścieżka statusów jak przy kurierze: to wysyłka.
+        $flow = OrderFlow::forOrder($order);
+        $this->assertTrue($flow->includes(OrderStatus::ReadyForShipment));
+        $this->assertFalse($flow->includes(OrderStatus::ReadyForPickup));
+    }
+
+    public function test_parcel_locker_order_does_not_store_shipping_address(): void
+    {
+        // Sedno rozdzielenia pojęć: paczkomat JEST wysyłką (ma koszt dostawy),
+        // ale adresu klienta nie potrzebuje — paczka jedzie do skrytki.
+        // Nawet gdy adres przyjdzie w danych, nie wolno go zapisać.
+        $shop = $this->parcelLockerShop();
+        $product = Product::factory()->create([
+            'shop_id' => $shop->id, 'is_active' => true, 'track_stock' => false, 'stock' => null,
+            'price_gross' => 100.00, 'vat_rate' => '23',
+        ]);
+        app(CartService::class)->add($product, 1);
+
+        $order = app(OrderService::class)->place($shop, array_merge($this->parcelLockerData(), [
+            'ship_street' => 'Leśna',
+            'ship_building_number' => '12',
+            'ship_postal_code' => '30-001',
+            'ship_city' => 'Kraków',
+        ]));
+
+        $this->assertTrue($order->delivery_method->isShipped());
+        $this->assertNull($order->ship_street);
+        $this->assertNull($order->ship_building_number);
+        $this->assertNull($order->ship_postal_code);
+        $this->assertNull($order->ship_city);
+    }
+
+    public function test_courier_order_does_not_store_parcel_locker_point(): void
+    {
+        // Lustro poprzedniego: zamówienie ma albo adres, albo paczkomat.
+        $shop = $this->courierShop();
+        $product = Product::factory()->create([
+            'shop_id' => $shop->id, 'is_active' => true, 'track_stock' => false, 'stock' => null,
+            'price_gross' => 100.00, 'vat_rate' => '23',
+        ]);
+        app(CartService::class)->add($product, 1);
+
+        $order = app(OrderService::class)->place($shop, array_merge($this->courierData(), [
+            'parcel_locker_code' => 'KRA01A',
+        ]));
+
+        $this->assertSame('Leśna', $order->ship_street);
+        $this->assertNull($order->parcel_locker_code);
+        $this->assertNull($order->parcel_locker_address);
+    }
+
+    public function test_parcel_locker_mail_to_customer_carries_the_point_code(): void
+    {
+        // Kod paczkomatu MUSI dojść mailem do KLIENTA: to jego jedyne
+        // potwierdzenie, gdzie odbierze paczkę. Mail sprzedawcy celowo tego nie
+        // niesie — jest powiadomieniem („szczegóły w panelu"), nie dokumentem do
+        // nadania, i przy kurierze też nie zawiera adresu dostawy.
+        $shop = $this->parcelLockerShop();
+        $product = Product::factory()->create([
+            'shop_id' => $shop->id, 'is_active' => true, 'track_stock' => false, 'stock' => null,
+            'price_gross' => 100.00, 'vat_rate' => '23',
+        ]);
+        app(CartService::class)->add($product, 1);
+
+        $order = app(OrderService::class)->place($shop, $this->parcelLockerData());
+
+        $mail = EmailMessage::where('to_email', $order->buyer_email)->firstOrFail();
+        $flat = json_encode($mail->intro_lines, JSON_UNESCAPED_UNICODE);
+
+        $this->assertStringContainsString('KRA01A', $flat);
+        $this->assertStringContainsString('ul. Długa 5, 30-001 Kraków', $flat);
+        $this->assertStringContainsString('Paczkomat InPost', $flat);
+        // Adresu dostawy nie ma czego pokazywać — nie wolno go udawać.
+        $this->assertStringNotContainsString('Adres dostawy', $flat);
+    }
+
+    public function test_parcel_locker_free_shipping_threshold_zeroes_cost(): void
+    {
+        $shop = $this->parcelLockerShop(freeFrom: 100.00);
+        $product = Product::factory()->create([
+            'shop_id' => $shop->id, 'is_active' => true, 'track_stock' => false, 'stock' => null,
+            'price_gross' => 120.00, 'vat_rate' => '23',
+        ]);
+        app(CartService::class)->add($product, 1);
+
+        $order = app(OrderService::class)->place($shop, $this->parcelLockerData());
+
+        // Koszyk 120 ≥ próg 100 → gratis. Kurier progu nie ma i nadal liczy 15 —
+        // progi obu metod są niezależne.
+        $this->assertSame('0.00', $order->delivery_cost);
+        $this->assertSame('120.00', $order->total_gross);
+        $this->assertSame(15.0, $shop->fresh()->deliveryCostFor(DeliveryMethod::Courier, 120.0));
+    }
+
     public function test_multiline_note_keeps_paragraphs_in_email(): void
     {
         $shop = $this->shop();

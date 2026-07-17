@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\DeliveryMethod;
 use App\Enums\IntegrationType;
 use App\Enums\SaleUnit;
 use App\Enums\ShopStatus;
@@ -32,6 +33,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'bank_account_number', 'bank_account_holder', 'bank_name', 'bank_transfer_enabled',
     'pickup_enabled', 'pay_on_pickup_enabled',
     'courier_enabled', 'courier_cost', 'courier_free_from',
+    'parcel_locker_enabled', 'parcel_locker_cost', 'parcel_locker_free_from',
     'package', 'entitlements', 'subscription_ends_at', 'comped',
 ])]
 class Shop extends Model
@@ -55,6 +57,9 @@ class Shop extends Model
             'courier_enabled' => 'boolean',
             'courier_cost' => 'decimal:2',
             'courier_free_from' => 'decimal:2',
+            'parcel_locker_enabled' => 'boolean',
+            'parcel_locker_cost' => 'decimal:2',
+            'parcel_locker_free_from' => 'decimal:2',
             'entitlements' => 'array',
             'subscription_ends_at' => 'datetime',
             'comped' => 'boolean',
@@ -403,6 +408,66 @@ class Shop extends Model
         }
 
         return (float) ($this->courier_cost ?? 0);
+    }
+
+    /**
+     * Czy sklep oferuje dostawę do paczkomatu InPost (Poziom 1 — bez integracji).
+     * Jak kurier: nie wymaga adresu sklepu ani konta sprzedawcy w InPoście, więc
+     * warunkiem jest sam włącznik (koszt bywa 0 = gratis). Mapa NIE jest
+     * warunkiem — gdy jej nie ma lub nie wstanie, klient wpisuje kod z palca.
+     */
+    public function parcelLockerAvailable(): bool
+    {
+        return $this->parcel_locker_enabled;
+    }
+
+    /**
+     * Efektywny koszt dostawy do paczkomatu dla danej wartości koszyka (brutto).
+     * Bliźniak courierCostFor(): próg osiągnięty → 0, inaczej ustalony koszt.
+     * Próg NULL = brak darmowej dostawy. Progi kuriera i paczkomatu są NIEZALEŻNE
+     * — sprzedawca może dać gratis w paczkomacie, a kuriera liczyć zawsze.
+     */
+    public function parcelLockerCostFor(float $itemsGross): float
+    {
+        $freeFrom = $this->parcel_locker_free_from;
+
+        if ($freeFrom !== null && $itemsGross >= (float) $freeFrom) {
+            return 0.0;
+        }
+
+        return (float) ($this->parcel_locker_cost ?? 0);
+    }
+
+    /**
+     * Efektywny koszt dostawy dla danej metody i wartości koszyka (brutto).
+     * JEDNO źródło dla kasy i OrderService — wcześniej koszt liczyło się jako
+     * „wysyłka → courierCostFor()", co przy paczkomacie kazałoby mu płacić
+     * cenę kuriera. Nowa metoda dostawy wywali tu UnhandledMatchError i dobrze:
+     * cennik trzeba dopisać świadomie, a nie odziedziczyć po cichu (ta sama
+     * zasada, co przy ścieżce statusów w OrderFlow).
+     */
+    public function deliveryCostFor(DeliveryMethod $method, float $itemsGross): float
+    {
+        return match ($method) {
+            DeliveryMethod::Pickup => 0.0,
+            DeliveryMethod::Courier => $this->courierCostFor($itemsGross),
+            DeliveryMethod::ParcelLocker => $this->parcelLockerCostFor($itemsGross),
+        };
+    }
+
+    /**
+     * Próg darmowej dostawy dla danej metody (null = brak progu). Lustro
+     * deliveryCostFor() — kasa pokazuje z tego podpowiedź „Darmowa dostawa od…".
+     */
+    public function deliveryFreeFrom(DeliveryMethod $method): ?float
+    {
+        $value = match ($method) {
+            DeliveryMethod::Pickup => null,
+            DeliveryMethod::Courier => $this->courier_free_from,
+            DeliveryMethod::ParcelLocker => $this->parcel_locker_free_from,
+        };
+
+        return $value !== null ? (float) $value : null;
     }
 
     /**

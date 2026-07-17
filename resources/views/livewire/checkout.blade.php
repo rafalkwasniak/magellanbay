@@ -120,17 +120,18 @@
                         @foreach ($deliveryOptions as $value => $label)
                             <label class="st-border flex cursor-pointer items-center gap-3 rounded-xl border p-4 text-sm">
                                 <input type="radio" wire:model.live="delivery_method" value="{{ $value }}" class="h-5 w-5 shrink-0" style="accent-color: var(--brand);">
+                                @php($meta = $deliveryMeta[$value] ?? null)
                                 <span class="flex-1">
                                     <span class="flex items-baseline justify-between gap-3">
                                         <span class="font-medium">{{ $label }}</span>
-                                        @if ($value === 'courier')
-                                            <span class="shrink-0 text-sm tabular-nums opacity-80">{{ $courierCostForCart > 0 ? \App\Support\Money::pln($courierCostForCart) : 'Gratis' }}</span>
+                                        @if ($meta)
+                                            <span class="shrink-0 text-sm tabular-nums opacity-80">{{ $meta['cost'] > 0 ? \App\Support\Money::pln($meta['cost']) : 'Gratis' }}</span>
                                         @endif
                                     </span>
                                     @if ($value === 'pickup' && filled($pickupAddress))
                                         <span class="block text-xs opacity-60">{{ $pickupAddress }}</span>
-                                    @elseif ($value === 'courier' && $courierFreeFrom && $courierCostForCart > 0)
-                                        <span class="block text-xs opacity-60">Darmowa dostawa od {{ \App\Support\Money::pln($courierFreeFrom) }}</span>
+                                    @elseif ($meta && $meta['free_from'] && $meta['cost'] > 0)
+                                        <span class="block text-xs opacity-60">Darmowa dostawa od {{ \App\Support\Money::pln($meta['free_from']) }}</span>
                                     @endif
                                 </span>
                             </label>
@@ -139,8 +140,9 @@
                     @error('delivery_method') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
                 </div>
 
-                {{-- Adres dostawy — tylko przy wysyłce (kurier). --}}
-                @if ($shippedDelivery)
+                {{-- Adres dostawy — tylko przy metodzie „pod adres" (kurier).
+                     Paczkomat jest wysyłką, ale adresu nie potrzebuje. --}}
+                @if ($addressDelivery)
                     <div class="st-card st-border rounded-3xl border p-6">
                         <h2 class="font-semibold">Adres dostawy</h2>
                         <div class="mt-4 grid grid-cols-6 gap-3">
@@ -171,6 +173,87 @@
                             </div>
                         </div>
                         <p class="mt-3 text-xs opacity-60">Adres, pod który wyślemy zamówienie.</p>
+                    </div>
+                @endif
+
+                {{-- Wybór paczkomatu. Mapa (geowidget) wypełnia pole kodu; pole
+                     zostaje dostępne z palca, bo gdy mapa nie wstanie (wolne łącze,
+                     brak tokenu), klient musi mieć jak dokończyć zakup. --}}
+                @if ($parcelDelivery)
+                    <div class="st-card st-border rounded-3xl border p-6"
+                        x-data="{
+                            mapOpen: false,
+                            onPoint(point) {
+                                const line1 = point?.address?.line1 ?? '';
+                                const line2 = point?.address?.line2 ?? '';
+                                const desc = [line1, line2].filter(Boolean).join(', ');
+                                $wire.set('parcel_locker_code', point?.name ?? '');
+                                $wire.set('parcel_locker_address', desc);
+                                this.mapOpen = false;
+                            },
+                        }"
+                        @inpost-point-selected.window="onPoint($event.detail)"
+                        @keydown.escape.window="mapOpen = false">
+                        <h2 class="font-semibold">Paczkomat</h2>
+
+                        {{-- Pole kodu + przycisk mapy obok: oba ustawiają to samo. --}}
+                        <div class="mt-4 flex flex-wrap items-end gap-3">
+                            <div class="flex-1 sm:flex-none">
+                                <label for="parcel_locker_code" class="block text-sm opacity-80">Kod paczkomatu</label>
+                                <input type="text" id="parcel_locker_code" wire:model="parcel_locker_code" placeholder="np. KRA01A"
+                                    class="st-border mt-1 block w-full rounded-xl border bg-transparent px-3 py-2.5 text-sm uppercase focus:outline-none sm:w-56">
+                            </div>
+                            @if ($geowidgetToken)
+                                <button type="button" x-on:click="mapOpen = true"
+                                    class="st-btn inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold shadow-sm transition hover:brightness-105">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="h-4 w-4" aria-hidden="true"><path d="M9 20l-5.5 2.5v-16L9 4m0 16l6-2.5M9 20V4m6 13.5L20.5 20v-16L15 6.5m0 11V6.5M9 4l6 2.5"/></svg>
+                                    Wybierz na mapie
+                                </button>
+                            @endif
+                        </div>
+                        @error('parcel_locker_code') <p class="mt-1.5 text-xs text-rose-600">{{ $message }}</p> @enderror
+                        @if (filled($parcel_locker_address))
+                            <p class="mt-2 text-xs opacity-60">{{ $parcel_locker_address }}</p>
+                        @endif
+                        <p class="mt-3 text-xs opacity-60">
+                            @if ($geowidgetToken)
+                                Wybierz punkt na mapie albo wpisz kod ręcznie.
+                            @else
+                                Kod znajdziesz w aplikacji InPost lub na <a href="https://inpost.pl/znajdz-paczkomat" target="_blank" rel="noopener" class="st-brand underline underline-offset-2">mapie paczkomatów</a>.
+                            @endif
+                        </p>
+
+                        @if ($geowidgetToken)
+                            {{-- Mapa w popupie: dostaje pełną szerokość i wysokość,
+                                 zamiast dusić się w kolumnie formularza. --}}
+                            <div x-show="mapOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4"
+                                role="dialog" aria-modal="true" aria-label="Wybór paczkomatu">
+                                <div class="absolute inset-0 bg-black/50" x-on:click="mapOpen = false"></div>
+                                <div class="st-card relative z-10 flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl shadow-2xl">
+                                    <div class="st-border flex items-center justify-between border-b px-5 py-4">
+                                        <h3 class="font-semibold">Wybierz paczkomat</h3>
+                                        <button type="button" x-on:click="mapOpen = false" aria-label="Zamknij"
+                                            class="st-border flex h-8 w-8 items-center justify-center rounded-full border transition hover:brightness-95">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="h-4 w-4" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+                                        </button>
+                                    </div>
+                                    {{-- Widget montowany dopiero przy otwarciu (x-if): mapa w
+                                         display:none nie zna wymiarów i wyszłaby połamana.
+                                         wire:ignore trzyma go z dala od morphdomu Livewire. --}}
+                                    <div class="min-h-0 flex-1 p-2" wire:ignore>
+                                        <template x-if="mapOpen">
+                                            <inpost-geowidget
+                                                x-init="$el.addEventListener('inpost.geowidget.init', (e) => e.detail.api.changePointsType('PARCEL_LOCKER'))"
+                                                token="{{ $geowidgetToken }}"
+                                                language="pl"
+                                                config="parcelCollect"
+                                                onpoint="afterInpostPointSelected"
+                                                class="block h-[70vh] w-full overflow-hidden rounded-2xl"></inpost-geowidget>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
                     </div>
                 @endif
 

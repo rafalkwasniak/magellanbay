@@ -75,12 +75,19 @@
                             {{ $shop->postal_code }} {{ $shop->city }}
                         </p>
                         <p class="mt-2 text-xs opacity-60">Poinformujemy Cię, gdy zamówienie będzie gotowe do odbioru.</p>
-                    @elseif ($order->delivery_method->isShipped())
+                    @elseif ($order->delivery_method->requiresShippingAddress())
                         <p class="mt-2 text-sm opacity-70">Wyślemy na adres:</p>
                         <p class="mt-1 text-sm font-medium">
                             {{ $order->ship_street }} {{ $order->ship_building_number }}{{ $order->ship_apartment_number ? '/'.$order->ship_apartment_number : '' }},
                             {{ $order->ship_postal_code }} {{ $order->ship_city }}
                         </p>
+                        <p class="mt-2 text-xs opacity-60">Poinformujemy Cię, gdy zamówienie będzie gotowe do wysyłki.</p>
+                    @elseif ($order->delivery_method->requiresParcelLocker())
+                        <p class="mt-2 text-sm opacity-70">Wyślemy do paczkomatu:</p>
+                        <p class="mt-1 text-sm font-medium">{{ $order->parcel_locker_code }}</p>
+                        @if (filled($order->parcel_locker_address))
+                            <p class="mt-0.5 text-sm opacity-70">{{ $order->parcel_locker_address }}</p>
+                        @endif
                         <p class="mt-2 text-xs opacity-60">Poinformujemy Cię, gdy zamówienie będzie gotowe do wysyłki.</p>
                     @endif
                 </div>

@@ -412,6 +412,203 @@ class CheckoutTest extends TestCase
         $this->assertSame('Kraków', $order->ship_city);
     }
 
+    public function test_parcel_locker_option_requires_code_but_not_address(): void
+    {
+        // Sedno w kasie: paczkomat prosi o KOD, a nie o ulicę i miasto.
+        $shop = $this->shopReadyForOrders();
+        $shop->update(['parcel_locker_enabled' => true, 'parcel_locker_cost' => 12.00]);
+        $this->cartProduct($shop);
+
+        Livewire::test(Checkout::class, ['shopId' => $shop->id])
+            ->assertSee('Paczkomat InPost')
+            ->set('buyer_name', 'Jan')
+            ->set('buyer_surname', 'Kowalski')
+            ->set('buyer_email', 'jan@example.com')
+            ->set('buyer_phone', '123456789')
+            ->set('delivery_method', 'parcel_locker')
+            ->set('payment_method', 'bank_transfer')
+            ->set('accept_terms', true)
+            ->set('accept_privacy', true)
+            ->call('place')
+            ->assertHasErrors('parcel_locker_code')
+            ->assertHasNoErrors(['ship_street', 'ship_building_number', 'ship_postal_code', 'ship_city']);
+
+        $this->assertSame(0, Order::count());
+    }
+
+    public function test_guest_places_parcel_locker_order_with_own_cost(): void
+    {
+        $shop = $this->shopReadyForOrders();
+        // Kurier włączony CELOWO drożej — paczkomat ma policzyć SWÓJ koszt.
+        $shop->update([
+            'parcel_locker_enabled' => true, 'parcel_locker_cost' => 12.00,
+            'courier_enabled' => true, 'courier_cost' => 15.00,
+        ]);
+        $this->cartProduct($shop);   // produkt 40 zł
+
+        Livewire::test(Checkout::class, ['shopId' => $shop->id])
+            ->set('buyer_name', 'Jan')
+            ->set('buyer_surname', 'Kowalski')
+            ->set('buyer_email', 'jan@example.com')
+            ->set('buyer_phone', '123456789')
+            ->set('delivery_method', 'parcel_locker')
+            ->set('payment_method', 'bank_transfer')
+            ->set('parcel_locker_code', 'kra01a')       // z palca, małymi literami
+            ->set('accept_terms', true)
+            ->set('accept_privacy', true)
+            ->call('place')
+            ->assertRedirect('/kasa/dziekujemy');
+
+        $order = Order::first();
+        $this->assertSame(\App\Enums\DeliveryMethod::ParcelLocker, $order->delivery_method);
+        $this->assertSame('12.00', $order->delivery_cost);
+        $this->assertSame('52.00', $order->total_gross);   // 40 produkty + 12 dostawa
+        // Kod znormalizowany do wersalików — klient nie ma za to obrywać.
+        $this->assertSame('KRA01A', $order->parcel_locker_code);
+        // Adres nie istnieje przy paczkomacie.
+        $this->assertNull($order->ship_street);
+        $this->assertNull($order->ship_city);
+    }
+
+    public function test_confirmation_page_shows_parcel_locker_instead_of_address(): void
+    {
+        $shop = $this->shopReadyForOrders();
+        $shop->update(['parcel_locker_enabled' => true, 'parcel_locker_cost' => 12.00]);
+        $this->cartProduct($shop);
+
+        Livewire::test(Checkout::class, ['shopId' => $shop->id])
+            ->set('buyer_name', 'Jan')
+            ->set('buyer_surname', 'Kowalski')
+            ->set('buyer_email', 'jan@example.com')
+            ->set('buyer_phone', '123456789')
+            ->set('delivery_method', 'parcel_locker')
+            ->set('payment_method', 'bank_transfer')
+            ->set('parcel_locker_code', 'KRA01A')
+            ->set('accept_terms', true)
+            ->set('accept_privacy', true)
+            ->call('place');
+
+        $order = Order::firstOrFail();
+        $base = 'http://'.$shop->slug.'.'.config('tenancy.central_domain');
+
+        $this->withSession(['recent_order_id' => $order->id])
+            ->get($base.'/kasa/dziekujemy')
+            ->assertOk()
+            ->assertSee('Wyślemy do paczkomatu:')
+            ->assertSee('KRA01A')
+            // Blok adresu nie ma prawa się pokazać — nie ma czego pokazać.
+            ->assertDontSee('Wyślemy na adres:');
+    }
+
+    public function test_checkout_loads_geowidget_script_when_parcel_locker_and_token_present(): void
+    {
+        config()->set('services.inpost.geowidget_token', 'test-token-123');
+
+        $shop = $this->shopReadyForOrders();
+        $shop->update(['parcel_locker_enabled' => true, 'parcel_locker_cost' => 12.00]);
+        $this->cartProduct($shop);
+
+        $base = 'http://'.$shop->slug.'.'.config('tenancy.central_domain');
+
+        // Skrypt mapy w <head> zależy od sklepu (oferuje paczkomat + token),
+        // nie od wybranej metody — ładuje się od wejścia na kasę.
+        $this->get($base.'/kasa')
+            ->assertOk()
+            ->assertSee('inpost-geowidget.js');
+    }
+
+    public function test_geowidget_element_with_token_appears_only_after_choosing_parcel_locker(): void
+    {
+        config()->set('services.inpost.geowidget_token', 'test-token-123');
+
+        $shop = $this->shopReadyForOrders();
+        $shop->update(['parcel_locker_enabled' => true, 'parcel_locker_cost' => 12.00]);
+        $this->cartProduct($shop);
+
+        // Token siedzi w atrybucie <inpost-geowidget> — nie wisi w kodzie, dopóki
+        // klient nie wybierze paczkomatu (mniej powierzchni do podebrania).
+        Livewire::test(Checkout::class, ['shopId' => $shop->id])
+            ->assertDontSee('test-token-123')
+            ->assertDontSee('inpost-geowidget', escape: false)
+            ->set('delivery_method', 'parcel_locker')
+            ->assertSee('test-token-123')
+            ->assertSee('inpost-geowidget', escape: false);
+    }
+
+    public function test_parcel_locker_falls_back_to_manual_code_when_token_missing(): void
+    {
+        config()->set('services.inpost.geowidget_token', null);
+
+        $shop = $this->shopReadyForOrders();
+        $shop->update(['parcel_locker_enabled' => true, 'parcel_locker_cost' => 12.00]);
+        $this->cartProduct($shop);
+
+        $base = 'http://'.$shop->slug.'.'.config('tenancy.central_domain');
+        $this->get($base.'/kasa')->assertOk()->assertDontSee('inpost-geowidget.js');
+
+        // Bez tokenu mapy nie ma, ale paczkomat wciąż da się kupić z palca —
+        // blok pokazuje link do mapy InPostu zamiast przycisku „Wybierz na mapie".
+        Livewire::test(Checkout::class, ['shopId' => $shop->id])
+            ->set('delivery_method', 'parcel_locker')
+            ->assertDontSee('inpost-geowidget', escape: false)
+            ->assertSee('znajdz-paczkomat', escape: false)
+            ->assertDontSee('Wybierz na mapie');
+    }
+
+    public function test_checkout_omits_geowidget_when_shop_has_no_parcel_locker(): void
+    {
+        config()->set('services.inpost.geowidget_token', 'test-token-123');
+
+        $shop = $this->shopReadyForOrders();   // paczkomat wyłączony
+        $this->cartProduct($shop);
+
+        $base = 'http://'.$shop->slug.'.'.config('tenancy.central_domain');
+
+        // Token jest, ale sklep nie oferuje paczkomatu — skrypt nie ma po co się
+        // ładować, nie obciąża kasy tego sklepu.
+        $this->get($base.'/kasa')
+            ->assertOk()
+            ->assertDontSee('inpost-geowidget.js');
+    }
+
+    public function test_choosing_parcel_locker_drops_pay_on_pickup_payment(): void
+    {
+        $shop = $this->shopReadyForOrders();
+        $shop->update(['parcel_locker_enabled' => true, 'parcel_locker_cost' => 12.00]);
+        $this->cartProduct($shop);
+
+        Livewire::test(Checkout::class, ['shopId' => $shop->id])
+            ->set('delivery_method', 'pickup')
+            ->set('payment_method', 'pay_on_pickup')
+            // Paczkomat to wysyłka — „płatność przy odbiorze" nie ma czego dotyczyć.
+            ->set('delivery_method', 'parcel_locker')
+            ->assertDontSee('Płatność przy odbiorze')
+            ->assertSet('payment_method', 'bank_transfer');
+    }
+
+    public function test_parcel_locker_option_is_hidden_when_shop_has_it_disabled(): void
+    {
+        $shop = $this->shopReadyForOrders();   // paczkomat domyślnie wyłączony
+        $this->cartProduct($shop);
+
+        Livewire::test(Checkout::class, ['shopId' => $shop->id])
+            ->assertDontSee('Paczkomat InPost')
+            ->set('delivery_method', 'parcel_locker')
+            ->set('payment_method', 'bank_transfer')
+            ->set('buyer_name', 'Jan')
+            ->set('buyer_surname', 'Kowalski')
+            ->set('buyer_email', 'jan@example.com')
+            ->set('buyer_phone', '123456789')
+            ->set('accept_terms', true)
+            ->set('accept_privacy', true)
+            ->call('place')
+            // Metoda spoza oferty sklepu nie przechodzi walidacji, choćby
+            // ktoś podstawił ją z palca w polu formularza.
+            ->assertHasErrors('delivery_method');
+
+        $this->assertSame(0, Order::count());
+    }
+
     public function test_confirmation_page_shows_order_number(): void
     {
         $shop = $this->shopReadyForOrders();

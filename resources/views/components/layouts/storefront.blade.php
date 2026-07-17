@@ -86,6 +86,10 @@
             </script>
         @endif
     @endif
+
+    {{-- Zasoby dokładane przez konkretną podstronę (np. geowidget InPostu w kasie).
+         Ładują się tylko tam, gdzie są potrzebne — nie obciążają całego sklepu. --}}
+    @stack('head')
 </head>
 
 <body class="min-h-full font-sans antialiased">

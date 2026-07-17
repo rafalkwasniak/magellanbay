@@ -198,9 +198,9 @@ class OrderService
             }
         }
 
-        // Koszt dostawy = konfiguracja kuriera per sklep (z progiem darmowej
+        // Koszt dostawy = cennik WYBRANEJ metody per sklep (z progiem darmowej
         // dostawy liczonym od wartości produktów). Odbiór osobisty: 0.
-        $deliveryCost = $delivery->isShipped() ? $shop->courierCostFor($itemsGross) : 0.0;
+        $deliveryCost = $shop->deliveryCostFor($delivery, $itemsGross);
 
         $order = $shop->orders()->create([
             'number' => $shop->allocateOrderNumber(),
@@ -220,12 +220,16 @@ class OrderService
             'company_apartment_number' => $this->companyField($data, 'company_apartment_number'),
             'company_postal_code' => $this->companyField($data, 'company_postal_code'),
             'company_city' => $this->companyField($data, 'company_city'),
-            // Migawka adresu dostawy — tylko przy wysyłce (odbiór: pusty).
+            // Migawka adresu dostawy — tylko przy metodzie „pod adres" (kurier).
             'ship_street' => $this->shipField($data, 'ship_street', $delivery),
             'ship_building_number' => $this->shipField($data, 'ship_building_number', $delivery),
             'ship_apartment_number' => $this->shipField($data, 'ship_apartment_number', $delivery),
             'ship_postal_code' => $this->shipField($data, 'ship_postal_code', $delivery),
             'ship_city' => $this->shipField($data, 'ship_city', $delivery),
+            // Migawka paczkomatu — tylko przy metodzie „do punktu". Wyklucza się
+            // z adresem: zamówienie ma albo jedno, albo drugie, nigdy oba.
+            'parcel_locker_code' => $this->lockerField($data, 'parcel_locker_code', $delivery),
+            'parcel_locker_address' => $this->lockerField($data, 'parcel_locker_address', $delivery),
             'delivery_method' => $delivery,
             'delivery_cost' => $deliveryCost,
             'payment_method' => $payment,
@@ -261,14 +265,33 @@ class OrderService
     }
 
     /**
-     * Pole adresu dostawy: wartość tylko przy metodzie z wysyłką (kurier), puste
-     * → null. Przy odbiorze osobistym adres nie istnieje.
+     * Pole adresu dostawy: wartość tylko przy metodzie „pod adres" (kurier),
+     * puste → null. Przy odbiorze osobistym i paczkomacie adres nie istnieje —
+     * dlatego bramką jest requiresShippingAddress(), a NIE isShipped(): paczkomat
+     * jest wysyłką, ale paczka jedzie do skrytki, nie pod dom kupującego.
      *
      * @param  array<string, mixed>  $data
      */
     private function shipField(array $data, string $key, DeliveryMethod $delivery): ?string
     {
-        if (! $delivery->isShipped()) {
+        if (! $delivery->requiresShippingAddress()) {
+            return null;
+        }
+
+        $value = $data[$key] ?? null;
+
+        return filled($value) ? (string) $value : null;
+    }
+
+    /**
+     * Pole paczkomatu: wartość tylko przy metodzie „do punktu", puste → null.
+     * Lustro shipField() — te dwa zestawy się wykluczają.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function lockerField(array $data, string $key, DeliveryMethod $delivery): ?string
+    {
+        if (! $delivery->requiresParcelLocker()) {
             return null;
         }
 

@@ -36,7 +36,7 @@ final class OrderFlow
         // trzeba wtedy dopisać świadomie, a nie odziedziczyć po cichu.
         $handover = match ($delivery) {
             DeliveryMethod::Pickup => OrderStatus::ReadyForPickup,
-            DeliveryMethod::Courier => OrderStatus::ReadyForShipment,
+            DeliveryMethod::Courier, DeliveryMethod::ParcelLocker => OrderStatus::ReadyForShipment,
         };
 
         // Przedpłata: brak „Nowego" — zaraz po złożeniu i tak oczekujemy wpłaty,

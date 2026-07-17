@@ -323,4 +323,142 @@ class ShopSettingsTest extends TestCase
         // Brak progu = darmowej dostawy nie ma, choćby koszyk był duży.
         $this->assertSame(15.99, $shop->courierCostFor(10_000.0));
     }
+
+    public function test_seller_can_enable_parcel_locker_with_cost_and_threshold(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop(['parcel_locker_enabled' => false]);
+
+        $this->actingAs($seller)
+            ->post(route('seller.settings.update'), [
+                'default_vat_rate' => '23',
+                'parcel_locker_enabled' => '1',
+                'parcel_locker_cost' => '12,99',          // przecinek → kropka
+                'parcel_locker_free_from' => '150',
+            ])
+            ->assertSessionHas('success');
+
+        $fresh = $shop->fresh();
+        $this->assertTrue($fresh->parcel_locker_enabled);
+        $this->assertTrue($fresh->parcelLockerAvailable());
+        $this->assertSame('12.99', $fresh->parcel_locker_cost);
+        $this->assertSame('150.00', $fresh->parcel_locker_free_from);
+    }
+
+    public function test_parcel_locker_cost_is_required_when_enabled(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop(['parcel_locker_enabled' => false]);
+
+        $this->actingAs($seller)
+            ->post(route('seller.settings.update'), [
+                'default_vat_rate' => '23',
+                'parcel_locker_enabled' => '1',
+                'parcel_locker_cost' => '',
+            ])
+            ->assertSessionHasErrors('parcel_locker_cost');
+
+        $this->assertFalse($shop->fresh()->parcel_locker_enabled);
+    }
+
+    public function test_seller_can_offer_free_parcel_locker_with_zero_cost(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop(['parcel_locker_enabled' => false]);
+
+        // Koszt 0 jest dozwolony (paczkomat gratis), próg pusty = brak darmowej dostawy.
+        $this->actingAs($seller)
+            ->post(route('seller.settings.update'), [
+                'default_vat_rate' => '23',
+                'parcel_locker_enabled' => '1',
+                'parcel_locker_cost' => '0',
+            ])
+            ->assertSessionHas('success');
+
+        $fresh = $shop->fresh();
+        $this->assertTrue($fresh->parcel_locker_enabled);
+        $this->assertSame('0.00', $fresh->parcel_locker_cost);
+        $this->assertNull($fresh->parcel_locker_free_from);
+    }
+
+    public function test_seller_can_disable_parcel_locker(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop([
+            'parcel_locker_enabled' => true,
+            'parcel_locker_cost' => 12.99,
+        ]);
+
+        // Checkbox odznaczony = brak klucza w POST; fiszka schodzi na false.
+        $this->actingAs($seller)
+            ->post(route('seller.settings.update'), ['default_vat_rate' => '23'])
+            ->assertSessionHas('success');
+
+        $this->assertFalse($shop->fresh()->parcel_locker_enabled);
+    }
+
+    public function test_parcel_locker_cost_reflects_free_shipping_threshold(): void
+    {
+        [, $shop] = $this->sellerWithShop([
+            'parcel_locker_enabled' => true,
+            'parcel_locker_cost' => 12.99,
+            'parcel_locker_free_from' => 150,
+        ]);
+
+        // Poniżej progu — pełny koszt; na/powyżej progu — gratis.
+        $this->assertSame(12.99, $shop->parcelLockerCostFor(149.99));
+        $this->assertSame(0.0, $shop->parcelLockerCostFor(150.0));
+        $this->assertSame(0.0, $shop->parcelLockerCostFor(250.0));
+    }
+
+    public function test_parcel_locker_cost_ignores_threshold_when_not_set(): void
+    {
+        [, $shop] = $this->sellerWithShop([
+            'parcel_locker_enabled' => true,
+            'parcel_locker_cost' => 12.99,
+            'parcel_locker_free_from' => null,
+        ]);
+
+        // Brak progu = darmowej dostawy nie ma, choćby koszyk był duży.
+        $this->assertSame(12.99, $shop->parcelLockerCostFor(10_000.0));
+    }
+
+    public function test_courier_and_parcel_locker_are_configured_independently(): void
+    {
+        // Sedno bliźniaczości: to DWIE osobne metody, nie jeden przełącznik
+        // „wysyłka". Sprzedawca może dać gratis w paczkomacie od 150 zł, a
+        // kuriera liczyć zawsze — progi i koszty nie mogą się o siebie ocierać.
+        [$seller, $shop] = $this->sellerWithShop([
+            'courier_enabled' => false,
+            'parcel_locker_enabled' => false,
+        ]);
+
+        $this->actingAs($seller)
+            ->post(route('seller.settings.update'), [
+                'default_vat_rate' => '23',
+                'courier_enabled' => '1',
+                'courier_cost' => '19,99',
+                'parcel_locker_enabled' => '1',
+                'parcel_locker_cost' => '12,99',
+                'parcel_locker_free_from' => '150',
+            ])
+            ->assertSessionHas('success');
+
+        $fresh = $shop->fresh();
+        $this->assertTrue($fresh->courierAvailable());
+        $this->assertTrue($fresh->parcelLockerAvailable());
+
+        // Duży koszyk: paczkomat gratis (próg 150), kurier dalej płatny (brak progu).
+        $this->assertSame(0.0, $fresh->parcelLockerCostFor(200.0));
+        $this->assertSame(19.99, $fresh->courierCostFor(200.0));
+
+        // Wyłączenie paczkomatu nie rusza kuriera.
+        $this->actingAs($seller)
+            ->post(route('seller.settings.update'), [
+                'default_vat_rate' => '23',
+                'courier_enabled' => '1',
+                'courier_cost' => '19,99',
+            ])
+            ->assertSessionHas('success');
+
+        $fresh = $shop->fresh();
+        $this->assertFalse($fresh->parcelLockerAvailable());
+        $this->assertTrue($fresh->courierAvailable());
+    }
 }

@@ -514,7 +514,7 @@ class OrderMailer
             return $lines;
         }
 
-        if ($order->delivery_method->isShipped()) {
+        if ($order->delivery_method->requiresShippingAddress()) {
             $address = trim(
                 trim($order->ship_street.' '.$order->ship_building_number.($order->ship_apartment_number ? '/'.$order->ship_apartment_number : ''))
                 .', '.trim($order->ship_postal_code.' '.$order->ship_city),
@@ -524,7 +524,20 @@ class OrderMailer
             if ($address !== '') {
                 $lines[] = 'Adres dostawy: '.$address;
             }
+        }
 
+        if ($order->delivery_method->requiresParcelLocker() && filled($order->parcel_locker_code)) {
+            // Kod pogrubiony: to jedyna dana, po której sprzedawca nadaje paczkę,
+            // a klient odbiera. Opis punktu tylko gdy jest — przy wpisie z palca
+            // (bez mapy) zamówienie niesie sam kod i nie ma czego dopowiadać.
+            $lines[] = 'Paczkomat: **'.$order->parcel_locker_code.'**';
+
+            if (filled($order->parcel_locker_address)) {
+                $lines[] = $order->parcel_locker_address;
+            }
+        }
+
+        if ($order->delivery_method->isShipped()) {
             $lines[] = 'Koszt dostawy: '.((float) $order->delivery_cost > 0 ? Money::pln($order->delivery_cost) : 'gratis');
         }
 
