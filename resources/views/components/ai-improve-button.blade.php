@@ -13,7 +13,7 @@
     data-ai-url="{{ route('ai.improve') }}"
     data-ai-max="{{ (int) config('shop.ai.max_uses_per_field') }}"
     data-ai-label="{{ $label }}"
-    {{ $attributes->merge(['class' => 'mt-2 inline-flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-800 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50']) }}>
+    {{ $attributes->merge(['class' => 'mt-2 inline-flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-800 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50']) }}>
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-4 w-4">
         <path d="M9 1.5 10.2 5 13.5 6.2 10.2 7.4 9 10.9 7.8 7.4 4.5 6.2 7.8 5 9 1.5Z" />
         <path d="M17 9.5 18 12.5 21 13.5 18 14.5 17 17.5 16 14.5 13 13.5 16 12.5 17 9.5Z" />
