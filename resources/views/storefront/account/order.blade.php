@@ -10,7 +10,7 @@
         <span class="text-sm opacity-60">Złożone {{ $order->created_at->format('d.m.Y, H:i') }}</span>
     </div>
 
-    <div class="mt-6 grid gap-6 md:grid-cols-2">
+    <div class="mt-6 space-y-6">
         {{-- Lewa kolumna: podsumowanie + faktura --}}
         <div class="space-y-6">
         <div class="st-card st-border rounded-3xl border p-6">
@@ -35,24 +35,6 @@
             </div>
             <p class="mt-1 text-right text-xs opacity-60">{{ \App\Support\Money::pln($order->total_net) }} netto</p>
         </div>
-
-        @if ($order->hasInvoice() && $order->invoicePdfUrl())
-            {{-- Faktura VAT pod podsumowaniem: pobranie wprost z publicznego PDF-a w Fakturowni. --}}
-            <div class="st-card st-border rounded-3xl border p-6">
-                <h2 class="st-brand st-box-title">Faktura VAT</h2>
-                <p class="mt-2 text-sm opacity-70">
-                    @if (filled($order->invoice_number))
-                        Faktura nr <span class="font-medium">{{ $order->invoice_number }}</span> do tego zamówienia jest gotowa.
-                    @else
-                        Faktura do tego zamówienia jest gotowa.
-                    @endif
-                </p>
-                <a href="{{ $order->invoicePdfUrl() }}" target="_blank" rel="noopener"
-                    class="st-btn mt-4 inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold shadow-sm transition hover:brightness-105">
-                    <span aria-hidden="true">⬇</span> Pobierz fakturę VAT
-                </a>
-            </div>
-        @endif
         </div>
 
         {{-- Płatność + dostawa --}}
@@ -105,5 +87,23 @@
                 </div>
             @endif
         </div>
+
+        @if ($order->hasInvoice() && $order->invoicePdfUrl())
+            {{-- Faktura VAT na samym dole. --}}
+            <div class="st-card st-border rounded-3xl border p-6">
+                <h2 class="st-brand st-box-title">Faktura VAT</h2>
+                <p class="mt-2 text-sm opacity-70">
+                    @if (filled($order->invoice_number))
+                        Faktura nr <span class="font-medium">{{ $order->invoice_number }}</span> do tego zamówienia jest gotowa.
+                    @else
+                        Faktura do tego zamówienia jest gotowa.
+                    @endif
+                </p>
+                <a href="{{ $order->invoicePdfUrl() }}" target="_blank" rel="noopener"
+                    class="st-btn mt-4 inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold shadow-sm transition hover:brightness-105">
+                    <span aria-hidden="true">⬇</span> Pobierz fakturę VAT
+                </a>
+            </div>
+        @endif
     </div>
 </x-storefront.account-shell>

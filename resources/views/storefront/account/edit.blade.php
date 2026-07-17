@@ -76,7 +76,7 @@
                 <label for="marketing_email" class="flex cursor-pointer items-start gap-3">
                     <input type="checkbox" id="marketing_email" name="marketing_email" value="1"
                         @checked(old('marketing_email', $customer->hasConsent(\App\Enums\ConsentChannel::Email)))
-                        class="st-border mt-0.5 h-4 w-4 shrink-0 rounded border bg-transparent">
+                        class="st-border mt-0.5 h-4 w-4 shrink-0 rounded border bg-transparent" style="accent-color: var(--brand);">
                     <span class="text-sm leading-relaxed opacity-80">{{ config('legal.marketing_consent.text') }}</span>
                 </label>
                 <button type="submit" class="st-btn rounded-xl px-5 py-2.5 text-sm font-semibold transition hover:brightness-95">Zapisz wybór</button>
