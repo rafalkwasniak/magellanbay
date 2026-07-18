@@ -32,6 +32,10 @@ class IntegrationController extends Controller
             'fakturowniaUrl' => $shop->fakturowniaAccountUrl(),
             'fakturowniaConfigured' => $shop->invoicingConfigured(),
             'fakturowniaEnabled' => $shop->invoicingEnabled(),
+            'paynowApiKey' => $shop->paynowApiKey(),
+            'paynowConfigured' => $shop->onlinePaymentsConfigured(),
+            'paynowEnabled' => $shop->onlinePaymentsEnabled(),
+            'paynowEnvironment' => $shop->paynowEnvironment(),
         ]);
     }
 
@@ -47,6 +51,16 @@ class IntegrationController extends Controller
         if ($shop->entitlement('invoices')) {
             $this->saveFakturownia($shop, $data['fakturownia_url'] ?? null, $data['fakturownia_token'] ?? null);
         }
+
+        // Paynow — świadomie BEZ bramy pakietu na tym etapie: płatności robimy
+        // najpierw dostępne (test na własnym sklepie), a egzekwowanie
+        // entitlement('online_payments') dokładamy na końcu wdrożenia.
+        $this->savePaynow(
+            $shop,
+            $data['paynow_api_key'] ?? null,
+            $data['paynow_signature_key'] ?? null,
+            $data['paynow_environment'] ?? 'sandbox',
+        );
 
         return redirect()
             ->route('seller.integrations.edit')
@@ -102,6 +116,39 @@ class IntegrationController extends Controller
         } else {
             $shop->integrations()->create([
                 'type' => IntegrationType::Invoicing,
+                'enabled' => true,
+                'config' => $config,
+            ]);
+        }
+    }
+
+    /**
+     * Zapis konfiguracji Paynow. Reguła odłączania trzyma się klucza API: pusty
+     * klucz API = usunięcie integracji. Klucz podpisu to sekret — nie odbijamy go
+     * w formularzu, więc puste pole znaczy „zostaw dotychczasowy" (FormRequest
+     * pilnuje, by istniał przy konfiguracji od zera). Środowisko zapisujemy zawsze.
+     */
+    private function savePaynow(Shop $shop, ?string $apiKey, ?string $signatureKey, string $environment): void
+    {
+        $integration = $shop->integration(IntegrationType::Payments);
+
+        if (blank($apiKey)) {
+            $integration?->delete();
+
+            return;
+        }
+
+        $config = [
+            'api_key' => $apiKey,
+            'signature_key' => filled($signatureKey) ? $signatureKey : ($integration?->config['signature_key'] ?? null),
+            'environment' => $environment,
+        ];
+
+        if ($integration !== null) {
+            $integration->update(['config' => $config]);
+        } else {
+            $shop->integrations()->create([
+                'type' => IntegrationType::Payments,
                 'enabled' => true,
                 'config' => $config,
             ]);

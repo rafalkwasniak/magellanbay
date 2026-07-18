@@ -292,4 +292,125 @@ class IntegrationsTest extends TestCase
 
         $this->assertSame(0, ShopIntegration::where('type', IntegrationType::Invoicing)->count());
     }
+
+    // --- Paynow (płatności online) — bliźniak Fakturowni, ale BEZ bramy pakietu ---
+
+    public function test_integrations_page_shows_paynow_card_without_entitlement(): void
+    {
+        // Płatności online nie są bramkowane pakietem na tym etapie: karta widoczna
+        // dla każdego sklepu, także takiego bez uprawnień do faktur.
+        [$seller] = $this->sellerWithShop(['entitlements' => ['invoices' => false]]);
+
+        $this->actingAs($seller)
+            ->get(route('seller.integrations.edit'))
+            ->assertOk()
+            ->assertSee('Płatności online (Paynow)')
+            ->assertSee('Klucz obliczania podpisu');
+    }
+
+    public function test_seller_can_configure_paynow_and_it_is_enabled_by_default(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+
+        $this->actingAs($seller)
+            ->post(route('seller.integrations.update'), [
+                'paynow_api_key' => '14d59738-4b18-4c83-86ea-131320c3d337',
+                'paynow_signature_key' => '57b7a81d-4f0f-4c2a-bf44-0234fd916f8a',
+                'paynow_environment' => 'sandbox',
+            ])
+            ->assertRedirect(route('seller.integrations.edit'))
+            ->assertSessionHas('success');
+
+        $integration = $shop->integrations()->where('type', IntegrationType::Payments)->first();
+        $this->assertNotNull($integration);
+        $this->assertTrue($integration->enabled);
+        $this->assertSame('14d59738-4b18-4c83-86ea-131320c3d337', $integration->config['api_key']);
+        $this->assertSame('57b7a81d-4f0f-4c2a-bf44-0234fd916f8a', $integration->config['signature_key']);
+        $this->assertSame('sandbox', $integration->config['environment']);
+        $this->assertTrue($shop->fresh()->onlinePaymentsEnabled());
+    }
+
+    public function test_paynow_api_key_without_signature_is_rejected_when_not_yet_configured(): void
+    {
+        [$seller] = $this->sellerWithShop();
+
+        $this->actingAs($seller)
+            ->post(route('seller.integrations.update'), [
+                'paynow_api_key' => '14d59738-4b18-4c83-86ea-131320c3d337',
+                'paynow_environment' => 'sandbox',
+            ])
+            ->assertSessionHasErrors('paynow_signature_key');
+
+        $this->assertSame(0, ShopIntegration::where('type', IntegrationType::Payments)->count());
+    }
+
+    public function test_blank_signature_on_resave_keeps_stored_signature(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+        $shop->integrations()->create([
+            'type' => IntegrationType::Payments,
+            'enabled' => true,
+            'config' => ['api_key' => 'OLD-KEY', 'signature_key' => 'KEEP-ME', 'environment' => 'sandbox'],
+        ]);
+
+        // Klucz API zmieniony, pole podpisu puste — sekret zostaje bez zmian.
+        $this->actingAs($seller)
+            ->post(route('seller.integrations.update'), [
+                'paynow_api_key' => 'NEW-KEY',
+                'paynow_signature_key' => '',
+                'paynow_environment' => 'production',
+            ]);
+
+        $config = $shop->integrations()->where('type', IntegrationType::Payments)->first()->config;
+        $this->assertSame('NEW-KEY', $config['api_key']);
+        $this->assertSame('KEEP-ME', $config['signature_key']);
+        $this->assertSame('production', $config['environment']);
+    }
+
+    public function test_clearing_paynow_api_key_removes_integration(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+        $shop->integrations()->create([
+            'type' => IntegrationType::Payments,
+            'enabled' => true,
+            'config' => ['api_key' => 'K', 'signature_key' => 'S', 'environment' => 'sandbox'],
+        ]);
+
+        $this->actingAs($seller)
+            ->post(route('seller.integrations.update'), [
+                'paynow_api_key' => '',
+                'paynow_signature_key' => '',
+                'paynow_environment' => 'sandbox',
+            ]);
+
+        $this->assertSame(0, ShopIntegration::where('type', IntegrationType::Payments)->count());
+    }
+
+    public function test_settings_toggle_enables_and_disables_configured_paynow(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop(['default_vat_rate' => '23']);
+        $integration = $shop->integrations()->create([
+            'type' => IntegrationType::Payments,
+            'enabled' => true,
+            'config' => ['api_key' => 'K', 'signature_key' => 'S', 'environment' => 'sandbox'],
+        ]);
+
+        // Wyłączenie: checkbox odznaczony = pole nieobecne w POST.
+        $this->actingAs($seller)
+            ->post(route('seller.settings.update'), ['default_vat_rate' => '23'])
+            ->assertSessionHas('success');
+
+        $this->assertFalse($integration->fresh()->enabled);
+        $this->assertFalse($shop->fresh()->onlinePaymentsEnabled());
+
+        // Włączenie z powrotem.
+        $this->actingAs($seller)
+            ->post(route('seller.settings.update'), [
+                'default_vat_rate' => '23',
+                'paynow_enabled' => '1',
+            ]);
+
+        $this->assertTrue($integration->fresh()->enabled);
+        $this->assertTrue($shop->fresh()->onlinePaymentsEnabled());
+    }
 }

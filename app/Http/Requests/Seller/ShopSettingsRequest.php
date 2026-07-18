@@ -40,6 +40,7 @@ class ShopSettingsRequest extends FormRequest
             'parcel_locker_free_from' => $this->normalizeAmount($this->input('parcel_locker_free_from')),
             'google_analytics_enabled' => $this->boolean('google_analytics_enabled'),
             'fakturownia_enabled' => $this->boolean('fakturownia_enabled'),
+            'paynow_enabled' => $this->boolean('paynow_enabled'),
             // Nowe pole — gdy formularz go nie przyśle (starszy submit), zostawiamy
             // bieżącą jednostkę sklepu, żeby częściowy zapis jej nie wyzerował.
             'default_sale_unit' => $this->input('default_sale_unit', $this->user()?->shop?->default_sale_unit?->value ?? 'piece'),
@@ -79,6 +80,7 @@ class ShopSettingsRequest extends FormRequest
             'parcel_locker_free_from' => ['nullable', 'numeric', 'min:0', 'max:999999.99'],
             'google_analytics_enabled' => ['boolean'],
             'fakturownia_enabled' => ['boolean'],
+            'paynow_enabled' => ['boolean'],
         ];
     }
 
@@ -101,6 +103,7 @@ class ShopSettingsRequest extends FormRequest
             'parcel_locker_free_from' => 'próg darmowej dostawy do paczkomatu',
             'google_analytics_enabled' => 'Google Analytics',
             'fakturownia_enabled' => 'Fakturownia',
+            'paynow_enabled' => 'płatności online (Paynow)',
         ];
     }
 

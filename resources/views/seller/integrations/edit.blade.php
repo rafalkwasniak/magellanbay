@@ -7,6 +7,89 @@
             <form method="POST" action="{{ route('seller.integrations.update') }}" class="space-y-6" novalidate data-validate>
                 @csrf
 
+                {{-- Płatności online (Paynow / mBank) — najważniejsza integracja, na
+                     samej górze. Na tym etapie BEZ bramy pakietu: dostępna dla każdego
+                     sklepu (test na własnym), egzekwowanie entitlement('online_payments')
+                     dojdzie na końcu wdrożenia. Klucze sprzedawcy trzymamy zaszyfrowane
+                     w bazie — pieniądze płyną klient → Paynow → sprzedawca, wprost. --}}
+                <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                    <div class="flex items-start gap-4">
+                        <span class="mt-0.5 shrink-0 text-2xl">💳</span>
+                        <div class="flex-1">
+                            <h2 class="font-semibold text-stone-900">Płatności online (Paynow)</h2>
+                            <p class="mt-1 text-sm text-stone-500">
+                                Przyjmuj płatności BLIK, kartą i szybkim przelewem wprost w kasie sklepu. Potrzebujesz konta w
+                                <a href="https://www.paynow.pl" target="_blank" rel="noopener" class="font-medium text-stone-600 underline decoration-amber-300 underline-offset-2">Paynow</a>
+                                (bramka mBanku) oraz dwóch kluczy z jego panelu. Pieniądze trafiają prosto na Twoje konto.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 space-y-5">
+                        <div class="grid gap-5 sm:grid-cols-2">
+                            <div>
+                                <label for="paynow_api_key" class="block text-sm font-medium text-stone-700">Klucz dostępu do API</label>
+                                <input type="text" id="paynow_api_key" name="paynow_api_key"
+                                    value="{{ old('paynow_api_key', $paynowApiKey) }}"
+                                    placeholder="np. 14d59738-4b18-4c83-…"
+                                    autocomplete="off" spellcheck="false"
+                                    class="mt-1.5 block w-full rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 font-mono text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
+                                @error('paynow_api_key')
+                                    <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
+                                @enderror
+                                <p class="mt-1.5 text-xs text-stone-400">Z panelu Paynow → <span class="text-stone-500">Ustawienia → Klucze API</span>. Wyczyść to pole, aby odłączyć płatności.</p>
+                            </div>
+
+                            <div>
+                                <label for="paynow_signature_key" class="block text-sm font-medium text-stone-700">Klucz obliczania podpisu</label>
+                                <input type="password" id="paynow_signature_key" name="paynow_signature_key"
+                                    value=""
+                                    placeholder="{{ $paynowConfigured ? '•••••••• (zapisany)' : 'Wklej klucz podpisu z Paynow' }}"
+                                    autocomplete="off" spellcheck="false"
+                                    class="mt-1.5 block w-full rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 font-mono text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
+                                @error('paynow_signature_key')
+                                    <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
+                                @enderror
+                                <p class="mt-1.5 text-xs text-stone-400">
+                                    Sekret — podpisuje płatności i weryfikuje powiadomienia.
+                                    @if ($paynowConfigured)
+                                        Klucz jest zapisany — zostaw pole puste, aby go nie zmieniać.
+                                    @endif
+                                </p>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="paynow_environment" class="block text-sm font-medium text-stone-700">Środowisko</label>
+                            <select id="paynow_environment" name="paynow_environment"
+                                class="mt-1.5 block w-full max-w-xs rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
+                                <option value="sandbox" @selected(old('paynow_environment', $paynowEnvironment) === 'sandbox')>Sandbox (testowe)</option>
+                                <option value="production" @selected(old('paynow_environment', $paynowEnvironment) === 'production')>Produkcja (prawdziwe płatności)</option>
+                            </select>
+                            @error('paynow_environment')
+                                <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
+                            @enderror
+                            <p class="mt-1.5 text-xs text-stone-400">Zacznij od Sandboksa, aby przetestować. Na produkcję przełącz dopiero z kluczami produkcyjnymi.</p>
+                        </div>
+
+                        @if ($paynowConfigured)
+                            <div class="flex items-start gap-3 rounded-2xl border border-stone-200 bg-white/60 p-4 text-sm">
+                                <span class="mt-0.5 shrink-0 font-semibold {{ $paynowEnabled ? 'text-emerald-600' : 'text-rose-600' }}">
+                                    {{ $paynowEnabled ? '✓' : '✕' }}
+                                </span>
+                                <p class="text-stone-600">
+                                    @if ($paynowEnabled)
+                                        Płatności online są połączone i <span class="font-medium text-stone-800">aktywne</span> ({{ $paynowEnvironment === 'production' ? 'produkcja' : 'sandbox' }}) — klient może zapłacić w kasie.
+                                    @else
+                                        Klucze są zapisane, ale integracja jest <span class="font-medium text-stone-800">wyłączona</span>. Włącz ją w
+                                        <a href="{{ route('seller.settings.edit') }}" class="font-medium underline decoration-amber-300 underline-offset-2">Ustawieniach</a>, aby przyjmować płatności.
+                                    @endif
+                                </p>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+
                 {{-- Fakturownia (faktury VAT) — tylko gdy pakiet daje to uprawnienie.
                      Ważniejsze integracje idą na górę; Google Analytics zostaje na dole. --}}
                 @if ($shop->entitlement('invoices'))

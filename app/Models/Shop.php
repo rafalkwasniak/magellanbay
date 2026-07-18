@@ -535,6 +535,54 @@ class Shop extends Model
     }
 
     /**
+     * Klucz dostępu do API Paynow (nagłówek Api-Key). Sam w sobie bezużyteczny
+     * bez klucza podpisu — nie da się nim podpisać żądania — dlatego, inaczej niż
+     * klucz podpisu, wolno go pokazać w formularzu sprzedawcy. null, gdy brak.
+     */
+    public function paynowApiKey(): ?string
+    {
+        return $this->integration(IntegrationType::Payments)?->config['api_key'] ?? null;
+    }
+
+    /**
+     * Klucz obliczania podpisu Paynow (sekret: podpisuje żądania i weryfikuje
+     * webhooki). Przechowywany zaszyfrowany; w UI nigdy nie odbijany. null, gdy brak.
+     */
+    public function paynowSignatureKey(): ?string
+    {
+        return $this->integration(IntegrationType::Payments)?->config['signature_key'] ?? null;
+    }
+
+    /**
+     * Środowisko Paynow: 'sandbox' (domyślnie) albo 'production'. Rozstrzyga, który
+     * adres API z config('services.paynow.base_url') wybrać przy wywołaniach.
+     */
+    public function paynowEnvironment(): string
+    {
+        return $this->integration(IntegrationType::Payments)?->config['environment'] ?? 'sandbox';
+    }
+
+    /**
+     * Czy Paynow jest w pełni skonfigurowany (oba klucze). Nie sprawdza włącznika
+     * ani uprawnienia pakietu — sama gotowość integracji. Analogia do
+     * invoicingConfigured().
+     */
+    public function onlinePaymentsConfigured(): bool
+    {
+        return filled($this->paynowApiKey()) && filled($this->paynowSignatureKey());
+    }
+
+    /**
+     * Stan efektywny płatności online: włącznik (Ustawienia) ORAZ komplet kluczy.
+     * To warunek, pod którym metoda „Płatność online" pojawia się w kasie — brama
+     * pakietu (entitlement('online_payments')) dojdzie osobno, na końcu wdrożenia.
+     */
+    public function onlinePaymentsEnabled(): bool
+    {
+        return $this->integration(IntegrationType::Payments)?->enabled === true && $this->onlinePaymentsConfigured();
+    }
+
+    /**
      * Telefon kontaktowy w czytelnej postaci („+48 668 196 229"). Przechowujemy
      * kanonicznie (48 + 9 cyfr); formatujemy dopiero do wyświetlenia — stopka,
      * maile, storefront. Null, gdy sklep nie ma jeszcze numeru.

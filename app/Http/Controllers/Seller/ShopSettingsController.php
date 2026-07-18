@@ -34,6 +34,8 @@ class ShopSettingsController extends Controller
             'googleAnalyticsEnabled' => (bool) $shop->integration(IntegrationType::GoogleAnalytics)?->enabled,
             'fakturowniaConfigured' => $shop->invoicingConfigured(),
             'fakturowniaEnabled' => (bool) $shop->integration(IntegrationType::Invoicing)?->enabled,
+            'paynowConfigured' => $shop->onlinePaymentsConfigured(),
+            'paynowEnabled' => (bool) $shop->integration(IntegrationType::Payments)?->enabled,
         ]);
     }
 
@@ -43,7 +45,7 @@ class ShopSettingsController extends Controller
 
         // Pola typowane sklepu (VAT, przelew) — bez włączników integracji, które
         // żyją na wierszach shop_integrations, nie na kolumnach shops.
-        $shop->fill($request->safe()->except(['google_analytics_enabled', 'fakturownia_enabled']));
+        $shop->fill($request->safe()->except(['google_analytics_enabled', 'fakturownia_enabled', 'paynow_enabled']));
         $shop->save();
 
         // Włączniki działają tylko, gdy integracja jest skonfigurowana (istnieje
@@ -53,6 +55,9 @@ class ShopSettingsController extends Controller
 
         $shop->integration(IntegrationType::Invoicing)
             ?->update(['enabled' => $request->boolean('fakturownia_enabled')]);
+
+        $shop->integration(IntegrationType::Payments)
+            ?->update(['enabled' => $request->boolean('paynow_enabled')]);
 
         return redirect()
             ->route('seller.settings.edit')

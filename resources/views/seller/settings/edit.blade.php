@@ -224,7 +224,23 @@
                     <p class="mt-1 text-sm text-stone-500">Włączasz i wyłączasz usługi skonfigurowane w zakładce <a href="{{ route('seller.integrations.edit') }}" class="font-medium text-stone-700 underline decoration-amber-300 underline-offset-2">Integracje</a>.</p>
 
                     <div class="mt-6 space-y-4">
-                        {{-- Ważniejsze integracje na górze; Google Analytics zawsze na dole. --}}
+                        {{-- Ważniejsze integracje na górze; Google Analytics zawsze na dole.
+                             Płatności online bez bramy pakietu na tym etapie (dojdzie na końcu). --}}
+                        <div class="flex items-start gap-4 rounded-2xl border border-stone-200 bg-white/60 p-5 sm:p-6 {{ $paynowConfigured ? '' : 'opacity-60' }}">
+                            {{-- hidden = wartość bazowa; bez konfiguracji checkbox jest disabled i nic nie wysyła --}}
+                            <input type="hidden" name="paynow_enabled" value="{{ $paynowConfigured ? '0' : ($paynowEnabled ? '1' : '0') }}">
+                            <input type="checkbox" id="paynow_enabled" name="paynow_enabled" value="1"
+                                @checked(old('paynow_enabled', $paynowEnabled)) @disabled(! $paynowConfigured)
+                                class="mt-0.5 h-5 w-5 shrink-0 rounded-md border-stone-300 text-amber-600 focus:ring-4 focus:ring-amber-500/20 disabled:cursor-not-allowed">
+                            <label for="paynow_enabled" class="flex-1 {{ $paynowConfigured ? 'cursor-pointer' : 'cursor-not-allowed' }}">
+                                <span class="block text-sm font-medium text-stone-800">Płatności online (Paynow)</span>
+                                <span class="mt-0.5 block text-sm text-stone-500">Udostępnia w kasie płatność BLIK, kartą i szybkim przelewem — pieniądze trafiają prosto na Twoje konto Paynow.</span>
+                                @unless($paynowConfigured)
+                                    <span class="mt-1.5 block text-xs text-amber-700">Aby móc włączyć, najpierw podaj klucze Paynow w <a href="{{ route('seller.integrations.edit') }}" class="font-medium underline decoration-amber-300 underline-offset-2">Integracjach</a>.</span>
+                                @endunless
+                            </label>
+                        </div>
+
                         @if ($shop->entitlement('invoices'))
                             <div class="flex items-start gap-4 rounded-2xl border border-stone-200 bg-white/60 p-5 sm:p-6 {{ $fakturowniaConfigured ? '' : 'opacity-60' }}">
                                 {{-- hidden = wartość bazowa; bez konfiguracji checkbox jest disabled i nic nie wysyła --}}

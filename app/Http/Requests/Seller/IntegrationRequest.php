@@ -34,6 +34,9 @@ class IntegrationRequest extends FormRequest
         $id = trim((string) $this->input('google_analytics_id'));
         $url = trim((string) $this->input('fakturownia_url'));
         $token = trim((string) $this->input('fakturownia_token'));
+        $paynowApiKey = trim((string) $this->input('paynow_api_key'));
+        $paynowSignatureKey = trim((string) $this->input('paynow_signature_key'));
+        $paynowEnvironment = (string) $this->input('paynow_environment');
 
         if ($url !== '' && ! preg_match('#^https?://#i', $url)) {
             $url = 'https://'.$url;
@@ -43,6 +46,11 @@ class IntegrationRequest extends FormRequest
             'google_analytics_id' => $id === '' ? null : strtoupper($id),
             'fakturownia_url' => $url === '' ? null : rtrim($url, '/'),
             'fakturownia_token' => $token === '' ? null : $token,
+            'paynow_api_key' => $paynowApiKey === '' ? null : $paynowApiKey,
+            'paynow_signature_key' => $paynowSignatureKey === '' ? null : $paynowSignatureKey,
+            // Wartość spoza dozwolonych (albo brak) → sandbox: bezpieczny domyślny,
+            // nikt przypadkiem nie wejdzie na produkcję operatora.
+            'paynow_environment' => in_array($paynowEnvironment, ['sandbox', 'production'], true) ? $paynowEnvironment : 'sandbox',
         ]);
     }
 
@@ -55,6 +63,9 @@ class IntegrationRequest extends FormRequest
             'google_analytics_id' => ['nullable', 'string', 'regex:'.self::GA_PATTERN],
             'fakturownia_url' => ['nullable', 'string', 'url', 'max:255'],
             'fakturownia_token' => ['nullable', 'string', 'max:255'],
+            'paynow_api_key' => ['nullable', 'string', 'max:255'],
+            'paynow_signature_key' => ['nullable', 'string', 'max:255'],
+            'paynow_environment' => ['required', 'in:sandbox,production'],
         ];
     }
 
@@ -73,6 +84,17 @@ class IntegrationRequest extends FormRequest
 
             if (filled($url) && blank($token) && blank($storedToken)) {
                 $validator->errors()->add('fakturownia_token', 'Podaj token API Fakturowni, aby połączyć konto.');
+            }
+
+            // Bliźniacza reguła dla Paynow: klucz API bez klucza podpisu jest OK
+            // tylko, gdy podpis jest już zapisany (puste pole = „zostaw bez zmian").
+            // Przy pierwszej konfiguracji obu kluczy nie da się rozdzielić.
+            $paynowApiKey = $this->input('paynow_api_key');
+            $paynowSignatureKey = $this->input('paynow_signature_key');
+            $storedSignature = $this->user()?->shop?->integration(IntegrationType::Payments)?->config['signature_key'] ?? null;
+
+            if (filled($paynowApiKey) && blank($paynowSignatureKey) && blank($storedSignature)) {
+                $validator->errors()->add('paynow_signature_key', 'Podaj klucz obliczania podpisu Paynow, aby połączyć konto.');
             }
         });
     }
@@ -97,6 +119,9 @@ class IntegrationRequest extends FormRequest
             'google_analytics_id' => 'identyfikator Google Analytics',
             'fakturownia_url' => 'adres konta Fakturowni',
             'fakturownia_token' => 'token API Fakturowni',
+            'paynow_api_key' => 'klucz dostępu do API Paynow',
+            'paynow_signature_key' => 'klucz obliczania podpisu Paynow',
+            'paynow_environment' => 'środowisko Paynow',
         ];
     }
 }
