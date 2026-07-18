@@ -236,6 +236,50 @@ class OrderStatusChangeTest extends TestCase
         );
     }
 
+    public function test_clicking_a_status_opens_an_inline_confirmation_instead_of_changing(): void
+    {
+        // Klik w status nie zmienia go od razu — otwiera panel potwierdzenia
+        // w miejscu (bliźniaczy do anulowania), zamiast systemowego popupu.
+        [$seller, $shop] = $this->sellerWithShop();
+        $order = Order::factory()->for($shop)->create(['status' => OrderStatus::New]);
+
+        Livewire::actingAs($seller)
+            ->test(OrderStatusManager::class, ['order' => $order])
+            ->call('askChange', OrderStatus::Processing->value)
+            ->assertSet('pendingStatus', OrderStatus::Processing->value)
+            ->assertSee('Zmienić status na');
+
+        // Nic się jeszcze nie stało: ani zmiany, ani maila.
+        $this->assertSame(OrderStatus::New, $order->refresh()->status);
+        $this->assertCount(0, $order->statusEvents);
+    }
+
+    public function test_asking_to_change_to_a_status_outside_the_flow_opens_nothing(): void
+    {
+        // Płatność przy odbiorze nie zna „Opłacone" — nie ma czego potwierdzać.
+        [$seller, $shop] = $this->sellerWithShop();
+        $order = Order::factory()->for($shop)->create(['status' => OrderStatus::New]);
+
+        Livewire::actingAs($seller)
+            ->test(OrderStatusManager::class, ['order' => $order])
+            ->call('askChange', OrderStatus::Paid->value)
+            ->assertSet('pendingStatus', null);
+    }
+
+    public function test_dismissing_the_confirmation_clears_the_pending_status_and_note(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+        $order = Order::factory()->for($shop)->create(['status' => OrderStatus::New]);
+
+        Livewire::actingAs($seller)
+            ->test(OrderStatusManager::class, ['order' => $order])
+            ->call('askChange', OrderStatus::Processing->value)
+            ->set('note', 'coś tam')
+            ->call('dismissChange')
+            ->assertSet('pendingStatus', null)
+            ->assertSet('note', '');
+    }
+
     public function test_panel_lists_only_statuses_from_the_orders_flow(): void
     {
         [$seller, $shop] = $this->sellerWithShop();

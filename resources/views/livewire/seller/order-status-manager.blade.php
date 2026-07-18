@@ -74,21 +74,52 @@
                 </div>
             </div>
         </div>
+    @elseif ($canChange && $pending)
+        {{-- Potwierdzenie w miejscu, bliźniacze do anulowania: klik w status nie
+             zmienia go od razu — najpierw ta karta mówi wprost, co się stanie, i
+             dopiero tu sprzedawca dopisuje wiadomość do kupującego. Amber (nie
+             rose): to normalny krok realizacji, nie operacja nieodwracalna. --}}
+        <div class="mt-5 border-t border-stone-100 pt-4">
+            <div class="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                <p class="font-medium text-amber-900">Zmienić status na „{{ $pending->label() }}”?</p>
+                <ul class="mt-2 space-y-1 text-xs text-amber-800">
+                    <li>• Kupujący dostanie maila o zmianie statusu.</li>
+                    @if ($pending !== $suggested)
+                        <li>• To <strong>nie jest kolejny krok</strong> tego zamówienia.</li>
+                    @endif
+                </ul>
+
+                {{-- Uwaga: ta wiadomość NIE jest wewnętrzna — leci w mailu do kupującego.
+                     Podpis musi to mówić wprost, inaczej sprzedawca wpisze tu coś, czego
+                     nigdy nie chciał pokazać klientowi. --}}
+                <label for="status-note" class="mt-3 block text-xs font-medium text-amber-900">Wiadomość do kupującego (opcjonalnie)</label>
+                <textarea
+                    id="status-note"
+                    wire:model="note"
+                    rows="2"
+                    placeholder="Np. Paczkę nadam jeszcze dziś"
+                    class="mt-1 w-full rounded-2xl border border-amber-200 bg-white px-3 py-2 text-sm text-stone-700 placeholder:text-stone-400 focus:border-amber-400 focus:ring-amber-400"
+                ></textarea>
+                <p class="mt-1 text-xs text-amber-700">Ta wiadomość znajdzie się w treści maila.</p>
+
+                <div class="mt-3 flex flex-wrap gap-2">
+                    <button
+                        type="button"
+                        wire:click="changeTo('{{ $pending->value }}')"
+                        class="inline-flex items-center rounded-full bg-amber-600 px-4 py-1.5 text-sm font-medium text-white shadow-sm transition hover:bg-amber-700"
+                    >Tak, zmień status</button>
+                    <button
+                        type="button"
+                        wire:click="dismissChange"
+                        class="inline-flex items-center rounded-full border border-stone-200 bg-white px-4 py-1.5 text-sm font-medium text-stone-600 transition hover:bg-stone-50"
+                    >Nie, wróć</button>
+                </div>
+            </div>
+        </div>
     @elseif ($canChange)
         <div class="mt-5 border-t border-stone-100 pt-4">
-            <label for="status-note" class="text-xs font-medium uppercase tracking-wide text-stone-400">Zmień status</label>
-
-            {{-- Uwaga: ta notatka NIE jest wewnętrzna — leci w mailu do kupującego.
-                 Podpis musi to mówić wprost, inaczej sprzedawca wpisze tu coś, czego
-                 nigdy nie chciał pokazać klientowi. --}}
-            <textarea
-                id="status-note"
-                wire:model="note"
-                rows="2"
-                placeholder="Wiadomość do kupującego (opcjonalnie)"
-                class="mt-2 w-full rounded-2xl border border-stone-200 bg-white/70 px-3 py-2 text-sm text-stone-700 placeholder:text-stone-400 focus:border-amber-400 focus:ring-amber-400"
-            ></textarea>
-            <p class="mt-1 text-xs text-stone-400">Każda zmiana statusu wysyła kupującemu maila. Ta wiadomość znajdzie się w jego treści.</p>
+            <label class="text-xs font-medium uppercase tracking-wide text-stone-400">Zmień status</label>
+            <p class="mt-1 text-xs text-stone-400">Każda zmiana statusu wysyła kupującemu maila — najpierw poprosimy o potwierdzenie.</p>
 
             <div class="mt-3 space-y-1.5">
                 @foreach ($statuses as $status)
@@ -101,10 +132,7 @@
                     @else
                         <button
                             type="button"
-                            wire:click="changeTo('{{ $status->value }}')"
-                            @if ($status !== $suggested)
-                                wire:confirm="Ustawić status „{{ $status->label() }}”? To nie jest kolejny krok tego zamówienia — kupujący dostanie o tym maila."
-                            @endif
+                            wire:click="askChange('{{ $status->value }}')"
                             @class([
                                 'flex w-full items-center gap-2 rounded-2xl border px-4 py-2 text-sm transition',
                                 'border-amber-300 bg-amber-50 font-medium text-amber-900 hover:bg-amber-100' => $status === $suggested,

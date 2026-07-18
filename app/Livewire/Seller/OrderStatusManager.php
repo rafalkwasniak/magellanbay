@@ -22,6 +22,14 @@ class OrderStatusManager extends Component
 
     public string $note = '';
 
+    /**
+     * Status oczekujący na potwierdzenie (zamiast listy). Klik w status nie zmienia
+     * go od razu — otwiera panel potwierdzenia w miejscu, bliźniaczy do anulowania,
+     * gdzie sprzedawca dopisuje wiadomość do kupującego. Dzięki temu nie da się
+     * zmienić statusu „przy okazji" i nie ma brzydkiego popupu przeglądarki.
+     */
+    public ?string $pendingStatus = null;
+
     /** Czy pokazujemy panel potwierdzenia anulowania (zamiast listy statusów). */
     public bool $confirmingCancel = false;
 
@@ -31,6 +39,37 @@ class OrderStatusManager extends Component
     public function mount(Order $order): void
     {
         $this->order = $order;
+    }
+
+    /**
+     * Otwiera panel potwierdzenia dla wybranego statusu (warstwa UI). Sama zmiana
+     * dzieje się dopiero w `changeTo()` po potwierdzeniu — tu tylko bramkujemy klik
+     * i czyścimy pole wiadomości, żeby panel startował ze świeżą kartką.
+     *
+     * Bierzemy status pod uwagę tylko, jeśli faktycznie należy do ścieżki tego
+     * zamówienia i coś zmienia — inaczej nie ma czego potwierdzać.
+     */
+    public function askChange(string $status): void
+    {
+        $this->authorizeOwnership();
+
+        $target = OrderStatus::tryFrom($status);
+
+        if ($target === null
+            || $target === $this->order->status
+            || $target === OrderStatus::Cancelled
+            || ! in_array($target, $this->order->flow()->statuses(), true)) {
+            return;
+        }
+
+        $this->pendingStatus = $target->value;
+        $this->note = '';
+    }
+
+    public function dismissChange(): void
+    {
+        $this->pendingStatus = null;
+        $this->note = '';
     }
 
     public function changeTo(string $status, OrderStatusChanger $changer): void
@@ -48,6 +87,7 @@ class OrderStatusManager extends Component
         // ich ominąć innym punktem wejścia.
         $changer->change($this->order, $target, $this->note !== '' ? trim($this->note) : null);
         $this->note = '';
+        $this->pendingStatus = null;
 
         $this->announceChange();
     }
@@ -110,6 +150,7 @@ class OrderStatusManager extends Component
             'canChange' => ! $this->order->status->isTerminal(),
             'initialStatus' => $this->initialStatus(),
             'events' => $events,
+            'pending' => $this->pendingStatus !== null ? OrderStatus::from($this->pendingStatus) : null,
         ]);
     }
 
