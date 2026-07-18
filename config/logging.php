@@ -92,6 +92,18 @@ return [
             'replace_placeholders' => true,
         ],
 
+        // Audyt płatności online (Paynow): utworzenie płatności + każdy webhook o
+        // zmianie statusu. Dotyczy pieniędzy, więc ślad trzymamy długo (jak FV).
+        // Klucze sprzedawcy NIGDY tu nie trafiają — logujemy payload i status
+        // bez sekretów.
+        'paynow' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/paynow.log'),
+            'level' => 'debug',
+            'days' => 365,
+            'replace_placeholders' => true,
+        ],
+
         'slack' => [
             'driver' => 'slack',
             'url' => env('LOG_SLACK_WEBHOOK_URL'),

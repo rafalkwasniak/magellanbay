@@ -11,6 +11,7 @@ enum IntegrationType: string
 {
     case GoogleAnalytics = 'google_analytics';
     case Invoicing = 'invoicing';
+    case Payments = 'payments';
 
     /**
      * Czytelna nazwa (do UI).
@@ -20,6 +21,7 @@ enum IntegrationType: string
         return match ($this) {
             self::GoogleAnalytics => 'Google Analytics',
             self::Invoicing => 'Fakturownia',
+            self::Payments => 'Płatności online (Paynow)',
         };
     }
 }

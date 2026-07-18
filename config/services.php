@@ -77,4 +77,17 @@ return [
         'token' => env('FAKTUROWNIA_TOKEN'),
     ],
 
+    'paynow' => [
+        // Płatności online (bramka mBanku). Model PER-SKLEP: klucze sprzedawcy
+        // (dostęp do API + obliczanie podpisu) żyją w shop_integrations, zaszyfrowane
+        // — TU NIE MA żadnych sekretów ani wpisów w `.env`. Trzymamy wyłącznie stałe,
+        // publiczne adresy API operatora; wybór sandbox/produkcja robi środowisko
+        // zapisane przy integracji sklepu. (Płatność za SaaS-a, gdyby kiedyś powstała,
+        // byłaby osobną integracją platformy i dopiero ona sięgnęłaby po `.env`.)
+        'base_url' => [
+            'sandbox' => 'https://api.sandbox.paynow.pl',
+            'production' => 'https://api.paynow.pl',
+        ],
+    ],
+
 ];
