@@ -7,7 +7,6 @@
 ]">
     <div class="flex flex-wrap items-center gap-3">
         <span class="rounded-full px-3 py-1 text-sm font-medium {{ $order->status->badgeClasses() }}">{{ $order->status->label() }}</span>
-        <span class="text-sm opacity-60">Złożone {{ $order->created_at->format('d.m.Y, H:i') }}</span>
     </div>
 
     <div class="mt-6 space-y-6">
@@ -34,6 +33,37 @@
                 <span class="text-xl font-bold tabular-nums">{{ \App\Support\Money::pln($order->total_gross) }}</span>
             </div>
             <p class="mt-1 text-right text-xs opacity-60">{{ \App\Support\Money::pln($order->total_net) }} netto</p>
+        </div>
+
+        {{-- Historia zamówienia: „kiedy co się wydarzyło”. Ten sam układ osi, co
+             widzi sprzedawca, ale w klasach motywu — kropki i linia w kolorze
+             sklepu. Status początkowy dokładamy ręcznie (nie ma go wśród zdarzeń:
+             zamówienie się z nim urodziło, nikt go nie zmieniał). Notatka przy
+             zdarzeniu to wiadomość, którą sprzedawca wysłał kupującemu mailem. --}}
+        <div class="st-card st-border rounded-3xl border p-6">
+            <h2 class="st-brand st-box-title">Historia zamówienia</h2>
+            <ol class="st-border mt-4 space-y-3 border-l pl-4">
+                <li class="relative">
+                    <span class="absolute -left-[21px] top-1.5 h-2 w-2 rounded-full opacity-40" style="background: currentColor"></span>
+                    <p class="text-sm font-medium">Złożone</p>
+                    <p class="text-xs opacity-50">{{ $order->created_at->format('d.m.Y, H:i') }}</p>
+                </li>
+                <li class="relative">
+                    <span class="absolute -left-[21px] top-1.5 h-2 w-2 rounded-full" style="background: var(--brand)"></span>
+                    <p class="text-sm font-medium">{{ $initialStatus->label() }}</p>
+                    <p class="text-xs opacity-50">{{ $order->created_at->format('d.m.Y, H:i') }}</p>
+                </li>
+                @foreach ($order->statusEvents as $event)
+                    <li class="relative">
+                        <span class="absolute -left-[21px] top-1.5 h-2 w-2 rounded-full" style="background: var(--brand)"></span>
+                        <p class="text-sm font-medium">{{ $event->to_status->label() }}</p>
+                        <p class="text-xs opacity-50">{{ $event->created_at->format('d.m.Y, H:i') }}</p>
+                        @if (filled($event->note))
+                            <p class="mt-0.5 text-xs italic opacity-70">„{{ $event->note }}"</p>
+                        @endif
+                    </li>
+                @endforeach
+            </ol>
         </div>
         </div>
 

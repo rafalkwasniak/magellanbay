@@ -60,8 +60,15 @@ class AccountController extends Controller
     {
         $this->authorizeOrder($order);
 
+        $order->load('items', 'statusEvents');
+
         return view('storefront.account.order', [
-            'order' => $order->load('items'),
+            'order' => $order,
+            // Status początkowy nie jest zdarzeniem (nikt go nie zmieniał), więc oś
+            // czasu musi go dołożyć sama — inaczej zjadałaby pierwszy status. Bierzemy
+            // go z `from_status` pierwszego zdarzenia (zapis historii: co FAKTYCZNIE
+            // było), a bez zdarzeń nic się jeszcze nie zmieniło, więc jest nim bieżący.
+            'initialStatus' => $order->statusEvents->first()?->from_status ?? $order->status,
             'back' => $this->safeBack($request->query('powrot')),
         ]);
     }

@@ -120,6 +120,33 @@ class CustomerAccountAreaTest extends TestCase
         $this->get($this->host($shop).'/moje-konto/zamowienia/'.$theirs->id)->assertNotFound();
     }
 
+    public function test_order_detail_shows_the_status_history_with_notes(): void
+    {
+        // Klient widzi „kiedy co się wydarzyło”: status początkowy + kolejne
+        // przejścia z datą, a notatka sprzedawcy (ta sama, którą dostał mailem)
+        // stoi przy właściwym kroku.
+        $shop = Shop::factory()->create();
+        $customer = Customer::factory()->for($shop)->create();
+        $order = Order::factory()->for($shop)->create([
+            'customer_id' => $customer->id,
+            'status' => \App\Enums\OrderStatus::Processing,
+        ]);
+        $order->statusEvents()->create([
+            'from_status' => \App\Enums\OrderStatus::New,
+            'to_status' => \App\Enums\OrderStatus::Processing,
+            'note' => 'Pakujemy dzisiaj',
+        ]);
+
+        $this->actingAs($customer, 'customer');
+
+        $this->get($this->host($shop).'/moje-konto/zamowienia/'.$order->id)
+            ->assertOk()
+            ->assertSee('Historia zamówienia')
+            ->assertSee('Złożone')
+            ->assertSee('W realizacji')
+            ->assertSee('Pakujemy dzisiaj');
+    }
+
     public function test_order_detail_offers_invoice_download_when_invoiced(): void
     {
         $shop = Shop::factory()->create();
