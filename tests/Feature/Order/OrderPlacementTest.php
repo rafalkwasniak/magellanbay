@@ -190,6 +190,30 @@ class OrderPlacementTest extends TestCase
         $this->assertContains('Otrzymaliśmy Twoje **zamówienie #'.$order->number.'** i już się nim zajmujemy.', $lines);
     }
 
+    public function test_customer_email_describes_online_payment_without_pickup_wording(): void
+    {
+        // Regresja: online to przedpłata — mail nie może mówić „zapłacisz na
+        // miejscu przy odbiorze" (dawny błąd wspólnej gałęzi z płatnością przy odbiorze).
+        $shop = $this->shop();
+        $product = Product::factory()->create([
+            'shop_id' => $shop->id, 'is_active' => true, 'track_stock' => false, 'stock' => null, 'price_gross' => 20.00,
+        ]);
+        app(CartService::class)->add($product, 1);
+
+        $order = app(OrderService::class)->place($shop, array_merge($this->buyerData(), [
+            'payment_method' => 'online',
+        ]));
+
+        $this->assertSame(OrderStatus::AwaitingPayment, $order->status);
+
+        $lines = collect(EmailMessage::where('to_email', 'jan@example.com')->firstOrFail()->intro_lines)->flatten()->all();
+        $joined = implode("\n", $lines);
+
+        $this->assertStringContainsString('Sposób płatności: Płatność online Paynow', $joined);
+        $this->assertStringContainsString('czeka na opłacenie', $joined);
+        $this->assertStringNotContainsString('przy odbiorze', $joined);
+    }
+
     public function test_seller_email_formats_phone_and_includes_company_address(): void
     {
         $shop = $this->shop();

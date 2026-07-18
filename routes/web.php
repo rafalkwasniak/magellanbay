@@ -30,6 +30,7 @@ use App\Http\Controllers\Storefront\CheckoutController as StorefrontCheckout;
 use App\Http\Controllers\Storefront\HomeController as StorefrontHome;
 use App\Http\Controllers\Storefront\RegisterController as StorefrontRegister;
 use App\Http\Controllers\Storefront\PageController as StorefrontPage;
+use App\Http\Controllers\Storefront\PaymentController as StorefrontPayment;
 use App\Http\Controllers\Storefront\ProductController as StorefrontProduct;
 use Illuminate\Support\Facades\Route;
 
@@ -224,9 +225,12 @@ Route::domain('{shop}.'.config('tenancy.central_domain'))
         Route::get('/koszyk', [StorefrontCart::class, 'show'])->name('storefront.cart');
         Route::get('/kasa', [StorefrontCheckout::class, 'show'])->name('storefront.checkout');
         Route::get('/kasa/dziekujemy', [StorefrontCheckout::class, 'confirmation'])->name('storefront.checkout.confirmation');
-        // Rozpoczęcie płatności online — z ekranu podsumowania (przycisk „Przejdź
-        // do płatności"). Tworzy płatność w Paynow i przekierowuje kupującego.
-        Route::post('/kasa/platnosc', [StorefrontCheckout::class, 'pay'])->name('storefront.checkout.pay');
+
+        // Strona płatności zamówienia (token = zaszyfrowany id zamówienia). Jedno
+        // miejsce dla wszystkich linków „dokończ płatność": mail, „Moje konto",
+        // powrót z Paynow, ekran podziękowania. Działa bez logowania.
+        Route::get('/platnosc/{token}', [StorefrontPayment::class, 'show'])->name('storefront.payment.show');
+        Route::post('/platnosc/{token}', [StorefrontPayment::class, 'pay'])->name('storefront.payment.pay');
 
         /*
         |----------------------------------------------------------------------

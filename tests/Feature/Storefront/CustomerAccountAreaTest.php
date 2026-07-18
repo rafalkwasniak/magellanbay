@@ -147,6 +147,26 @@ class CustomerAccountAreaTest extends TestCase
             ->assertSee('Pakujemy dzisiaj');
     }
 
+    public function test_order_detail_describes_online_payment_without_pickup_wording(): void
+    {
+        // Regresja: online w „Moje konto" mówił „płatność przy odbiorze" (dawna
+        // gałąź @else). Nieopłacone → „oczekuje na płatność online", bez odbioru.
+        $shop = Shop::factory()->create();
+        $customer = Customer::factory()->for($shop)->create();
+        $order = Order::factory()->for($shop)->create([
+            'customer_id' => $customer->id,
+            'status' => \App\Enums\OrderStatus::AwaitingPayment,
+            'payment_method' => \App\Enums\PaymentMethod::Online,
+        ]);
+
+        $this->actingAs($customer, 'customer');
+
+        $this->get($this->host($shop).'/moje-konto/zamowienia/'.$order->id)
+            ->assertOk()
+            ->assertSee('Oczekuje na płatność online')
+            ->assertDontSee('przy odbiorze');
+    }
+
     public function test_order_detail_offers_invoice_download_when_invoiced(): void
     {
         $shop = Shop::factory()->create();

@@ -1,4 +1,4 @@
-@php use App\Enums\PaymentMethod; use App\Enums\DeliveryMethod; @endphp
+@php use App\Enums\PaymentMethod; use App\Enums\DeliveryMethod; use App\Enums\OrderStatus; @endphp
 <x-storefront.account-shell :shop="$shop" active="orders" heading="Zamówienie #{{ $order->number }}" :back="$back" :crumbs="[
     ['label' => $shop->name, 'url' => '/'],
     ['label' => 'Moje konto', 'url' => '/moje-konto'],
@@ -82,6 +82,15 @@
                         <div class="flex justify-between gap-3"><dt class="opacity-60">Tytuł przelewu</dt><dd class="text-right font-medium">Zamówienie #{{ $order->number }}</dd></div>
                         <div class="flex justify-between gap-3"><dt class="opacity-60">Kwota</dt><dd class="text-right font-bold">{{ \App\Support\Money::pln($order->total_gross) }}</dd></div>
                     </dl>
+                @elseif ($order->payment_method === PaymentMethod::Online)
+                    @if ($order->isAwaitingOnlinePayment())
+                        <p class="mt-2 text-sm opacity-70">Oczekuje na płatność online (BLIK, karta lub szybki przelew).</p>
+                        <a href="/platnosc/{{ $order->paymentToken() }}" class="st-btn mt-4 inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold shadow-sm transition hover:brightness-105">
+                            Zapłać — {{ \App\Support\Money::pln($order->total_gross) }}
+                        </a>
+                    @else
+                        <p class="mt-2 text-sm opacity-70">Opłacone online.</p>
+                    @endif
                 @else
                     <p class="mt-2 text-sm opacity-70">Płatność na miejscu przy odbiorze zamówienia.</p>
                 @endif

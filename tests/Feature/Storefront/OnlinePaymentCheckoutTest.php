@@ -86,6 +86,43 @@ class OnlinePaymentCheckoutTest extends TestCase
             ->assertDontSee('Przejdź do płatności');
     }
 
+    public function test_payment_page_shows_pay_button_for_unpaid_online_order(): void
+    {
+        $shop = $this->shopWithOnlinePayments();
+        $order = Order::factory()->for($shop)->create([
+            'status' => OrderStatus::AwaitingPayment,
+            'payment_method' => PaymentMethod::Online,
+        ]);
+
+        // Token niesie dostęp — bez sesji i bez logowania (jak z maila/gościa).
+        $this->get($this->base($shop).'/platnosc/'.$order->paymentToken())
+            ->assertOk()
+            ->assertSee('To zamówienie czeka na opłacenie')
+            ->assertSee('Zapłać');
+    }
+
+    public function test_payment_page_shows_paid_state_and_no_button(): void
+    {
+        $shop = $this->shopWithOnlinePayments();
+        $order = Order::factory()->for($shop)->create([
+            'status' => OrderStatus::Paid,
+            'payment_method' => PaymentMethod::Online,
+        ]);
+
+        $this->get($this->base($shop).'/platnosc/'.$order->paymentToken())
+            ->assertOk()
+            ->assertSee('Płatność potwierdzona')
+            ->assertDontSee('To zamówienie czeka na opłacenie');
+    }
+
+    public function test_invalid_payment_token_redirects_home(): void
+    {
+        $shop = $this->shopWithOnlinePayments();
+
+        $this->get($this->base($shop).'/platnosc/nie-jest-tokenem')
+            ->assertRedirect($this->base($shop));
+    }
+
     public function test_pay_creates_payment_and_redirects_to_paynow(): void
     {
         Http::fake(['*/v1/payments' => Http::response([
@@ -99,8 +136,7 @@ class OnlinePaymentCheckoutTest extends TestCase
             'total_gross' => 50,
         ]);
 
-        $this->withSession(['recent_order_id' => $order->id])
-            ->post($this->base($shop).'/kasa/platnosc')
+        $this->post($this->base($shop).'/platnosc/'.$order->paymentToken())
             ->assertRedirect('https://paynow.pl/go/9');
 
         $order->refresh();
@@ -116,26 +152,26 @@ class OnlinePaymentCheckoutTest extends TestCase
             'status' => OrderStatus::New,
             'payment_method' => PaymentMethod::PayOnPickup,
         ]);
+        $token = $order->paymentToken();
 
-        $this->withSession(['recent_order_id' => $order->id])
-            ->post($this->base($shop).'/kasa/platnosc')
-            ->assertRedirect($this->base($shop).'/kasa/dziekujemy');
+        $this->post($this->base($shop).'/platnosc/'.$token)
+            ->assertRedirect($this->base($shop).'/platnosc/'.$token);
 
         Http::assertNothingSent();
     }
 
-    public function test_pay_without_session_order_redirects_home(): void
+    public function test_invalid_token_pay_redirects_home(): void
     {
         Http::fake();
         $shop = $this->shopWithOnlinePayments();
 
-        $this->post($this->base($shop).'/kasa/platnosc')
+        $this->post($this->base($shop).'/platnosc/nie-jest-tokenem')
             ->assertRedirect($this->base($shop));
 
         Http::assertNothingSent();
     }
 
-    public function test_pay_falls_back_to_confirmation_with_error_when_gateway_fails(): void
+    public function test_pay_falls_back_with_error_when_gateway_fails(): void
     {
         Http::fake(['*/v1/payments' => Http::response(['error' => 'nope'], 500)]);
 
@@ -144,10 +180,10 @@ class OnlinePaymentCheckoutTest extends TestCase
             'status' => OrderStatus::AwaitingPayment,
             'payment_method' => PaymentMethod::Online,
         ]);
+        $token = $order->paymentToken();
 
-        $this->withSession(['recent_order_id' => $order->id])
-            ->post($this->base($shop).'/kasa/platnosc')
-            ->assertRedirect($this->base($shop).'/kasa/dziekujemy')
+        $this->post($this->base($shop).'/platnosc/'.$token)
+            ->assertRedirect($this->base($shop).'/platnosc/'.$token)
             ->assertSessionHas('error');
 
         $this->assertNull($order->refresh()->payment_external_id);

@@ -32,7 +32,7 @@
             <div class="space-y-6 lg:col-span-2">
                 {{-- Dane kupującego --}}
                 <div class="st-card st-border rounded-3xl border p-6">
-                    <h2 class="font-semibold">Dane kupującego</h2>
+                    <h2 class="st-brand st-box-title">Dane kupującego</h2>
                     <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div>
                             <label for="buyer_name" class="block text-sm opacity-80">Imię</label>
@@ -115,7 +115,7 @@
 
                 {{-- Dostawa --}}
                 <div class="st-card st-border rounded-3xl border p-6">
-                    <h2 class="font-semibold">Dostawa</h2>
+                    <h2 class="st-brand st-box-title">Dostawa</h2>
                     <div class="mt-4 space-y-2">
                         @foreach ($deliveryOptions as $value => $label)
                             <label class="st-border flex cursor-pointer items-center gap-3 rounded-xl border p-4 text-sm">
@@ -144,7 +144,7 @@
                      Paczkomat jest wysyłką, ale adresu nie potrzebuje. --}}
                 @if ($addressDelivery)
                     <div class="st-card st-border rounded-3xl border p-6">
-                        <h2 class="font-semibold">Adres dostawy</h2>
+                        <h2 class="st-brand st-box-title">Adres dostawy</h2>
                         <div class="mt-4 grid grid-cols-6 gap-3">
                             <div class="col-span-6 sm:col-span-4">
                                 <label for="ship_street" class="block text-sm opacity-80">Ulica</label>
@@ -194,7 +194,7 @@
                         }"
                         @inpost-point-selected.window="onPoint($event.detail)"
                         @keydown.escape.window="mapOpen = false">
-                        <h2 class="font-semibold">Paczkomat</h2>
+                        <h2 class="st-brand st-box-title">Paczkomat</h2>
 
                         {{-- Pole kodu + przycisk mapy obok: oba ustawiają to samo. --}}
                         <div class="mt-4 flex flex-wrap items-end gap-3">
@@ -259,7 +259,7 @@
 
                 {{-- Płatność --}}
                 <div class="st-card st-border rounded-3xl border p-6">
-                    <h2 class="font-semibold">Płatność</h2>
+                    <h2 class="st-brand st-box-title">Płatność</h2>
                     <div class="mt-4 space-y-2">
                         @foreach ($paymentOptions as $value => $label)
                             <label class="st-border flex cursor-pointer items-center gap-3 rounded-xl border p-4 text-sm">
@@ -270,6 +270,8 @@
                                         <span class="block text-xs opacity-60">{{ $bankName }}</span>
                                     @elseif ($value === 'pay_on_pickup' && filled($pickupAddress))
                                         <span class="block text-xs opacity-60">Odbiór i płatność: {{ $pickupAddress }}</span>
+                                    @elseif ($value === 'online')
+                                        <span class="block text-xs opacity-60">BLIK, karta płatnicza, szybki przelew</span>
                                     @endif
                                 </span>
                             </label>
@@ -280,7 +282,7 @@
 
                 {{-- Uwagi --}}
                 <div class="st-card st-border rounded-3xl border p-6">
-                    <label for="note" class="font-semibold">Uwagi do zamówienia <span class="text-sm font-normal opacity-60">(opcjonalnie)</span></label>
+                    <label for="note" class="st-brand st-box-title">Uwagi do zamówienia <span class="text-sm font-normal opacity-60">(opcjonalnie)</span></label>
                     <textarea id="note" wire:model="note" rows="3" class="st-border mt-3 block w-full rounded-xl border bg-transparent px-3 py-2.5 text-sm focus:outline-none"></textarea>
                     @error('note') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
                 </div>
@@ -289,7 +291,7 @@
             {{-- Podsumowanie --}}
             <aside class="lg:col-span-1">
                 <div class="st-card st-border rounded-3xl border p-6">
-                    <h2 class="font-semibold">Twoje zamówienie</h2>
+                    <h2 class="st-brand st-box-title">Twoje zamówienie</h2>
                     <ul class="mt-4 space-y-3">
                         @foreach ($lines as $line)
                             <li class="flex justify-between gap-3 text-sm">
@@ -344,7 +346,7 @@
                      e-mail z kontem → dopiszemy do historii; wolny e-mail → opcja
                      założenia konta (mail aktywacyjny po zamówieniu). --}}
                 <div class="st-card st-border mt-6 rounded-3xl border p-6">
-                    <h2 class="font-semibold">Konto</h2>
+                    <h2 class="st-brand st-box-title">Konto</h2>
                     @if ($this->authCustomer)
                         <p class="mt-3 text-sm opacity-70">
                             Zamawiasz jako <strong class="st-brand">{{ $this->authCustomer->email }}</strong> — zamówienie trafi do historii Twojego konta.

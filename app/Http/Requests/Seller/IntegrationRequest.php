@@ -36,7 +36,6 @@ class IntegrationRequest extends FormRequest
         $token = trim((string) $this->input('fakturownia_token'));
         $paynowApiKey = trim((string) $this->input('paynow_api_key'));
         $paynowSignatureKey = trim((string) $this->input('paynow_signature_key'));
-        $paynowEnvironment = (string) $this->input('paynow_environment');
 
         if ($url !== '' && ! preg_match('#^https?://#i', $url)) {
             $url = 'https://'.$url;
@@ -48,9 +47,10 @@ class IntegrationRequest extends FormRequest
             'fakturownia_token' => $token === '' ? null : $token,
             'paynow_api_key' => $paynowApiKey === '' ? null : $paynowApiKey,
             'paynow_signature_key' => $paynowSignatureKey === '' ? null : $paynowSignatureKey,
-            // Wartość spoza dozwolonych (albo brak) → sandbox: bezpieczny domyślny,
-            // nikt przypadkiem nie wejdzie na produkcję operatora.
-            'paynow_environment' => in_array($paynowEnvironment, ['sandbox', 'production'], true) ? $paynowEnvironment : 'sandbox',
+            // Środowisko wybieramy checkboxem „testowe (sandbox)": zaznaczony =
+            // sandbox, odznaczony = produkcja. Odznaczony domyślnie znaczy produkcję,
+            // więc UI musi renderować stan bieżący, żeby zapis go nie zresetował.
+            'paynow_environment' => $this->boolean('paynow_sandbox') ? 'sandbox' : 'production',
         ]);
     }
 

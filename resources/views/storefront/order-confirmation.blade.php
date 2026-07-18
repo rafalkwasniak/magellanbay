@@ -28,18 +28,18 @@
             <div class="mt-6">
                 @if ($order->status === OrderStatus::AwaitingPayment)
                     <div class="st-card st-border rounded-3xl border p-6 text-center">
-                        @if (session('error'))
-                            <p class="mb-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{{ session('error') }}</p>
-                        @endif
                         <p class="font-semibold">Twoje zamówienie czeka na opłacenie</p>
                         <p class="mt-1 text-sm opacity-70">Zapłać online (BLIK, karta lub szybki przelew), aby sklep mógł rozpocząć realizację.</p>
-                        <form method="POST" action="/kasa/platnosc" class="mt-5">
+                        {{-- Kupujący dopiero co widział podsumowanie (ten ekran), więc idziemy
+                             PROSTO do bramki (POST = akcja płatności), bez pośredniej strony.
+                             Ta sama trasa niesie tokenowa strona z maila/„Moje konto". --}}
+                        <form method="POST" action="/platnosc/{{ $order->paymentToken() }}" class="mt-5">
                             @csrf
                             <button type="submit" class="st-btn inline-flex items-center gap-2 rounded-full px-8 py-3 text-sm font-semibold shadow-sm transition hover:brightness-105">
                                 Przejdź do płatności — {{ \App\Support\Money::pln($order->total_gross) }}
                             </button>
                         </form>
-                        <p class="mt-3 text-xs opacity-60">Jeśli właśnie zapłacono, potwierdzenie może chwilę potrwać — odśwież stronę za moment.</p>
+                        <p class="mt-3 text-xs opacity-60">Link do płatności wysłaliśmy też w mailu z potwierdzeniem — możesz zapłacić później.</p>
                     </div>
                 @elseif ($order->status !== OrderStatus::Cancelled)
                     <div class="st-card st-border rounded-3xl border p-6 text-center">

@@ -36,7 +36,7 @@
                         @php($atMax = $product->track_stock && $product->stock !== null && $line['quantity'] >= $product->stock)
                         @php($atMin = $line['quantity'] <= $product->sale_unit->minQuantity())
                         <div class="min-w-0 flex-1">
-                            <a href="{{ $product->storefrontPath() }}" wire:navigate class="block font-semibold break-words hover:underline">{{ $product->name }}</a>
+                            <a href="{{ $product->storefrontPath() }}" wire:navigate class="block st-brand font-serif text-xl font-normal tracking-tight break-words hover:underline">{{ $product->name }}</a>
                             <p class="mt-0.5 text-sm opacity-70">{{ \App\Support\Money::pln($line['unit_price']) }} / {{ $product->sale_unit->abbreviation() }}</p>
 
                             {{-- Ilość: krok +/− wg jednostki (1 szt. / 0,5 kg), pole wpisywane z palca.
@@ -81,7 +81,7 @@
             {{-- Podsumowanie --}}
             <aside class="lg:col-span-1">
                 <div class="st-card st-border rounded-3xl border p-6">
-                    <h2 class="font-semibold">Podsumowanie</h2>
+                    <h2 class="st-brand st-box-title">Podsumowanie</h2>
                     <div class="mt-4 flex items-baseline justify-between border-t st-border pt-4">
                         <span class="opacity-70">Razem (brutto)</span>
                         <span class="text-xl font-bold tabular-nums">{{ \App\Support\Money::pln($total) }}</span>

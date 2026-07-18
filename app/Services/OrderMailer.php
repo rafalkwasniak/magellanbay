@@ -53,10 +53,14 @@ class OrderMailer
                 $this->companyBlock($order),
                 $this->noteBlock($order, 'Uwagi:'),
             ]),
-            'action_text' => 'Wróć do sklepu',
-            'action_url' => 'https://'.$shop->host(),
+            // Nieopłacone online → przycisk prowadzi wprost do płatności (link po
+            // tokenie, działa bez logowania i nie wygasa). Inaczej — powrót do sklepu.
+            'action_text' => $order->isAwaitingOnlinePayment() ? 'Zapłać za zamówienie' : 'Wróć do sklepu',
+            'action_url' => $order->isAwaitingOnlinePayment() ? $order->paymentUrl() : 'https://'.$shop->host(),
             'outro_lines' => [
-                'O kolejnych krokach (przygotowanie, gotowość do odbioru) poinformujemy Cię osobnym e-mailem.',
+                $order->isAwaitingOnlinePayment()
+                    ? 'Jeśli zamówienie nie zostało jeszcze opłacone, dokończ płatność przyciskiem powyżej — możesz to zrobić także później, link nie wygasa.'
+                    : 'O kolejnych krokach (przygotowanie, gotowość do odbioru) poinformujemy Cię osobnym e-mailem.',
             ],
         ]);
     }
@@ -486,6 +490,16 @@ class OrderMailer
                 'Tytuł przelewu: **Zamówienie #'.$order->number.'**',
                 'Kwota: **'.Money::pln($order->total_gross).'**',
             ]));
+        }
+
+        if ($order->payment_method === PaymentMethod::Online) {
+            // Online = przedpłata: dopóki nie ma potwierdzenia (webhook przenosi na
+            // „Opłacone"), zamówienie czeka na wpłatę. Bez „przy odbiorze" — to był błąd.
+            return ['Sposób płatności: '.$order->payment_method->label().
+                ($order->status === OrderStatus::AwaitingPayment
+                    ? ' — zamówienie czeka na opłacenie.'
+                    : ' — opłacone.'),
+            ];
         }
 
         return ['Sposób płatności: '.$order->payment_method->label().' — zapłacisz na miejscu przy odbiorze.'];

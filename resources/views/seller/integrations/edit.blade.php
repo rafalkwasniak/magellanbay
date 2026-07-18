@@ -59,17 +59,16 @@
                             </div>
                         </div>
 
-                        <div>
-                            <label for="paynow_environment" class="block text-sm font-medium text-stone-700">Środowisko</label>
-                            <select id="paynow_environment" name="paynow_environment"
-                                class="mt-1.5 block w-full max-w-xs rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
-                                <option value="sandbox" @selected(old('paynow_environment', $paynowEnvironment) === 'sandbox')>Sandbox (testowe)</option>
-                                <option value="production" @selected(old('paynow_environment', $paynowEnvironment) === 'production')>Produkcja (prawdziwe płatności)</option>
-                            </select>
-                            @error('paynow_environment')
-                                <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
-                            @enderror
-                            <p class="mt-1.5 text-xs text-stone-400">Zacznij od Sandboksa, aby przetestować. Na produkcję przełącz dopiero z kluczami produkcyjnymi.</p>
+                        <div class="flex items-start gap-3 rounded-2xl border border-stone-200 bg-white/60 p-4">
+                            {{-- hidden = wartość bazowa (odznaczone = produkcja); checkbox nadpisuje na sandbox --}}
+                            <input type="hidden" name="paynow_sandbox" value="0">
+                            <input type="checkbox" id="paynow_sandbox" name="paynow_sandbox" value="1"
+                                @checked(old('paynow_sandbox', $paynowEnvironment === 'sandbox'))
+                                class="mt-0.5 h-5 w-5 shrink-0 rounded-md border-stone-300 text-amber-600 focus:ring-4 focus:ring-amber-500/20">
+                            <label for="paynow_sandbox" class="flex-1 cursor-pointer">
+                                <span class="block text-sm font-medium text-stone-800">Włącz środowisko testowe (sandbox)</span>
+                                <span class="mt-0.5 block text-xs text-stone-400">Zaznacz do testów kluczami sandbox. Odznacz, gdy podłączasz klucze produkcyjne i chcesz przyjmować prawdziwe płatności.</span>
+                            </label>
                         </div>
 
                         @if ($paynowConfigured)

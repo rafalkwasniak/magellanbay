@@ -319,7 +319,7 @@ class IntegrationsTest extends TestCase
             ->post(route('seller.integrations.update'), [
                 'paynow_api_key' => '14d59738-4b18-4c83-86ea-131320c3d337',
                 'paynow_signature_key' => '57b7a81d-4f0f-4c2a-bf44-0234fd916f8a',
-                'paynow_environment' => 'sandbox',
+                'paynow_sandbox' => '1',
             ])
             ->assertRedirect(route('seller.integrations.edit'))
             ->assertSessionHas('success');
@@ -340,7 +340,7 @@ class IntegrationsTest extends TestCase
         $this->actingAs($seller)
             ->post(route('seller.integrations.update'), [
                 'paynow_api_key' => '14d59738-4b18-4c83-86ea-131320c3d337',
-                'paynow_environment' => 'sandbox',
+                'paynow_sandbox' => '1',
             ])
             ->assertSessionHasErrors('paynow_signature_key');
 
@@ -361,7 +361,7 @@ class IntegrationsTest extends TestCase
             ->post(route('seller.integrations.update'), [
                 'paynow_api_key' => 'NEW-KEY',
                 'paynow_signature_key' => '',
-                'paynow_environment' => 'production',
+                'paynow_sandbox' => '0',
             ]);
 
         $config = $shop->integrations()->where('type', IntegrationType::Payments)->first()->config;
@@ -383,7 +383,7 @@ class IntegrationsTest extends TestCase
             ->post(route('seller.integrations.update'), [
                 'paynow_api_key' => '',
                 'paynow_signature_key' => '',
-                'paynow_environment' => 'sandbox',
+                'paynow_sandbox' => '1',
             ]);
 
         $this->assertSame(0, ShopIntegration::where('type', IntegrationType::Payments)->count());

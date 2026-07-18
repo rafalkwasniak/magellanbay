@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -181,6 +182,49 @@ class Order extends Model
     public function isInvoicePending(): bool
     {
         return $this->invoice_status === \App\Enums\InvoiceStatus::Pending;
+    }
+
+    /**
+     * Czy zamówienie wciąż czeka na płatność online — jedyny stan, w którym ma sens
+     * pokazać przycisk „Zapłać" (kasa, mail, „Moje konto", strona płatności).
+     */
+    public function isAwaitingOnlinePayment(): bool
+    {
+        return $this->payment_method === PaymentMethod::Online
+            && $this->status === OrderStatus::AwaitingPayment;
+    }
+
+    /**
+     * Token do publicznej strony płatności. Zaszyfrowany identyfikator zamówienia
+     * (APP_KEY + MAC): nie do zgadnięcia i odporny na podmianę, więc link działa bez
+     * logowania — dla kupującego z konta i gościa tak samo. Zero kolumn w bazie.
+     * `strtr` na znaki bezpieczne w ścieżce URL (bez `+ / =`).
+     */
+    public function paymentToken(): string
+    {
+        return strtr(Crypt::encryptString((string) $this->getKey()), '+/=', '-_~');
+    }
+
+    /**
+     * Pełny adres strony płatności na hoście sklepu — do maila, „Moje konto" i
+     * powrotu z Paynow. Budujemy z `host()`, więc działa też z joba/CLI (bez requestu).
+     */
+    public function paymentUrl(): string
+    {
+        return 'https://'.$this->shop->host().'/platnosc/'.$this->paymentToken();
+    }
+
+    /**
+     * Odwrotność `paymentToken()`: identyfikator zamówienia albo null, gdy token
+     * jest uszkodzony/podrobiony. Wołający i tak scope'uje zamówienie do sklepu.
+     */
+    public static function decodePaymentToken(string $token): ?int
+    {
+        try {
+            return (int) Crypt::decryptString(strtr($token, '-_~', '+/='));
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     /**

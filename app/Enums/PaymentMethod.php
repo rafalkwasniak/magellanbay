@@ -19,7 +19,7 @@ enum PaymentMethod: string
         return match ($this) {
             self::BankTransfer => 'Przelew na konto',
             self::PayOnPickup => 'Płatność przy odbiorze',
-            self::Online => 'Płatność online (BLIK, karta, przelew)',
+            self::Online => 'Płatność online Paynow',
         };
     }
 

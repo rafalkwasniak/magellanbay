@@ -33,7 +33,23 @@
         ];
     }
 
+    if ($shop->parcelLockerAvailable()) {
+        $lockerCost = (float) ($shop->parcel_locker_cost ?? 0);
+        $deliveries[] = [
+            'label' => \App\Enums\DeliveryMethod::ParcelLocker->label(),
+            'value' => $lockerCost > 0 ? \App\Support\Money::pln($lockerCost) : 'Gratis',
+            'note' => ($lockerCost > 0 && $shop->parcel_locker_free_from !== null)
+                ? 'gratis od '.\App\Support\Money::pln((float) $shop->parcel_locker_free_from)
+                : null,
+        ];
+    }
+
     $payments = [];
+
+    // Płatność online na czele (preferowana), spójnie z kolejnością w kasie.
+    if ($shop->onlinePaymentsEnabled()) {
+        $payments[] = \App\Enums\PaymentMethod::Online->label();
+    }
 
     if ($shop->bankTransferAvailable()) {
         $payments[] = \App\Enums\PaymentMethod::BankTransfer->label();
