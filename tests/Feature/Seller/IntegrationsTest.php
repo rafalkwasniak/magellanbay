@@ -305,7 +305,10 @@ class IntegrationsTest extends TestCase
             ->get(route('seller.integrations.edit'))
             ->assertOk()
             ->assertSee('Płatności online (Paynow)')
-            ->assertSee('Klucz obliczania podpisu');
+            ->assertSee('Klucz obliczania podpisu')
+            // Gotowy adres powiadomień do przeklejenia w panelu Paynow.
+            ->assertSee('/platnosci/paynow/webhook')
+            ->assertSee('Adres powiadomień (webhook)');
     }
 
     public function test_seller_can_configure_paynow_and_it_is_enabled_by_default(): void

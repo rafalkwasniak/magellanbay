@@ -1,4 +1,4 @@
-@php use App\Enums\PaymentMethod; use App\Enums\DeliveryMethod; @endphp
+@php use App\Enums\PaymentMethod; use App\Enums\DeliveryMethod; use App\Enums\OrderStatus; @endphp
 <x-layouts.storefront :shop="$shop" title="Dziękujemy za zamówienie">
     <main class="mx-auto max-w-6xl px-6 pt-10 pb-16">
         <x-storefront.breadcrumbs :items="[
@@ -19,6 +19,36 @@
                 <p class="mt-1 text-sm opacity-70">Potwierdzenie wysłaliśmy na {{ $order->buyer_email }}.</p>
             </div>
         </div>
+
+        {{-- Płatność online: dopóki zamówienie czeka na wpłatę, kupujący kończy ją
+             przyciskiem stąd (płatność inicjujemy z podsumowania, nie auto-redirectem
+             z kasy). Gdy webhook potwierdzi wpłatę, zamiast przycisku widać ptaszek.
+             Powrót z Paynow wraca właśnie tutaj. --}}
+        @if ($order->payment_method === PaymentMethod::Online)
+            <div class="mt-6">
+                @if ($order->status === OrderStatus::AwaitingPayment)
+                    <div class="st-card st-border rounded-3xl border p-6 text-center">
+                        @if (session('error'))
+                            <p class="mb-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{{ session('error') }}</p>
+                        @endif
+                        <p class="font-semibold">Twoje zamówienie czeka na opłacenie</p>
+                        <p class="mt-1 text-sm opacity-70">Zapłać online (BLIK, karta lub szybki przelew), aby sklep mógł rozpocząć realizację.</p>
+                        <form method="POST" action="/kasa/platnosc" class="mt-5">
+                            @csrf
+                            <button type="submit" class="st-btn inline-flex items-center gap-2 rounded-full px-8 py-3 text-sm font-semibold shadow-sm transition hover:brightness-105">
+                                Przejdź do płatności — {{ \App\Support\Money::pln($order->total_gross) }}
+                            </button>
+                        </form>
+                        <p class="mt-3 text-xs opacity-60">Jeśli właśnie zapłacono, potwierdzenie może chwilę potrwać — odśwież stronę za moment.</p>
+                    </div>
+                @elseif ($order->status !== OrderStatus::Cancelled)
+                    <div class="st-card st-border rounded-3xl border p-6 text-center">
+                        <p class="font-semibold text-emerald-600">✓ Płatność potwierdzona</p>
+                        <p class="mt-1 text-sm opacity-70">Dziękujemy! Zamówienie jest opłacone i trafiło do realizacji.</p>
+                    </div>
+                @endif
+            </div>
+        @endif
 
         <div class="mt-6 grid gap-6 md:grid-cols-2">
             {{-- Lewa: pozycje + sumy --}}
@@ -61,6 +91,10 @@
                             <div class="flex justify-between gap-3"><dt class="opacity-60">Tytuł przelewu</dt><dd class="text-right font-medium">Zamówienie #{{ $order->number }}</dd></div>
                             <div class="flex justify-between gap-3"><dt class="opacity-60">Kwota</dt><dd class="text-right font-bold">{{ \App\Support\Money::pln($order->total_gross) }}</dd></div>
                         </dl>
+                    @elseif ($order->payment_method === PaymentMethod::Online)
+                        <p class="mt-2 text-sm opacity-70">
+                            {{ $order->status === OrderStatus::AwaitingPayment ? 'Oczekuje na płatność online (BLIK, karta lub szybki przelew).' : 'Opłacone online.' }}
+                        </p>
                     @else
                         <p class="mt-2 text-sm opacity-70">Zapłacisz na miejscu przy odbiorze zamówienia.</p>
                     @endif

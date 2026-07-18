@@ -26,6 +26,12 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Niezalogowani trafiają na ekran logowania.
         $middleware->redirectGuestsTo(fn () => route('login'));
+
+        // Webhook Paynow przychodzi z zewnątrz, bez tokenu CSRF — broni go podpis
+        // (weryfikowany w kontrolerze), nie sesja. To jedyny wyjątek.
+        $middleware->validateCsrfTokens(except: [
+            'platnosci/paynow/webhook',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Błędy w JSON dla żądań AJAX/JSON (np. „Popraw przez AI"); zwykłe

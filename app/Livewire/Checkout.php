@@ -250,6 +250,12 @@ class Checkout extends Component
         $shop = $this->shop();
         $options = [];
 
+        // Płatność online na górze (preferowana): działa przy każdej dostawie,
+        // bo to przedpłata — pieniądze wpływają przed wydaniem towaru.
+        if ($shop->onlinePaymentsEnabled()) {
+            $options[PaymentMethod::Online->value] = PaymentMethod::Online->label();
+        }
+
         if ($shop->bankTransferAvailable()) {
             $options[PaymentMethod::BankTransfer->value] = PaymentMethod::BankTransfer->label();
         }

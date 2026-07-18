@@ -4,6 +4,7 @@ use App\Enums\LegalDocumentType;
 use App\Http\Controllers\Administrator\DashboardController as AdministratorDashboard;
 use App\Http\Controllers\Administrator\MailPreviewController;
 use App\Http\Controllers\Auth\ActivationController;
+use App\Http\Controllers\PaynowWebhookController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\AiController;
@@ -74,6 +75,11 @@ Route::post('/rejestracja/wyslij-ponownie', [ResendActivationController::class, 
 // Aktywacja konta (ustawienie pierwszego hasła + danych) — token brokera 'activation', 24 h.
 Route::get('/aktywacja/{token}', [ActivationController::class, 'create'])->name('activation.show');
 Route::post('/aktywacja', [ActivationController::class, 'store'])->name('activation.store');
+
+// Webhook Paynow: powiadomienie o zmianie statusu płatności (źródło prawdy o
+// zapłacie). Publiczny — Paynow nie ma sesji ani CSRF; broni go podpis (patrz
+// kontroler). Na domenie centrali; adres wpisujemy w panelu Paynow sprzedawcy.
+Route::post('/platnosci/paynow/webhook', PaynowWebhookController::class)->name('payments.paynow.webhook');
 
 /*
 |--------------------------------------------------------------------------
@@ -218,6 +224,9 @@ Route::domain('{shop}.'.config('tenancy.central_domain'))
         Route::get('/koszyk', [StorefrontCart::class, 'show'])->name('storefront.cart');
         Route::get('/kasa', [StorefrontCheckout::class, 'show'])->name('storefront.checkout');
         Route::get('/kasa/dziekujemy', [StorefrontCheckout::class, 'confirmation'])->name('storefront.checkout.confirmation');
+        // Rozpoczęcie płatności online — z ekranu podsumowania (przycisk „Przejdź
+        // do płatności"). Tworzy płatność w Paynow i przekierowuje kupującego.
+        Route::post('/kasa/platnosc', [StorefrontCheckout::class, 'pay'])->name('storefront.checkout.pay');
 
         /*
         |----------------------------------------------------------------------

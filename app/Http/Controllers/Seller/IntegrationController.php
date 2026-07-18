@@ -36,6 +36,7 @@ class IntegrationController extends Controller
             'paynowConfigured' => $shop->onlinePaymentsConfigured(),
             'paynowEnabled' => $shop->onlinePaymentsEnabled(),
             'paynowEnvironment' => $shop->paynowEnvironment(),
+            'paynowWebhookUrl' => $shop->paynowWebhookUrl(),
         ]);
     }
 

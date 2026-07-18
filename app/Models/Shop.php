@@ -583,6 +583,17 @@ class Shop extends Model
     }
 
     /**
+     * Adres powiadomień (webhooka) Paynow dla tego sklepu — do przeklejenia w
+     * panelu operatora. Na własnym hoście sklepu (subdomena/domena), bo tam
+     * kieruje kupującego i tam sprzedawca konfiguruje Paynow. Powiadomień NIE da
+     * się ustawić z naszego systemu — sprzedawca wkleja ten adres ręcznie.
+     */
+    public function paynowWebhookUrl(): string
+    {
+        return 'https://'.$this->host().'/platnosci/paynow/webhook';
+    }
+
+    /**
      * Telefon kontaktowy w czytelnej postaci („+48 668 196 229"). Przechowujemy
      * kanonicznie (48 + 9 cyfr); formatujemy dopiero do wyświetlenia — stopka,
      * maile, storefront. Null, gdy sklep nie ma jeszcze numeru.

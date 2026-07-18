@@ -87,6 +87,24 @@
                                 </p>
                             </div>
                         @endif
+
+                        {{-- Adres powiadomień: to sprzedawca musi wkleić w panelu Paynow.
+                             Nie da się tego ustawić z naszej strony — dlatego pokazujemy
+                             gotowy link do skopiowania, a nie „załatwiamy to za Ciebie". --}}
+                        <div class="rounded-2xl border border-amber-200 bg-amber-50/70 p-4">
+                            <p class="text-sm font-medium text-stone-800">Adres powiadomień (webhook)</p>
+                            <p class="mt-1 text-xs text-stone-500">
+                                Wklej ten adres w panelu Paynow → <span class="text-stone-600">Ustawienia → Powiadomienia (URL)</span>. To przez niego Paynow informuje sklep o opłaceniu zamówienia — bez tego zamówienia nie oznaczą się jako opłacone. Musisz ustawić go samodzielnie po stronie Paynow.
+                            </p>
+                            <div class="mt-3 flex items-stretch gap-2">
+                                <input type="text" id="paynow_webhook_url" value="{{ $paynowWebhookUrl }}" readonly
+                                    onclick="this.select()"
+                                    class="min-w-0 flex-1 rounded-xl border border-amber-200 bg-white px-3 py-2 font-mono text-xs text-stone-700 shadow-sm">
+                                <button type="button"
+                                    onclick="navigator.clipboard.writeText(document.getElementById('paynow_webhook_url').value); this.textContent='Skopiowano ✓'; setTimeout(() => this.textContent='Kopiuj', 1500);"
+                                    class="shrink-0 rounded-xl border border-amber-300 bg-white px-4 py-2 text-xs font-medium text-amber-800 transition hover:bg-amber-100">Kopiuj</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
