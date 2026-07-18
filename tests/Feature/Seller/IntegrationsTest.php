@@ -333,6 +333,24 @@ class IntegrationsTest extends TestCase
         $this->assertTrue($shop->fresh()->onlinePaymentsEnabled());
     }
 
+    public function test_paynow_auto_invoice_flag_is_saved(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+
+        $this->actingAs($seller)
+            ->post(route('seller.integrations.update'), [
+                'paynow_api_key' => '14d59738-4b18-4c83-86ea-131320c3d337',
+                'paynow_signature_key' => '57b7a81d-4f0f-4c2a-bf44-0234fd916f8a',
+                'paynow_sandbox' => '1',
+                'paynow_auto_invoice' => '1',
+            ]);
+
+        $config = $shop->integrations()->where('type', IntegrationType::Payments)->first()->config;
+        $this->assertTrue($config['auto_invoice']);
+        $this->assertTrue($shop->fresh()->autoInvoiceAfterPayment());
+    }
+
+
     public function test_paynow_api_key_without_signature_is_rejected_when_not_yet_configured(): void
     {
         [$seller] = $this->sellerWithShop();

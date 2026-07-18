@@ -87,6 +87,28 @@
                             </div>
                         @endif
 
+                        {{-- Auto-FV po opłaceniu — pełny pakiet: płatność online + Fakturownia.
+                             Pokazujemy tylko sklepom z dostępem do faktur; realnie zadziała,
+                             gdy Fakturownia jest też WŁĄCZONA (guard po stronie zlecenia FV). --}}
+                        @if ($shop->entitlement('invoices'))
+                            {{-- Zespolone z Fakturownią: bez WŁĄCZONEJ Fakturowni checkbox jest
+                                 wyłączony (wzór jak włączniki w Ustawieniach). hidden zachowuje
+                                 zapisaną wartość, gdy pole disabled — zapis Integracji jej nie kasuje. --}}
+                            <div class="flex items-start gap-3 rounded-2xl border border-stone-200 bg-white/60 p-4 {{ $fakturowniaEnabled ? '' : 'opacity-60' }}">
+                                <input type="hidden" name="paynow_auto_invoice" value="{{ $fakturowniaEnabled ? '0' : ($paynowAutoInvoice ? '1' : '0') }}">
+                                <input type="checkbox" id="paynow_auto_invoice" name="paynow_auto_invoice" value="1"
+                                    @checked(old('paynow_auto_invoice', $paynowAutoInvoice)) @disabled(! $fakturowniaEnabled)
+                                    class="mt-0.5 h-5 w-5 shrink-0 rounded-md border-stone-300 text-amber-600 focus:ring-4 focus:ring-amber-500/20 disabled:cursor-not-allowed">
+                                <label for="paynow_auto_invoice" class="flex-1 {{ $fakturowniaEnabled ? 'cursor-pointer' : 'cursor-not-allowed' }}">
+                                    <span class="block text-sm font-medium text-stone-800">Wystaw fakturę VAT automatycznie po opłaceniu</span>
+                                    <span class="mt-0.5 block text-xs text-stone-400">Gdy klient opłaci zamówienie online, faktura wystawi się sama w Fakturowni — bez klikania.</span>
+                                    @unless($fakturowniaEnabled)
+                                        <span class="mt-1.5 block text-xs text-amber-700">Aby włączyć, najpierw uruchom Fakturownię: podaj dane wyżej i włącz ją w <a href="{{ route('seller.settings.edit') }}" class="font-medium underline decoration-amber-300 underline-offset-2">Ustawieniach</a>.</span>
+                                    @endunless
+                                </label>
+                            </div>
+                        @endif
+
                         {{-- Adres powiadomień: to sprzedawca musi wkleić w panelu Paynow.
                              Nie da się tego ustawić z naszej strony — dlatego pokazujemy
                              gotowy link do skopiowania, a nie „załatwiamy to za Ciebie". --}}

@@ -51,6 +51,7 @@ class IntegrationRequest extends FormRequest
             // sandbox, odznaczony = produkcja. Odznaczony domyślnie znaczy produkcję,
             // więc UI musi renderować stan bieżący, żeby zapis go nie zresetował.
             'paynow_environment' => $this->boolean('paynow_sandbox') ? 'sandbox' : 'production',
+            'paynow_auto_invoice' => $this->boolean('paynow_auto_invoice'),
         ]);
     }
 
@@ -66,6 +67,7 @@ class IntegrationRequest extends FormRequest
             'paynow_api_key' => ['nullable', 'string', 'max:255'],
             'paynow_signature_key' => ['nullable', 'string', 'max:255'],
             'paynow_environment' => ['required', 'in:sandbox,production'],
+            'paynow_auto_invoice' => ['boolean'],
         ];
     }
 

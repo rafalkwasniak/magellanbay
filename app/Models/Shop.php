@@ -583,6 +583,17 @@ class Shop extends Model
     }
 
     /**
+     * Czy po opłaceniu online sklep chce automatycznie wystawić FV (checkbox przy
+     * integracji Paynow). Sama flaga — realne wystawienie i tak przechodzi przez
+     * `Order::canBeInvoiced()` (Fakturownia włączona, uprawnienie, brak dubla), więc
+     * zaznaczona bez włączonej Fakturowni po prostu nic nie robi.
+     */
+    public function autoInvoiceAfterPayment(): bool
+    {
+        return ($this->integration(IntegrationType::Payments)?->config['auto_invoice'] ?? false) === true;
+    }
+
+    /**
      * Adres powiadomień (webhooka) Paynow dla tego sklepu — do przeklejenia w
      * panelu operatora. Na własnym hoście sklepu (subdomena/domena), bo tam
      * kieruje kupującego i tam sprzedawca konfiguruje Paynow. Powiadomień NIE da

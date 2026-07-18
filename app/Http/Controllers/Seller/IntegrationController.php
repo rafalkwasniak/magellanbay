@@ -37,6 +37,7 @@ class IntegrationController extends Controller
             'paynowEnabled' => $shop->onlinePaymentsEnabled(),
             'paynowEnvironment' => $shop->paynowEnvironment(),
             'paynowWebhookUrl' => $shop->paynowWebhookUrl(),
+            'paynowAutoInvoice' => $shop->autoInvoiceAfterPayment(),
         ]);
     }
 
@@ -61,6 +62,7 @@ class IntegrationController extends Controller
             $data['paynow_api_key'] ?? null,
             $data['paynow_signature_key'] ?? null,
             $data['paynow_environment'] ?? 'sandbox',
+            (bool) ($data['paynow_auto_invoice'] ?? false),
         );
 
         return redirect()
@@ -129,7 +131,7 @@ class IntegrationController extends Controller
      * w formularzu, więc puste pole znaczy „zostaw dotychczasowy" (FormRequest
      * pilnuje, by istniał przy konfiguracji od zera). Środowisko zapisujemy zawsze.
      */
-    private function savePaynow(Shop $shop, ?string $apiKey, ?string $signatureKey, string $environment): void
+    private function savePaynow(Shop $shop, ?string $apiKey, ?string $signatureKey, string $environment, bool $autoInvoice): void
     {
         $integration = $shop->integration(IntegrationType::Payments);
 
@@ -143,6 +145,7 @@ class IntegrationController extends Controller
             'api_key' => $apiKey,
             'signature_key' => filled($signatureKey) ? $signatureKey : ($integration?->config['signature_key'] ?? null),
             'environment' => $environment,
+            'auto_invoice' => $autoInvoice,
         ];
 
         if ($integration !== null) {

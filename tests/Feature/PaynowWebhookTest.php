@@ -5,11 +5,13 @@ namespace Tests\Feature;
 use App\Enums\IntegrationType;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
+use App\Jobs\GenerateInvoice;
 use App\Models\EmailMessage;
 use App\Models\Order;
 use App\Models\Shop;
 use App\Services\PaynowService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Bus;
 use Tests\TestCase;
 
 /**
@@ -31,14 +33,23 @@ class PaynowWebhookTest extends TestCase
      * Zamówienie z płatnością online, czekające na wpłatę, wraz z podpiętym
      * kluczem podpisu sklepu i przypisanym `paymentId`.
      */
-    private function awaitingOrder(string $paymentId = 'PAY-123'): Order
+    private function awaitingOrder(string $paymentId = 'PAY-123', bool $autoInvoice = false, bool $withFakturownia = false): Order
     {
         $shop = Shop::factory()->create();
         $shop->integrations()->create([
             'type' => IntegrationType::Payments,
             'enabled' => true,
-            'config' => ['api_key' => 'API', 'signature_key' => self::SIGNATURE_KEY, 'environment' => 'sandbox'],
+            'config' => ['api_key' => 'API', 'signature_key' => self::SIGNATURE_KEY, 'environment' => 'sandbox', 'auto_invoice' => $autoInvoice],
         ]);
+
+        if ($withFakturownia) {
+            $shop->integrations()->create([
+                'type' => IntegrationType::Invoicing,
+                'enabled' => true,
+                'config' => ['account_url' => 'https://sklep.fakturownia.pl', 'api_token' => 'SECRET'],
+            ]);
+        }
+        $shop = $shop->fresh();
 
         $order = Order::factory()->for($shop)->create([
             'status' => OrderStatus::AwaitingPayment,
@@ -81,6 +92,41 @@ class PaynowWebhookTest extends TestCase
         $this->assertSame('CONFIRMED', $order->payment_status);
         $this->assertCount(1, $order->statusEvents);
         $this->assertSame(1, EmailMessage::count());
+    }
+
+    public function test_confirmed_webhook_auto_invoices_when_enabled_and_fakturownia_on(): void
+    {
+        // Pełny pakiet: auto-FV zaznaczone + Fakturownia włączona → po opłaceniu
+        // leci zlecenie wystawienia faktury (job GenerateInvoice), bez klikania.
+        Bus::fake();
+        $order = $this->awaitingOrder(autoInvoice: true, withFakturownia: true);
+
+        $this->postSigned(['paymentId' => 'PAY-123', 'status' => 'CONFIRMED'])->assertOk();
+
+        $this->assertSame(OrderStatus::Paid, $order->refresh()->status);
+        Bus::assertDispatched(GenerateInvoice::class);
+    }
+
+    public function test_confirmed_webhook_does_not_auto_invoice_when_flag_off(): void
+    {
+        // Fakturownia jest, ale checkbox auto-FV wyłączony → żadnego zlecenia.
+        Bus::fake();
+        $this->awaitingOrder(autoInvoice: false, withFakturownia: true);
+
+        $this->postSigned(['paymentId' => 'PAY-123', 'status' => 'CONFIRMED'])->assertOk();
+
+        Bus::assertNotDispatched(GenerateInvoice::class);
+    }
+
+    public function test_confirmed_webhook_does_not_auto_invoice_without_fakturownia(): void
+    {
+        // Checkbox zaznaczony, ale brak Fakturowni → guard requestInvoice() blokuje.
+        Bus::fake();
+        $this->awaitingOrder(autoInvoice: true, withFakturownia: false);
+
+        $this->postSigned(['paymentId' => 'PAY-123', 'status' => 'CONFIRMED'])->assertOk();
+
+        Bus::assertNotDispatched(GenerateInvoice::class);
     }
 
     public function test_bad_signature_is_rejected_and_order_untouched(): void

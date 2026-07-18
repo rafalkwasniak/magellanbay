@@ -68,6 +68,13 @@ class PaynowWebhookController extends Controller
             // Przejście przez serwis: zapis na oś czasu + mail „Opłacone" do
             // kupującego lecą tą samą drogą, co ręczna zmiana w panelu.
             $changer->change($order, OrderStatus::Paid, 'Płatność online potwierdzona.');
+
+            // Auto-FV: gdy sklep tak ustawił (pełny pakiet: płatność online +
+            // Fakturownia). Guard `requestInvoice()` sam sprawdzi, czy Fakturownia
+            // jest włączona i czy FV jeszcze nie ma — więc to tylko dodatkowa zgoda.
+            if ($order->shop?->autoInvoiceAfterPayment()) {
+                $order->requestInvoice();
+            }
         }
 
         Log::channel('paynow')->info('Webhook: przetworzony.', [
