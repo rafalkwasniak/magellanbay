@@ -7,11 +7,17 @@
 
     <div class="grid gap-6 lg:grid-cols-12">
         <div class="lg:col-span-8">
+    @php($hasFilters = $filters['q'] !== '' || $filters['package'] !== '' || $filters['status'] !== '')
     @if ($shops->isEmpty())
         <div class="flex flex-col items-center justify-center rounded-3xl border border-dashed border-stone-300 bg-white/40 px-6 py-16 text-center">
             <span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-stone-100 text-2xl">🛍️</span>
-            <p class="mt-4 font-medium text-stone-700">Nie ma jeszcze żadnych sklepów</p>
-            <p class="mt-1 max-w-sm text-sm text-stone-500">Gdy sprzedawcy założą swoje sklepy, pojawią się tutaj wraz z pakietem i stanem abonamentu.</p>
+            @if ($hasFilters)
+                <p class="mt-4 font-medium text-stone-700">Brak sklepów dla tych filtrów</p>
+                <p class="mt-1 max-w-sm text-sm text-stone-500">Zmień kryteria albo <a href="{{ route('administrator.shops.index') }}" class="font-medium text-stone-700 underline decoration-amber-300 underline-offset-2">wyczyść filtry</a>.</p>
+            @else
+                <p class="mt-4 font-medium text-stone-700">Nie ma jeszcze żadnych sklepów</p>
+                <p class="mt-1 max-w-sm text-sm text-stone-500">Gdy sprzedawcy założą swoje sklepy, pojawią się tutaj wraz z pakietem i stanem abonamentu.</p>
+            @endif
         </div>
     @else
         <div class="overflow-hidden rounded-3xl border border-white/60 bg-white/70 backdrop-blur">
@@ -94,6 +100,46 @@
         </div>
 
         <aside class="lg:col-span-4 space-y-6">
+            <form method="GET" action="{{ route('administrator.shops.index') }}" class="space-y-4 rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                <h2 class="font-semibold text-stone-900">Filtry</h2>
+
+                <div>
+                    <label for="q" class="block text-sm font-medium text-stone-700">Szukaj</label>
+                    <input type="search" id="q" name="q" value="{{ $filters['q'] }}" placeholder="Nazwa, właściciel, e-mail"
+                        class="mt-1.5 block w-full rounded-2xl border border-stone-200 bg-white/80 px-4 py-2.5 text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
+                </div>
+
+                <div>
+                    <label for="package" class="block text-sm font-medium text-stone-700">Pakiet</label>
+                    <select id="package" name="package"
+                        class="mt-1.5 block w-full rounded-2xl border border-stone-200 bg-white/80 px-4 py-2.5 text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
+                        <option value="">Wszystkie</option>
+                        @foreach ($packages as $slug => $pkg)
+                            <option value="{{ $slug }}" @selected($filters['package'] === $slug)>{{ $pkg['name'] }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div>
+                    <label for="status" class="block text-sm font-medium text-stone-700">Status</label>
+                    <select id="status" name="status"
+                        class="mt-1.5 block w-full rounded-2xl border border-stone-200 bg-white/80 px-4 py-2.5 text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
+                        <option value="">Wszystkie</option>
+                        @foreach ($statuses as $status)
+                            <option value="{{ $status->value }}" @selected($filters['status'] === $status->value)>{{ $status->label() }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="flex items-center gap-3 pt-1">
+                    <button type="submit"
+                        class="rounded-2xl bg-gradient-to-br from-amber-500 to-rose-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-rose-500/20 transition hover:brightness-105">Filtruj</button>
+                    @if ($filters['q'] !== '' || $filters['package'] !== '' || $filters['status'] !== '')
+                        <a href="{{ route('administrator.shops.index') }}" class="text-sm font-medium text-stone-500 transition hover:text-stone-800">Wyczyść</a>
+                    @endif
+                </div>
+            </form>
+
             <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
                 <h2 class="font-semibold text-stone-900">Zarządzanie sklepami</h2>
                 <p class="mt-2 text-sm text-stone-500">

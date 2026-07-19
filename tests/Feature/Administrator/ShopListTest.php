@@ -56,4 +56,37 @@ class ShopListTest extends TestCase
             ->assertSee('Darmowy Kram')
             ->assertSee('za darmo');
     }
+
+    public function test_shops_can_be_filtered_by_search_and_package(): void
+    {
+        $admin = User::factory()->admin()->create();
+        Shop::factory()->package('booth')->create(['name' => 'Kwiaciarnia Zosia']);
+        Shop::factory()->package('pavilion')->create(['name' => 'Rowery Krzysztof']);
+
+        // Szukajka po nazwie.
+        $this->actingAs($admin)
+            ->get(route('administrator.shops.index', ['q' => 'Zosia']))
+            ->assertOk()
+            ->assertSee('Kwiaciarnia Zosia')
+            ->assertDontSee('Rowery Krzysztof');
+
+        // Filtr po pakiecie.
+        $this->actingAs($admin)
+            ->get(route('administrator.shops.index', ['package' => 'pavilion']))
+            ->assertOk()
+            ->assertSee('Rowery Krzysztof')
+            ->assertDontSee('Kwiaciarnia Zosia');
+    }
+
+    public function test_filter_with_no_matches_shows_message(): void
+    {
+        $admin = User::factory()->admin()->create();
+        Shop::factory()->create(['name' => 'Kwiaciarnia Zosia']);
+
+        $this->actingAs($admin)
+            ->get(route('administrator.shops.index', ['q' => 'nieistniejące']))
+            ->assertOk()
+            ->assertSee('Brak sklepów dla tych filtrów')
+            ->assertDontSee('Kwiaciarnia Zosia');
+    }
 }
