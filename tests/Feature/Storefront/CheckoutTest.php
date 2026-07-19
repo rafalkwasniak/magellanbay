@@ -25,7 +25,7 @@ class CheckoutTest extends TestCase
 
     private function shopReadyForOrders(): Shop
     {
-        return Shop::factory()->create([
+        return Shop::factory()->withCourierShipping()->create([
             'street' => 'Kwiatowa', 'building_number' => '5', 'postal_code' => '00-001',
             'city' => 'Warszawa', 'province' => 'mazowieckie',
             'pickup_enabled' => true, 'pay_on_pickup_enabled' => true,
@@ -626,5 +626,24 @@ class CheckoutTest extends TestCase
             ->get($base.'/kasa/dziekujemy')
             ->assertOk()
             ->assertSee('#7');
+    }
+
+    public function test_courier_and_parcel_hidden_in_checkout_without_entitlement(): void
+    {
+        // Brama pakietu: sklep z włączonym kurierem i paczkomatem, ale bez
+        // uprawnienia `courier_shipping` (Kram), oferuje w kasie TYLKO odbiór.
+        $shop = Shop::factory()->create([
+            'street' => 'Kwiatowa', 'building_number' => '5', 'postal_code' => '00-001',
+            'city' => 'Warszawa', 'province' => 'mazowieckie',
+            'pickup_enabled' => true,
+            'courier_enabled' => true, 'courier_cost' => 15.00,
+            'parcel_locker_enabled' => true, 'parcel_locker_cost' => 12.00,
+        ]);
+        $this->assertFalse($shop->entitlement('courier_shipping'));
+
+        $options = Livewire::test(Checkout::class, ['shopId' => $shop->id])->instance()->deliveryOptions();
+        $this->assertArrayHasKey(DeliveryMethod::Pickup->value, $options);
+        $this->assertArrayNotHasKey(DeliveryMethod::Courier->value, $options);
+        $this->assertArrayNotHasKey(DeliveryMethod::ParcelLocker->value, $options);
     }
 }

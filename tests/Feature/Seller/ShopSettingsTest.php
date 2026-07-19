@@ -16,7 +16,7 @@ class ShopSettingsTest extends TestCase
     private function sellerWithShop(array $shopAttributes = []): array
     {
         $seller = User::factory()->consented()->create();
-        $shop = Shop::factory()->create(array_merge(['owner_id' => $seller->id], $shopAttributes));
+        $shop = Shop::factory()->withCourierShipping()->create(array_merge(['owner_id' => $seller->id], $shopAttributes));
 
         return [$seller, $shop];
     }
@@ -460,5 +460,20 @@ class ShopSettingsTest extends TestCase
         $fresh = $shop->fresh();
         $this->assertFalse($fresh->parcelLockerAvailable());
         $this->assertTrue($fresh->courierAvailable());
+    }
+
+    public function test_delivery_courier_blocks_hidden_without_entitlement(): void
+    {
+        // Kram (bez `courier_shipping`) w Ustawieniach widzi tylko odbiór osobisty —
+        // bloki kuriera i paczkomatu są schowane (funkcja płatna, Stragan+).
+        $seller = User::factory()->consented()->create();
+        Shop::factory()->create(['owner_id' => $seller->id]); // domyślny Kram
+
+        $this->actingAs($seller)
+            ->get(route('seller.settings.edit'))
+            ->assertOk()
+            ->assertSee('Odbiór osobisty')
+            ->assertDontSee('Dostawa kurierem')
+            ->assertDontSee('Paczkomat InPost');
     }
 }

@@ -71,6 +71,9 @@
                             </label>
                         </div>
 
+                        {{-- Kurier + Paczkomat = wysyłka InPost/Furgonetka, funkcja płatna
+                             (courier_shipping, Stragan+). Kram ma tylko odbiór osobisty. --}}
+                        @if ($shop->entitlement('courier_shipping'))
                         {{-- Kurier — Poziom 1: bez integracji, bez mapy. Włącznik + koszt + opcjonalny próg. --}}
                         @php($courierEnabled = old('courier_enabled', $shop->courier_enabled))
                         <div class="rounded-2xl border border-stone-200 bg-white/60 p-5 sm:p-6">
@@ -169,6 +172,7 @@
                         </div>
 
                         <p class="text-xs text-stone-400">Automatyczne etykiety i nadania dojdą tu jako osobna integracja.</p>
+                        @endif
                     </div>
                 </div>
 

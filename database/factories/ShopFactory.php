@@ -83,4 +83,18 @@ class ShopFactory extends Factory
             ),
         ]);
     }
+
+    /**
+     * Sklep z uprawnieniem do wysyłki kurierem/paczkomatem (InPost + Furgonetka) —
+     * funkcja płatna (Stragan+). Dokłada `courier_shipping=true` bez zmiany pakietu.
+     */
+    public function withCourierShipping(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'entitlements' => array_merge(
+                $attributes['entitlements'] ?? config('shop.packages.'.config('shop.default_package').'.entitlements'),
+                ['courier_shipping' => true],
+            ),
+        ]);
+    }
 }

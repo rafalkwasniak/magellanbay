@@ -45,7 +45,7 @@ class ProductPageTest extends TestCase
 
     public function test_product_page_shows_delivery_and_payment_summary(): void
     {
-        $shop = Shop::factory()->active()->create([
+        $shop = Shop::factory()->active()->withCourierShipping()->create([
             'street' => 'Kwiatowa', 'building_number' => '5', 'postal_code' => '00-001',
             'city' => 'Warszawa', 'province' => 'mazowieckie',
             'pickup_enabled' => true, 'pay_on_pickup_enabled' => true,

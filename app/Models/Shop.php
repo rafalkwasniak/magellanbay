@@ -384,15 +384,15 @@ class Shop extends Model
     }
 
     /**
-     * Czy sklep oferuje dostawę kurierem (Poziom 1 — bez integracji). W
-     * przeciwieństwie do odbioru NIE wymaga adresu sklepu: paczkę wysyła
-     * sprzedawca do klienta, więc do pokazania metody w kasie wystarczy włączona
-     * fiszka. Koszt bywa 0 (kurier gratis) — dlatego warunkiem jest sam włącznik,
-     * a nie „koszt > 0". Analogia do bankTransferAvailable(): stan efektywny.
+     * Czy sklep oferuje dostawę kurierem. Wymaga uprawnienia pakietu
+     * `courier_shipping` (Stragan+; wysyłka InPost+Furgonetka to funkcja płatna —
+     * Kram ma tylko odbiór osobisty) ORAZ włączonej fiszki. Nie wymaga adresu
+     * sklepu: paczkę wysyła sprzedawca do klienta. Koszt bywa 0 (kurier gratis),
+     * dlatego warunkiem jest włącznik, a nie „koszt > 0". Stan efektywny.
      */
     public function courierAvailable(): bool
     {
-        return $this->courier_enabled;
+        return $this->entitlement('courier_shipping') === true && $this->courier_enabled;
     }
 
     /**
@@ -412,14 +412,15 @@ class Shop extends Model
     }
 
     /**
-     * Czy sklep oferuje dostawę do paczkomatu InPost (Poziom 1 — bez integracji).
-     * Jak kurier: nie wymaga adresu sklepu ani konta sprzedawcy w InPoście, więc
-     * warunkiem jest sam włącznik (koszt bywa 0 = gratis). Mapa NIE jest
-     * warunkiem — gdy jej nie ma lub nie wstanie, klient wpisuje kod z palca.
+     * Czy sklep oferuje dostawę do paczkomatu InPost. Jak kurier: wymaga
+     * uprawnienia `courier_shipping` (Stragan+; InPost jest w tym samym płatnym
+     * pakiecie wysyłkowym co Furgonetka) ORAZ włączonej fiszki. Nie wymaga adresu
+     * sklepu ani konta w InPoście (koszt bywa 0 = gratis). Mapa NIE jest
+     * warunkiem — gdy jej nie ma, klient wpisuje kod z palca.
      */
     public function parcelLockerAvailable(): bool
     {
-        return $this->parcel_locker_enabled;
+        return $this->entitlement('courier_shipping') === true && $this->parcel_locker_enabled;
     }
 
     /**
