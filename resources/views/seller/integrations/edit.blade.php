@@ -7,6 +7,16 @@
             <form method="POST" action="{{ route('seller.integrations.update') }}" class="space-y-6" novalidate data-validate>
                 @csrf
 
+                @php($hasAnyIntegration = $shop->entitlement('online_payments') || $shop->entitlement('invoices') || $shop->entitlement('ga_analytics'))
+
+                @unless ($hasAnyIntegration)
+                    <div class="rounded-3xl border border-dashed border-stone-300 bg-white/40 p-8 text-center">
+                        <span class="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-stone-100 text-2xl">🔌</span>
+                        <p class="mt-4 font-medium text-stone-700">Integracje w wyższych pakietach</p>
+                        <p class="mx-auto mt-1 max-w-sm text-sm text-stone-500">Płatności online, wysyłki, faktury i Google Analytics dołączają od pakietu <span class="font-medium text-stone-700">Stragan</span>. Twój obecny pakiet: {{ $shop->packageName() }}.</p>
+                    </div>
+                @endunless
+
                 {{-- Płatności online (Paynow / mBank) — najważniejsza integracja, na
                      samej górze, ale TYLKO gdy pakiet daje `online_payments` (Stragan+).
                      Klucze sprzedawcy trzymamy zaszyfrowane w bazie — pieniądze płyną
@@ -199,7 +209,9 @@
                     </div>
                 @endif
 
-                {{-- Google Analytics — najmniej istotna integracja, zawsze na dole. --}}
+                {{-- Google Analytics — funkcja płatna (ga_analytics, Stragan+). NASZA
+                     analityka jest osobna i dla wszystkich; to jest zewnętrzne GA/GTM. --}}
+                @if ($shop->entitlement('ga_analytics'))
                 <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
                     <div class="flex items-start gap-4">
                         <span class="mt-0.5 shrink-0 text-2xl">📈</span>
@@ -241,13 +253,16 @@
                         @endif
                     </div>
                 </div>
+                @endif
 
+                @if ($hasAnyIntegration)
                 <div class="flex justify-end">
                     <button type="submit"
                         class="rounded-2xl bg-gradient-to-br from-amber-500 to-rose-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-rose-500/20 transition hover:brightness-105 focus:outline-none focus:ring-4 focus:ring-amber-500/25">
                         Zapisz integracje
                     </button>
                 </div>
+                @endif
             </form>
         </div>
 

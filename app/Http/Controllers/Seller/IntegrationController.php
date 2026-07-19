@@ -46,7 +46,11 @@ class IntegrationController extends Controller
         $shop = $request->user()->shop;
         $data = $request->validated();
 
-        $this->saveGoogleAnalytics($shop, $data['google_analytics_id'] ?? null);
+        // GA/GTM bramkowane uprawnieniem pakietu (Stragan+) — bez niego karta się
+        // nie renderuje, ale nie ufamy widokowi: zapis tylko gdy wolno.
+        if ($shop->entitlement('ga_analytics')) {
+            $this->saveGoogleAnalytics($shop, $data['google_analytics_id'] ?? null);
+        }
 
         // Fakturownia bramkowana uprawnieniem pakietu — bez niego pola i tak nie
         // renderują się w formularzu, ale nie ufamy widokowi: zapis tylko gdy wolno.

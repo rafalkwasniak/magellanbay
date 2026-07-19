@@ -111,4 +111,18 @@ class ShopFactory extends Factory
             ),
         ]);
     }
+
+    /**
+     * Sklep z uprawnieniem do zewnętrznej analityki Google (GA/GTM) — funkcja
+     * płatna (Stragan+). Dokłada `ga_analytics=true` bez zmiany pakietu.
+     */
+    public function withGaAnalytics(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'entitlements' => array_merge(
+                $attributes['entitlements'] ?? config('shop.packages.'.config('shop.default_package').'.entitlements'),
+                ['ga_analytics' => true],
+            ),
+        ]);
+    }
 }

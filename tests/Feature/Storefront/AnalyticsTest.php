@@ -23,7 +23,7 @@ class AnalyticsTest extends TestCase
 
     private function activeShopWithGa(string $trackingId, bool $enabled = true): Shop
     {
-        $shop = Shop::factory()->active()->create();
+        $shop = Shop::factory()->active()->withGaAnalytics()->create();
         $shop->integrations()->create([
             'type' => IntegrationType::GoogleAnalytics,
             'enabled' => $enabled,
@@ -71,5 +71,23 @@ class AnalyticsTest extends TestCase
             ->assertOk()
             ->assertDontSee('googletagmanager.com/gtag', false)
             ->assertDontSee('googletagmanager.com/gtm.js', false);
+    }
+
+    public function test_ga_not_injected_without_entitlement(): void
+    {
+        // Brama pakietu: sklep skonfigurował i włączył GA, ale bez uprawnienia
+        // `ga_analytics` (Kram) skrypt NIE trafia na storefront.
+        $shop = Shop::factory()->active()->create(); // domyślny Kram, brak ga_analytics
+        $shop->integrations()->create([
+            'type' => IntegrationType::GoogleAnalytics,
+            'enabled' => true,
+            'config' => ['tracking_id' => 'G-ABC123XYZ'],
+        ]);
+
+        $this->assertFalse($shop->fresh()->tracksWithGoogleAnalytics());
+
+        $this->get($this->url($shop->fresh()))
+            ->assertOk()
+            ->assertDontSee('googletagmanager.com/gtag', false);
     }
 }

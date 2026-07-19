@@ -21,7 +21,7 @@ class IntegrationsTest extends TestCase
     /**
      * @return array{0: User, 1: Shop}
      */
-    private function sellerWithShop(array $shopAttributes = [], bool $invoicing = false, bool $onlinePayments = false): array
+    private function sellerWithShop(array $shopAttributes = [], bool $invoicing = false, bool $onlinePayments = false, bool $gaAnalytics = false): array
     {
         $seller = User::factory()->consented()->create();
         $factory = Shop::factory();
@@ -31,6 +31,9 @@ class IntegrationsTest extends TestCase
         if ($onlinePayments) {
             $factory = $factory->withOnlinePayments();
         }
+        if ($gaAnalytics) {
+            $factory = $factory->withGaAnalytics();
+        }
         $shop = $factory->create(array_merge(['owner_id' => $seller->id], $shopAttributes));
 
         return [$seller, $shop];
@@ -38,7 +41,7 @@ class IntegrationsTest extends TestCase
 
     public function test_seller_can_view_integrations_page(): void
     {
-        [$seller] = $this->sellerWithShop();
+        [$seller] = $this->sellerWithShop(gaAnalytics: true);
 
         $this->actingAs($seller)
             ->get(route('seller.integrations.edit'))
@@ -49,7 +52,7 @@ class IntegrationsTest extends TestCase
 
     public function test_seller_can_configure_ga4_id_and_it_is_enabled_by_default(): void
     {
-        [$seller, $shop] = $this->sellerWithShop();
+        [$seller, $shop] = $this->sellerWithShop(gaAnalytics: true);
 
         $this->actingAs($seller)
             ->post(route('seller.integrations.update'), ['google_analytics_id' => 'G-ABC123XYZ'])
@@ -65,7 +68,7 @@ class IntegrationsTest extends TestCase
 
     public function test_gtm_id_is_accepted(): void
     {
-        [$seller, $shop] = $this->sellerWithShop();
+        [$seller, $shop] = $this->sellerWithShop(gaAnalytics: true);
 
         $this->actingAs($seller)
             ->post(route('seller.integrations.update'), ['google_analytics_id' => 'GTM-ABCD12'])
@@ -76,7 +79,7 @@ class IntegrationsTest extends TestCase
 
     public function test_id_is_trimmed_and_uppercased(): void
     {
-        [$seller, $shop] = $this->sellerWithShop();
+        [$seller, $shop] = $this->sellerWithShop(gaAnalytics: true);
 
         $this->actingAs($seller)
             ->post(route('seller.integrations.update'), ['google_analytics_id' => '  g-abc123  ']);
@@ -97,7 +100,7 @@ class IntegrationsTest extends TestCase
 
     public function test_clearing_id_removes_integration(): void
     {
-        [$seller, $shop] = $this->sellerWithShop();
+        [$seller, $shop] = $this->sellerWithShop(gaAnalytics: true);
         $shop->integrations()->create([
             'type' => IntegrationType::GoogleAnalytics,
             'enabled' => true,
@@ -112,7 +115,7 @@ class IntegrationsTest extends TestCase
 
     public function test_reconfiguring_keeps_enabled_state(): void
     {
-        [$seller, $shop] = $this->sellerWithShop();
+        [$seller, $shop] = $this->sellerWithShop(gaAnalytics: true);
         $shop->integrations()->create([
             'type' => IntegrationType::GoogleAnalytics,
             'enabled' => false,                     // wcześniej wyłączona w Ustawieniach
@@ -444,5 +447,20 @@ class IntegrationsTest extends TestCase
 
         $this->assertTrue($integration->fresh()->enabled);
         $this->assertTrue($shop->fresh()->onlinePaymentsEnabled());
+    }
+
+    public function test_integrations_page_shows_empty_state_for_free_package(): void
+    {
+        // Kram (bez płatnych integracji) — zamiast kart widzi upsell, bez przycisku zapisu.
+        [$seller] = $this->sellerWithShop(); // domyślny Kram
+
+        $this->actingAs($seller)
+            ->get(route('seller.integrations.edit'))
+            ->assertOk()
+            ->assertSee('Integracje w wyższych pakietach')
+            ->assertDontSee('Klucz obliczania podpisu')   // pole karty Paynow
+            ->assertDontSee('Identyfikator śledzenia')     // pole karty GA
+            ->assertDontSee('Token API')                   // pole karty Fakturowni
+            ->assertDontSee('Zapisz integracje');
     }
 }

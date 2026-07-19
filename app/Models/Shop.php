@@ -483,12 +483,17 @@ class Shop extends Model
     }
 
     /**
-     * Czy storefront ma faktycznie wstrzyknąć GA: dwa warunki — fiszka włączona
-     * (Ustawienia) ORAZ identyfikator wpisany (Integracje). Analogia do
-     * bankTransferAvailable(): stan efektywny, nie sam włącznik.
+     * Czy storefront ma faktycznie wstrzyknąć GA: uprawnienie pakietu
+     * `ga_analytics` (Stragan+; GA/GTM to funkcja płatna — NASZA analityka zostaje
+     * dla wszystkich osobno) ORAZ fiszka włączona (Ustawienia) ORAZ identyfikator
+     * wpisany (Integracje). Stan efektywny, nie sam włącznik.
      */
     public function tracksWithGoogleAnalytics(): bool
     {
+        if ($this->entitlement('ga_analytics') !== true) {
+            return false;
+        }
+
         $integration = $this->integration(IntegrationType::GoogleAnalytics);
 
         return $integration?->enabled === true && filled($integration->config['tracking_id'] ?? null);

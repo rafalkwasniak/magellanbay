@@ -225,7 +225,12 @@
                 {{-- Integracje (włączniki; konfiguracja w zakładce Integracje) --}}
                 <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
                     <h2 class="font-semibold text-stone-900">Integracje</h2>
-                    <p class="mt-1 text-sm text-stone-500">Włączasz i wyłączasz usługi skonfigurowane w zakładce <a href="{{ route('seller.integrations.edit') }}" class="font-medium text-stone-700 underline decoration-amber-300 underline-offset-2">Integracje</a>.</p>
+                    @php($hasAnyIntegration = $shop->entitlement('online_payments') || $shop->entitlement('invoices') || $shop->entitlement('ga_analytics'))
+                    @if ($hasAnyIntegration)
+                        <p class="mt-1 text-sm text-stone-500">Włączasz i wyłączasz usługi skonfigurowane w zakładce <a href="{{ route('seller.integrations.edit') }}" class="font-medium text-stone-700 underline decoration-amber-300 underline-offset-2">Integracje</a>.</p>
+                    @else
+                        <p class="mt-1 text-sm text-stone-500">Płatności online, faktury i Google Analytics dołączają od pakietu <span class="font-medium text-stone-700">Stragan</span>.</p>
+                    @endif
 
                     <div class="mt-6 space-y-4">
                         {{-- Ważniejsze integracje na górze; Google Analytics zawsze na dole.
@@ -265,6 +270,7 @@
                             </div>
                         @endif
 
+                        @if ($shop->entitlement('ga_analytics'))
                         @php($gaConfigured = filled($googleAnalyticsId))
                         <div class="flex items-start gap-4 rounded-2xl border border-stone-200 bg-white/60 p-5 sm:p-6 {{ $gaConfigured ? '' : 'opacity-60' }}">
                             {{-- hidden = wartość bazowa; bez ID checkbox jest disabled i nic nie wysyła --}}
@@ -280,6 +286,7 @@
                                 @endunless
                             </label>
                         </div>
+                        @endif
                     </div>
                 </div>
 
