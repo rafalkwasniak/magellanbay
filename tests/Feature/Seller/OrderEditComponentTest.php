@@ -28,7 +28,7 @@ class OrderEditComponentTest extends TestCase
     private function sellerWithShop(): array
     {
         $seller = User::factory()->consented()->create();
-        $shop = Shop::factory()->create(['owner_id' => $seller->id]);
+        $shop = Shop::factory()->withOrderEditing()->create(['owner_id' => $seller->id]);
 
         return [$seller, $shop];
     }
@@ -160,5 +160,24 @@ class OrderEditComponentTest extends TestCase
             ->assertForbidden();
 
         $this->assertSame('2.00', $item->fresh()->quantity);
+    }
+
+    public function test_editing_blocked_without_entitlement(): void
+    {
+        // Bez uprawnienia `order_editing` (Kram/Stragan) — brak przełącznika edycji,
+        // a crafted-request do mutacji nie zmienia zamówienia (guard w run()).
+        $seller = User::factory()->consented()->create();
+        $shop = Shop::factory()->create(['owner_id' => $seller->id]); // domyślny Kram, brak order_editing
+        $product = Product::factory()->create(['shop_id' => $shop->id, 'track_stock' => true, 'stock' => 5, 'price_gross' => 12.00]);
+        $item = $this->itemFor($shop, $product, 4);
+
+        Livewire::actingAs($seller)
+            ->test(OrderEditor::class, ['order' => $item->order])
+            ->assertDontSee('Edytuj zamówienie')
+            ->call('setQuantity', $item->id, '5')
+            ->assertOk();
+
+        // Zamówienie nietknięte mimo próby mutacji.
+        $this->assertSame('4.00', $item->fresh()->quantity);
     }
 }

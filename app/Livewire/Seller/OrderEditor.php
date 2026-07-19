@@ -63,7 +63,10 @@ class OrderEditor extends Component
      */
     public function editable(): bool
     {
-        return ! $this->order->status->isTerminal();
+        // Edycja zamówienia to funkcja pakietu Pawilon (`order_editing`). Bez niej
+        // nie wchodzimy w tryb edycji, a i tak zablokuje ją guard w run().
+        return $this->order->shop?->entitlement('order_editing') === true
+            && ! $this->order->status->isTerminal();
     }
 
     /**
@@ -169,6 +172,13 @@ class OrderEditor extends Component
     private function run(callable $action, ?int $itemId = null): bool
     {
         $this->authorizeOwnership();
+
+        // Nie ufamy widokowi: żadna mutacja bez prawa do edycji (uprawnienie
+        // pakietu + status niekońcowy). Blokuje też crafted-request z pominięciem
+        // przełącznika „Edytuj zamówienie".
+        if (! $this->editable()) {
+            return false;
+        }
 
         try {
             $action();

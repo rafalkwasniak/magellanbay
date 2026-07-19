@@ -97,4 +97,18 @@ class ShopFactory extends Factory
             ),
         ]);
     }
+
+    /**
+     * Sklep z uprawnieniem do edycji zamówienia — funkcja TYLKO Pawilonu
+     * (`order_editing`). Dokłada `order_editing=true` bez zmiany pakietu.
+     */
+    public function withOrderEditing(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'entitlements' => array_merge(
+                $attributes['entitlements'] ?? config('shop.packages.'.config('shop.default_package').'.entitlements'),
+                ['order_editing' => true],
+            ),
+        ]);
+    }
 }
