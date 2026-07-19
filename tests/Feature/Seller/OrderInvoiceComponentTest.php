@@ -30,7 +30,7 @@ class OrderInvoiceComponentTest extends TestCase
     private function sellerWithFakturownia(): array
     {
         $seller = User::factory()->consented()->create();
-        $shop = Shop::factory()->create(['owner_id' => $seller->id]);
+        $shop = Shop::factory()->withInvoicing()->create(['owner_id' => $seller->id]);
         $shop->integrations()->create([
             'type' => IntegrationType::Invoicing,
             'enabled' => true,

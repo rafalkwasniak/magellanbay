@@ -20,7 +20,7 @@ class OrderInvoicingTest extends TestCase
 
     private function shopWithFakturownia(bool $enabled = true, array $shopAttributes = []): Shop
     {
-        $shop = Shop::factory()->create($shopAttributes);
+        $shop = Shop::factory()->withInvoicing()->create($shopAttributes);
         $shop->integrations()->create([
             'type' => IntegrationType::Invoicing,
             'enabled' => $enabled,

@@ -134,14 +134,19 @@ return [
     | decyduje, czy pakiet da się kupić — wycofanego NIE usuwamy (stare sklepy go
     | trzymają), tylko ustawiamy `false`.
     |
-    | `entitlements` = kanoniczna lista uprawnień. Wygląd/kolory i Analytics są dla
-    | wszystkich, więc NIE są uprawnieniem. `price_yearly` to placeholder (kwoty
-    | nieustalone). `max_products` 24/48/96 dzieli się na pełne rzędy siatki.
+    | `entitlements` = kanoniczna lista uprawnień (ZATWIERDZONA 2026-07-19, 8 kluczy).
+    | Wygląd/kolory i NASZA analityka są dla wszystkich, więc NIE są uprawnieniem
+    | (GA/GTM to osobny klucz `ga_analytics`, płatny od Straganu). `max_products`
+    | 24/48/96 dzieli się na pełne rzędy siatki.
     |
-    | `invoices` (faktury VAT / Fakturownia) jest CELOWO `true` we wszystkich
-    | pakietach — na start dostępne dla każdego. Bramka w kodzie już stoi
-    | (Shop::entitlement('invoices')), więc gdy zapadnie decyzja o płatności,
-    | wystarczy przełączyć `stall` na `false` — bez dorabiania mechanizmu.
+    | `price_yearly` = cena roczna BRUTTO (VAT 23%). Reguła: rok = 10× miesiąc, czyli
+    | 2 miesiące gratis (75/mc→750/rok, 150/mc→1500/rok). To cena „na wystawie";
+    | realny billing (pobieranie pieniędzy) jest osobnym, późniejszym tematem.
+    |
+    | Uprawnienia płatne (`online_payments`, `courier_shipping`, `invoices`,
+    | `ga_analytics`) startują od Straganu; `order_editing`, `discount_codes`,
+    | `bulk_mail` są WYŁĄCZNIE w Pawilonie (uzasadniają 2× cenę). `bulk_mail` i
+    | `discount_codes` to na razie flagi „na wyrost" — same funkcje dojdą później.
     |
     */
 
@@ -155,37 +160,43 @@ return [
                 'max_products' => 24,
                 'online_payments' => false,
                 'courier_shipping' => false,
+                'invoices' => false,
+                'ga_analytics' => false,
+                'order_editing' => false,
                 'discount_codes' => false,
-                'custom_domain' => false,
-                'invoices' => true,
+                'bulk_mail' => false,
             ],
         ],
         'booth' => [
             'name' => 'Stragan',
             'order' => 2,
-            'price_yearly' => 500,
+            'price_yearly' => 750,
             'available' => true,
             'entitlements' => [
                 'max_products' => 48,
                 'online_payments' => true,
                 'courier_shipping' => true,
-                'discount_codes' => true,
-                'custom_domain' => false,
                 'invoices' => true,
+                'ga_analytics' => true,
+                'order_editing' => false,
+                'discount_codes' => false,
+                'bulk_mail' => false,
             ],
         ],
         'pavilion' => [
             'name' => 'Pawilon',
             'order' => 3,
-            'price_yearly' => 900,
+            'price_yearly' => 1500,
             'available' => true,
             'entitlements' => [
                 'max_products' => 96,
                 'online_payments' => true,
                 'courier_shipping' => true,
-                'discount_codes' => true,
-                'custom_domain' => true,
                 'invoices' => true,
+                'ga_analytics' => true,
+                'order_editing' => true,
+                'discount_codes' => true,
+                'bulk_mail' => true,
             ],
         ],
     ],

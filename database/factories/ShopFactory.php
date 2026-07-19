@@ -29,6 +29,7 @@ class ShopFactory extends Factory
             // Snapshot pakietu domyślnego — jak w produkcji (Shop::assignPackage).
             'package' => $package,
             'entitlements' => config("shop.packages.{$package}.entitlements"),
+            'price_yearly' => config("shop.packages.{$package}.price_yearly"),
         ];
     }
 
@@ -50,6 +51,22 @@ class ShopFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'package' => $slug,
             'entitlements' => config("shop.packages.{$slug}.entitlements"),
+            'price_yearly' => config("shop.packages.{$slug}.price_yearly"),
+        ]);
+    }
+
+    /**
+     * Sklep z uprawnieniem do faktur (Fakturownia) — funkcja płatna (Stragan+).
+     * Dokłada `invoices=true` do istniejącego snapshotu bez zmiany pakietu, więc
+     * testy FV nie muszą znać tieru; izoluje samo uprawnienie.
+     */
+    public function withInvoicing(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'entitlements' => array_merge(
+                $attributes['entitlements'] ?? config('shop.packages.'.config('shop.default_package').'.entitlements'),
+                ['invoices' => true],
+            ),
         ]);
     }
 }

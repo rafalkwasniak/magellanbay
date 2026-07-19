@@ -21,10 +21,11 @@ class IntegrationsTest extends TestCase
     /**
      * @return array{0: User, 1: Shop}
      */
-    private function sellerWithShop(array $shopAttributes = []): array
+    private function sellerWithShop(array $shopAttributes = [], bool $invoicing = false): array
     {
         $seller = User::factory()->consented()->create();
-        $shop = Shop::factory()->create(array_merge(['owner_id' => $seller->id], $shopAttributes));
+        $factory = $invoicing ? Shop::factory()->withInvoicing() : Shop::factory();
+        $shop = $factory->create(array_merge(['owner_id' => $seller->id], $shopAttributes));
 
         return [$seller, $shop];
     }
@@ -163,7 +164,7 @@ class IntegrationsTest extends TestCase
 
     public function test_integrations_page_shows_fakturownia_card(): void
     {
-        [$seller] = $this->sellerWithShop();
+        [$seller] = $this->sellerWithShop(invoicing: true);
 
         $this->actingAs($seller)
             ->get(route('seller.integrations.edit'))
@@ -174,7 +175,7 @@ class IntegrationsTest extends TestCase
 
     public function test_seller_can_configure_fakturownia_and_url_is_normalized(): void
     {
-        [$seller, $shop] = $this->sellerWithShop();
+        [$seller, $shop] = $this->sellerWithShop(invoicing: true);
 
         // Bez schematu i z końcowym ukośnikiem — normalizujemy do https:// bez „/".
         $this->actingAs($seller)
@@ -210,7 +211,7 @@ class IntegrationsTest extends TestCase
 
     public function test_blank_token_on_resave_keeps_stored_token(): void
     {
-        [$seller, $shop] = $this->sellerWithShop();
+        [$seller, $shop] = $this->sellerWithShop(invoicing: true);
         $shop->integrations()->create([
             'type' => IntegrationType::Invoicing,
             'enabled' => true,
@@ -232,7 +233,7 @@ class IntegrationsTest extends TestCase
 
     public function test_clearing_fakturownia_url_removes_integration(): void
     {
-        [$seller, $shop] = $this->sellerWithShop();
+        [$seller, $shop] = $this->sellerWithShop(invoicing: true);
         $shop->integrations()->create([
             'type' => IntegrationType::Invoicing,
             'enabled' => true,

@@ -34,7 +34,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'pickup_enabled', 'pay_on_pickup_enabled',
     'courier_enabled', 'courier_cost', 'courier_free_from',
     'parcel_locker_enabled', 'parcel_locker_cost', 'parcel_locker_free_from',
-    'package', 'entitlements', 'subscription_ends_at', 'comped',
+    'package', 'entitlements', 'price_yearly', 'subscription_ends_at', 'comped',
 ])]
 class Shop extends Model
 {
@@ -61,6 +61,7 @@ class Shop extends Model
             'parcel_locker_cost' => 'decimal:2',
             'parcel_locker_free_from' => 'decimal:2',
             'entitlements' => 'array',
+            'price_yearly' => 'decimal:2',
             'subscription_ends_at' => 'datetime',
             'comped' => 'boolean',
             'unseen_orders_count' => 'integer',
@@ -816,15 +817,28 @@ class Shop extends Model
      */
     public function assignPackage(string $slug): void
     {
-        $entitlements = config("shop.packages.{$slug}.entitlements");
+        $package = config("shop.packages.{$slug}");
 
-        if ($entitlements === null) {
+        if ($package === null || ! isset($package['entitlements'])) {
             throw new \InvalidArgumentException("Nieznany pakiet: {$slug}");
         }
 
         $this->package = $slug;
-        $this->entitlements = $entitlements;
+        $this->entitlements = $package['entitlements'];
+        $this->price_yearly = $package['price_yearly'] ?? 0;
         $this->save();
+    }
+
+    /**
+     * Cena roczna (BRUTTO, zł) sklepu: wygrywa zapisany snapshot per sklep,
+     * a gdy go brak (legacy) — fallback do aktualnego cennika pakietu w configu.
+     * Analogicznie do entitlement(): źródłem prawdy jest to, co zapisane na sklepie
+     * (deal per klient, cena zamrożona), nie definicja pakietu.
+     */
+    public function priceYearly(): float
+    {
+        return (float) ($this->price_yearly
+            ?? config("shop.packages.{$this->package}.price_yearly", 0));
     }
 
     /**

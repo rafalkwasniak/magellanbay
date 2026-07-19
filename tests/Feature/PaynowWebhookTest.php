@@ -35,7 +35,7 @@ class PaynowWebhookTest extends TestCase
      */
     private function awaitingOrder(string $paymentId = 'PAY-123', bool $autoInvoice = false, bool $withFakturownia = false): Order
     {
-        $shop = Shop::factory()->create();
+        $shop = Shop::factory()->when($withFakturownia, fn ($f) => $f->withInvoicing())->create();
         $shop->integrations()->create([
             'type' => IntegrationType::Payments,
             'enabled' => true,
