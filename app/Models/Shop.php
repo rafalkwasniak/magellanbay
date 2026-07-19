@@ -574,13 +574,17 @@ class Shop extends Model
     }
 
     /**
-     * Stan efektywny płatności online: włącznik (Ustawienia) ORAZ komplet kluczy.
-     * To warunek, pod którym metoda „Płatność online" pojawia się w kasie — brama
-     * pakietu (entitlement('online_payments')) dojdzie osobno, na końcu wdrożenia.
+     * Stan efektywny płatności online: uprawnienie pakietu ORAZ włącznik
+     * (Ustawienia) ORAZ komplet kluczy. To warunek, pod którym metoda „Płatność
+     * online" pojawia się w kasie. Uprawnienie na pierwszym miejscu = centralna
+     * brama: sklep bez `online_payments` (np. Kram lub po zejściu z pakietu) nie
+     * oferuje płatności online nigdzie, choćby integracja była skonfigurowana.
      */
     public function onlinePaymentsEnabled(): bool
     {
-        return $this->integration(IntegrationType::Payments)?->enabled === true && $this->onlinePaymentsConfigured();
+        return $this->entitlement('online_payments') === true
+            && $this->integration(IntegrationType::Payments)?->enabled === true
+            && $this->onlinePaymentsConfigured();
     }
 
     /**

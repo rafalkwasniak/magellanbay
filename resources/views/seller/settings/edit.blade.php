@@ -225,7 +225,8 @@
 
                     <div class="mt-6 space-y-4">
                         {{-- Ważniejsze integracje na górze; Google Analytics zawsze na dole.
-                             Płatności online bez bramy pakietu na tym etapie (dojdzie na końcu). --}}
+                             Płatności online tylko gdy pakiet daje `online_payments` (Stragan+). --}}
+                        @if ($shop->entitlement('online_payments'))
                         <div class="flex items-start gap-4 rounded-2xl border border-stone-200 bg-white/60 p-5 sm:p-6 {{ $paynowConfigured ? '' : 'opacity-60' }}">
                             {{-- hidden = wartość bazowa; bez konfiguracji checkbox jest disabled i nic nie wysyła --}}
                             <input type="hidden" name="paynow_enabled" value="{{ $paynowConfigured ? '0' : ($paynowEnabled ? '1' : '0') }}">
@@ -240,6 +241,7 @@
                                 @endunless
                             </label>
                         </div>
+                        @endif
 
                         @if ($shop->entitlement('invoices'))
                             <div class="flex items-start gap-4 rounded-2xl border border-stone-200 bg-white/60 p-5 sm:p-6 {{ $fakturowniaConfigured ? '' : 'opacity-60' }}">

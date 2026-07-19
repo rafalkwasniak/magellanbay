@@ -25,7 +25,7 @@ class OnlinePaymentCheckoutTest extends TestCase
 
     private function shopWithOnlinePayments(): Shop
     {
-        $shop = Shop::factory()->create([
+        $shop = Shop::factory()->withOnlinePayments()->create([
             'street' => 'Kwiatowa', 'building_number' => '5', 'postal_code' => '00-001',
             'city' => 'Warszawa', 'province' => 'mazowieckie',
             'pickup_enabled' => true, 'pay_on_pickup_enabled' => true,
@@ -54,6 +54,20 @@ class OnlinePaymentCheckoutTest extends TestCase
         // Wyłączenie integracji zdejmuje metodę z kasy — sama konfiguracja nie wystarcza.
         $shop->integration(IntegrationType::Payments)->update(['enabled' => false]);
         $options = Livewire::test(Checkout::class, ['shopId' => $shop->fresh()->id])->instance()->paymentOptions();
+        $this->assertArrayNotHasKey(PaymentMethod::Online->value, $options);
+    }
+
+    public function test_checkout_hides_online_method_without_entitlement(): void
+    {
+        // Brama pakietu: sklep skonfigurowany i z włączoną integracją, ale bez
+        // uprawnienia `online_payments` (np. po zejściu z pakietu) NIE oferuje
+        // płatności online w kasie.
+        $shop = $this->shopWithOnlinePayments();
+        $shop->forceFill(['entitlements' => ['online_payments' => false]])->save();
+
+        $this->assertFalse($shop->fresh()->onlinePaymentsEnabled());
+
+        $options = Livewire::test(Checkout::class, ['shopId' => $shop->id])->instance()->paymentOptions();
         $this->assertArrayNotHasKey(PaymentMethod::Online->value, $options);
     }
 

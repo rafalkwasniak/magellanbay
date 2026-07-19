@@ -21,10 +21,16 @@ class IntegrationsTest extends TestCase
     /**
      * @return array{0: User, 1: Shop}
      */
-    private function sellerWithShop(array $shopAttributes = [], bool $invoicing = false): array
+    private function sellerWithShop(array $shopAttributes = [], bool $invoicing = false, bool $onlinePayments = false): array
     {
         $seller = User::factory()->consented()->create();
-        $factory = $invoicing ? Shop::factory()->withInvoicing() : Shop::factory();
+        $factory = Shop::factory();
+        if ($invoicing) {
+            $factory = $factory->withInvoicing();
+        }
+        if ($onlinePayments) {
+            $factory = $factory->withOnlinePayments();
+        }
         $shop = $factory->create(array_merge(['owner_id' => $seller->id], $shopAttributes));
 
         return [$seller, $shop];
@@ -294,27 +300,31 @@ class IntegrationsTest extends TestCase
         $this->assertSame(0, ShopIntegration::where('type', IntegrationType::Invoicing)->count());
     }
 
-    // --- Paynow (płatności online) — bliźniak Fakturowni, ale BEZ bramy pakietu ---
+    // --- Paynow (płatności online) — bliźniak Fakturowni, bramkowany `online_payments` ---
 
-    public function test_integrations_page_shows_paynow_card_without_entitlement(): void
+    public function test_paynow_card_is_gated_by_entitlement(): void
     {
-        // Płatności online nie są bramkowane pakietem na tym etapie: karta widoczna
-        // dla każdego sklepu, także takiego bez uprawnień do faktur.
-        [$seller] = $this->sellerWithShop(['entitlements' => ['invoices' => false]]);
+        // Bez uprawnienia `online_payments` (Kram) — karta Paynow się nie renderuje.
+        [$sellerFree] = $this->sellerWithShop();
+        $this->actingAs($sellerFree)
+            ->get(route('seller.integrations.edit'))
+            ->assertOk()
+            ->assertDontSee('Płatności online (Paynow)');
 
-        $this->actingAs($seller)
+        // Z uprawnieniem (Stragan+) — karta widoczna z kluczami i adresem webhooka.
+        [$sellerPaid] = $this->sellerWithShop(onlinePayments: true);
+        $this->actingAs($sellerPaid)
             ->get(route('seller.integrations.edit'))
             ->assertOk()
             ->assertSee('Płatności online (Paynow)')
             ->assertSee('Klucz obliczania podpisu')
-            // Gotowy adres powiadomień do przeklejenia w panelu Paynow.
             ->assertSee('/platnosci/paynow/webhook')
             ->assertSee('Adres powiadomień (webhook)');
     }
 
     public function test_seller_can_configure_paynow_and_it_is_enabled_by_default(): void
     {
-        [$seller, $shop] = $this->sellerWithShop();
+        [$seller, $shop] = $this->sellerWithShop(onlinePayments: true);
 
         $this->actingAs($seller)
             ->post(route('seller.integrations.update'), [
@@ -336,7 +346,7 @@ class IntegrationsTest extends TestCase
 
     public function test_paynow_auto_invoice_flag_is_saved(): void
     {
-        [$seller, $shop] = $this->sellerWithShop();
+        [$seller, $shop] = $this->sellerWithShop(onlinePayments: true);
 
         $this->actingAs($seller)
             ->post(route('seller.integrations.update'), [
@@ -354,7 +364,7 @@ class IntegrationsTest extends TestCase
 
     public function test_paynow_api_key_without_signature_is_rejected_when_not_yet_configured(): void
     {
-        [$seller] = $this->sellerWithShop();
+        [$seller] = $this->sellerWithShop(onlinePayments: true);
 
         $this->actingAs($seller)
             ->post(route('seller.integrations.update'), [
@@ -368,7 +378,7 @@ class IntegrationsTest extends TestCase
 
     public function test_blank_signature_on_resave_keeps_stored_signature(): void
     {
-        [$seller, $shop] = $this->sellerWithShop();
+        [$seller, $shop] = $this->sellerWithShop(onlinePayments: true);
         $shop->integrations()->create([
             'type' => IntegrationType::Payments,
             'enabled' => true,
@@ -391,7 +401,7 @@ class IntegrationsTest extends TestCase
 
     public function test_clearing_paynow_api_key_removes_integration(): void
     {
-        [$seller, $shop] = $this->sellerWithShop();
+        [$seller, $shop] = $this->sellerWithShop(onlinePayments: true);
         $shop->integrations()->create([
             'type' => IntegrationType::Payments,
             'enabled' => true,
@@ -410,7 +420,7 @@ class IntegrationsTest extends TestCase
 
     public function test_settings_toggle_enables_and_disables_configured_paynow(): void
     {
-        [$seller, $shop] = $this->sellerWithShop(['default_vat_rate' => '23']);
+        [$seller, $shop] = $this->sellerWithShop(['default_vat_rate' => '23'], onlinePayments: true);
         $integration = $shop->integrations()->create([
             'type' => IntegrationType::Payments,
             'enabled' => true,

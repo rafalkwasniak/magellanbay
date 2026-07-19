@@ -54,16 +54,17 @@ class IntegrationController extends Controller
             $this->saveFakturownia($shop, $data['fakturownia_url'] ?? null, $data['fakturownia_token'] ?? null);
         }
 
-        // Paynow — świadomie BEZ bramy pakietu na tym etapie: płatności robimy
-        // najpierw dostępne (test na własnym sklepie), a egzekwowanie
-        // entitlement('online_payments') dokładamy na końcu wdrożenia.
-        $this->savePaynow(
-            $shop,
-            $data['paynow_api_key'] ?? null,
-            $data['paynow_signature_key'] ?? null,
-            $data['paynow_environment'] ?? 'sandbox',
-            (bool) ($data['paynow_auto_invoice'] ?? false),
-        );
+        // Paynow bramkowany uprawnieniem pakietu — bez niego karta i tak się nie
+        // renderuje, ale nie ufamy widokowi: zapis tylko gdy wolno.
+        if ($shop->entitlement('online_payments')) {
+            $this->savePaynow(
+                $shop,
+                $data['paynow_api_key'] ?? null,
+                $data['paynow_signature_key'] ?? null,
+                $data['paynow_environment'] ?? 'sandbox',
+                (bool) ($data['paynow_auto_invoice'] ?? false),
+            );
+        }
 
         return redirect()
             ->route('seller.integrations.edit')

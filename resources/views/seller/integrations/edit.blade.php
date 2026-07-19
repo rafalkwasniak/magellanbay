@@ -8,10 +8,10 @@
                 @csrf
 
                 {{-- Płatności online (Paynow / mBank) — najważniejsza integracja, na
-                     samej górze. Na tym etapie BEZ bramy pakietu: dostępna dla każdego
-                     sklepu (test na własnym), egzekwowanie entitlement('online_payments')
-                     dojdzie na końcu wdrożenia. Klucze sprzedawcy trzymamy zaszyfrowane
-                     w bazie — pieniądze płyną klient → Paynow → sprzedawca, wprost. --}}
+                     samej górze, ale TYLKO gdy pakiet daje `online_payments` (Stragan+).
+                     Klucze sprzedawcy trzymamy zaszyfrowane w bazie — pieniądze płyną
+                     klient → Paynow → sprzedawca, wprost. --}}
+                @if ($shop->entitlement('online_payments'))
                 <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
                     <div class="flex items-start gap-4">
                         <span class="mt-0.5 shrink-0 text-2xl">💳</span>
@@ -128,6 +128,7 @@
                         </div>
                     </div>
                 </div>
+                @endif
 
                 {{-- Fakturownia (faktury VAT) — tylko gdy pakiet daje to uprawnienie.
                      Ważniejsze integracje idą na górę; Google Analytics zostaje na dole. --}}

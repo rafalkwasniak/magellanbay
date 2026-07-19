@@ -69,4 +69,18 @@ class ShopFactory extends Factory
             ),
         ]);
     }
+
+    /**
+     * Sklep z uprawnieniem do płatności online (Paynow) — funkcja płatna
+     * (Stragan+). Dokłada `online_payments=true` do snapshotu bez zmiany pakietu.
+     */
+    public function withOnlinePayments(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'entitlements' => array_merge(
+                $attributes['entitlements'] ?? config('shop.packages.'.config('shop.default_package').'.entitlements'),
+                ['online_payments' => true],
+            ),
+        ]);
+    }
 }
