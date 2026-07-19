@@ -17,7 +17,7 @@
         $area = $isAdmin ? 'Administrator' : 'Sprzedawca';
         $nav = $isAdmin ? [
             ['label' => 'Pulpit', 'route' => 'administrator.dashboard', 'icon' => '🏠'],
-            ['label' => 'Sklepy', 'route' => null, 'icon' => '🛍️'],
+            ['label' => 'Sklepy', 'route' => 'administrator.shops.index', 'active' => 'administrator.shops.*', 'icon' => '🛍️'],
             ['label' => 'Sprzedawcy', 'route' => null, 'icon' => '👥'],
             ['label' => 'Zamówienia', 'route' => null, 'icon' => '📦'],
             ['label' => 'Pakiety', 'route' => null, 'icon' => '✨'],

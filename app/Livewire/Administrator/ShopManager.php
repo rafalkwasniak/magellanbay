@@ -1,0 +1,149 @@
+<?php
+
+namespace App\Livewire\Administrator;
+
+use App\Models\Shop;
+use Illuminate\Support\Carbon;
+use Livewire\Component;
+
+/**
+ * Konsola admina — edytor pojedynczego sklepu. Ręczne sterowanie snapshotem:
+ * pakiet (preset), poszczególne uprawnienia, limit produktów, cena roczna,
+ * data końca abonamentu i flaga `comped`.
+ *
+ * WAŻNE: zapis pisze wprost do snapshotu sklepu (`entitlements` + `price_yearly`
+ * + `subscription_ends_at` + `comped` + `package`), NIE woła assignPackage —
+ * dzięki temu ręczne nadpisania (np. moduł spoza pakietu dla dobrego klienta)
+ * NIE są kasowane. „Nadaj pakiet" tylko WYPEŁNIA formularz wartościami presetu
+ * z configu; dopiero „Zapisz" je zatwierdza. Odnowienie/lepkość uprawnień —
+ * patrz plan pakietów (uprawnienia lepkie, cena idzie za cennikiem).
+ */
+class ShopManager extends Component
+{
+    public Shop $shop;
+
+    /** Slug pakietu (naklejka) — ustawiany presetem, zapisywany jako etykieta. */
+    public string $package = '';
+
+    public int $max_products = 0;
+
+    public bool $online_payments = false;
+
+    public bool $courier_shipping = false;
+
+    public bool $invoices = false;
+
+    public bool $ga_analytics = false;
+
+    public bool $order_editing = false;
+
+    public bool $discount_codes = false;
+
+    public bool $bulk_mail = false;
+
+    /** Cena roczna BRUTTO (zł). */
+    public string $price_yearly = '0';
+
+    /** Data końca abonamentu (Y-m-d) lub pusto = bezterminowo/nieustalone. */
+    public string $subscription_ends_at = '';
+
+    public bool $comped = false;
+
+    /**
+     * Kanoniczne klucze uprawnień boolowskich + etykiety PL (do UI).
+     *
+     * @return array<string, string>
+     */
+    public function booleanEntitlements(): array
+    {
+        return [
+            'online_payments' => 'Płatności online',
+            'courier_shipping' => 'Wysyłka kurierska (InPost + Furgonetka)',
+            'invoices' => 'Faktury (Fakturownia)',
+            'ga_analytics' => 'Google Analytics / Tag Manager',
+            'order_editing' => 'Edycja zamówienia',
+            'discount_codes' => 'Kody rabatowe',
+            'bulk_mail' => 'Korespondencja seryjna',
+        ];
+    }
+
+    public function mount(Shop $shop): void
+    {
+        $this->shop = $shop;
+        $this->package = $shop->package ?? config('shop.default_package');
+        $this->max_products = (int) $shop->entitlement('max_products');
+
+        foreach (array_keys($this->booleanEntitlements()) as $key) {
+            $this->{$key} = (bool) $shop->entitlement($key);
+        }
+
+        $this->price_yearly = (string) (int) round($shop->priceYearly());
+        $this->subscription_ends_at = $shop->subscription_ends_at?->format('Y-m-d') ?? '';
+        $this->comped = (bool) $shop->comped;
+    }
+
+    /**
+     * „Nadaj pakiet" — wypełnia formularz wartościami presetu z configu (bez
+     * zapisu). Admin może potem nadpisać pojedyncze pola i zatwierdzić „Zapisz".
+     */
+    public function applyPreset(string $slug): void
+    {
+        $package = config("shop.packages.{$slug}");
+
+        if ($package === null) {
+            return;
+        }
+
+        $this->package = $slug;
+        $this->max_products = (int) ($package['entitlements']['max_products'] ?? 0);
+
+        foreach (array_keys($this->booleanEntitlements()) as $key) {
+            $this->{$key} = (bool) ($package['entitlements'][$key] ?? false);
+        }
+
+        $this->price_yearly = (string) (int) round($package['price_yearly'] ?? 0);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function rules(): array
+    {
+        return [
+            'package' => ['required', 'string', 'in:'.implode(',', array_keys(config('shop.packages')))],
+            'max_products' => ['required', 'integer', 'min:0', 'max:100000'],
+            'price_yearly' => ['required', 'numeric', 'min:0', 'max:1000000'],
+            'subscription_ends_at' => ['nullable', 'date'],
+            'comped' => ['boolean'],
+        ];
+    }
+
+    public function save(): void
+    {
+        $this->validate();
+
+        $entitlements = ['max_products' => $this->max_products];
+        foreach (array_keys($this->booleanEntitlements()) as $key) {
+            $entitlements[$key] = (bool) $this->{$key};
+        }
+
+        $this->shop->forceFill([
+            'package' => $this->package,
+            'entitlements' => $entitlements,
+            'price_yearly' => $this->price_yearly,
+            'subscription_ends_at' => $this->subscription_ends_at !== ''
+                ? Carbon::parse($this->subscription_ends_at)->endOfDay()
+                : null,
+            'comped' => $this->comped,
+        ])->save();
+
+        session()->flash('success', 'Zapisano ustawienia sklepu „'.$this->shop->name.'".');
+
+        $this->redirect(route('administrator.shops.edit', $this->shop), navigate: false);
+    }
+
+    public function render()
+    {
+        return view('livewire.administrator.shop-manager');
+    }
+}

@@ -3,6 +3,7 @@
 use App\Enums\LegalDocumentType;
 use App\Http\Controllers\Administrator\DashboardController as AdministratorDashboard;
 use App\Http\Controllers\Administrator\MailPreviewController;
+use App\Http\Controllers\Administrator\ShopController as AdministratorShopController;
 use App\Http\Controllers\Auth\ActivationController;
 use App\Http\Controllers\PaynowWebhookController;
 use App\Http\Controllers\Auth\AuthController;
@@ -106,6 +107,10 @@ Route::middleware(['auth', 'role:admin'])
     ->name('administrator.')
     ->group(function () {
         Route::get('/panel', AdministratorDashboard::class)->name('dashboard');
+
+        // Sklepy — lista + zarządzanie pakietem/uprawnieniami/ceną per sklep.
+        Route::get('/sklepy', [AdministratorShopController::class, 'index'])->name('shops.index');
+        Route::get('/sklepy/{shop}', [AdministratorShopController::class, 'edit'])->name('shops.edit');
 
         // Podgląd szablonów maili (na froncie, dla nas) — np. /administrator/podglad-maila/aktywacja
         Route::get('/podglad-maila/{template}', [MailPreviewController::class, 'show'])->name('mail.preview');
