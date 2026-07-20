@@ -116,6 +116,61 @@ class CartServiceTest extends TestCase
         $this->assertSame(1, $this->cart()->count($shop->id));
     }
 
+    public function test_reconcile_reports_quantity_adjustment_when_stock_drops(): void
+    {
+        $shop = Shop::factory()->create();
+        $product = $this->product($shop, ['name' => 'Bukiet', 'track_stock' => true, 'stock' => 9]);
+        $this->cart()->add($product, 8);
+
+        $product->update(['stock' => 3]);
+        $result = $this->cart()->reconcile($shop->id);
+
+        $this->assertSame(3.0, $result['lines']->first()['quantity']);
+        $this->assertCount(1, $result['notices']);
+        $this->assertStringContainsString('Bukiet', $result['notices'][0]);
+        $this->assertStringContainsString('dostosowana do dostępności', $result['notices'][0]);
+    }
+
+    public function test_reconcile_reports_removed_product(): void
+    {
+        $shop = Shop::factory()->create();
+        $product = $this->product($shop, ['name' => 'Świeca']);
+        $this->cart()->add($product, 2);
+
+        $product->update(['is_active' => false]);
+        $result = $this->cart()->reconcile($shop->id);
+
+        $this->assertTrue($result['lines']->isEmpty());
+        $this->assertContains('Jeden lub więcej produktów nie jest już dostępnych i został usunięty z koszyka.', $result['notices']);
+    }
+
+    public function test_reconcile_reports_sold_out_product(): void
+    {
+        $shop = Shop::factory()->create();
+        $product = $this->product($shop, ['name' => 'Kubek', 'track_stock' => true, 'stock' => 4]);
+        $this->cart()->add($product, 4);
+
+        $product->update(['stock' => 0]);
+        $result = $this->cart()->reconcile($shop->id);
+
+        $this->assertTrue($result['lines']->isEmpty());
+        $this->assertCount(1, $result['notices']);
+        $this->assertStringContainsString('Kubek', $result['notices'][0]);
+        $this->assertStringContainsString('wyprzedany', $result['notices'][0]);
+    }
+
+    public function test_reconcile_has_no_notices_when_nothing_changed(): void
+    {
+        $shop = Shop::factory()->create();
+        $product = $this->product($shop, ['track_stock' => true, 'stock' => 10]);
+        $this->cart()->add($product, 3);
+
+        $result = $this->cart()->reconcile($shop->id);
+
+        $this->assertSame(3.0, $result['lines']->first()['quantity']);
+        $this->assertSame([], $result['notices']);
+    }
+
     public function test_weight_product_takes_fractional_quantity_and_caps_to_stock(): void
     {
         $shop = Shop::factory()->create();

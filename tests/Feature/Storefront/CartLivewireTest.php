@@ -231,4 +231,27 @@ class CartLivewireTest extends TestCase
 
         $this->assertSame(0.5, app(CartService::class)->raw($shop->id)[$product->id]);
     }
+
+    public function test_cart_page_shows_banner_when_stock_dropped(): void
+    {
+        $shop = Shop::factory()->create();
+        $product = $this->product($shop, ['name' => 'Storczyk', 'track_stock' => true, 'stock' => 9]);
+        app(CartService::class)->add($product, 8);
+
+        $product->update(['stock' => 3]);
+
+        Livewire::test(Cart::class, ['shopId' => $shop->id])
+            ->assertSee('Zaktualizowaliśmy Twój koszyk')
+            ->assertSee('dostosowana do dostępności');
+    }
+
+    public function test_cart_page_no_banner_when_nothing_changed(): void
+    {
+        $shop = Shop::factory()->create();
+        $product = $this->product($shop, ['track_stock' => true, 'stock' => 10]);
+        app(CartService::class)->add($product, 2);
+
+        Livewire::test(Cart::class, ['shopId' => $shop->id])
+            ->assertDontSee('Zaktualizowaliśmy Twój koszyk');
+    }
 }

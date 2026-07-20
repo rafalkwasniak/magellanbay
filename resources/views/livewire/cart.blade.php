@@ -1,4 +1,20 @@
 <div>
+    @if (! empty($notices))
+        {{-- Korekta dostępności: koszyk został po cichu uzgodniony ze stanem —
+             tu tłumaczymy klientowi, co i dlaczego się zmieniło. --}}
+        <div class="st-card st-border mb-6 flex gap-3 rounded-2xl border px-5 py-4" role="status" aria-live="polite">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="mt-0.5 h-5 w-5 shrink-0 opacity-70" aria-hidden="true">
+                <circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/>
+            </svg>
+            <div class="min-w-0 space-y-1 text-sm">
+                <p class="font-semibold">Zaktualizowaliśmy Twój koszyk</p>
+                @foreach ($notices as $notice)
+                    <p class="opacity-80">{{ $notice }}</p>
+                @endforeach
+            </div>
+        </div>
+    @endif
+
     @if ($lines->isEmpty())
         {{-- Pusty koszyk --}}
         <div class="st-card st-border mx-auto max-w-lg rounded-3xl border px-8 py-16 text-center">

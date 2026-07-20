@@ -84,11 +84,15 @@ class Cart extends Component
 
     public function render()
     {
-        $lines = app(CartService::class)->lines($this->shopId);
+        // Jedno uzgodnienie na render: pozycje + komunikaty o korektach (spadł
+        // stan / produkt zniknął), żeby klient nie zobaczył cicho zmienionego
+        // koszyka bez wyjaśnienia.
+        ['lines' => $lines, 'notices' => $notices] = app(CartService::class)->reconcile($this->shopId);
 
         return view('livewire.cart', [
             'lines' => $lines,
             'total' => $lines->sum('line_total'),
+            'notices' => $notices,
         ]);
     }
 }

@@ -117,18 +117,20 @@ class CartService
     }
 
     /**
-     * Uzgodnione pozycje koszyka: świeże produkty z bazy, ilości przycięte do
-     * stanu, pominięte produkty nieistniejące/nieaktywne (i wyczyszczone z sesji).
-     * Każda pozycja: product, quantity, unit_price (brutto), line_total.
+     * Uzgodnione pozycje koszyka + komunikaty o dokonanych korektach — do banera
+     * na stronie koszyka. Zwraca świeże produkty z bazy, ilości przycięte do stanu,
+     * pomija produkty nieistniejące/nieaktywne/wyprzedane (i czyści je z sesji).
+     * Treść komunikatów jest ta sama co przy składaniu zamówienia (OrderService),
+     * żeby klient słyszał jeden, spójny głos na obu etapach.
      *
-     * @return Collection<int, array{product: Product, quantity: float, unit_price: float, line_total: float}>
+     * @return array{lines: Collection<int, array{product: Product, quantity: float, unit_price: float, line_total: float}>, notices: list<string>}
      */
-    public function lines(int $shopId): Collection
+    public function reconcile(int $shopId): array
     {
         $raw = $this->raw($shopId);
 
         if ($raw === []) {
-            return collect();
+            return ['lines' => collect(), 'notices' => []];
         }
 
         $products = Product::where('shop_id', $shopId)
@@ -138,19 +140,29 @@ class CartService
             ->keyBy('id');
 
         $reconciled = [];
+        $notices = [];
 
         $lines = collect(array_keys($raw))
-            ->map(function (int $productId) use ($raw, $products, &$reconciled) {
+            ->map(function (int $productId) use ($raw, $products, &$reconciled, &$notices) {
                 $product = $products->get($productId);
+                $requested = (float) $raw[$productId];
 
                 if ($product === null) {
+                    $notices[] = 'Jeden lub więcej produktów nie jest już dostępnych i został usunięty z koszyka.';
+
                     return null;    // zdjęty/usunięty — wypadnie z koszyka
                 }
 
-                $qty = $this->capToStock($product, (float) $raw[$productId]);
+                $qty = $this->capToStock($product, $requested);
 
                 if ($qty <= 0) {
+                    $notices[] = 'Produkt „'.$product->name.'" jest wyprzedany i został usunięty z koszyka.';
+
                     return null;    // wyprzedany — wypada
+                }
+
+                if ($qty < $requested) {
+                    $notices[] = 'Ilość „'.$product->name.'" została dostosowana do dostępności ('.$product->sale_unit->formatQuantity($qty).').';
                 }
 
                 $reconciled[$productId] = $qty;
@@ -172,7 +184,18 @@ class CartService
             session()->put(self::KEY.'.'.$shopId, $reconciled);
         }
 
-        return $lines;
+        return ['lines' => $lines, 'notices' => array_values(array_unique($notices))];
+    }
+
+    /**
+     * Same pozycje koszyka, bez komunikatów o korektach (cienki wrapper na
+     * reconcile()). Używane tam, gdzie liczy się tylko zawartość/suma.
+     *
+     * @return Collection<int, array{product: Product, quantity: float, unit_price: float, line_total: float}>
+     */
+    public function lines(int $shopId): Collection
+    {
+        return $this->reconcile($shopId)['lines'];
     }
 
     public function total(int $shopId): float
