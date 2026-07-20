@@ -27,6 +27,7 @@
                 <nav class="flex items-center gap-2 sm:gap-4">
                     <a href="#funkcje" class="hidden text-sm font-medium text-stone-500 transition hover:text-stone-800 sm:inline">Możliwości</a>
                     <a href="#jak-to-dziala" class="hidden text-sm font-medium text-stone-500 transition hover:text-stone-800 sm:inline">Jak to działa</a>
+                    <a href="#pakiety" class="hidden text-sm font-medium text-stone-500 transition hover:text-stone-800 sm:inline">Pakiety</a>
                     <a href="{{ route('login') }}" class="rounded-2xl px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-white/70">Zaloguj się</a>
                     <a href="{{ route('register') }}" class="rounded-2xl bg-gradient-to-br from-amber-500 to-rose-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-rose-500/20 transition hover:brightness-105">Załóż sklep</a>
                 </nav>
@@ -36,13 +37,13 @@
             <section class="grid items-center gap-12 py-12 lg:grid-cols-2 lg:py-20">
                 <div>
                     <span class="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/70 px-3 py-1 text-xs font-medium text-amber-700 backdrop-blur">
-                        Pakiet Free — zacznij bez opłat
+                        Pakiet Kram — zacznij bez opłat
                     </span>
                     <h1 class="mt-5 text-4xl font-semibold leading-tight tracking-tight text-stone-900 sm:text-5xl">
                         Twój sklep internetowy <span class="bg-gradient-to-br from-amber-500 to-rose-500 bg-clip-text text-transparent">w 5 minut</span>
                     </h1>
                     <p class="mt-5 max-w-xl text-lg text-stone-600">
-                        Kiedy konkurencja dopiero konfiguruje swój sklep, Ty już sprzedajesz swój produkt. Załóż konto, dodaj pierwszy produkt i otwórz sklep — bez wiedzy technicznej.
+                        Kiedy konkurencja dopiero konfiguruje sklep, Ty już sprzedajesz. Załóż konto, dodaj pierwszy produkt i publikuj — bez wiedzy technicznej.
                     </p>
                     <div class="mt-8 flex flex-wrap items-center gap-3">
                         <a href="{{ route('register') }}" class="rounded-2xl bg-gradient-to-br from-amber-500 to-rose-500 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-rose-500/20 transition hover:brightness-105">
@@ -84,19 +85,69 @@
                         </div>
                     </div>
                     <div class="pointer-events-none absolute -right-4 -top-4 rounded-2xl border border-white/60 bg-white/90 px-3 py-2 text-xs font-medium text-stone-700 shadow-lg backdrop-blur">
-                        Sklep gotowy ✓
+                        Przykładowy sklep
                     </div>
                 </div>
             </section>
 
-            {{-- Pasek zaufania (dane przykładowe) --}}
-            <section class="grid grid-cols-2 gap-4 py-6 sm:grid-cols-4">
-                @foreach ([['1 200+', 'aktywnych sklepów'], ['5 min', 'średni czas startu'], ['0 zł', 'pakiet Free'], ['25', 'produktów w Free']] as [$value, $label])
-                    <div class="rounded-3xl border border-white/60 bg-white/70 p-5 text-center backdrop-blur">
-                        <p class="text-2xl font-semibold tracking-tight text-stone-900">{{ $value }}</p>
-                        <p class="mt-1 text-xs text-stone-500">{{ $label }}</p>
-                    </div>
-                @endforeach
+            {{-- Pakiety (dane realne z config/shop.php — jedno źródło prawdy) --}}
+            <section id="pakiety" class="py-10">
+                <div class="max-w-2xl">
+                    <h2 class="text-3xl font-semibold tracking-tight text-stone-900">Zacznij za darmo, rośnij, gdy zechcesz</h2>
+                    <p class="mt-3 text-stone-600">Pakiet Kram jest bezpłatny bez limitu czasu. Płatne pakiety odblokowują płatności online, wysyłki i faktury — zmienisz je w każdej chwili.</p>
+                </div>
+                <div class="mt-8 grid gap-5 sm:grid-cols-3">
+                    @foreach (config('shop.packages') as $pkg)
+                        @php($ent = $pkg['entitlements'])
+                        @php($yearly = (int) $pkg['price_yearly'])
+                        @php($monthly = intdiv($yearly, 10))
+                        @php($featured = ($pkg['name'] ?? '') === 'Stragan')
+                        @php($features = array_values(array_filter([
+                            ['label' => 'Do '.$ent['max_products'].' produktów'],
+                            ['label' => 'Własny adres i strona sklepu'],
+                            ['label' => 'Opisy z korektą AI'],
+                            ['label' => $ent['online_payments'] ? 'Płatności online Paynow' : 'Przelew i odbiór osobisty'],
+                            $ent['courier_shipping'] ? ['label' => 'Wysyłka kurierem i przez InPost'] : null,
+                            $ent['invoices'] ? ['label' => 'Integracja z Fakturownią'] : null,
+                            $ent['order_editing'] ? ['label' => 'Edycja zamówień'] : null,
+                            $ent['discount_codes'] ? ['label' => 'Kody rabatowe w koszyku', 'soon' => true] : null,
+                            $ent['bulk_mail'] ? ['label' => 'Newsletter produktowy', 'soon' => true] : null,
+                        ])))
+                        <div class="relative rounded-3xl border bg-white/70 p-6 backdrop-blur {{ $featured ? 'border-amber-300 ring-2 ring-amber-400/50 shadow-lg shadow-amber-900/5' : 'border-white/60' }}">
+                            @if ($featured)
+                                <span class="absolute -top-3 left-6 rounded-full bg-gradient-to-br from-amber-500 to-rose-500 px-3 py-1 text-[11px] font-semibold text-white shadow">Najczęściej wybierany</span>
+                            @endif
+                            <p class="font-semibold text-stone-900">{{ $pkg['name'] }}</p>
+                            @if ($yearly === 0)
+                                <p class="mt-3">
+                                    <span class="text-3xl font-semibold tracking-tight text-stone-900">0 zł</span>
+                                </p>
+                                <p class="mt-1 text-xs text-stone-500">Za darmo, bez limitu czasu · bez karty</p>
+                            @else
+                                <p class="mt-3">
+                                    <span class="text-3xl font-semibold tracking-tight text-stone-900">{{ $yearly }} zł</span>
+                                    <span class="text-sm text-stone-500">/ rok</span>
+                                </p>
+                                <p class="mt-1 text-xs text-stone-500">To {{ $monthly }} zł/mies. — płacisz za 10 miesięcy, 2 gratis</p>
+                            @endif
+                            <ul class="mt-5 space-y-2 text-sm">
+                                @foreach ($features as $feature)
+                                    @php($soon = $feature['soon'] ?? false)
+                                    <li class="flex items-start gap-2 {{ $soon ? 'text-stone-400' : 'text-stone-600' }}">
+                                        <span class="mt-0.5 {{ $soon ? 'text-stone-300' : 'text-amber-600' }}">✓</span>
+                                        <span>
+                                            {{ $feature['label'] }}
+                                            @if ($soon)
+                                                <span class="ml-1 align-middle rounded-full bg-stone-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-stone-500">wkrótce</span>
+                                            @endif
+                                        </span>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endforeach
+                </div>
+                <p class="mt-4 text-xs text-stone-500">Ceny brutto, rozliczenie roczne. Pakiet zmienisz w każdej chwili.</p>
             </section>
 
             {{-- Funkcje --}}
@@ -109,7 +160,7 @@
                     @foreach ([
                         ['🏪', 'Własny adres sklepu', 'Każdy sklep dostaje subdomenę {nazwa}.'.$domain.' od razu po rejestracji.'],
                         ['⚡', 'Gotowy w kilka minut', 'Rejestracja, dodanie produktu i publikacja — bez wiedzy technicznej.'],
-                        ['✨', 'Treści z pomocą AI', 'Generuj i redaguj opisy produktów oraz sklepu jednym kliknięciem.'],
+                        ['✨', 'Korekta opisów przez AI', 'Napisz szkic — AI poprawi styl, ortografię i interpunkcję jednym kliknięciem.'],
                         ['🔎', 'SEO od ręki', 'Przyjazne adresy, meta opisy, mapy strony i dane produktów dla wyszukiwarek.'],
                         ['💳', 'Płatności i dostawy', 'Odbiór osobisty, przelew i kolejne metody — konfigurowane w kilka chwil.'],
                         ['🧾', 'Dane firmy z NIP', 'Pobierz nazwę i adres firmy po numerze NIP i przyspiesz konfigurację.'],
@@ -145,26 +196,26 @@
                 </div>
             </section>
 
-            {{-- Przykładowe sklepy (dane przykładowe) --}}
+            {{-- Dla kogo jest Kramio (branże, nie konkretne sklepy) --}}
             <section class="py-16 lg:py-20">
                 <div class="max-w-2xl">
-                    <h2 class="text-3xl font-semibold tracking-tight text-stone-900">Sklepy, które mogłyby powstać u nas</h2>
-                    <p class="mt-3 text-stone-600">Rękodzieło, lokalne marki, twórcy — każdy z własnym adresem.</p>
+                    <h2 class="text-3xl font-semibold tracking-tight text-stone-900">Dla kogo jest Kramio</h2>
+                    <p class="mt-3 text-stone-600">Dla twórców i lokalnych marek, które chcą sprzedawać po swojemu — bez prowizji marketplace'u i bez agencji.</p>
                 </div>
                 <div class="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                     @foreach ([
-                        ['Pracownia Ceramiki', 'ceramika-lena', 'Rękodzieło', '🏺'],
-                        ['Świece Sojowe Mila', 'swiece-mila', 'Dom i zapachy', '🕯️'],
-                        ['Skórzane Drobiazgi', 'skora-atelier', 'Galanteria', '👜'],
-                        ['Kawa Palarnia 47', 'palarnia-47', 'Żywność', '☕'],
-                        ['Biżuteria Srebrna Iga', 'srebro-iga', 'Biżuteria', '💍'],
-                        ['Zabawki z Drewna', 'drewniane-zabawki', 'Dla dzieci', '🧸'],
-                    ] as [$name, $slug, $category, $icon])
-                        <div class="flex items-center gap-4 rounded-3xl border border-white/60 bg-white/70 p-5 backdrop-blur">
+                        ['Rękodzieło i sztuka', 'Ceramika, biżuteria, ilustracja — rzeczy robione ręcznie.', '🏺'],
+                        ['Dom i zapachy', 'Świece, dekoracje, tekstylia i drobiazgi do wnętrz.', '🕯️'],
+                        ['Moda i galanteria', 'Ubrania, torby, dodatki ze skóry i tkanin.', '👜'],
+                        ['Lokalna żywność', 'Kawa, miód, przetwory, wypieki i produkty regionalne.', '☕'],
+                        ['Dla dzieci', 'Zabawki, ubranka i wyprawki od małych twórców.', '🧸'],
+                        ['Rośliny i florystyka', 'Bukiety, kompozycje i rośliny doniczkowe.', '🌷'],
+                    ] as [$title, $desc, $icon])
+                        <div class="flex items-start gap-4 rounded-3xl border border-white/60 bg-white/70 p-5 backdrop-blur">
                             <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-100 to-rose-100 text-2xl">{{ $icon }}</span>
                             <div class="min-w-0">
-                                <p class="truncate font-semibold text-stone-900">{{ $name }}</p>
-                                <p class="truncate text-xs text-stone-500">{{ $category }} · {{ $slug }}.{{ $domain }}</p>
+                                <p class="font-semibold text-stone-900">{{ $title }}</p>
+                                <p class="mt-0.5 text-xs text-stone-500">{{ $desc }}</p>
                             </div>
                         </div>
                     @endforeach
@@ -201,7 +252,7 @@
                         <a href="{{ route('legal.privacy') }}" class="transition hover:text-stone-800">Polityka prywatności</a>
                     </nav>
                 </div>
-                <p class="mt-6 text-center text-xs text-stone-400">© {{ now()->year }} {{ config('app.name') }}. Wszystkie nazwy sklepów i statystyki na tej stronie są przykładowe.</p>
+                <p class="mt-6 text-center text-xs text-stone-400">© {{ now()->year }} {{ config('app.name') }}. Widok sklepu w nagłówku to wizualizacja produktu.</p>
             </footer>
         </div>
     </div>
