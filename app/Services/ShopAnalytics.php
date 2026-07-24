@@ -6,6 +6,7 @@ use App\Enums\AnalyticsPeriod;
 use App\Enums\OrderStatus;
 use App\Models\OrderItem;
 use App\Models\Shop;
+use App\Models\ShopStat;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -103,6 +104,33 @@ class ShopAnalytics
             // klienci wg wartości zakupów w oknie.
             'customers_breakdown' => $this->customerBreakdown($shop, $current, $start),
             'top_customers' => $this->topCustomers($current),
+            // Poziom 2: ruch z agregatu `shop_stats` + konwersja (zamówienia/wizyty).
+            'traffic' => $this->traffic($shop, $start, $now, $current->count()),
+        ];
+    }
+
+    /**
+     * Ruch w oknie z dziennego agregatu `shop_stats`: wizyty i wyświetlenia
+     * produktów (suma dni), oraz konwersja = zamówienia / wizyty. Konwersja null
+     * przy zerze wizyt (brak bazy — starsze okresy sprzed uruchomienia zliczania
+     * ruchu), żeby UI pokazał „—" zamiast dzielić przez zero.
+     *
+     * @return array{visits: int, product_views: int, conversion: float|null}
+     */
+    private function traffic(Shop $shop, CarbonInterface $start, CarbonInterface $end, int $ordersCount): array
+    {
+        $row = ShopStat::query()
+            ->where('shop_id', $shop->id)
+            ->whereBetween('date', [$start->toDateString(), $end->toDateString()])
+            ->selectRaw('COALESCE(SUM(visits), 0) as visits, COALESCE(SUM(product_views), 0) as product_views')
+            ->first();
+
+        $visits = (int) ($row->visits ?? 0);
+
+        return [
+            'visits' => $visits,
+            'product_views' => (int) ($row->product_views ?? 0),
+            'conversion' => $visits > 0 ? round($ordersCount / $visits * 100, 1) : null,
         ];
     }
 

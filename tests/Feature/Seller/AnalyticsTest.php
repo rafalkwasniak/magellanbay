@@ -236,6 +236,38 @@ class AnalyticsTest extends TestCase
         $this->assertSame('maly@example.com', $top[1]['label']);
     }
 
+    public function test_traffic_and_conversion_from_shop_stats(): void
+    {
+        [, $shop] = $this->sellerWithShop();
+        // Zapis jak z TrafficRecordera (czysta data, bez komponentu czasu).
+        \Illuminate\Support\Facades\DB::table('shop_stats')->insert([
+            'shop_id' => $shop->id, 'date' => now()->toDateString(),
+            'visits' => 100, 'product_views' => 250,
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+        for ($i = 0; $i < 10; $i++) {
+            $this->sale($shop, 50.0, "k{$i}@example.com", now()->subDays(1)->toDateTimeString());
+        }
+
+        $tr = app(ShopAnalytics::class)->for($shop, AnalyticsPeriod::Last30Days)['traffic'];
+
+        $this->assertSame(100, $tr['visits']);
+        $this->assertSame(250, $tr['product_views']);
+        // 10 zamówień / 100 wizyt = 10% konwersji.
+        $this->assertSame(10.0, $tr['conversion']);
+    }
+
+    public function test_conversion_is_null_without_visits(): void
+    {
+        [, $shop] = $this->sellerWithShop();
+        $this->sale($shop, 50.0, 'a@example.com', now()->subDays(1)->toDateTimeString());
+
+        $tr = app(ShopAnalytics::class)->for($shop, AnalyticsPeriod::Last30Days)['traffic'];
+
+        // Zamówienia są, ale ruchu nie zbierano → konwersja „—" (null), nie /0.
+        $this->assertNull($tr['conversion']);
+    }
+
     public function test_seller_can_view_analytics_page(): void
     {
         [$seller, $shop] = $this->sellerWithShop();
@@ -254,7 +286,8 @@ class AnalyticsTest extends TestCase
             ->assertSee('Metody płatności')
             ->assertSee('Metody dostawy')
             ->assertSee('Nowi vs powracający')
-            ->assertSee('Najlepsi klienci');
+            ->assertSee('Najlepsi klienci')
+            ->assertSee('Ruch i konwersja');
     }
 
     public function test_period_can_be_switched_via_query(): void

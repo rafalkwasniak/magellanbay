@@ -3,6 +3,7 @@
 use App\Http\Middleware\AuthenticateCustomer;
 use App\Http\Middleware\EnsureConsentsAreCurrent;
 use App\Http\Middleware\EnsureUserHasRole;
+use App\Http\Middleware\RecordStorefrontTraffic;
 use App\Http\Middleware\ResolveShop;
 use App\Services\DiscordErrorReporter;
 use Illuminate\Foundation\Application;
@@ -21,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => EnsureUserHasRole::class,
             'ensure.consents' => EnsureConsentsAreCurrent::class,
             'tenant' => ResolveShop::class,
+            'record.traffic' => RecordStorefrontTraffic::class,
             'auth.customer' => AuthenticateCustomer::class,
         ]);
 

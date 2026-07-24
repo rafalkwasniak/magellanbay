@@ -46,6 +46,33 @@
                 @endforeach
             </div>
 
+            {{-- Ruch i konwersja (Poziom 2): z agregatu shop_stats. Zbierane od
+                 uruchomienia zliczania, więc starsze okna bywają puste — mówimy to
+                 wprost, a konwersję bez wizyt pokazujemy jako „—" (nie dzielimy /0). --}}
+            @php $tr = $analytics['traffic']; @endphp
+            <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                <div class="flex items-center justify-between">
+                    <h2 class="font-semibold text-stone-900">Ruch i konwersja</h2>
+                    <span class="text-lg">📈</span>
+                </div>
+                <p class="mt-1 text-sm text-stone-500">Zliczane od włączenia analityki ruchu — starsze okresy mogą być puste.</p>
+                <dl class="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <div>
+                        <dt class="text-sm text-stone-500">Wizyty</dt>
+                        <dd class="mt-1 text-2xl font-semibold tracking-tight tabular-nums text-stone-900">{{ number_format($tr['visits'], 0, ',', ' ') }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm text-stone-500">Wyświetlenia produktów</dt>
+                        <dd class="mt-1 text-2xl font-semibold tracking-tight tabular-nums text-stone-900">{{ number_format($tr['product_views'], 0, ',', ' ') }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm text-stone-500">Konwersja</dt>
+                        <dd class="mt-1 text-2xl font-semibold tracking-tight tabular-nums text-stone-900">{{ $tr['conversion'] === null ? '—' : number_format($tr['conversion'], 1, ',', ' ').'%' }}</dd>
+                    </div>
+                </dl>
+                <p class="mt-3 text-xs text-stone-400">Konwersja = udział wizyt zakończonych zamówieniem.</p>
+            </div>
+
             {{-- Sprzedaż w czasie: jeden słupek na kubełek okna (dzień/miesiąc). --}}
             @php $byMonth = $period === \App\Enums\AnalyticsPeriod::Last12Months; @endphp
             <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">

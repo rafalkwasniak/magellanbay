@@ -214,7 +214,7 @@ Route::middleware('auth')->group(function () {
 | Kolejno dojdą: /produkt/{product}, /kategoria/{...}, /koszyk.
 */
 Route::domain('{shop}.'.config('tenancy.central_domain'))
-    ->middleware('tenant')
+    ->middleware(['tenant', 'record.traffic'])
     ->group(function () {
         Route::get('/', [StorefrontHome::class, 'show'])->name('storefront.home');
         Route::get('/produkty', [StorefrontProduct::class, 'index'])->name('storefront.products');
