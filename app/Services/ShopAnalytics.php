@@ -99,7 +99,79 @@ class ShopAnalytics
             'bestsellers' => $this->bestsellers($shop, $start, $now),
             'payment_split' => $this->split($current, 'payment_method'),
             'delivery_split' => $this->split($current, 'delivery_method'),
+            // CP-D: klienci. Nowi vs powracający (wg historii sprzed okna) i najlepsi
+            // klienci wg wartości zakupów w oknie.
+            'customers_breakdown' => $this->customerBreakdown($shop, $current, $start),
+            'top_customers' => $this->topCustomers($current),
         ];
+    }
+
+    /**
+     * Nowi vs powracający wśród klientów, którzy kupili w oknie. „Powracający" =
+     * miał jakiekolwiek nie-anulowane zamówienie PRZED początkiem okna; reszta to
+     * „nowi" (pierwszy zakup w tym oknie). Jedno dodatkowe lekkie zapytanie o same
+     * e-maile sprzed okna; dopasowanie po znormalizowanym adresie w PHP.
+     *
+     * @param  Collection<int, \App\Models\Order>  $current
+     * @return array{new: int, returning: int, returning_rate: float|null}
+     */
+    private function customerBreakdown(Shop $shop, Collection $current, CarbonInterface $start): array
+    {
+        $windowEmails = $current
+            ->map(fn ($order) => mb_strtolower(trim((string) $order->buyer_email)))
+            ->filter()
+            ->unique();
+
+        $total = $windowEmails->count();
+
+        if ($total === 0) {
+            return ['new' => 0, 'returning' => 0, 'returning_rate' => null];
+        }
+
+        $priorEmails = $shop->orders()
+            ->countedAsSale()
+            ->where('created_at', '<', $start)
+            ->get(['buyer_email'])
+            ->map(fn ($order) => mb_strtolower(trim((string) $order->buyer_email)))
+            ->filter()
+            ->unique();
+
+        $returning = $windowEmails->intersect($priorEmails)->count();
+        $new = $total - $returning;
+
+        return [
+            'new' => $new,
+            'returning' => $returning,
+            'returning_rate' => $returning / $total,
+        ];
+    }
+
+    /**
+     * Najlepsi klienci w oknie wg wartości zakupów (suma obrotu, po znormalizowanym
+     * e-mailu). Etykieta = imię i nazwisko kupującego, a gdy brak — sam e-mail.
+     *
+     * @param  Collection<int, \App\Models\Order>  $orders
+     * @return list<array{label: string, revenue: float, orders: int}>
+     */
+    private function topCustomers(Collection $orders, int $limit = 5): array
+    {
+        return $orders
+            ->filter(fn ($order) => filled($order->buyer_email))
+            ->groupBy(fn ($order) => mb_strtolower(trim((string) $order->buyer_email)))
+            ->map(function (Collection $rows) {
+                $first = $rows->first();
+                $name = trim(($first->buyer_name ?? '').' '.($first->buyer_surname ?? ''));
+
+                return [
+                    'label' => $name !== '' ? $name : (string) $first->buyer_email,
+                    'revenue' => $this->revenue($rows),
+                    'orders' => $rows->count(),
+                ];
+            })
+            ->sortByDesc('revenue')
+            ->take($limit)
+            ->values()
+            ->all();
     }
 
     /**
@@ -174,7 +246,7 @@ class ShopAnalytics
             ->countedAsSale()
             ->where('created_at', '>=', $from)
             ->where('created_at', '<', $to)
-            ->get(['total_gross', 'buyer_email', 'created_at', 'payment_method', 'delivery_method']);
+            ->get(['total_gross', 'buyer_email', 'buyer_name', 'buyer_surname', 'created_at', 'payment_method', 'delivery_method']);
     }
 
     /**

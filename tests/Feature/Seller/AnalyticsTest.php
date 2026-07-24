@@ -196,6 +196,46 @@ class AnalyticsTest extends TestCase
         $this->assertEqualsWithDelta(1.0, $delivery->first()['share'], 0.001);
     }
 
+    public function test_customer_breakdown_new_vs_returning(): void
+    {
+        [, $shop] = $this->sellerWithShop();
+
+        // Klient A: kupił PRZED oknem i teraz → powracający.
+        $this->sale($shop, 100.0, 'wraca@example.com', now()->subDays(90)->toDateTimeString());
+        $this->sale($shop, 150.0, 'wraca@example.com', now()->subDays(2)->toDateTimeString());
+        // Klient B: tylko teraz → nowy.
+        $this->sale($shop, 80.0, 'nowy@example.com', now()->subDays(1)->toDateTimeString());
+
+        $cb = app(ShopAnalytics::class)->for($shop, AnalyticsPeriod::Last30Days)['customers_breakdown'];
+
+        $this->assertSame(1, $cb['new']);
+        $this->assertSame(1, $cb['returning']);
+        $this->assertEqualsWithDelta(0.5, $cb['returning_rate'], 0.001);
+    }
+
+    public function test_top_customers_ranked_by_revenue(): void
+    {
+        [, $shop] = $this->sellerWithShop();
+
+        Order::factory()->for($shop)->create([
+            'status' => OrderStatus::Paid, 'total_gross' => 500.0,
+            'buyer_email' => 'duzy@example.com', 'buyer_name' => 'Anna', 'buyer_surname' => 'Nowak',
+            'created_at' => now()->subDays(2)->toDateTimeString(),
+        ]);
+        Order::factory()->for($shop)->create([
+            'status' => OrderStatus::Paid, 'total_gross' => 90.0,
+            'buyer_email' => 'maly@example.com', 'buyer_name' => '', 'buyer_surname' => '',
+            'created_at' => now()->subDays(2)->toDateTimeString(),
+        ]);
+
+        $top = app(ShopAnalytics::class)->for($shop, AnalyticsPeriod::Last30Days)['top_customers'];
+
+        $this->assertSame('Anna Nowak', $top[0]['label']);
+        $this->assertSame(500.0, $top[0]['revenue']);
+        // Bez nazwiska → etykietą jest e-mail.
+        $this->assertSame('maly@example.com', $top[1]['label']);
+    }
+
     public function test_seller_can_view_analytics_page(): void
     {
         [$seller, $shop] = $this->sellerWithShop();
@@ -212,7 +252,9 @@ class AnalyticsTest extends TestCase
             ->assertSee('Sprzedaż w czasie')
             ->assertSee('Bestsellery')
             ->assertSee('Metody płatności')
-            ->assertSee('Metody dostawy');
+            ->assertSee('Metody dostawy')
+            ->assertSee('Nowi vs powracający')
+            ->assertSee('Najlepsi klienci');
     }
 
     public function test_period_can_be_switched_via_query(): void

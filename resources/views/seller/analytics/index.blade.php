@@ -102,6 +102,38 @@
                     </div>
                 </div>
             </div>
+
+            {{-- Klienci: nowi vs powracający (wg historii sprzed okna) + najlepsi klienci. --}}
+            @php
+                $cb = $analytics['customers_breakdown'];
+                $cbTotal = $cb['new'] + $cb['returning'];
+                $customerTypeRows = $cbTotal === 0 ? [] : [
+                    ['label' => 'Nowi klienci', 'value' => $cb['new'].' ('.round($cb['new'] / $cbTotal * 100).'%)', 'ratio' => $cb['new'] / $cbTotal],
+                    ['label' => 'Powracający klienci', 'value' => $cb['returning'].' ('.round($cb['returning'] / $cbTotal * 100).'%)', 'ratio' => $cb['returning'] / $cbTotal],
+                ];
+                $maxCust = collect($analytics['top_customers'])->max('revenue') ?: 1;
+                $topCustomerRows = array_map(fn ($c) => [
+                    'label' => $c['label'],
+                    'value' => \App\Support\Money::pln($c['revenue']),
+                    'ratio' => $c['revenue'] / $maxCust,
+                ], $analytics['top_customers']);
+            @endphp
+            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                    <h2 class="font-semibold text-stone-900">Nowi vs powracający</h2>
+                    <p class="mt-1 text-sm text-stone-500">Klienci, którzy kupili w tym okresie.</p>
+                    <div class="mt-5">
+                        <x-analytics.bars :rows="$customerTypeRows" color="#e11d48" empty="Brak klientów w tym okresie." />
+                    </div>
+                </div>
+                <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                    <h2 class="font-semibold text-stone-900">Najlepsi klienci</h2>
+                    <p class="mt-1 text-sm text-stone-500">Wg wartości zakupów w tym okresie.</p>
+                    <div class="mt-5">
+                        <x-analytics.bars :rows="$topCustomerRows" color="#f59e0b" empty="Brak klientów w tym okresie." />
+                    </div>
+                </div>
+            </div>
         </div>
 
         {{-- Kolumna pomocnicza: filtry (okres) + opis danych — wzorzec jak w Zamówieniach. --}}
