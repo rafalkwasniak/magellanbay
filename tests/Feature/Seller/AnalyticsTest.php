@@ -3,8 +3,11 @@
 namespace Tests\Feature\Seller;
 
 use App\Enums\AnalyticsPeriod;
+use App\Enums\DeliveryMethod;
 use App\Enums\OrderStatus;
+use App\Enums\PaymentMethod;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Shop;
 use App\Models\User;
 use App\Services\ShopAnalytics;
@@ -127,6 +130,72 @@ class AnalyticsTest extends TestCase
         $this->assertSame($data['kpis']['revenue']['value'], round($seriesRevenue, 2));
     }
 
+    /**
+     * @param  list<array{0: string, 1: float, 2: float}>  $items  [nazwa, obrót pozycji, ilość]
+     */
+    private function orderWithItems(Shop $shop, array $items, ?string $createdAt = null, OrderStatus $status = OrderStatus::Paid): Order
+    {
+        $order = Order::factory()->for($shop)->create([
+            'status' => $status,
+            'created_at' => $createdAt ?? now()->subDays(2)->toDateTimeString(),
+        ]);
+
+        foreach ($items as [$name, $revenue, $quantity]) {
+            OrderItem::factory()->for($order)->create([
+                'name' => $name,
+                'quantity' => $quantity,
+                'line_total_gross' => $revenue,
+            ]);
+        }
+
+        return $order;
+    }
+
+    public function test_bestsellers_ranked_by_revenue_excluding_cancelled(): void
+    {
+        [, $shop] = $this->sellerWithShop();
+
+        $this->orderWithItems($shop, [['Bukiet', 300.0, 2.0], ['Wosk', 50.0, 1.0]]);
+        $this->orderWithItems($shop, [['Bukiet', 200.0, 1.0]]);
+        // Anulowane — poza rankingiem.
+        $this->orderWithItems($shop, [['Duch', 999.0, 9.0]], null, OrderStatus::Cancelled);
+
+        $best = app(ShopAnalytics::class)->for($shop, AnalyticsPeriod::Last30Days)['bestsellers'];
+
+        $this->assertCount(2, $best);
+        // Bukiet na szczycie: obrót 300+200=500, ilość 3; Wosk niżej.
+        $this->assertSame('Bukiet', $best[0]['name']);
+        $this->assertSame(500.0, $best[0]['revenue']);
+        $this->assertSame(3.0, $best[0]['quantity']);
+        $this->assertSame('Wosk', $best[1]['name']);
+    }
+
+    public function test_payment_and_delivery_split_shares_sum_to_one(): void
+    {
+        [, $shop] = $this->sellerWithShop();
+
+        foreach ([PaymentMethod::BankTransfer, PaymentMethod::BankTransfer, PaymentMethod::Online] as $method) {
+            Order::factory()->for($shop)->create([
+                'status' => OrderStatus::Paid,
+                'payment_method' => $method,
+                'delivery_method' => DeliveryMethod::Courier,
+                'created_at' => now()->subDays(2)->toDateTimeString(),
+            ]);
+        }
+
+        $data = app(ShopAnalytics::class)->for($shop, AnalyticsPeriod::Last30Days);
+
+        $payment = collect($data['payment_split']);
+        $this->assertSame(2, $payment->firstWhere('label', PaymentMethod::BankTransfer->label())['count']);
+        $this->assertSame(1, $payment->firstWhere('label', PaymentMethod::Online->label())['count']);
+        $this->assertEqualsWithDelta(1.0, $payment->sum('share'), 0.001);
+
+        // Wszystkie zamówienia kurierem → jeden segment, 100%.
+        $delivery = collect($data['delivery_split']);
+        $this->assertCount(1, $delivery);
+        $this->assertEqualsWithDelta(1.0, $delivery->first()['share'], 0.001);
+    }
+
     public function test_seller_can_view_analytics_page(): void
     {
         [$seller, $shop] = $this->sellerWithShop();
@@ -140,7 +209,10 @@ class AnalyticsTest extends TestCase
             ->assertSee('Zamówienia')
             ->assertSee('Średni koszyk')
             ->assertSee('Klienci')
-            ->assertSee('Sprzedaż w czasie');
+            ->assertSee('Sprzedaż w czasie')
+            ->assertSee('Bestsellery')
+            ->assertSee('Metody płatności')
+            ->assertSee('Metody dostawy');
     }
 
     public function test_period_can_be_switched_via_query(): void

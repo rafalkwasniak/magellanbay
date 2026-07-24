@@ -3,8 +3,11 @@
 namespace App\Services;
 
 use App\Enums\AnalyticsPeriod;
+use App\Enums\OrderStatus;
+use App\Models\OrderItem;
 use App\Models\Shop;
 use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 
@@ -91,7 +94,72 @@ class ShopAnalytics
                 'revenue' => $grouped->has($bucket['key']) ? $this->revenue($grouped->get($bucket['key'])) : 0.0,
                 'orders' => $grouped->has($bucket['key']) ? $grouped->get($bucket['key'])->count() : 0,
             ], $buckets),
+            // CP-C: co się sprzedaje. Bestsellery wg obrotu (z pozycji zamówień) oraz
+            // podział zamówień wg metody płatności i dostawy (udział w liczbie zamówień).
+            'bestsellers' => $this->bestsellers($shop, $start, $now),
+            'payment_split' => $this->split($current, 'payment_method'),
+            'delivery_split' => $this->split($current, 'delivery_method'),
         ];
+    }
+
+    /**
+     * Top produkty wg obrotu w oknie — z migawek pozycji zamówień (`order_items`),
+     * więc wierne nawet po zmianie/usunięciu produktu. Grupujemy po produkcie
+     * (a gdy pozycja bez `product_id` — po nazwie migawki). Anulowane zamówienia
+     * odpadają (ten sam warunek co `countedAsSale`, wyrażony wprost w podzapytaniu).
+     *
+     * @return list<array{name: string, revenue: float, quantity: float}>
+     */
+    private function bestsellers(Shop $shop, CarbonInterface $from, CarbonInterface $to, int $limit = 5): array
+    {
+        $items = OrderItem::query()
+            ->whereHas('order', fn (Builder $query) => $query
+                ->where('shop_id', $shop->id)
+                ->where('status', '!=', OrderStatus::Cancelled->value)
+                ->where('created_at', '>=', $from)
+                ->where('created_at', '<', $to))
+            ->get(['product_id', 'name', 'quantity', 'line_total_gross']);
+
+        return $items
+            ->groupBy(fn (OrderItem $item) => $item->product_id ?? 'name:'.$item->name)
+            ->map(fn (Collection $rows) => [
+                'name' => (string) $rows->first()->name,
+                'revenue' => (float) $rows->sum(fn (OrderItem $r) => (float) $r->line_total_gross),
+                'quantity' => (float) $rows->sum(fn (OrderItem $r) => (float) $r->quantity),
+            ])
+            ->sortByDesc('revenue')
+            ->take($limit)
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Podział zamówień wg wartości enuma (`payment_method`/`delivery_method`):
+     * liczba, obrót i udział w liczbie zamówień. Sortowane malejąco. Pusta lista
+     * przy braku zamówień (widok pokaże stan pusty).
+     *
+     * @param  Collection<int, \App\Models\Order>  $orders
+     * @return list<array{label: string, count: int, revenue: float, share: float}>
+     */
+    private function split(Collection $orders, string $attribute): array
+    {
+        $total = $orders->count();
+
+        if ($total === 0) {
+            return [];
+        }
+
+        return $orders
+            ->groupBy(fn ($order) => $order->{$attribute}->value)
+            ->map(fn (Collection $rows) => [
+                'label' => $rows->first()->{$attribute}->label(),
+                'count' => $rows->count(),
+                'revenue' => $this->revenue($rows),
+                'share' => $rows->count() / $total,
+            ])
+            ->sortByDesc('count')
+            ->values()
+            ->all();
     }
 
     /**
@@ -106,7 +174,7 @@ class ShopAnalytics
             ->countedAsSale()
             ->where('created_at', '>=', $from)
             ->where('created_at', '<', $to)
-            ->get(['total_gross', 'buyer_email', 'created_at']);
+            ->get(['total_gross', 'buyer_email', 'created_at', 'payment_method', 'delivery_method']);
     }
 
     /**

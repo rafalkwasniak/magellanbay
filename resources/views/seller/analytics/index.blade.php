@@ -29,7 +29,7 @@
 
                             {{-- Δ vs poprzedni okres: zielony wzrost / różowy spadek / szare „—"
                                  gdy brak bazy odniesienia (poprzedni okres = 0). --}}
-                            @php($delta = $tile['delta'])
+                            @php $delta = $tile['delta']; @endphp
                             @if ($delta === null)
                                 <span class="inline-flex items-center rounded-full bg-stone-100 px-2 py-0.5 text-xs font-medium text-stone-400" title="Brak danych z poprzedniego okresu">—</span>
                             @elseif ($delta >= 0)
@@ -47,12 +47,59 @@
             </div>
 
             {{-- Sprzedaż w czasie: jeden słupek na kubełek okna (dzień/miesiąc). --}}
-            @php($byMonth = $period === \App\Enums\AnalyticsPeriod::Last12Months)
+            @php $byMonth = $period === \App\Enums\AnalyticsPeriod::Last12Months; @endphp
             <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
                 <h2 class="font-semibold text-stone-900">Sprzedaż w czasie</h2>
                 <p class="mt-1 text-sm text-stone-500">Obrót w kolejnych {{ $byMonth ? 'miesiącach' : 'dniach' }} — najedź na słupek po szczegóły.</p>
                 <div class="mt-5">
                     <x-analytics.bar-chart :series="$analytics['series']" />
+                </div>
+            </div>
+
+            {{-- Bestsellery: top produkty wg obrotu (poziome paski, długość ∝ obrót). --}}
+            @php
+                $maxRev = collect($analytics['bestsellers'])->max('revenue') ?: 1;
+                $bestsellerRows = array_map(fn ($b) => [
+                    'label' => $b['name'],
+                    'value' => \App\Support\Money::pln($b['revenue']),
+                    'ratio' => $b['revenue'] / $maxRev,
+                ], $analytics['bestsellers']);
+            @endphp
+            <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                <h2 class="font-semibold text-stone-900">Bestsellery</h2>
+                <p class="mt-1 text-sm text-stone-500">Najlepiej sprzedające się produkty wg obrotu.</p>
+                <div class="mt-5">
+                    <x-analytics.bars :rows="$bestsellerRows" color="#f59e0b" empty="Brak sprzedaży w tym okresie." />
+                </div>
+            </div>
+
+            {{-- Podział zamówień: metoda płatności i metoda dostawy (udział w liczbie). --}}
+            @php
+                $paymentRows = array_map(fn ($s) => [
+                    'label' => $s['label'],
+                    'value' => $s['count'].' ('.round($s['share'] * 100).'%)',
+                    'ratio' => $s['share'],
+                ], $analytics['payment_split']);
+                $deliveryRows = array_map(fn ($s) => [
+                    'label' => $s['label'],
+                    'value' => $s['count'].' ('.round($s['share'] * 100).'%)',
+                    'ratio' => $s['share'],
+                ], $analytics['delivery_split']);
+            @endphp
+            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                    <h2 class="font-semibold text-stone-900">Metody płatności</h2>
+                    <p class="mt-1 text-sm text-stone-500">Udział w liczbie zamówień.</p>
+                    <div class="mt-5">
+                        <x-analytics.bars :rows="$paymentRows" color="#10b981" empty="Brak zamówień w tym okresie." />
+                    </div>
+                </div>
+                <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                    <h2 class="font-semibold text-stone-900">Metody dostawy</h2>
+                    <p class="mt-1 text-sm text-stone-500">Udział w liczbie zamówień.</p>
+                    <div class="mt-5">
+                        <x-analytics.bars :rows="$deliveryRows" color="#6366f1" empty="Brak zamówień w tym okresie." />
+                    </div>
                 </div>
             </div>
         </div>
