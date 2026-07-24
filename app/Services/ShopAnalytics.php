@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\AnalyticsPeriod;
 use App\Enums\OrderStatus;
+use App\Enums\SaleUnit;
 use App\Models\OrderItem;
 use App\Models\Shop;
 use App\Models\ShopStat;
@@ -103,7 +104,7 @@ class ShopAnalytics
             // CP-D: klienci. Nowi vs powracający (wg historii sprzed okna) i najlepsi
             // klienci wg wartości zakupów w oknie.
             'customers_breakdown' => $this->customerBreakdown($shop, $current, $start),
-            'top_customers' => $this->topCustomers($current),
+            'top_customers' => $this->topCustomers($shop, $start, $now),
             // Poziom 2: ruch z agregatu `shop_stats` + konwersja (zamówienia/wizyty).
             'traffic' => $this->traffic($shop, $start, $now, $current->count()),
         ];
@@ -175,40 +176,53 @@ class ShopAnalytics
     }
 
     /**
-     * Najlepsi klienci w oknie wg wartości zakupów (suma obrotu, po znormalizowanym
-     * e-mailu). Etykieta = imię i nazwisko kupującego, a gdy brak — sam e-mail.
+     * Najlepsi klienci w oknie wg LICZBY KUPIONYCH PRODUKTÓW (sztuk), nie zamówień
+     * ani kwoty — 20 sztuk w jednym zamówieniu > 3 osobne zamówienia po 1 sztuce.
+     * Sumujemy ilości z pozycji zamówień; jednostki liczymy 1:1 (1 kg = 1 szt.),
+     * a wynik podłoga do liczby całkowitej. Grupujemy po znormalizowanym e-mailu
+     * kupującego (z zamówienia pozycji). Etykieta = imię i nazwisko, a gdy brak —
+     * sam e-mail.
      *
-     * @param  Collection<int, \App\Models\Order>  $orders
-     * @return list<array{label: string, revenue: float, orders: int}>
+     * @return list<array{label: string, items: int}>
      */
-    private function topCustomers(Collection $orders, int $limit = 5): array
+    private function topCustomers(Shop $shop, CarbonInterface $from, CarbonInterface $to, int $limit = 5): array
     {
-        return $orders
-            ->filter(fn ($order) => filled($order->buyer_email))
-            ->groupBy(fn ($order) => mb_strtolower(trim((string) $order->buyer_email)))
+        $items = OrderItem::query()
+            ->whereHas('order', fn (Builder $query) => $query
+                ->where('shop_id', $shop->id)
+                ->where('status', '!=', OrderStatus::Cancelled->value)
+                ->where('created_at', '>=', $from)
+                ->where('created_at', '<', $to))
+            ->with(['order' => fn ($query) => $query->select('id', 'buyer_email', 'buyer_name', 'buyer_surname')])
+            ->get(['order_id', 'quantity']);
+
+        return $items
+            ->filter(fn (OrderItem $item) => filled($item->order?->buyer_email))
+            ->groupBy(fn (OrderItem $item) => mb_strtolower(trim((string) $item->order->buyer_email)))
             ->map(function (Collection $rows) {
-                $first = $rows->first();
-                $name = trim(($first->buyer_name ?? '').' '.($first->buyer_surname ?? ''));
+                $order = $rows->first()->order;
+                $name = trim(($order->buyer_name ?? '').' '.($order->buyer_surname ?? ''));
 
                 return [
-                    'label' => $name !== '' ? $name : (string) $first->buyer_email,
-                    'revenue' => $this->revenue($rows),
-                    'orders' => $rows->count(),
+                    'label' => $name !== '' ? $name : (string) $order->buyer_email,
+                    'items' => (int) floor((float) $rows->sum(fn (OrderItem $r) => (float) $r->quantity)),
                 ];
             })
-            ->sortByDesc('revenue')
+            ->sortByDesc('items')
             ->take($limit)
             ->values()
             ->all();
     }
 
     /**
-     * Top produkty wg obrotu w oknie — z migawek pozycji zamówień (`order_items`),
-     * więc wierne nawet po zmianie/usunięciu produktu. Grupujemy po produkcie
-     * (a gdy pozycja bez `product_id` — po nazwie migawki). Anulowane zamówienia
-     * odpadają (ten sam warunek co `countedAsSale`, wyrażony wprost w podzapytaniu).
+     * Top produkty wg LICZBY SPRZEDANYCH SZTUK w oknie — „bestseller" to to, co
+     * najlepiej się sprzedaje (ilościowo), nie najdroższe. Z migawek pozycji
+     * zamówień (`order_items`), więc wierne nawet po zmianie/usunięciu produktu.
+     * Grupujemy po produkcie (a gdy pozycja bez `product_id` — po nazwie migawki).
+     * Anulowane zamówienia odpadają. `unit` niesie jednostkę (szt./kg) do
+     * sformatowania ilości w widoku.
      *
-     * @return list<array{name: string, revenue: float, quantity: float}>
+     * @return list<array{name: string, quantity: float, unit: string}>
      */
     private function bestsellers(Shop $shop, CarbonInterface $from, CarbonInterface $to, int $limit = 5): array
     {
@@ -218,16 +232,16 @@ class ShopAnalytics
                 ->where('status', '!=', OrderStatus::Cancelled->value)
                 ->where('created_at', '>=', $from)
                 ->where('created_at', '<', $to))
-            ->get(['product_id', 'name', 'quantity', 'line_total_gross']);
+            ->get(['product_id', 'name', 'quantity', 'sale_unit']);
 
         return $items
             ->groupBy(fn (OrderItem $item) => $item->product_id ?? 'name:'.$item->name)
             ->map(fn (Collection $rows) => [
                 'name' => (string) $rows->first()->name,
-                'revenue' => (float) $rows->sum(fn (OrderItem $r) => (float) $r->line_total_gross),
                 'quantity' => (float) $rows->sum(fn (OrderItem $r) => (float) $r->quantity),
+                'unit' => ($rows->first()->sale_unit ?? SaleUnit::Piece)->value,
             ])
-            ->sortByDesc('revenue')
+            ->sortByDesc('quantity')
             ->take($limit)
             ->values()
             ->all();

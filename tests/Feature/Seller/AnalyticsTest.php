@@ -151,23 +151,24 @@ class AnalyticsTest extends TestCase
         return $order;
     }
 
-    public function test_bestsellers_ranked_by_revenue_excluding_cancelled(): void
+    public function test_bestsellers_ranked_by_quantity_not_revenue_excluding_cancelled(): void
     {
         [, $shop] = $this->sellerWithShop();
 
-        $this->orderWithItems($shop, [['Bukiet', 300.0, 2.0], ['Wosk', 50.0, 1.0]]);
-        $this->orderWithItems($shop, [['Bukiet', 200.0, 1.0]]);
-        // Anulowane — poza rankingiem.
-        $this->orderWithItems($shop, [['Duch', 999.0, 9.0]], null, OrderStatus::Cancelled);
+        // Tania rzecz, dużo sztuk (10) — bestseller, mimo niższego obrotu.
+        $this->orderWithItems($shop, [['Naklejka', 100.0, 10.0]]);
+        // Droga rzecz, mało sztuk (2) — wyższy obrót, ale mniej sprzedana → niżej.
+        $this->orderWithItems($shop, [['Rower', 8000.0, 2.0]]);
+        // Anulowane — poza rankingiem (choćby miało najwięcej sztuk).
+        $this->orderWithItems($shop, [['Duch', 999.0, 99.0]], null, OrderStatus::Cancelled);
 
         $best = app(ShopAnalytics::class)->for($shop, AnalyticsPeriod::Last30Days)['bestsellers'];
 
         $this->assertCount(2, $best);
-        // Bukiet na szczycie: obrót 300+200=500, ilość 3; Wosk niżej.
-        $this->assertSame('Bukiet', $best[0]['name']);
-        $this->assertSame(500.0, $best[0]['revenue']);
-        $this->assertSame(3.0, $best[0]['quantity']);
-        $this->assertSame('Wosk', $best[1]['name']);
+        $this->assertSame('Naklejka', $best[0]['name']);
+        $this->assertSame(10.0, $best[0]['quantity']);
+        $this->assertArrayHasKey('unit', $best[0]);
+        $this->assertSame('Rower', $best[1]['name']);
     }
 
     public function test_payment_and_delivery_split_shares_sum_to_one(): void
@@ -213,27 +214,52 @@ class AnalyticsTest extends TestCase
         $this->assertEqualsWithDelta(0.5, $cb['returning_rate'], 0.001);
     }
 
-    public function test_top_customers_ranked_by_revenue(): void
+    public function test_top_customers_ranked_by_product_quantity_not_order_count(): void
     {
         [, $shop] = $this->sellerWithShop();
 
-        Order::factory()->for($shop)->create([
-            'status' => OrderStatus::Paid, 'total_gross' => 500.0,
-            'buyer_email' => 'duzy@example.com', 'buyer_name' => 'Anna', 'buyer_surname' => 'Nowak',
+        // Hurtowy: 1 zamówienie, 20 sztuk — najwięcej produktów, więc pierwszy.
+        $hurt = Order::factory()->for($shop)->create([
+            'status' => OrderStatus::Paid,
+            'buyer_email' => 'hurt@example.com', 'buyer_name' => 'Ewa', 'buyer_surname' => 'Hurt',
             'created_at' => now()->subDays(2)->toDateTimeString(),
         ]);
-        Order::factory()->for($shop)->create([
-            'status' => OrderStatus::Paid, 'total_gross' => 90.0,
-            'buyer_email' => 'maly@example.com', 'buyer_name' => '', 'buyer_surname' => '',
-            'created_at' => now()->subDays(2)->toDateTimeString(),
-        ]);
+        OrderItem::factory()->for($hurt)->create(['name' => 'Bransoletka', 'quantity' => 20.0]);
+
+        // Drobny: 3 osobne zamówienia po 1 sztuce = 3 produkty → niżej mimo więcej zamówień.
+        for ($i = 0; $i < 3; $i++) {
+            $o = Order::factory()->for($shop)->create([
+                'status' => OrderStatus::Paid,
+                'buyer_email' => 'drobny@example.com', 'buyer_name' => 'Jan', 'buyer_surname' => 'Drobny',
+                'created_at' => now()->subDays($i + 1)->toDateTimeString(),
+            ]);
+            OrderItem::factory()->for($o)->create(['name' => 'Bransoletka', 'quantity' => 1.0]);
+        }
 
         $top = app(ShopAnalytics::class)->for($shop, AnalyticsPeriod::Last30Days)['top_customers'];
 
-        $this->assertSame('Anna Nowak', $top[0]['label']);
-        $this->assertSame(500.0, $top[0]['revenue']);
-        // Bez nazwiska → etykietą jest e-mail.
-        $this->assertSame('maly@example.com', $top[1]['label']);
+        $this->assertSame('Ewa Hurt', $top[0]['label']);
+        $this->assertSame(20, $top[0]['items']);
+        $this->assertSame('Jan Drobny', $top[1]['label']);
+        $this->assertSame(3, $top[1]['items']);
+    }
+
+    public function test_top_customer_items_count_units_one_to_one_and_floor(): void
+    {
+        [, $shop] = $this->sellerWithShop();
+
+        $order = Order::factory()->for($shop)->create([
+            'status' => OrderStatus::Paid,
+            'buyer_email' => 'mix@example.com', 'buyer_name' => 'Zofia', 'buyer_surname' => 'Miks',
+            'created_at' => now()->subDays(2)->toDateTimeString(),
+        ]);
+        // 2,5 kg (waga) liczone 1:1 jak sztuki + 3 szt. = 5,5 → podłoga → 5.
+        OrderItem::factory()->for($order)->create(['name' => 'Kwiaty', 'quantity' => 2.5, 'sale_unit' => \App\Enums\SaleUnit::Weight]);
+        OrderItem::factory()->for($order)->create(['name' => 'Doniczka', 'quantity' => 3.0, 'sale_unit' => \App\Enums\SaleUnit::Piece]);
+
+        $top = app(ShopAnalytics::class)->for($shop, AnalyticsPeriod::Last30Days)['top_customers'];
+
+        $this->assertSame(5, $top[0]['items']);
     }
 
     public function test_traffic_and_conversion_from_shop_stats(): void

@@ -83,18 +83,18 @@
                 </div>
             </div>
 
-            {{-- Bestsellery: top produkty wg obrotu (poziome paski, długość ∝ obrót). --}}
+            {{-- Bestsellery: top produkty wg LICZBY SZTUK (poziome paski, długość ∝ ilość). --}}
             @php
-                $maxRev = collect($analytics['bestsellers'])->max('revenue') ?: 1;
+                $maxQty = collect($analytics['bestsellers'])->max('quantity') ?: 1;
                 $bestsellerRows = array_map(fn ($b) => [
                     'label' => $b['name'],
-                    'value' => \App\Support\Money::pln($b['revenue']),
-                    'ratio' => $b['revenue'] / $maxRev,
+                    'value' => \App\Enums\SaleUnit::from($b['unit'])->formatQuantity($b['quantity']),
+                    'ratio' => $b['quantity'] / $maxQty,
                 ], $analytics['bestsellers']);
             @endphp
             <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
                 <h2 class="font-semibold text-stone-900">Bestsellery</h2>
-                <p class="mt-1 text-sm text-stone-500">Najlepiej sprzedające się produkty wg obrotu.</p>
+                <p class="mt-1 text-sm text-stone-500">Najczęściej kupowane produkty — wg liczby sprzedanych sztuk.</p>
                 <div class="mt-5">
                     <x-analytics.bars :rows="$bestsellerRows" color="#f59e0b" empty="Brak sprzedaży w tym okresie." />
                 </div>
@@ -138,11 +138,16 @@
                     ['label' => 'Nowi klienci', 'value' => $cb['new'].' ('.round($cb['new'] / $cbTotal * 100).'%)', 'ratio' => $cb['new'] / $cbTotal],
                     ['label' => 'Powracający klienci', 'value' => $cb['returning'].' ('.round($cb['returning'] / $cbTotal * 100).'%)', 'ratio' => $cb['returning'] / $cbTotal],
                 ];
-                $maxCust = collect($analytics['top_customers'])->max('revenue') ?: 1;
+                $maxCustItems = collect($analytics['top_customers'])->max('items') ?: 1;
+                $plProd = function (int $n) {
+                    if ($n === 1) return 'produkt';
+                    $m10 = $n % 10; $m100 = $n % 100;
+                    return ($m10 >= 2 && $m10 <= 4 && ! ($m100 >= 12 && $m100 <= 14)) ? 'produkty' : 'produktów';
+                };
                 $topCustomerRows = array_map(fn ($c) => [
                     'label' => $c['label'],
-                    'value' => \App\Support\Money::pln($c['revenue']),
-                    'ratio' => $c['revenue'] / $maxCust,
+                    'value' => $c['items'].' '.$plProd($c['items']),
+                    'ratio' => $c['items'] / $maxCustItems,
                 ], $analytics['top_customers']);
             @endphp
             <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
@@ -155,7 +160,7 @@
                 </div>
                 <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
                     <h2 class="font-semibold text-stone-900">Najlepsi klienci</h2>
-                    <p class="mt-1 text-sm text-stone-500">Wg wartości zakupów w tym okresie.</p>
+                    <p class="mt-1 text-sm text-stone-500">Wg liczby kupionych produktów w tym okresie.</p>
                     <div class="mt-5">
                         <x-analytics.bars :rows="$topCustomerRows" color="#f59e0b" empty="Brak klientów w tym okresie." />
                     </div>
