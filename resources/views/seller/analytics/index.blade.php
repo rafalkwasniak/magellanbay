@@ -14,8 +14,8 @@
     @endphp
 
     <div class="grid gap-6 lg:grid-cols-12">
-        {{-- Główna kolumna: dane (KPI). Reszta wykresów dojdzie tu w kolejnych krokach. --}}
-        <div class="lg:col-span-8">
+        {{-- Główna kolumna: dane (KPI + wykresy). Kolejne wykresy dojdą tu niżej. --}}
+        <div class="lg:col-span-8 space-y-6">
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 @foreach ($tiles as $tile)
                     <div class="rounded-3xl border border-white/60 bg-white/70 p-5 backdrop-blur">
@@ -44,6 +44,16 @@
                         </div>
                     </div>
                 @endforeach
+            </div>
+
+            {{-- Sprzedaż w czasie: jeden słupek na kubełek okna (dzień/miesiąc). --}}
+            @php($byMonth = $period === \App\Enums\AnalyticsPeriod::Last12Months)
+            <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                <h2 class="font-semibold text-stone-900">Sprzedaż w czasie</h2>
+                <p class="mt-1 text-sm text-stone-500">Obrót w kolejnych {{ $byMonth ? 'miesiącach' : 'dniach' }} — najedź na słupek po szczegóły.</p>
+                <div class="mt-5">
+                    <x-analytics.bar-chart :series="$analytics['series']" />
+                </div>
             </div>
         </div>
 

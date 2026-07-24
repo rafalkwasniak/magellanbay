@@ -108,6 +108,25 @@ class AnalyticsTest extends TestCase
         $this->assertLessThanOrEqual(13, count($kpis['revenue']['spark']));
     }
 
+    public function test_series_sums_to_kpi_revenue(): void
+    {
+        [, $shop] = $this->sellerWithShop();
+        $this->sale($shop, 100.0, 'a@example.com', now()->subDays(2)->toDateTimeString());
+        $this->sale($shop, 50.0, 'b@example.com', now()->subDays(2)->toDateTimeString());
+
+        $data = app(ShopAnalytics::class)->for($shop, AnalyticsPeriod::Last30Days);
+
+        // Każdy kubełek serii ma komplet kluczy do wykresu i tooltipa.
+        $this->assertNotEmpty($data['series']);
+        foreach ($data['series'] as $bucket) {
+            $this->assertSame(['label', 'full', 'revenue', 'orders'], array_keys($bucket));
+        }
+
+        // Suma słupków = obrót z KPI (ta sama prawda, inna prezentacja).
+        $seriesRevenue = array_sum(array_column($data['series'], 'revenue'));
+        $this->assertSame($data['kpis']['revenue']['value'], round($seriesRevenue, 2));
+    }
+
     public function test_seller_can_view_analytics_page(): void
     {
         [$seller, $shop] = $this->sellerWithShop();
@@ -120,7 +139,8 @@ class AnalyticsTest extends TestCase
             ->assertSee('Obrót')
             ->assertSee('Zamówienia')
             ->assertSee('Średni koszyk')
-            ->assertSee('Klienci');
+            ->assertSee('Klienci')
+            ->assertSee('Sprzedaż w czasie');
     }
 
     public function test_period_can_be_switched_via_query(): void

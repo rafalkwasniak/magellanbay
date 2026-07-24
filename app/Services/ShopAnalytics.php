@@ -54,8 +54,10 @@ class ShopAnalytics
         $current = $this->orders($shop, $start, $now);
         $previous = $this->orders($shop, $prevStart, $start);
 
-        $buckets = $this->bucketKeys($start, $now, $period->bucketUnit());
-        $grouped = $current->groupBy(fn ($order) => $this->bucketKey($order->created_at, $period->bucketUnit()));
+        $unit = $period->bucketUnit();
+        $buckets = $this->buildBuckets($start, $now, $unit);
+        $keys = array_column($buckets, 'key');
+        $grouped = $current->groupBy(fn ($order) => $this->bucketKey($order->created_at, $unit));
 
         return [
             'period' => $period,
@@ -63,24 +65,32 @@ class ShopAnalytics
                 'revenue' => [
                     'value' => $this->revenue($current),
                     'delta' => $this->delta($this->revenue($current), $this->revenue($previous)),
-                    'spark' => $this->sparkline($buckets, $grouped, fn (Collection $rows) => $this->revenue($rows)),
+                    'spark' => $this->sparkline($keys, $grouped, fn (Collection $rows) => $this->revenue($rows)),
                 ],
                 'orders' => [
                     'value' => (float) $current->count(),
                     'delta' => $this->delta((float) $current->count(), (float) $previous->count()),
-                    'spark' => $this->sparkline($buckets, $grouped, fn (Collection $rows) => (float) $rows->count()),
+                    'spark' => $this->sparkline($keys, $grouped, fn (Collection $rows) => (float) $rows->count()),
                 ],
                 'aov' => [
                     'value' => $this->aov($current),
                     'delta' => $this->delta($this->aov($current), $this->aov($previous)),
-                    'spark' => $this->sparkline($buckets, $grouped, fn (Collection $rows) => $this->aov($rows)),
+                    'spark' => $this->sparkline($keys, $grouped, fn (Collection $rows) => $this->aov($rows)),
                 ],
                 'customers' => [
                     'value' => (float) $this->customers($current),
                     'delta' => $this->delta((float) $this->customers($current), (float) $this->customers($previous)),
-                    'spark' => $this->sparkline($buckets, $grouped, fn (Collection $rows) => (float) $this->customers($rows)),
+                    'spark' => $this->sparkline($keys, $grouped, fn (Collection $rows) => (float) $this->customers($rows)),
                 ],
             ],
+            // Seria czasowa dla wykresu „sprzedaż w czasie" (CP-B): jeden słupek na
+            // kubełek, z etykietą osi (krótka) i pełnym opisem do tooltipa.
+            'series' => array_map(fn (array $bucket) => [
+                'label' => $bucket['label'],
+                'full' => $bucket['full'],
+                'revenue' => $grouped->has($bucket['key']) ? $this->revenue($grouped->get($bucket['key'])) : 0.0,
+                'orders' => $grouped->has($bucket['key']) ? $grouped->get($bucket['key'])->count() : 0,
+            ], $buckets),
         ];
     }
 
@@ -148,24 +158,29 @@ class ShopAnalytics
     }
 
     /**
-     * Uporządkowana lista kluczy kubełków od początku okna do teraz (z dziurami =
-     * kubełki bez zamówień, żeby sparkline miał równe odstępy w czasie).
+     * Uporządkowane kubełki od początku okna do teraz (z dziurami = kubełki bez
+     * zamówień, żeby oś czasu miała równe odstępy). Każdy niesie klucz grupujący,
+     * krótką etykietę osi i pełny opis do tooltipa. Etykiety po polsku (locale pl).
      *
-     * @return list<string>
+     * @return list<array{key: string, label: string, full: string}>
      */
-    private function bucketKeys(CarbonInterface $start, CarbonInterface $end, string $unit): array
+    private function buildBuckets(CarbonInterface $start, CarbonInterface $end, string $unit): array
     {
-        $keys = [];
+        $buckets = [];
         $cursor = $unit === 'month' ? $start->copy()->startOfMonth() : $start->copy()->startOfDay();
         $last = $this->bucketKey($end, $unit);
 
         do {
             $key = $this->bucketKey($cursor, $unit);
-            $keys[] = $key;
+            $buckets[] = [
+                'key' => $key,
+                'label' => $unit === 'month' ? $cursor->translatedFormat('M y') : $cursor->translatedFormat('j.m'),
+                'full' => $unit === 'month' ? $cursor->translatedFormat('F Y') : $cursor->translatedFormat('j F Y'),
+            ];
             $cursor = $unit === 'month' ? $cursor->addMonth() : $cursor->addDay();
-        } while ($key !== $last && count($keys) < 400);
+        } while ($key !== $last && count($buckets) < 400);
 
-        return $keys;
+        return $buckets;
     }
 
     private function bucketKey(CarbonInterface $moment, string $unit): string
@@ -177,16 +192,16 @@ class ShopAnalytics
      * Sparkline = wartość metryki w każdym kubełku, w kolejności czasu. Kubełek bez
      * zamówień daje 0.0, żeby wykres nie „ściskał" osi czasu.
      *
-     * @param  list<string>  $buckets
+     * @param  list<string>  $keys
      * @param  Collection<string, Collection<int, \App\Models\Order>>  $grouped
      * @param  callable(Collection<int, \App\Models\Order>): float  $metric
      * @return list<float>
      */
-    private function sparkline(array $buckets, Collection $grouped, callable $metric): array
+    private function sparkline(array $keys, Collection $grouped, callable $metric): array
     {
         return array_map(
             fn (string $key) => $grouped->has($key) ? $metric($grouped->get($key)) : 0.0,
-            $buckets,
+            $keys,
         );
     }
 }
