@@ -13,6 +13,7 @@ use App\Http\Controllers\Auth\ResendActivationController;
 use App\Http\Controllers\Consent\ConsentController;
 use App\Http\Controllers\LegalController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\Seller\AnalyticsController;
 use App\Http\Controllers\Seller\AppearanceController;
 use App\Http\Controllers\Seller\CompanyLookupController;
 use App\Http\Controllers\Seller\DashboardController as SellerDashboard;
@@ -126,6 +127,9 @@ Route::middleware(['auth', 'role:seller', 'ensure.consents'])
     ->name('seller.')
     ->group(function () {
         Route::get('/panel', SellerDashboard::class)->name('dashboard');
+
+        // Analityka (Poziom 1: z danych, które już mamy; dla wszystkich pakietów).
+        Route::get('/analityka', [AnalyticsController::class, 'index'])->name('analytics.index');
 
         // Profil sklepu (nazwa, opis, adres). Edycja przez POST (FOUNDATION sek. 5).
         Route::get('/sklep', [ShopProfileController::class, 'edit'])->name('shop.edit');

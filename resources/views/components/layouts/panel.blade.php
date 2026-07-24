@@ -27,6 +27,7 @@
             ['label' => 'Mój sklep', 'route' => 'seller.shop.edit', 'icon' => '🛍️'],
             ['label' => 'Produkty', 'route' => 'seller.products.index', 'active' => 'seller.products.*', 'icon' => '🏷️'],
             ['label' => 'Zamówienia', 'route' => 'seller.orders.index', 'active' => 'seller.orders.*', 'icon' => '📦', 'badge' => (int) ($user->shop?->unseen_orders_count ?? 0)],
+            ['label' => 'Analityka', 'route' => 'seller.analytics.index', 'icon' => '📊'],
             ['label' => 'Informacje', 'route' => 'seller.pages.index', 'active' => 'seller.pages.*', 'icon' => '📄'],
             ['label' => 'Wygląd', 'route' => 'seller.appearance.edit', 'icon' => '🎨'],
             ['label' => 'Ustawienia', 'route' => 'seller.settings.edit', 'icon' => '⚙️'],
