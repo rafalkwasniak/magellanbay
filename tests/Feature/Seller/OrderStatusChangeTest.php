@@ -2,14 +2,17 @@
 
 namespace Tests\Feature\Seller;
 
+use App\Enums\IntegrationType;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
+use App\Jobs\GenerateInvoice;
 use App\Livewire\Seller\OrderStatusManager;
 use App\Models\EmailMessage;
 use App\Models\Order;
 use App\Models\Shop;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -54,6 +57,39 @@ class OrderStatusChangeTest extends TestCase
         $this->assertSame(OrderStatus::New, $event->from_status);
         $this->assertSame(OrderStatus::Processing, $event->to_status);
         $this->assertSame('Pakuję dzisiaj', $event->note);
+    }
+
+    public function test_bank_transfer_marked_paid_does_not_auto_invoice(): void
+    {
+        // Auto-FV jest przypięta do Paynow (wyzwala ją webhook operatora), NIE do
+        // samego statusu „Opłacone". Ręczne oznaczenie przelewu jako opłaconego —
+        // nawet gdy sklep ma auto-FV i włączoną Fakturownię — nie zleca faktury.
+        // Ta gwarancja jest sednem umieszczenia checkboxa pod Paynow.
+        Bus::fake();
+        [$seller, $shop] = $this->sellerWithShop();
+        $shop->integrations()->create([
+            'type' => IntegrationType::Payments,
+            'enabled' => true,
+            'config' => ['api_key' => 'API', 'signature_key' => 'SIGN', 'environment' => 'sandbox', 'auto_invoice' => true],
+        ]);
+        $shop->integrations()->create([
+            'type' => IntegrationType::Invoicing,
+            'enabled' => true,
+            'config' => ['account_url' => 'https://sklep.fakturownia.pl', 'api_token' => 'SECRET'],
+        ]);
+
+        $order = Order::factory()->for($shop)->create([
+            'status' => OrderStatus::AwaitingPayment,
+            'payment_method' => PaymentMethod::BankTransfer,
+        ]);
+
+        Livewire::actingAs($seller)
+            ->test(OrderStatusManager::class, ['order' => $order])
+            ->call('changeTo', OrderStatus::Paid->value)
+            ->assertOk();
+
+        $this->assertSame(OrderStatus::Paid, $order->refresh()->status);
+        Bus::assertNotDispatched(GenerateInvoice::class);
     }
 
     public function test_setting_same_status_is_a_no_op(): void

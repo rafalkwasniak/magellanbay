@@ -35,4 +35,16 @@ class ShopIntegration extends Model
     {
         return $this->belongsTo(Shop::class);
     }
+
+    /**
+     * Czy TA bramka płatności ma po opłaceniu wystawić FV automatycznie (flaga
+     * `auto_invoice` w configu). Zgoda siedzi na wierszu konkretnej integracji,
+     * nie na sklepie — więc gdy dojdzie druga bramka (np. Przelewy24), każda
+     * niesie własną decyzję, a jej webhook pyta tylko swój rekord. To jedyny
+     * autorytatywny odczyt tej flagi.
+     */
+    public function autoInvoiceAfterPayment(): bool
+    {
+        return ($this->config['auto_invoice'] ?? false) === true;
+    }
 }

@@ -236,19 +236,46 @@
                         {{-- Ważniejsze integracje na górze; Google Analytics zawsze na dole.
                              Płatności online tylko gdy pakiet daje `online_payments` (Stragan+). --}}
                         @if ($shop->entitlement('online_payments'))
-                        <div class="flex items-start gap-4 rounded-2xl border border-stone-200 bg-white/60 p-5 sm:p-6 {{ $paynowConfigured ? '' : 'opacity-60' }}">
-                            {{-- hidden = wartość bazowa; bez konfiguracji checkbox jest disabled i nic nie wysyła --}}
-                            <input type="hidden" name="paynow_enabled" value="{{ $paynowConfigured ? '0' : ($paynowEnabled ? '1' : '0') }}">
-                            <input type="checkbox" id="paynow_enabled" name="paynow_enabled" value="1"
-                                @checked(old('paynow_enabled', $paynowEnabled)) @disabled(! $paynowConfigured)
-                                class="mt-0.5 h-5 w-5 shrink-0 rounded-md border-stone-300 text-amber-600 focus:ring-4 focus:ring-amber-500/20 disabled:cursor-not-allowed">
-                            <label for="paynow_enabled" class="flex-1 {{ $paynowConfigured ? 'cursor-pointer' : 'cursor-not-allowed' }}">
-                                <span class="block text-sm font-medium text-stone-800">Płatności online (Paynow)</span>
-                                <span class="mt-0.5 block text-sm text-stone-500">Udostępnia w kasie płatność BLIK, kartą i szybkim przelewem — pieniądze trafiają prosto na Twoje konto Paynow.</span>
-                                @unless($paynowConfigured)
-                                    <span class="mt-1.5 block text-xs text-amber-700">Aby móc włączyć, najpierw podaj klucze Paynow w <a href="{{ route('seller.integrations.edit') }}" class="font-medium underline decoration-amber-300 underline-offset-2">Integracjach</a>.</span>
-                                @endunless
-                            </label>
+                        <div class="rounded-2xl border border-stone-200 bg-white/60 p-5 sm:p-6 {{ $paynowConfigured ? '' : 'opacity-60' }}">
+                            <div class="flex items-start gap-4">
+                                {{-- hidden = wartość bazowa; bez konfiguracji checkbox jest disabled i nic nie wysyła --}}
+                                <input type="hidden" name="paynow_enabled" value="{{ $paynowConfigured ? '0' : ($paynowEnabled ? '1' : '0') }}">
+                                <input type="checkbox" id="paynow_enabled" name="paynow_enabled" value="1"
+                                    @checked(old('paynow_enabled', $paynowEnabled)) @disabled(! $paynowConfigured)
+                                    class="mt-0.5 h-5 w-5 shrink-0 rounded-md border-stone-300 text-amber-600 focus:ring-4 focus:ring-amber-500/20 disabled:cursor-not-allowed">
+                                <label for="paynow_enabled" class="flex-1 {{ $paynowConfigured ? 'cursor-pointer' : 'cursor-not-allowed' }}">
+                                    <span class="block text-sm font-medium text-stone-800">Płatności online (Paynow)</span>
+                                    <span class="mt-0.5 block text-sm text-stone-500">Udostępnia w kasie płatność BLIK, kartą i szybkim przelewem — pieniądze trafiają prosto na Twoje konto Paynow.</span>
+                                    @unless($paynowConfigured)
+                                        <span class="mt-1.5 block text-xs text-amber-700">Aby móc włączyć, najpierw podaj klucze Paynow w <a href="{{ route('seller.integrations.edit') }}" class="font-medium underline decoration-amber-300 underline-offset-2">Integracjach</a>.</span>
+                                    @endunless
+                                </label>
+                            </div>
+
+                            {{-- Auto-FV po opłaceniu: decyzja ZALEŻNA od Paynow (po tej płatności
+                                 leci FV), więc wcięta pod nim, nie luzem przy Fakturowni — inaczej
+                                 sugerowałaby, że i przelew na konto wystawia FV (a nie wystawia).
+                                 Tylko sklepy z pakietem faktur; aktywna, gdy WŁĄCZONE są oba:
+                                 Paynow i Fakturownia. hidden zachowuje zapisaną wartość, gdy pole
+                                 disabled — zapis ustawień jej nie kasuje. --}}
+                            @if ($shop->entitlement('invoices'))
+                                @php($autoInvoiceReady = $paynowEnabled && $fakturowniaEnabled)
+                                <div class="mt-4 border-t border-stone-100 pt-4">
+                                    <div class="ml-4 flex items-start gap-3 {{ $autoInvoiceReady ? '' : 'opacity-60' }}">
+                                        <input type="hidden" name="paynow_auto_invoice" value="{{ $autoInvoiceReady ? '0' : ($paynowAutoInvoice ? '1' : '0') }}">
+                                        <input type="checkbox" id="paynow_auto_invoice" name="paynow_auto_invoice" value="1"
+                                            @checked(old('paynow_auto_invoice', $paynowAutoInvoice)) @disabled(! $autoInvoiceReady)
+                                            class="mt-0.5 h-5 w-5 shrink-0 rounded-md border-stone-300 text-amber-600 focus:ring-4 focus:ring-amber-500/20 disabled:cursor-not-allowed">
+                                        <label for="paynow_auto_invoice" class="flex-1 {{ $autoInvoiceReady ? 'cursor-pointer' : 'cursor-not-allowed' }}">
+                                            <span class="block text-sm font-medium text-stone-800">Wystaw fakturę VAT automatycznie po opłaceniu</span>
+                                            <span class="mt-0.5 block text-xs text-stone-400">Gdy klient opłaci zamówienie online przez Paynow, faktura wystawi się sama w Fakturowni — bez klikania.</span>
+                                            @unless($autoInvoiceReady)
+                                                <span class="mt-1.5 block text-xs text-amber-700">Zadziała, gdy włączone są oba: płatności online (wyżej) oraz Fakturownia.</span>
+                                            @endunless
+                                        </label>
+                                    </div>
+                                </div>
+                            @endif
                         </div>
                         @endif
 

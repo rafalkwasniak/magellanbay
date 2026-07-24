@@ -41,6 +41,10 @@ class ShopSettingsRequest extends FormRequest
             'google_analytics_enabled' => $this->boolean('google_analytics_enabled'),
             'fakturownia_enabled' => $this->boolean('fakturownia_enabled'),
             'paynow_enabled' => $this->boolean('paynow_enabled'),
+            // Auto-FV po opłaceniu online — decyzja systemowa (nie dane połączenia),
+            // więc mieszka tu, wcięta pod włącznikiem Paynow. Flaga siedzi w configu
+            // integracji płatności; zapis merge'uje ją w kontrolerze.
+            'paynow_auto_invoice' => $this->boolean('paynow_auto_invoice'),
             // Nowe pole — gdy formularz go nie przyśle (starszy submit), zostawiamy
             // bieżącą jednostkę sklepu, żeby częściowy zapis jej nie wyzerował.
             'default_sale_unit' => $this->input('default_sale_unit', $this->user()?->shop?->default_sale_unit?->value ?? 'piece'),
@@ -81,6 +85,7 @@ class ShopSettingsRequest extends FormRequest
             'google_analytics_enabled' => ['boolean'],
             'fakturownia_enabled' => ['boolean'],
             'paynow_enabled' => ['boolean'],
+            'paynow_auto_invoice' => ['boolean'],
         ];
     }
 
@@ -104,6 +109,7 @@ class ShopSettingsRequest extends FormRequest
             'google_analytics_enabled' => 'Google Analytics',
             'fakturownia_enabled' => 'Fakturownia',
             'paynow_enabled' => 'płatności online (Paynow)',
+            'paynow_auto_invoice' => 'automatyczna faktura po opłaceniu',
         ];
     }
 

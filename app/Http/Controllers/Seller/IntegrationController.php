@@ -37,7 +37,6 @@ class IntegrationController extends Controller
             'paynowEnabled' => $shop->onlinePaymentsEnabled(),
             'paynowEnvironment' => $shop->paynowEnvironment(),
             'paynowWebhookUrl' => $shop->paynowWebhookUrl(),
-            'paynowAutoInvoice' => $shop->autoInvoiceAfterPayment(),
         ]);
     }
 
@@ -66,7 +65,6 @@ class IntegrationController extends Controller
                 $data['paynow_api_key'] ?? null,
                 $data['paynow_signature_key'] ?? null,
                 $data['paynow_environment'] ?? 'sandbox',
-                (bool) ($data['paynow_auto_invoice'] ?? false),
             );
         }
 
@@ -135,8 +133,10 @@ class IntegrationController extends Controller
      * klucz API = usunięcie integracji. Klucz podpisu to sekret — nie odbijamy go
      * w formularzu, więc puste pole znaczy „zostaw dotychczasowy" (FormRequest
      * pilnuje, by istniał przy konfiguracji od zera). Środowisko zapisujemy zawsze.
+     * Flagę `auto_invoice` ustawia się w Ustawieniach (pod włącznikiem Paynow) — tu
+     * ją tylko przepisujemy 1:1, żeby zapis kluczy nie skasował zapisanej decyzji.
      */
-    private function savePaynow(Shop $shop, ?string $apiKey, ?string $signatureKey, string $environment, bool $autoInvoice): void
+    private function savePaynow(Shop $shop, ?string $apiKey, ?string $signatureKey, string $environment): void
     {
         $integration = $shop->integration(IntegrationType::Payments);
 
@@ -150,7 +150,7 @@ class IntegrationController extends Controller
             'api_key' => $apiKey,
             'signature_key' => filled($signatureKey) ? $signatureKey : ($integration?->config['signature_key'] ?? null),
             'environment' => $environment,
-            'auto_invoice' => $autoInvoice,
+            'auto_invoice' => $integration?->config['auto_invoice'] ?? false,
         ];
 
         if ($integration !== null) {

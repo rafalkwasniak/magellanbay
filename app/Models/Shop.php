@@ -594,14 +594,17 @@ class Shop extends Model
     }
 
     /**
-     * Czy po opłaceniu online sklep chce automatycznie wystawić FV (checkbox przy
-     * integracji Paynow). Sama flaga — realne wystawienie i tak przechodzi przez
-     * `Order::canBeInvoiced()` (Fakturownia włączona, uprawnienie, brak dubla), więc
-     * zaznaczona bez włączonej Fakturowni po prostu nic nie robi.
+     * Czy po opłaceniu online sklep chce automatycznie wystawić FV. Wygodny skrót
+     * dla widoku Ustawień (checkbox pod włącznikiem Paynow) — deleguje do bramki
+     * płatności, bo to na jej wierszu żyje flaga `auto_invoice`. Miejsce wyzwalania
+     * (webhook) pyta integrację wprost, więc druga bramka nie wymaga tu zmian. Sama
+     * flaga — realne wystawienie i tak przechodzi przez `Order::canBeInvoiced()`
+     * (Fakturownia włączona, uprawnienie, brak dubla), więc zaznaczona bez włączonej
+     * Fakturowni po prostu nic nie robi.
      */
     public function autoInvoiceAfterPayment(): bool
     {
-        return ($this->integration(IntegrationType::Payments)?->config['auto_invoice'] ?? false) === true;
+        return $this->integration(IntegrationType::Payments)?->autoInvoiceAfterPayment() === true;
     }
 
     /**

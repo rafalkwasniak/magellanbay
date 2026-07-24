@@ -36,6 +36,7 @@ class ShopSettingsController extends Controller
             'fakturowniaEnabled' => (bool) $shop->integration(IntegrationType::Invoicing)?->enabled,
             'paynowConfigured' => $shop->onlinePaymentsConfigured(),
             'paynowEnabled' => (bool) $shop->integration(IntegrationType::Payments)?->enabled,
+            'paynowAutoInvoice' => $shop->autoInvoiceAfterPayment(),
         ]);
     }
 
@@ -43,9 +44,14 @@ class ShopSettingsController extends Controller
     {
         $shop = $request->user()->shop;
 
-        // Pola typowane sklepu (VAT, przelew) — bez włączników integracji, które
-        // żyją na wierszach shop_integrations, nie na kolumnach shops.
-        $shop->fill($request->safe()->except(['google_analytics_enabled', 'fakturownia_enabled', 'paynow_enabled']));
+        // Pola typowane sklepu (VAT, przelew) — bez włączników integracji ani flagi
+        // auto-FV, które żyją na wierszach shop_integrations, nie na kolumnach shops.
+        $shop->fill($request->safe()->except([
+            'google_analytics_enabled',
+            'fakturownia_enabled',
+            'paynow_enabled',
+            'paynow_auto_invoice',
+        ]));
         $shop->save();
 
         // Włączniki działają tylko, gdy integracja jest skonfigurowana (istnieje
@@ -56,8 +62,17 @@ class ShopSettingsController extends Controller
         $shop->integration(IntegrationType::Invoicing)
             ?->update(['enabled' => $request->boolean('fakturownia_enabled')]);
 
-        $shop->integration(IntegrationType::Payments)
-            ?->update(['enabled' => $request->boolean('paynow_enabled')]);
+        // Paynow: włącznik + wciśnięta pod nim decyzja auto-FV. Flaga leży w configu
+        // integracji, więc merge'ujemy ją, nie ruszając kluczy (api_key/signature_key).
+        if ($payments = $shop->integration(IntegrationType::Payments)) {
+            $config = $payments->config;
+            $config['auto_invoice'] = $request->boolean('paynow_auto_invoice');
+
+            $payments->update([
+                'enabled' => $request->boolean('paynow_enabled'),
+                'config' => $config,
+            ]);
+        }
 
         return redirect()
             ->route('seller.settings.edit')

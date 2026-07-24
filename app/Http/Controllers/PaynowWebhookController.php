@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\IntegrationType;
 use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Services\OrderStatusChanger;
@@ -69,10 +70,12 @@ class PaynowWebhookController extends Controller
             // kupującego lecą tą samą drogą, co ręczna zmiana w panelu.
             $changer->change($order, OrderStatus::Paid, 'Płatność online potwierdzona.');
 
-            // Auto-FV: gdy sklep tak ustawił (pełny pakiet: płatność online +
-            // Fakturownia). Guard `requestInvoice()` sam sprawdzi, czy Fakturownia
-            // jest włączona i czy FV jeszcze nie ma — więc to tylko dodatkowa zgoda.
-            if ($order->shop?->autoInvoiceAfterPayment()) {
+            // Auto-FV: gdy sklep tak ustawił dla TEJ bramki (Paynow). Pytamy wprost
+            // wiersz integracji, która obsłużyła płatność — kolejna bramka (P24)
+            // niesie własną flagę i własny webhook, bez wspólnego przełącznika.
+            // Guard `requestInvoice()` sam sprawdzi, czy Fakturownia jest włączona
+            // i czy FV jeszcze nie ma — więc to tylko dodatkowa zgoda.
+            if ($order->shop?->integration(IntegrationType::Payments)?->autoInvoiceAfterPayment()) {
                 $order->requestInvoice();
             }
         }

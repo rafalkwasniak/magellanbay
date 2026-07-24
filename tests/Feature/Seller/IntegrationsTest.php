@@ -347,20 +347,75 @@ class IntegrationsTest extends TestCase
         $this->assertTrue($shop->fresh()->onlinePaymentsEnabled());
     }
 
-    public function test_paynow_auto_invoice_flag_is_saved(): void
+    public function test_auto_invoice_checkbox_lives_in_settings_not_integrations(): void
     {
+        // Przenosiny: decyzja o auto-FV widnieje w Ustawieniach (pod Paynow), a nie
+        // w Integracjach (gdzie są tylko dane połączenia z zewnętrznymi narzędziami).
+        [$seller, $shop] = $this->sellerWithShop(onlinePayments: true, invoicing: true);
+        $shop->integrations()->create([
+            'type' => IntegrationType::Payments,
+            'enabled' => true,
+            'config' => ['api_key' => 'API', 'signature_key' => 'SIGN', 'environment' => 'sandbox'],
+        ]);
+
+        $this->actingAs($seller)
+            ->get(route('seller.settings.edit'))
+            ->assertOk()
+            ->assertSee('Wystaw fakturę VAT automatycznie po opłaceniu');
+
+        $this->actingAs($seller)
+            ->get(route('seller.integrations.edit'))
+            ->assertOk()
+            ->assertDontSee('Wystaw fakturę VAT automatycznie po opłaceniu');
+    }
+
+    public function test_paynow_auto_invoice_flag_is_saved_from_settings(): void
+    {
+        // Auto-FV to decyzja systemowa (nie dane połączenia) — mieszka w Ustawieniach,
+        // wcięta pod włącznikiem Paynow. Zapisuje się do configu integracji płatności.
+        [$seller, $shop] = $this->sellerWithShop(onlinePayments: true, invoicing: true);
+        $shop->integrations()->create([
+            'type' => IntegrationType::Payments,
+            'enabled' => true,
+            'config' => ['api_key' => 'API', 'signature_key' => 'SIGN', 'environment' => 'sandbox'],
+        ]);
+
+        $this->actingAs($seller)
+            ->post(route('seller.settings.update'), [
+                'default_vat_rate' => '23',
+                'paynow_enabled' => '1',
+                'paynow_auto_invoice' => '1',
+            ])
+            ->assertRedirect(route('seller.settings.edit'))
+            ->assertSessionHas('success');
+
+        $config = $shop->integrations()->where('type', IntegrationType::Payments)->first()->config;
+        $this->assertTrue($config['auto_invoice']);
+        $this->assertTrue($shop->fresh()->autoInvoiceAfterPayment());
+        // Klucze nietknięte — merge, nie nadpisanie.
+        $this->assertSame('API', $config['api_key']);
+        $this->assertSame('SIGN', $config['signature_key']);
+    }
+
+    public function test_saving_paynow_keys_preserves_existing_auto_invoice_flag(): void
+    {
+        // Flaga auto-FV żyje w Ustawieniach; ponowny zapis kluczy w Integracjach nie
+        // może jej skasować (config przepisujemy 1:1 z zachowaniem `auto_invoice`).
         [$seller, $shop] = $this->sellerWithShop(onlinePayments: true);
+        $shop->integrations()->create([
+            'type' => IntegrationType::Payments,
+            'enabled' => true,
+            'config' => ['api_key' => 'OLD', 'signature_key' => 'SIGN', 'environment' => 'sandbox', 'auto_invoice' => true],
+        ]);
 
         $this->actingAs($seller)
             ->post(route('seller.integrations.update'), [
                 'paynow_api_key' => '14d59738-4b18-4c83-86ea-131320c3d337',
                 'paynow_signature_key' => '57b7a81d-4f0f-4c2a-bf44-0234fd916f8a',
                 'paynow_sandbox' => '1',
-                'paynow_auto_invoice' => '1',
-            ]);
+            ])
+            ->assertSessionHas('success');
 
-        $config = $shop->integrations()->where('type', IntegrationType::Payments)->first()->config;
-        $this->assertTrue($config['auto_invoice']);
         $this->assertTrue($shop->fresh()->autoInvoiceAfterPayment());
     }
 
