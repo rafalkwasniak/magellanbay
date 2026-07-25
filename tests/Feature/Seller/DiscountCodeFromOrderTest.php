@@ -51,7 +51,7 @@ class DiscountCodeFromOrderTest extends TestCase
         $this->actingAs($seller)->get(route('seller.orders.show', $order))
             ->assertOk()
             ->assertSee(route('seller.discounts.create', ['jednorazowy' => 1]), escape: false)
-            ->assertSee('nie da się przypisać imiennie', escape: false);
+            ->assertSee('kod nie będzie imienny', escape: false);
     }
 
     public function test_shop_without_the_entitlement_gets_no_offer(): void

@@ -43,6 +43,9 @@
                     <livewire:seller.order-invoice :order="$order" />
                 </div>
 
+                {{-- Prawa kolumna siatki: dostawa i płatność, a pod nią kod dla
+                     klienta — obie karty trzymają tę samą szerokość. --}}
+                <div class="space-y-6">
                 <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
                     <h2 class="font-semibold text-stone-900">Dostawa i płatność</h2>
                     <div class="mt-3 space-y-2 text-sm text-stone-600">
@@ -76,6 +79,30 @@
                         @endif
                     </div>
                 </div>
+
+                {{-- Nagroda dla klienta: kod rabatowy wystawiony wprost z zamówienia.
+                     Ten sam formularz co w dziale Kody rabatowe, tylko z wypełnionym
+                     klientem i trybem jednorazowym. Wymaga uprawnienia `discount_codes`
+                     (Pawilon). Stoi pod „Dostawą i płatnością", bo to domknięcie
+                     obsługi zamówienia, nie element statusu. --}}
+                @if ($order->shop->entitlement('discount_codes'))
+                    <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                        <h2 class="font-semibold text-stone-900">Kod dla klienta</h2>
+                        <p class="mt-1 text-sm text-stone-500">
+                            Zadowolony klient wraca. Wystaw jednorazowy kod rabatowy — jako podziękowanie za zakupy albo zachętę do kolejnych.
+                        </p>
+                        <a href="{{ route('seller.discounts.create', $order->customer_id !== null ? ['klient' => $order->customer_id] : ['jednorazowy' => 1]) }}"
+                            class="mt-4 inline-flex rounded-2xl border border-stone-200 bg-white px-5 py-2.5 text-sm font-semibold text-stone-700 transition hover:bg-stone-100">
+                            Wystaw kod
+                        </a>
+                        @if ($order->customer_id === null)
+                            <p class="mt-3 text-xs text-stone-400">
+                                To zamówienie złożono bez konta, więc kod nie będzie imienny — zadziała u każdego, kto go dostanie. Wyślij go klientowi na jego adres e-mail.
+                            </p>
+                        @endif
+                    </div>
+                @endif
+                </div>
             </div>
 
             <div class="pt-2">
@@ -87,27 +114,6 @@
         <aside class="space-y-6 lg:col-span-4">
             <livewire:seller.order-status-manager :order="$order" />
             <livewire:seller.order-messenger :order="$order" />
-
-            {{-- Rekompensata: kod rabatowy wystawiony wprost z zamówienia. Ten sam
-                 formularz co w dziale Kody rabatowe, tylko z wypełnionym klientem
-                 i trybem jednorazowym. Wymaga uprawnienia `discount_codes` (Pawilon). --}}
-            @if ($order->shop->entitlement('discount_codes'))
-                <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
-                    <h2 class="font-semibold text-stone-900">Kod dla klienta</h2>
-                    <p class="mt-1 text-sm text-stone-500">
-                        Wpadka przy realizacji albo zwykłe podziękowanie za zakupy — wystaw jednorazowy kod rabatowy i wyślij go klientowi.
-                    </p>
-                    <a href="{{ route('seller.discounts.create', $order->customer_id !== null ? ['klient' => $order->customer_id] : ['jednorazowy' => 1]) }}"
-                        class="mt-4 inline-flex rounded-2xl border border-stone-200 bg-white px-5 py-2.5 text-sm font-semibold text-stone-700 transition hover:bg-stone-100">
-                        Wystaw kod
-                    </a>
-                    @if ($order->customer_id === null)
-                        <p class="mt-2 text-xs text-stone-400">
-                            To zamówienie złożono bez konta, więc kodu nie da się przypisać imiennie — będzie jednorazowy i zadziała u każdego, kto go dostanie.
-                        </p>
-                    @endif
-                </div>
-            @endif
         </aside>
     </div>
 </x-layouts.panel>
