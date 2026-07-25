@@ -31,6 +31,7 @@ class ProductRequest extends FormRequest
             'slug' => app(SlugService::class)->make((string) $this->input('name')),
             'price_gross' => str_replace([' ', "\u{a0}", ','], ['', '', '.'], trim((string) $this->input('price_gross'))),
             'track_stock' => $this->boolean('track_stock'),
+            'withdrawal_excluded' => $this->boolean('withdrawal_excluded'),
             'is_active' => $this->boolean('is_active'),
             'show_on_homepage' => $this->boolean('show_on_homepage'),
         ];
@@ -61,6 +62,7 @@ class ProductRequest extends FormRequest
             'vat_rate' => ['required', Rule::enum(VatRate::class)],
             'sale_unit' => ['required', Rule::enum(SaleUnit::class)],
             'track_stock' => ['boolean'],
+            'withdrawal_excluded' => ['boolean'],
             'stock' => ['nullable', 'numeric', 'min:0', 'max:1000000', 'required_if:track_stock,true'],
             'is_active' => ['boolean'],
             'show_on_homepage' => ['boolean'],

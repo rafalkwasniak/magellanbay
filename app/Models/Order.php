@@ -6,6 +6,7 @@ use App\Enums\DeliveryMethod;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Support\OrderFlow;
+use Carbon\CarbonInterface;
 use Database\Factories\OrderFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -206,6 +207,47 @@ class Order extends Model
     {
         return $this->payment_method === PaymentMethod::Online
             && $this->status === OrderStatus::AwaitingPayment;
+    }
+
+    /**
+     * Czy w zamówieniu jest COKOLWIEK objętego prawem odstąpienia (14 dni).
+     * Wyjątki z art. 38 sprzedawca ustawia per produkt, a w jednym koszyku
+     * bywa i stroik z żywych kwiatów (wyłączony), i doniczki (objęte) — więc
+     * pouczenie należy się zamówieniu, gdy choć jedna pozycja mu podlega.
+     *
+     * Pozycja bez produktu (skasowany z katalogu) liczy się jako OBJĘTA:
+     * przy niepewności rozstrzygamy na korzyść konsumenta.
+     */
+    public function hasWithdrawableItems(): bool
+    {
+        return $this->items->contains(
+            fn (OrderItem $item) => $item->product === null || $item->product->isWithdrawable(),
+        );
+    }
+
+    /**
+     * Ostatni dzień na odstąpienie od umowy. Ustawa liczy 14 dni od DORĘCZENIA,
+     * którego nie znamy — więc liczymy od przejścia w „Zrealizowane" (a bez
+     * takiego zdarzenia od złożenia zamówienia) i dokładamy zapas na dostawę.
+     * Zapas daje konsumentowi więcej czasu, nie mniej — w tę stronę wolno.
+     */
+    public function withdrawalDeadline(): CarbonInterface
+    {
+        $completedAt = $this->statusEvents
+            ->firstWhere('to_status', OrderStatus::Completed)?->created_at;
+
+        return ($completedAt ?? $this->created_at)
+            ->copy()
+            ->addDays((int) config('legal.withdrawal.days') + (int) config('legal.withdrawal.delivery_buffer_days'))
+            ->endOfDay();
+    }
+
+    /**
+     * Czy termin na odstąpienie jeszcze biegnie.
+     */
+    public function withinWithdrawalWindow(): bool
+    {
+        return $this->withdrawalDeadline()->isFuture();
     }
 
     /**

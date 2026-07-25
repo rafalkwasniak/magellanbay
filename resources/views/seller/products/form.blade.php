@@ -183,6 +183,22 @@
                             </label>
                             <p class="mt-1 text-xs text-stone-400">Wyłącz dla usług, produktów na zamówienie lub cyfrowych — wtedy pole stanu jest nieaktywne.</p>
                         </div>
+
+                        {{-- Wyłączenie prawa odstąpienia (art. 38 ustawy o prawach
+                             konsumenta). Domyślnie NIEZAZNACZONE — zwrot przysługuje,
+                             a wyjątek sprzedawca zaznacza świadomie. --}}
+                        <div class="col-span-12">
+                            <label class="inline-flex items-start gap-3 text-sm text-stone-600">
+                                <input type="checkbox" name="withdrawal_excluded" value="1" class="mt-0.5 shrink-0"
+                                    @checked(old('withdrawal_excluded', $product->withdrawal_excluded))>
+                                <span>Ten produkt nie podlega zwrotowi w ciągu 14 dni</span>
+                            </label>
+                            <p class="mt-1 text-xs text-stone-400">
+                                Zaznacz tylko wtedy, gdy prawo na to pozwala (art. 38 ustawy o prawach konsumenta): towary szybko psujące się —
+                                kwiaty i żywność, wykonane na indywidualne zamówienie oraz zapieczętowane ze względów higienicznych.
+                                W pozostałych przypadkach klient ma prawo odstąpić od umowy bez podania przyczyny, a my informujemy go o tym w mailu.
+                            </p>
+                        </div>
                     </div>
                 </div>
 

@@ -8,6 +8,7 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Models\EmailMessage;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\OrderStatusEvent;
 use App\Models\Shop;
 use App\Support\Money;
@@ -26,7 +27,9 @@ class OrderMailer
 
     public function confirmToCustomer(Order $order): void
     {
-        $order->loadMissing(['items', 'shop']);
+        // `items.product` — pouczenie o zwrotach pyta każdą pozycję o wyłączenie
+        // z art. 38, więc produkty dociągamy jednym zapytaniem.
+        $order->loadMissing(['items.product', 'shop']);
         $shop = $order->shop;
 
         EmailMessage::create($this->senderIdentity($shop) + [
@@ -52,6 +55,7 @@ class OrderMailer
                 $this->deliveryBlock($order, $shop),
                 $this->companyBlock($order),
                 $this->noteBlock($order, 'Uwagi:'),
+                $this->withdrawalBlock($order),
             ]),
             // Nieopłacone online → przycisk prowadzi wprost do płatności (link po
             // tokenie, działa bez logowania i nie wygasa). Inaczej — powrót do sklepu.
@@ -443,6 +447,51 @@ class OrderMailer
      * @param  list<list<string>>  $blocks
      * @return list<list<string>>
      */
+    /**
+     * Pouczenie o prawie odstąpienia od umowy (14 dni) wraz z wzorem
+     * oświadczenia — obowiązek informacyjny z ustawy z 30 maja 2014 o prawach
+     * konsumenta. Brak pouczenia wydłuża termin odstąpienia z 14 dni do
+     * 12 miesięcy, więc ten blok jest tańszy niż jego brak.
+     *
+     * Nie dokładamy go do zamówień złożonych wyłącznie z towarów wyłączonych
+     * (art. 38) — informowanie o prawie, które nie przysługuje, wprowadza
+     * w błąd. Gdy zamówienie jest mieszane, wymieniamy wyłączone pozycje
+     * z nazwy, żeby klient wiedział, czego pouczenie NIE obejmuje.
+     *
+     * @return list<string>
+     */
+    private function withdrawalBlock(Order $order): array
+    {
+        if (! $order->hasWithdrawableItems()) {
+            return [];
+        }
+
+        $days = (int) config('legal.withdrawal.days');
+        $contact = $order->shop?->contact_email;
+
+        $lines = [
+            '**Prawo odstąpienia od umowy**',
+            'Możesz odstąpić od tej umowy w ciągu '.$days.' dni od otrzymania zamówienia, bez podania przyczyny. '
+                .'Wystarczy, że prześlesz nam oświadczenie'
+                .($contact !== null ? ' — na adres '.$contact.' albo w odpowiedzi na tego e-maila.' : ' w odpowiedzi na tego e-maila.'),
+            'Wzór oświadczenia: „Niniejszym odstępuję od umowy sprzedaży następujących rzeczy: … '
+                .'(zamówienie #'.$order->number.'). Imię i nazwisko, adres, data."',
+            'Towar odeślij w ciągu 14 dni od złożenia oświadczenia. Zwrócimy Ci zapłatę wraz z kosztem '
+                .'najtańszej oferowanej przez nas dostawy; koszt odesłania towaru ponosisz Ty.',
+        ];
+
+        $excluded = $order->items
+            ->filter(fn (OrderItem $item) => $item->product !== null && ! $item->product->isWithdrawable())
+            ->pluck('name');
+
+        if ($excluded->isNotEmpty()) {
+            $lines[] = 'Prawo odstąpienia nie obejmuje: **'.$excluded->implode(', ').'** — '
+                .'to towary wyłączone ze zwrotu na podstawie art. 38 ustawy o prawach konsumenta.';
+        }
+
+        return $lines;
+    }
+
     private function blocks(array $blocks): array
     {
         return array_values(array_filter($blocks, fn (array $block): bool => $block !== []));

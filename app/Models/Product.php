@@ -26,6 +26,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 #[Fillable([
     'name', 'slug', 'description', 'price_gross', 'vat_rate',
     'track_stock', 'stock', 'sale_unit', 'is_active', 'show_on_homepage',
+    'withdrawal_excluded',
 ])]
 class Product extends Model
 {
@@ -42,6 +43,7 @@ class Product extends Model
             'sale_unit' => SaleUnit::class,
             'price_gross' => 'decimal:2',
             'track_stock' => 'boolean',
+            'withdrawal_excluded' => 'boolean',
             'is_active' => 'boolean',
             'show_on_homepage' => 'boolean',
             'stock' => 'decimal:2',
@@ -64,6 +66,17 @@ class Product extends Model
     public function tracksStock(): bool
     {
         return $this->track_stock && $this->stock !== null;
+    }
+
+    /**
+     * Czy produkt podlega prawu odstąpienia od umowy (14 dni bez podania
+     * przyczyny). Pytamy o to zdanie twierdząco, bo tak brzmi zasada — wyjątki
+     * z art. 38 (kwiaty, żywność, rękodzieło na zamówienie) są odstępstwem,
+     * które sprzedawca zaznacza świadomie.
+     */
+    public function isWithdrawable(): bool
+    {
+        return ! $this->withdrawal_excluded;
     }
 
     /**

@@ -29,6 +29,8 @@ class ProductFactory extends Factory
             'price_gross' => fake()->randomFloat(2, 5, 999),
             'vat_rate' => VatRate::R23,
             'track_stock' => true,
+            // Domyślnie zwrot przysługuje — wyjątek z art. 38 zaznacza sprzedawca.
+            'withdrawal_excluded' => false,
             'stock' => fake()->numberBetween(0, 50),
             'sale_unit' => SaleUnit::Piece,
             'is_active' => true,

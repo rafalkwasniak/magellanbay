@@ -47,4 +47,28 @@ return [
         'text' => 'Chcę otrzymywać e-maile o nowościach, promocjach i ofertach tego sklepu.',
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Prawo odstąpienia od umowy (zwroty)
+    |--------------------------------------------------------------------------
+    |
+    | Ustawa z 30 maja 2014 o prawach konsumenta (wdrożenie dyrektywy
+    | 2011/83/UE): konsument kupujący na odległość może odstąpić od umowy w
+    | 14 dni bez podania przyczyny, licząc od DORĘCZENIA towaru.
+    |
+    | Doręczenia nie znamy — kurier nam o nim nie mówi. Dlatego termin liczymy
+    | od przejścia zamówienia w „Zrealizowane" (a gdy takiego zdarzenia nie ma,
+    | od złożenia zamówienia) i dokładamy `delivery_buffer_days` jako zapas na
+    | czas dostawy. Zapas działa na korzyść konsumenta — wolno dać więcej czasu
+    | niż wymaga ustawa, nie wolno mniej.
+    |
+    | Wyjątki (art. 38) ustawia sprzedawca per produkt: `products.withdrawal_excluded`.
+    |
+    */
+
+    'withdrawal' => [
+        'days' => 14,
+        'delivery_buffer_days' => 4,
+    ],
+
 ];
