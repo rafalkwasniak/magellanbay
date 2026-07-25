@@ -9,11 +9,11 @@ return [
     |
     | Główna domena platformy. Tu leży zarządzanie: logowanie, rejestracja,
     | panel sprzedawcy i administratora. Storefronty sprzedawców siedzą na
-    | subdomenach {shop}.{central_domain} (np. bukiety.shop.kwasniak.org),
+    | subdomenach {shop}.{central_domain} (np. ilikemybike.kramio.pl),
     | gdzie {shop} = slug sklepu = etykieta subdomeny.
     |
-    | Routing per-domena (Route::domain) włączymy razem z budową storefrontu;
-    | na razie cała aplikacja działa na domenie centrali. Patrz routes/web.php.
+    | Routing per-domena DZIAŁA: grupa `Route::domain` + middleware ResolveShop
+    | w routes/web.php, na serwerze wildcard DNS i wildcard SSL *.kramio.pl.
     |
     */
 

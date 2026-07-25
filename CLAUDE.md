@@ -57,7 +57,7 @@ Specyfika projektu **Kramio** (`kramio.pl`). Plik czytany przez asystenta na sta
    - **Centrala** = domena platformy (`config('tenancy.central_domain')` ← `APP_DOMAIN`): zarządzanie, logowanie/rejestracja, panel sprzedawcy i administratora. **Sprzedawca zarządza sklepem w centrali, NIE loguje się do swojej subdomeny, by nim zarządzać** (na subdomenie może co najwyżej zostać własnym klientem).
    - **Storefront** = subdomena `{shop}.{central_domain}` (np. `bukiety.kramio.pl`): publiczny sklep jednego sprzedawcy. `{shop}` = slug sklepu = etykieta subdomeny; middleware rozwiązuje `Shop` i scope'uje wszystko do niego.
    - **Jedna baza + `shop_id`** na tabelach najemcy (nie baza-per-sklep — przerost na shared-hoście).
-   - **Stan:** wildcard DNS już działa; serwer jeszcze nie kieruje subdomen do aplikacji (wildcard vhost + wildcard SSL — działka Rafała, na później). Działamy na domenie centrali jeszcze długo. Routing per-domena (`Route::domain`) jest przewidziany (wyłączony szkielet w `routes/web.php`), włączymy go razem z budową storefrontu — wtedy jednym ruchem, bez przepisywania.
+   - **Stan (zweryfikowany 2026-07-25): DZIAŁA na produkcji.** Wildcard DNS i wildcard SSL `*.kramio.pl` są na serwerze; w aplikacji storefront żyje w grupie `Route::domain('{shop}.'.config('tenancy.central_domain'))` z middleware `tenant` (`App\Http\Middleware\ResolveShop`) w `routes/web.php`. Zweryfikowane na `ilikemybike.kramio.pl`. Wcześniejsze zdanie „wyłączony szkielet, włączymy później" było NIEPRAWDĄ przepisywaną z czasów sprzed wdrożenia — raz wprowadziło asystenta w błąd przy podsumowaniu zaległości.
 
 ---
 
@@ -85,7 +85,7 @@ Zweryfikowane pod kątem „cały serwis, nie tylko API":
 ## 5. Środowiskowe TODO (konfiguracja przed produkcją)
 
 Zrobione:
-- `APP_NAME=Kramio`, `APP_URL=https://kramio.pl`, `APP_DOMAIN=kramio.pl`, `APP_ENV=production`, `APP_DEBUG=false`. (Storefronty pod `*.kramio.pl` wymagają wildcard DNS+SSL — działka Rafała, na później.)
+- `APP_NAME=Kramio`, `APP_URL=https://kramio.pl`, `APP_DOMAIN=kramio.pl`, `APP_ENV=production`, `APP_DEBUG=false`. (Storefronty pod `*.kramio.pl` — wildcard DNS i SSL ustawione, subdomeny działają.)
 - `MAIL_FROM_ADDRESS=sklep@kramio.pl`.
 - Parytet `.env` ↔ `.env.example` wyrównany (48 kluczy, blok DB pod MySQL z pustymi wartościami w example).
 - Logowanie (`FOUNDATION` sek. 5): logi dzienne (kanał `daily`, retencja 14 dni w `config/logging.php`).

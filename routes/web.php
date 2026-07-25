@@ -45,11 +45,11 @@ use Illuminate\Support\Facades\Route;
 | administratora i sprzedawcy. Sprzedawca zarządza sklepem TUTAJ, nie na
 | swojej subdomenie.
 |
-| Architektura wielonajemcza: storefronty sprzedawców będą serwowane z
-| subdomen {shop}.{central_domain} (np. bukiety.shop.kwasniak.org) — patrz
-| wyłączony szkielet STOREFRONT na dole pliku. Dopóki subdomeny nie są
-| włączone na serwerze, wszystko działa na domenie centrali bez wiązania
-| Route::domain (uniknięcie kruchości na localhost/www/testach).
+| Architektura wielonajemcza: storefronty sprzedawców są serwowane z subdomen
+| {shop}.{central_domain} (np. ilikemybike.kramio.pl) — sekcja STOREFRONT na
+| dole pliku, DZIAŁAJĄCA (wildcard DNS + SSL na serwerze, Route::domain +
+| middleware ResolveShop). Trasy w tej sekcji nie są wiązane z domeną, więc
+| centrala odpowiada na każdym hoście, który nie jest subdomeną sklepu.
 */
 
 Route::get('/', function () {
@@ -136,15 +136,17 @@ Route::middleware(['auth', 'role:seller', 'ensure.consents'])
         Route::get('/sklep', [ShopProfileController::class, 'edit'])->name('shop.edit');
         Route::post('/sklep', [ShopProfileController::class, 'update'])->name('shop.update');
 
-        // Wygląd sklepu (logo; docelowo kolory/szablony). Edycja przez POST.
+        // Wygląd sklepu (logo, kolor przewodni, szablon motywu). Edycja przez POST.
         Route::get('/wyglad', [AppearanceController::class, 'edit'])->name('appearance.edit');
         Route::post('/wyglad', [AppearanceController::class, 'update'])->name('appearance.update');
 
-        // Ustawienia sklepu (na razie domyślny VAT; docelowo więcej). Edycja przez POST.
+        // Ustawienia sklepu (sprzedaż/VAT, dostawa, płatności, włączniki
+        // integracji). Edycja przez POST.
         Route::get('/ustawienia', [ShopSettingsController::class, 'edit'])->name('settings.edit');
         Route::post('/ustawienia', [ShopSettingsController::class, 'update'])->name('settings.update');
 
-        // Integracje (na razie Google Analytics — konfiguracja usług). Edycja przez POST.
+        // Integracje (klucze usług: Paynow, Fakturownia, Google Analytics).
+        // Edycja przez POST.
         Route::get('/integracje', [IntegrationController::class, 'edit'])->name('integrations.edit');
         Route::post('/integracje', [IntegrationController::class, 'update'])->name('integrations.update');
 
@@ -219,8 +221,6 @@ Route::middleware('auth')->group(function () {
 | go z widokami (404 gdy slug bez sklepu). Inne kontrolery niż centrala — to
 | sedno podziału „inne domeny → inne kontrolery". Grupa łapie tylko hosty
 | {label}.{central_domain}, więc centrala (bez subdomeny) działa jak dotąd.
-|
-| Kolejno dojdą: /produkt/{product}, /kategoria/{...}, /koszyk.
 */
 Route::domain('{shop}.'.config('tenancy.central_domain'))
     ->middleware(['tenant', 'record.traffic'])
