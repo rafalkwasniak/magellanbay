@@ -31,7 +31,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'ship_street', 'ship_building_number', 'ship_apartment_number', 'ship_postal_code', 'ship_city',
     'parcel_locker_code', 'parcel_locker_address',
     'delivery_method', 'delivery_cost', 'payment_method',
-    'items_total', 'total_net', 'total_vat', 'total_gross', 'note',
+    'items_total', 'discount_code_id', 'discount_code', 'discount_amount',
+    'total_net', 'total_vat', 'total_gross', 'note',
 ])]
 class Order extends Model
 {
@@ -50,6 +51,7 @@ class Order extends Model
             'is_company' => 'boolean',
             'delivery_cost' => 'decimal:2',
             'items_total' => 'decimal:2',
+            'discount_amount' => 'decimal:2',
             'total_net' => 'decimal:2',
             'total_vat' => 'decimal:2',
             'total_gross' => 'decimal:2',
@@ -76,6 +78,18 @@ class Order extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    /**
+     * Kod rabatowy użyty przy składaniu zamówienia (lub null). Do liczenia użyć
+     * kodu; to, CO klient dostał, opisuje migawka `discount_code` /
+     * `discount_amount` — ona przeżyje skasowanie kodu przez sprzedawcę.
+     *
+     * @return BelongsTo<DiscountCode, $this>
+     */
+    public function discountCodeUsed(): BelongsTo
+    {
+        return $this->belongsTo(DiscountCode::class, 'discount_code_id');
     }
 
     /**

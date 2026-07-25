@@ -142,6 +142,17 @@ class Shop extends Model
     }
 
     /**
+     * Kody rabatowe sklepu (uprawnienie `discount_codes`, pakiet Pawilon).
+     * Najnowsze pierwsze — sprzedawca zwykle pracuje na tym, co właśnie dodał.
+     *
+     * @return HasMany<DiscountCode, $this>
+     */
+    public function discountCodes(): HasMany
+    {
+        return $this->hasMany(DiscountCode::class)->latest('id');
+    }
+
+    /**
      * Alokuje kolejny numer zamówienia tego sklepu — atomowo, przez blokadę
      * wiersza sklepu (unika kolizji przy równoczesnych zamówieniach). Numeracja
      * jest ciągła i nieodzyskiwana: licznik rośnie niezależnie od anulowania czy

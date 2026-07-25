@@ -125,4 +125,18 @@ class ShopFactory extends Factory
             ),
         ]);
     }
+
+    /**
+     * Sklep z uprawnieniem do kodów rabatowych — funkcja TYLKO Pawilonu
+     * (`discount_codes`). Dokłada `discount_codes=true` bez zmiany pakietu.
+     */
+    public function withDiscountCodes(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'entitlements' => array_merge(
+                $attributes['entitlements'] ?? config('shop.packages.'.config('shop.default_package').'.entitlements'),
+                ['discount_codes' => true],
+            ),
+        ]);
+    }
 }
