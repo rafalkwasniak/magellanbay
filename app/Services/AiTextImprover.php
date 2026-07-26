@@ -2,21 +2,27 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Http;
+use App\Services\Ai\AiClient;
 use RuntimeException;
 
 /**
- * Redakcja treści przez API DeepSeek. Dwie ścieżki:
+ * Redakcja treści przez AI. Dwie ścieżki:
  * - improve(): zwykły tekst (krótki prompt) — pola bez formatowania.
  * - improveHtml(): fragment HTML z edytora (dłuższy prompt) — model poprawia
  *   wyłącznie tekst wewnątrz znaczników, nie ruszając samego HTML.
  *
- * Poprawiane są tylko ortografia, interpunkcja, styl i czytelność — bez dodawania
- * nowych informacji. Klucz API zostaje po stronie serwera, treści nie logujemy.
+ * Ta klasa odpowiada wyłącznie za instrukcje dla modelu; czym zostaną wykonane,
+ * rozstrzyga zadanie `proofread` w `config/ai.php`. Poprawiane są tylko ortografia,
+ * interpunkcja, styl i czytelność — bez dodawania nowych informacji.
  * Wzorzec przeniesiony z projektu kociaczek.com.pl.
  */
 class AiTextImprover
 {
+    /** Zadanie z `config('ai.tasks')` obsługujące redakcję tekstu. */
+    private const TASK = 'proofread';
+
+    public function __construct(private readonly AiClient $ai) {}
+
     /**
      * Redakcja zwykłego tekstu.
      *
@@ -34,7 +40,7 @@ class AiTextImprover
             $system .= " Wynik nie może przekroczyć {$maxChars} znaków.";
         }
 
-        return $this->ask($system, $text);
+        return $this->ai->run(self::TASK, $system, $text);
     }
 
     /**
@@ -60,46 +66,12 @@ class AiTextImprover
         }
 
         // Zdejmij ewentualne opakowanie w blok kodu (```html ... ```), gdyby model je dodał.
-        $result = preg_replace('/^```[a-z]*\s*|\s*```$/i', '', $this->ask($system, $html));
+        $result = preg_replace(
+            '/^```[a-z]*\s*|\s*```$/i',
+            '',
+            $this->ai->run(self::TASK, $system, $html)
+        );
 
         return trim((string) $result);
-    }
-
-    /**
-     * Pojedyncze wywołanie API: wiadomość systemowa (instrukcja) + treść użytkownika.
-     *
-     * @throws RuntimeException
-     */
-    private function ask(string $system, string $content): string
-    {
-        $key = config('services.deepseek.key');
-
-        if (empty($key)) {
-            throw new RuntimeException('Usługa AI nie jest skonfigurowana.');
-        }
-
-        $response = Http::baseUrl(rtrim((string) config('services.deepseek.base_url'), '/'))
-            ->withToken($key)
-            ->timeout(30)
-            ->post('/chat/completions', [
-                'model' => config('services.deepseek.model', 'deepseek-chat'),
-                'temperature' => 0.3,
-                'messages' => [
-                    ['role' => 'system', 'content' => $system],
-                    ['role' => 'user', 'content' => $content],
-                ],
-            ]);
-
-        if ($response->failed()) {
-            throw new RuntimeException('Wywołanie AI zakończyło się błędem.');
-        }
-
-        $improved = $response->json('choices.0.message.content');
-
-        if (! is_string($improved) || trim($improved) === '') {
-            throw new RuntimeException('AI zwróciło pustą odpowiedź.');
-        }
-
-        return trim($improved);
     }
 }

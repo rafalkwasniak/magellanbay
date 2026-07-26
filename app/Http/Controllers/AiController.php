@@ -34,10 +34,16 @@ class AiController extends Controller
 
         $config = $fields[$validated['field']];
 
+        // Przychodzi FRAGMENT, nie całe pole — dzieli przeglądarka (resources/js/ai.js),
+        // bo długi tekst w jednym wywołaniu przekroczyłby timeout. Limit długości
+        // wyniku liczymy więc względem tego, co faktycznie przyszło: przy korekcie
+        // tekst nie ma prawa spuchnąć. Limitu całego pola pilnuje walidacja zapisu.
+        $maxOut = max(200, (int) ceil(mb_strlen($validated['text']) * 1.3));
+
         try {
             $improved = $config['html']
-                ? $ai->improveHtml($validated['text'], $config['max'])
-                : $ai->improve($validated['text'], $config['max']);
+                ? $ai->improveHtml($validated['text'], $maxOut)
+                : $ai->improve($validated['text'], $maxOut);
         } catch (Throwable) {
             return response()->json([
                 'message' => 'Usługa AI jest chwilowo niedostępna. Spróbuj ponownie później.',

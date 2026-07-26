@@ -13,7 +13,7 @@ class AiImproveTest extends TestCase
 
     public function test_seller_can_improve_text(): void
     {
-        config(['services.deepseek.key' => 'test-key']);
+        config(['ai.providers.deepseek.key' => 'test-key']);
         Http::fake([
             '*/chat/completions' => Http::response([
                 'choices' => [['message' => ['content' => 'Poprawiony tekst.']]],
@@ -33,7 +33,7 @@ class AiImproveTest extends TestCase
 
     public function test_html_field_preserves_markup_and_strips_code_fences(): void
     {
-        config(['services.deepseek.key' => 'test-key']);
+        config(['ai.providers.deepseek.key' => 'test-key']);
         Http::fake([
             '*/chat/completions' => Http::response([
                 'choices' => [['message' => ['content' => "```html\n<div>Poprawiony <strong>opis</strong></div>\n```"]]],
@@ -53,7 +53,7 @@ class AiImproveTest extends TestCase
 
     public function test_product_description_uses_html_mode(): void
     {
-        config(['services.deepseek.key' => 'test-key']);
+        config(['ai.providers.deepseek.key' => 'test-key']);
         Http::fake([
             '*/chat/completions' => Http::response([
                 'choices' => [['message' => ['content' => '<div>Poprawiony <strong>opis</strong></div>']]],
@@ -71,9 +71,60 @@ class AiImproveTest extends TestCase
             ->assertJson(['text' => '<div>Poprawiony <strong>opis</strong></div>']);
     }
 
+    public function test_output_limit_follows_the_chunk_not_the_whole_field(): void
+    {
+        // Przychodzi FRAGMENT (dzieli przeglądarka), więc instrukcja dla modelu
+        // musi ograniczać wynik do rozmiaru fragmentu. Gdyby szła tu długość
+        // całego pola (strona CMS: 30 tys. znaków), model dostawałby przyzwolenie
+        // na rozdmuchanie krótkiego akapitu w wypracowanie.
+        config(['ai.providers.deepseek.key' => 'test-key']);
+        Http::fake([
+            '*/chat/completions' => Http::response([
+                'choices' => [['message' => ['content' => '<div>ok</div>']]],
+            ]),
+        ]);
+
+        $seller = User::factory()->consented()->create();
+        $chunk = '<div>'.str_repeat('a', 289).'</div>'; // 300 znaków → limit 390
+
+        $this->actingAs($seller)
+            ->postJson(route('ai.improve'), ['field' => 'page_content', 'text' => $chunk])
+            ->assertOk();
+
+        Http::assertSent(function ($request) {
+            $system = $request->data()['messages'][0]['content'];
+
+            return str_contains($system, 'nie może przekroczyć 390 znaków')
+                && ! str_contains($system, '30000');
+        });
+    }
+
+    public function test_short_chunk_gets_a_sane_minimum_limit(): void
+    {
+        // Kilkuznakowy nagłówek nie może dostać limitu w rodzaju „max 5 znaków",
+        // bo poprawiona wersja bywa dłuższa od oryginału.
+        config(['ai.providers.deepseek.key' => 'test-key']);
+        Http::fake([
+            '*/chat/completions' => Http::response([
+                'choices' => [['message' => ['content' => '<h2>Ok</h2>']]],
+            ]),
+        ]);
+
+        $seller = User::factory()->consented()->create();
+
+        $this->actingAs($seller)
+            ->postJson(route('ai.improve'), ['field' => 'page_content', 'text' => '<h2>tytul</h2>'])
+            ->assertOk();
+
+        Http::assertSent(fn ($request) => str_contains(
+            $request->data()['messages'][0]['content'],
+            'nie może przekroczyć 200 znaków'
+        ));
+    }
+
     public function test_unconfigured_service_returns_503(): void
     {
-        config(['services.deepseek.key' => '']);
+        config(['ai.providers.deepseek.key' => '']);
         Http::fake();
 
         $seller = User::factory()->consented()->create();

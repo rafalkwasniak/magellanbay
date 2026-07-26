@@ -40,12 +40,7 @@ return [
         'webhook' => env('DISCORD_WEBHOOK_URL'),
     ],
 
-    'deepseek' => [
-        // Redakcja/generowanie treści („Popraw przez AI"). Klucz tylko po stronie serwera.
-        'key' => env('DEEPSEEK_API_KEY'),
-        'base_url' => env('DEEPSEEK_BASE_URL', 'https://api.deepseek.com'),
-        'model' => env('DEEPSEEK_MODEL', 'deepseek-chat'),
-    ],
+    // AI (dostawcy, modele, zadania) mieszka w osobnym pliku: config/ai.php.
 
     'mf' => [
         // Biała lista podatników VAT (Ministerstwo Finansów) — auto-fill firmy z NIP. Bez klucza.

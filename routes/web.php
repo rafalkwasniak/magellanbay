@@ -203,8 +203,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/zgody', [ConsentController::class, 'store'])->name('consents.store');
 
     // Redakcja treści przez AI („Popraw przez AI") — zwraca poprawiony tekst, nie zapisuje.
+    // Limit liczy FRAGMENTY, nie kliknięcia: jedna korekta długiej strony to
+    // kilkanaście żądań (dzielenie w resources/js/ai.js), więc dawne 30/min
+    // kończyłoby się błędem limitu w połowie roboty. Ochrona przed nadużyciem
+    // zostaje — 120 wywołań modelu na minutę to i tak dużo powyżej normalnej pracy.
     Route::post('/ai/popraw', [AiController::class, 'improve'])
-        ->middleware('throttle:30,1')
+        ->middleware('throttle:120,1')
         ->name('ai.improve');
 
     // Edycja własnego profilu (dane z users, awatar, hasło). Edycja przez POST.
