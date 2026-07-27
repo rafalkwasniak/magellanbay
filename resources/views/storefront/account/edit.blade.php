@@ -31,8 +31,10 @@
                     @error('phone') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
                 </div>
                 <div>
-                    <label class="block text-sm opacity-80">E-mail (login)</label>
-                    <input type="email" value="{{ $customer->email }}" disabled
+                    {{-- `for` + `id`: etykieta musi być POWIĄZANA z polem, nie tylko
+                         leżeć obok — inaczej czytnik ekranu jej nie przeczyta. --}}
+                    <label for="account-email" class="block text-sm opacity-80">E-mail (login)</label>
+                    <input id="account-email" type="email" value="{{ $customer->email }}" disabled
                         class="st-border mt-1 block w-full cursor-not-allowed rounded-xl border bg-transparent px-3 py-2.5 text-sm opacity-60">
                 </div>
                 <button type="submit" class="st-btn rounded-xl px-5 py-2.5 text-sm font-semibold transition hover:brightness-95">Zapisz dane</button>

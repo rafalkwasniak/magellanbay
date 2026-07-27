@@ -80,13 +80,15 @@ class Seo
     }
 
     /**
-     * Obrazek do social mediów. Na razie logo sklepu (absolutny adres, bo
-     * Facebook nie rozwiąże ścieżki względnej); generowana grafika 1200×630
-     * dojdzie osobnym krokiem i wejdzie dokładnie tutaj.
+     * Obrazek do social mediów: wygenerowana karta 1200×630, a gdy jej jeszcze
+     * nie ma (job w kolejce, świeży sklep) — logo sklepu. Adres absolutny, bo
+     * Facebook nie rozwiąże ścieżki względnej.
      */
     public static function shopImage(Shop $shop): ?string
     {
-        return $shop->logo_path ? Storage::disk('public')->url($shop->logo_path) : null;
+        $path = $shop->og_image_path ?: $shop->logo_path;
+
+        return $path ? Storage::disk('public')->url($path) : null;
     }
 
     /**

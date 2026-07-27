@@ -107,6 +107,28 @@
         .st-prose a { color: var(--brand); text-decoration: underline; text-underline-offset: 2px; }
         .st-prose a:hover { opacity: 0.8; }
         [x-cloak] { display: none !important; }
+
+        /* Skip link („Przejdź do treści"): schowany, dopóki ktoś nie dojdzie do
+           niego klawiszem Tab. Osoba nawigująca klawiaturą omija w ten sposób
+           całe menu zamiast przechodzić je na każdej podstronie — audyt WCAG
+           wskazał brak tego linku na 100% stron. Własny CSS zamiast klas
+           Tailwinda, bo `focus:not-sr-only` nie ma w zbudowanym arkuszu. */
+        .st-skip {
+            position: absolute;
+            left: -9999px;
+            top: 0;
+            z-index: 100;
+        }
+        .st-skip:focus {
+            left: 1rem;
+            top: 1rem;
+            padding: 0.75rem 1.25rem;
+            border-radius: 9999px;
+            background: var(--brand);
+            color: var(--brand-ink);
+            font-weight: 600;
+            text-decoration: none;
+        }
     </style>
 
     @livewireStyles
@@ -133,6 +155,10 @@
 </head>
 
 <body class="min-h-full font-sans antialiased">
+    {{-- Pierwszy element w kolejności Tab — inaczej klawiatura musi przejść całe
+         menu na każdej podstronie, zanim dotrze do oferty. --}}
+    <a href="#tresc" class="st-skip">Przejdź do treści</a>
+
     @if($gaId && $isGtm)
         {{-- Google Tag Manager (noscript) --}}
         <noscript><iframe src="https://www.googletagmanager.com/ns.html?id={{ $gaId }}" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
@@ -224,7 +250,11 @@
     </header>
     @endunless
 
-    {{ $slot }}
+    {{-- Cel skip linku. `tabindex="-1"` sprawia, że po kliknięciu fokus faktycznie
+         przeskakuje tutaj, a nie tylko przewija się widok. --}}
+    <div id="tresc" tabindex="-1">
+        {{ $slot }}
+    </div>
 
     @unless ($bare)
     {{-- Stopka globalna: brand · Informacje (te same pozycje co w menu + NASZA

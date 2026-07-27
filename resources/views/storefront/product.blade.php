@@ -30,8 +30,13 @@
                 @if ($product->images->count() > 1)
                     <div class="mt-3 flex flex-wrap gap-3">
                         @foreach ($product->images as $img)
-                            {{-- Miniatury: kwadrat, przycięte (object-cover) — jak kafle na wykazie. --}}
+                            {{-- Miniatury: kwadrat, przycięte (object-cover) — jak kafle na wykazie.
+                                 `aria-label` na przycisku, bo jego jedyną treścią jest obrazek —
+                                 bez nazwy czytnik ekranu mówi tylko „przycisk". Zdjęcie w środku
+                                 zostaje z pustym `alt`: opisuje je etykieta przycisku, więc
+                                 powtórzenie byłoby szumem. --}}
                             <button type="button" data-gallery-thumb="{{ $img->url() }}"
+                                aria-label="Pokaż zdjęcie {{ $loop->iteration }} z {{ $loop->count }}: {{ $product->name }}"
                                 class="st-border h-16 w-16 overflow-hidden rounded-xl border transition hover:brightness-105">
                                 <img src="{{ $img->url() }}" alt="" class="h-full w-full object-cover">
                             </button>

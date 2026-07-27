@@ -2,15 +2,26 @@
 
 namespace App\Observers;
 
+use App\Jobs\GenerateShopOgImage;
 use App\Models\Shop;
 
 /**
  * Zakłada nowemu sklepowi stronę systemową Regulamin (nieusuwalną). Szkielet
  * treści bierzemy z config/pages.php — sprzedawca uzupełnia go pod swój sklep.
  * `is_system` ustawiamy jawnie, bo nie jest mass-assignable na modelu Page.
+ *
+ * Pilnuje też grafiki sklepu do social mediów: przerysowuje ją, gdy zmieni się
+ * cokolwiek, co na niej widać (nazwa, logo, kolory motywu).
  */
 class ShopObserver
 {
+    /**
+     * Pola, których zmiana wymusza nową grafikę Open Graph.
+     *
+     * @var list<string>
+     */
+    private const OG_SOURCES = ['name', 'logo_path', 'theme', 'template'];
+
     public function created(Shop $shop): void
     {
         $regulamin = config('pages.regulamin');
@@ -24,5 +35,19 @@ class ShopObserver
         ]);
         $page->is_system = true;
         $page->save();
+
+        GenerateShopOgImage::dispatch($shop);
+    }
+
+    /**
+     * Grafika OG przerysowuje się tylko wtedy, gdy zmieniło się to, co na niej
+     * widać. Bez tego warunku każde zapisanie ustawień sklepu (VAT, dostawa,
+     * numer konta) generowałoby obrazek od nowa bez powodu.
+     */
+    public function updated(Shop $shop): void
+    {
+        if ($shop->wasChanged(self::OG_SOURCES)) {
+            GenerateShopOgImage::dispatch($shop);
+        }
     }
 }
