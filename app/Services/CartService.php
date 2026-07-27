@@ -19,6 +19,9 @@ class CartService
     /** Sesyjny worek wszystkich koszyków: [shop_id => [product_id => qty]]. */
     private const KEY = 'carts';
 
+    /** Kody rabatowe przyklejone do koszyków: [shop_id => 'KOD']. */
+    private const DISCOUNT_KEY = 'cart_discounts';
+
     /**
      * Surowa zawartość koszyka sklepu: [product_id => qty]. Ilość jest ułamkowa
      * (waga: 2,50 kg) albo całkowita (sztuki). Kolejność wstawiania zachowana.
@@ -97,6 +100,30 @@ class CartService
     public function clear(int $shopId): void
     {
         session()->forget(self::KEY.'.'.$shopId);
+        $this->clearDiscountCode($shopId);
+    }
+
+    /**
+     * Kod rabatowy przyklejony do koszyka. W sesji trzymamy WYŁĄCZNIE sam kod —
+     * nigdy wyliczonej kwoty. Zniżkę przeliczamy przy każdym renderze z aktualnej
+     * zawartości koszyka, więc nie da się jej zamrozić przez dołożenie i wyjęcie
+     * produktów ani podmianę wartości w sesji (ta sama zasada co przy cenach).
+     */
+    public function discountCode(int $shopId): ?string
+    {
+        $code = session()->get(self::DISCOUNT_KEY.'.'.$shopId);
+
+        return is_string($code) && $code !== '' ? $code : null;
+    }
+
+    public function setDiscountCode(int $shopId, string $code): void
+    {
+        session()->put(self::DISCOUNT_KEY.'.'.$shopId, mb_strtoupper(trim($code)));
+    }
+
+    public function clearDiscountCode(int $shopId): void
+    {
+        session()->forget(self::DISCOUNT_KEY.'.'.$shopId);
     }
 
     /**

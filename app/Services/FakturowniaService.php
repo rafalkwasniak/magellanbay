@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Enums\VatRate;
 use App\Models\Order;
+use App\Support\DiscountAllocation;
+use App\Support\Money;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -121,9 +123,28 @@ class FakturowniaService
             'status' => 'paid',
             'payment_type' => 'transfer',
             'positions' => $this->positions($order),
+            // Ślad kodu rabatowego na dokumencie — kwoty pozycji są już po rabacie,
+            // więc bez tej adnotacji nie dałoby się odtworzyć, skąd niższa cena.
+            'description' => $this->discountNote($order),
         ] + $this->buyer($order);
 
         return ['invoice' => array_filter($invoice, fn ($value): bool => $value !== null)];
+    }
+
+    /**
+     * Adnotacja o rabacie (null, gdy zamówienie go nie miało — wtedy pole odpada
+     * w `array_filter`).
+     */
+    private function discountNote(Order $order): ?string
+    {
+        $discount = (float) $order->discount_amount;
+
+        if ($discount <= 0) {
+            return null;
+        }
+
+        return 'Uwzględniono rabat'.(filled($order->discount_code) ? ' (kod '.$order->discount_code.')' : '')
+            .': '.Money::pln($discount).'. Ceny pozycji są po rabacie.';
     }
 
     /**
@@ -165,12 +186,22 @@ class FakturowniaService
      */
     private function positions(Order $order): array
     {
-        $positions = $order->items->map(fn ($item): array => [
+        // Rabat rozbity na pozycje proporcjonalnie — tym samym podziałem co w
+        // OrderTotals, więc VAT na fakturze zgadza się z VAT-em zamówienia.
+        // ŚWIADOMIE nie dopisujemy rabatu jako ujemnej pozycji: przy dwóch
+        // stawkach w koszyku musiałaby dostać jedną stawkę, co zafałszowałoby
+        // rozbicie podatku.
+        $shares = DiscountAllocation::spread(
+            (float) $order->discount_amount,
+            $order->items->pluck('line_total_gross')->map(fn ($v): float => (float) $v)->all(),
+        );
+
+        $positions = $order->items->values()->map(fn ($item, int $i): array => [
             'name' => $item->name,
             'tax' => $this->tax($item->vat_rate),
             'quantity' => (float) $item->quantity,
             'quantity_unit' => $item->sale_unit->abbreviation(),
-            'total_price_gross' => (float) $item->line_total_gross,
+            'total_price_gross' => round((float) $item->line_total_gross - ($shares[$i] ?? 0.0), 2),
         ])->values()->all();
 
         if ((float) $order->delivery_cost > 0) {

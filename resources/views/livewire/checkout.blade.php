@@ -300,13 +300,27 @@
                             </li>
                         @endforeach
                     </ul>
+                    @if ($formattedDiscount !== null)
+                        {{-- Rabat: osobny wiersz nad dostawą, żeby było widać, od czego
+                             zszedł (produkty) i że wysyłki nie dotyczy. --}}
+                        <div class="st-border mt-4 space-y-2 border-t pt-4 text-sm">
+                            <div class="flex items-baseline justify-between">
+                                <span class="opacity-70">Produkty</span>
+                                <span class="shrink-0 tabular-nums opacity-70">{{ $formattedItems }}</span>
+                            </div>
+                            <div class="flex items-baseline justify-between gap-3">
+                                <span class="min-w-0 opacity-70">Rabat <span class="font-semibold uppercase tracking-wide break-words">{{ $discountCode }}</span></span>
+                                <span class="shrink-0 font-semibold tabular-nums">−{{ $formattedDiscount }}</span>
+                            </div>
+                        </div>
+                    @endif
                     @if ($shippedDelivery)
-                        <div class="st-border mt-4 flex items-baseline justify-between border-t pt-4 text-sm">
+                        <div class="st-border flex items-baseline justify-between text-sm {{ $formattedDiscount !== null ? 'mt-2' : 'mt-4 border-t pt-4' }}">
                             <span class="opacity-70">Dostawa (kurier)</span>
                             <span class="shrink-0 tabular-nums">{{ $formattedDelivery }}</span>
                         </div>
                     @endif
-                    <div class="st-border flex items-baseline justify-between {{ $shippedDelivery ? 'mt-3' : 'mt-4 border-t pt-4' }}">
+                    <div class="st-border flex items-baseline justify-between {{ $shippedDelivery || $formattedDiscount !== null ? 'mt-3' : 'mt-4 border-t pt-4' }}">
                         <span class="opacity-70">Razem (brutto)</span>
                         <span class="text-xl font-bold tabular-nums">{{ $formattedTotal }}</span>
                     </div>

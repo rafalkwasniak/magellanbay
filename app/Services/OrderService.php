@@ -9,6 +9,7 @@ use App\Models\Customer;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\Shop;
+use App\Support\DiscountResult;
 use App\Support\OrderFlow;
 use Illuminate\Support\Facades\DB;
 
@@ -26,6 +27,7 @@ class OrderService
         private OrderMailer $mailer,
         private OrderTotals $totals,
         private CustomerActivationMailer $activationMailer,
+        private DiscountResolver $discounts,
     ) {}
 
     /**
@@ -175,6 +177,7 @@ class OrderService
 
         $itemRows = [];
         $itemsGross = 0.0;
+        $discountLines = [];
 
         foreach ($lines as $line) {
             $product = $line['product'];
@@ -182,6 +185,13 @@ class OrderService
 
             [$lineGross] = $this->totals->lineAmounts((float) $product->price_gross, $quantity, $product->vat_rate);
             $itemsGross += $lineGross;
+
+            $discountLines[] = [
+                'product' => $product,
+                'quantity' => $quantity,
+                'unit_price' => (float) $product->price_gross,
+                'line_total' => $lineGross,
+            ];
 
             $itemRows[] = [
                 'product_id' => $product->id,
@@ -198,9 +208,17 @@ class OrderService
             }
         }
 
+        // Kod rabatowy z koszyka sprawdzamy PONOWNIE, na finalnych pozycjach —
+        // między koszykiem a kasą klient zmienia zawartość, a sprzedawca bywa
+        // szybszy i wyłącza kod. Odmowa przerywa składanie (patrz metoda niżej).
+        $discount = $this->resolveDiscount($shop, $discountLines, $customer);
+
         // Koszt dostawy = cennik WYBRANEJ metody per sklep (z progiem darmowej
         // dostawy liczonym od wartości produktów). Odbiór osobisty: 0.
-        $deliveryCost = $shop->deliveryCostFor($delivery, $itemsGross);
+        // Kod „darmowa wysyłka" zeruje go niezależnie od cennika i progu.
+        $deliveryCost = $discount?->freeShipping
+            ? 0.0
+            : $shop->deliveryCostFor($delivery, $itemsGross);
 
         $order = $shop->orders()->create([
             'number' => $shop->allocateOrderNumber(),
@@ -234,6 +252,11 @@ class OrderService
             'delivery_cost' => $deliveryCost,
             'payment_method' => $payment,
             'items_total' => 0,
+            // Relacja do liczenia użyć kodu + MIGAWKA (kod i kwota), która przeżyje
+            // skasowanie kodu przez sprzedawcę. Kwotę i tak przelicza OrderTotals.
+            'discount_code_id' => $discount?->code?->id,
+            'discount_code' => $discount?->code?->code,
+            'discount_amount' => $discount?->itemsDiscount ?? 0,
             'total_net' => 0,
             'total_vat' => 0,
             'total_gross' => 0,
@@ -246,6 +269,40 @@ class OrderService
         $this->totals->recalculate($order->load('items'));
 
         return $order;
+    }
+
+    /**
+     * Kod rabatowy przyklejony do koszyka, sprawdzony na FINALNYCH pozycjach
+     * zamówienia (null, gdy klient żadnego nie użył).
+     *
+     * Kod, który przestał działać, PRZERYWA składanie zamówienia zamiast zniknąć
+     * po cichu: klient widział w kasie inną kwotę, więc nie wolno obciążyć go
+     * wyższą. Odklejamy kod i odsyłamy do podsumowania — ta sama ścieżka, co przy
+     * zmianie dostępności produktów.
+     *
+     * @param  list<array{product: Product, quantity: float, unit_price: float, line_total: float}>  $lines
+     */
+    private function resolveDiscount(Shop $shop, array $lines, ?Customer $customer): ?DiscountResult
+    {
+        $code = $this->cart->discountCode($shop->id);
+
+        if ($code === null) {
+            return null;
+        }
+
+        $result = $this->discounts->resolve($shop, $code, collect($lines), $customer);
+
+        if (! $result->accepted()) {
+            $this->cart->clearDiscountCode($shop->id);
+
+            throw new CartNeedsReviewException([
+                'Kod rabatowy „'.$code.'" nie został naliczony — '
+                    .mb_strtolower(mb_substr((string) $result->error, 0, 1)).mb_substr((string) $result->error, 1)
+                    .' Sprawdź podsumowanie i złóż zamówienie ponownie.',
+            ]);
+        }
+
+        return $result;
     }
 
     /**

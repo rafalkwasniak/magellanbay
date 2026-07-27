@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\VatRate;
 use App\Models\Order;
+use App\Support\DiscountAllocation;
 
 /**
  * Jedno źródło przeliczania kwot zamówienia. Formuła jest „od brutto": netto i
@@ -21,11 +22,10 @@ class OrderTotals
     public function recalculate(Order $order): void
     {
         $itemsTotal = 0.0;
-        $totalNet = 0.0;
-        $totalVat = 0.0;
+        $lineGrossValues = [];
 
-        foreach ($order->items as $item) {
-            [$lineGross, $lineNet, $lineVat] = $this->lineAmounts(
+        foreach ($order->items as $index => $item) {
+            [$lineGross] = $this->lineAmounts(
                 (float) $item->unit_price_gross,
                 (float) $item->quantity,
                 $item->vat_rate,
@@ -37,15 +37,37 @@ class OrderTotals
             }
 
             $itemsTotal += $lineGross;
+            $lineGrossValues[$index] = $lineGross;
+        }
+
+        // Rabat nigdy nie przekracza wartości produktów — inaczej edycja
+        // zamówienia (usunięcie pozycji) zrobiłaby ujemne zamówienie albo
+        // zjadła koszt wysyłki, którego rabat na produkty tykać nie może.
+        $discount = min(round((float) $order->discount_amount, 2), round($itemsTotal, 2));
+        $shares = DiscountAllocation::spread($discount, $lineGrossValues);
+
+        $totalNet = 0.0;
+        $totalVat = 0.0;
+
+        foreach ($order->items as $index => $item) {
+            // Rabat rozbity na pozycje PROPORCJONALNIE, żeby netto i VAT liczyły
+            // się od kwoty faktycznie zapłaconej — przy dwóch stawkach w koszyku
+            // odjęcie rabatu dopiero od sumy dałoby złą fakturę.
+            $discounted = $lineGrossValues[$index] - ($shares[$index] ?? 0.0);
+            $lineNet = round($discounted / (1 + $item->vat_rate->fraction()), 2);
+
             $totalNet += $lineNet;
-            $totalVat += $lineVat;
+            $totalVat += round($discounted - $lineNet, 2);
         }
 
         $order->update([
+            // `items_total` to wartość produktów PRZED rabatem — zgadza się z sumą
+            // pozycji na liście; rabat mieszka osobno w `discount_amount`.
             'items_total' => round($itemsTotal, 2),
+            'discount_amount' => $discount,
             'total_net' => round($totalNet, 2),
             'total_vat' => round($totalVat, 2),
-            'total_gross' => round($itemsTotal + (float) $order->delivery_cost, 2),
+            'total_gross' => round($itemsTotal - $discount + (float) $order->delivery_cost, 2),
         ]);
     }
 

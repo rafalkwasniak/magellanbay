@@ -49,7 +49,7 @@ class OrderMailer
                 array_merge(
                     ['**Zamówione produkty:**'],
                     $this->productLines($order),
-                    ['Razem do zapłaty: **'.Money::pln($order->total_gross).'**'],
+                    $this->amountLines($order, 'Razem do zapłaty'),
                 ),
                 $this->paymentBlock($order, $shop),
                 $this->deliveryBlock($order, $shop),
@@ -135,7 +135,7 @@ class OrderMailer
                 array_merge(
                     ['**Twoje zamówienie:**'],
                     $this->productLines($order),
-                    ['Razem: **'.Money::pln($order->total_gross).'**'],
+                    $this->amountLines($order, 'Razem'),
                 ),
                 // Pełne dane do przelewu tylko wtedy, gdy pieniądze wciąż są
                 // oczekiwane — w mailu o „Zrealizowane" numer konta to szum.
@@ -179,7 +179,7 @@ class OrderMailer
                 array_merge(
                     ['**Anulowane zamówienie obejmowało:**'],
                     $this->productLines($order),
-                    ['Na kwotę: **'.Money::pln($order->total_gross).'**'],
+                    $this->amountLines($order, 'Na kwotę'),
                 ),
             ]),
             'outro_lines' => [
@@ -274,7 +274,7 @@ class OrderMailer
             [array_merge(
                 ['**'.$productsLabel.'**'],
                 $this->productLines($order),
-                ['Razem: **'.Money::pln($order->total_gross).'**'],
+                $this->amountLines($order, 'Razem'),
             )],
         );
     }
@@ -333,7 +333,7 @@ class OrderMailer
                 array_merge(
                     ['**Zamówione produkty:**'],
                     $this->productLines($order),
-                    ['Wartość zamówienia: **'.Money::pln($order->total_gross).'**'],
+                    $this->amountLines($order, 'Wartość zamówienia'),
                 ),
                 [
                     'Dostawa: '.$order->delivery_method->label(),
@@ -523,6 +523,39 @@ class OrderMailer
             ->map(fn ($item): string => '• '.$item->sale_unit->formatQuantity((float) $item->quantity).' × '.$item->name.' — '.Money::pln($item->line_total_gross))
             ->values()
             ->all();
+    }
+
+    /**
+     * Rachunek pod listą pozycji: rabat i dostawa POKAZANE, gdy istnieją, a na
+     * końcu suma z podanym nagłówkiem. Bez tych linii mail nie zgadzał się
+     * arytmetycznie — suma pozycji różniła się od kwoty do zapłaty i wyglądało
+     * to na pomyłkę sklepu, choć doliczona była dostawa.
+     *
+     * @return list<string>
+     */
+    private function amountLines(Order $order, string $totalLabel): array
+    {
+        $discount = (float) $order->discount_amount;
+        $delivery = (float) $order->delivery_cost;
+        $lines = [];
+
+        // Wiersz „Produkty" ma sens dopiero, gdy pod spodem coś od niego odejmujemy
+        // albo do niego dodajemy — inaczej powtarzałby sumę pozycji.
+        if ($discount > 0 || $delivery > 0) {
+            $lines[] = 'Produkty: '.Money::pln($order->items_total);
+        }
+
+        if ($discount > 0) {
+            $lines[] = 'Rabat'.(filled($order->discount_code) ? ' '.$order->discount_code : '').': −'.Money::pln($discount);
+        }
+
+        if ($delivery > 0) {
+            $lines[] = 'Dostawa: '.Money::pln($delivery);
+        }
+
+        $lines[] = $totalLabel.': **'.Money::pln($order->total_gross).'**';
+
+        return $lines;
     }
 
     /**

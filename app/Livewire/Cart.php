@@ -3,7 +3,11 @@
 namespace App\Livewire;
 
 use App\Models\Product;
+use App\Models\Shop;
 use App\Services\CartService;
+use App\Services\DiscountResolver;
+use App\Support\DiscountResult;
+use App\Support\Money;
 use Livewire\Component;
 
 /**
@@ -15,6 +19,11 @@ use Livewire\Component;
 class Cart extends Component
 {
     public int $shopId;
+
+    /** Kod wpisywany w polu „Mam kod rabatowy" (nie: kod już zastosowany). */
+    public string $discountInput = '';
+
+    public ?string $discountError = null;
 
     public function mount(int $shopId): void
     {
@@ -75,6 +84,43 @@ class Cart extends Component
     }
 
     /**
+     * Wpisany kod rabatowy. Przyklejamy go do koszyka TYLKO gdy naprawdę działa —
+     * kod odrzucony zostaje w polu razem z powodem, żeby klient mógł go poprawić,
+     * a nie zgadywać, czy „się zapisał".
+     */
+    public function applyDiscount(): void
+    {
+        $shop = Shop::find($this->shopId);
+
+        if ($shop === null) {
+            return;
+        }
+
+        $result = app(DiscountResolver::class)->resolve(
+            $shop,
+            $this->discountInput,
+            app(CartService::class)->lines($this->shopId),
+            auth('customer')->user(),
+        );
+
+        if (! $result->accepted()) {
+            $this->discountError = $result->error;
+
+            return;
+        }
+
+        app(CartService::class)->setDiscountCode($this->shopId, $result->code->code);
+        $this->discountInput = '';
+        $this->discountError = null;
+    }
+
+    public function removeDiscount(): void
+    {
+        app(CartService::class)->clearDiscountCode($this->shopId);
+        $this->discountError = null;
+    }
+
+    /**
      * Aktywny produkt tego sklepu (dla kroku/jednostki), lub null gdy zdjęty.
      */
     private function product(int $productId): ?Product
@@ -89,10 +135,69 @@ class Cart extends Component
         // koszyka bez wyjaśnienia.
         ['lines' => $lines, 'notices' => $notices] = app(CartService::class)->reconcile($this->shopId);
 
+        // Przyklejony kod sprawdzamy PRZY KAŻDYM renderze, z aktualnym koszykiem.
+        // Dzięki temu zniżka sama znika, gdy klient zejdzie poniżej progu albo
+        // wyjmie produkt, którego kod dotyczył — i sama wraca, gdy dołoży.
+        $discount = $this->resolveStoredDiscount($lines);
+        $itemsTotal = (float) $lines->sum('line_total');
+        $itemsDiscount = $discount?->accepted() ? $discount->itemsDiscount : 0.0;
+
         return view('livewire.cart', [
             'lines' => $lines,
-            'total' => $lines->sum('line_total'),
+            'itemsTotal' => $itemsTotal,
+            'discount' => $discount,
+            'discountCode' => app(CartService::class)->discountCode($this->shopId),
+            'discountIssue' => $this->discountIssue($discount),
+            'discountNote' => $this->discountNote($discount),
+            'total' => round($itemsTotal - $itemsDiscount, 2),
             'notices' => $notices,
         ]);
+    }
+
+    /**
+     * Powód, dla którego kod nie działa — z wpisania („nie znamy takiego kodu")
+     * albo z ponownego sprawdzenia przyklejonego kodu („koszyk zszedł poniżej
+     * progu"). Dla klienta to ta sama sytuacja, więc i komunikat jest jeden.
+     */
+    private function discountIssue(?DiscountResult $discount): ?string
+    {
+        return $this->discountError
+            ?? ($discount !== null && ! $discount->accepted() ? $discount->error : null);
+    }
+
+    /**
+     * Potwierdzenie, że kod zadziałał — pokazywane w tym samym miejscu i w tej
+     * samej ramce co powód odmowy; różni je tylko ikona.
+     */
+    private function discountNote(?DiscountResult $discount): ?string
+    {
+        if ($this->discountIssue($discount) !== null || $discount === null || ! $discount->accepted()) {
+            return null;
+        }
+
+        return match (true) {
+            $discount->freeShipping => 'Darmowa wysyłka — uwzględnimy ją w kasie.',
+            $discount->itemsDiscount > 0 => 'Zniżka '.Money::pln($discount->itemsDiscount).' — już policzona poniżej.',
+            default => null,
+        };
+    }
+
+    /**
+     * Wynik dla kodu zapisanego w sesji (null, gdy żadnego nie ma). Kodu, który
+     * przestał działać, NIE odklejamy po cichu — pokazujemy powód, bo klient
+     * zwykle może go przywrócić, dokładając coś do koszyka.
+     *
+     * @param  \Illuminate\Support\Collection<int, array{product: Product, quantity: float, unit_price: float, line_total: float}>  $lines
+     */
+    private function resolveStoredDiscount(\Illuminate\Support\Collection $lines): ?DiscountResult
+    {
+        $code = app(CartService::class)->discountCode($this->shopId);
+        $shop = $code !== null ? Shop::find($this->shopId) : null;
+
+        if ($code === null || $shop === null) {
+            return null;
+        }
+
+        return app(DiscountResolver::class)->resolve($shop, $code, $lines, auth('customer')->user());
     }
 }

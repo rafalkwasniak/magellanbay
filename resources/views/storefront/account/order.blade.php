@@ -22,17 +22,7 @@
                     </li>
                 @endforeach
             </ul>
-            @if ($order->delivery_method->isShipped())
-                <div class="st-border mt-4 flex items-baseline justify-between border-t pt-4 text-sm">
-                    <span class="opacity-70">Dostawa</span>
-                    <span class="shrink-0 tabular-nums">{{ (float) $order->delivery_cost > 0 ? \App\Support\Money::pln($order->delivery_cost) : 'Gratis' }}</span>
-                </div>
-            @endif
-            <div class="st-border flex items-baseline justify-between {{ $order->delivery_method->isShipped() ? 'mt-3' : 'mt-4 border-t pt-4' }}">
-                <span class="opacity-70">Razem (brutto)</span>
-                <span class="text-xl font-bold tabular-nums">{{ \App\Support\Money::pln($order->total_gross) }}</span>
-            </div>
-            <p class="mt-1 text-right text-xs opacity-60">{{ \App\Support\Money::pln($order->total_net) }} netto</p>
+            <x-storefront.order-totals :order="$order" />
         </div>
 
         {{-- Historia zamówienia: „kiedy co się wydarzyło”. Ten sam układ osi, co

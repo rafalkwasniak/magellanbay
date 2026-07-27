@@ -9,9 +9,11 @@ use App\Models\Customer;
 use App\Models\Shop;
 use App\Services\CartService;
 use App\Services\CompanyLookup;
+use App\Services\DiscountResolver;
 use App\Services\NipService;
 use App\Services\OrderService;
 use App\Services\PhoneService;
+use App\Support\DiscountAllocation;
 use App\Support\Money;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
@@ -452,17 +454,30 @@ class Checkout extends Component
         $lines = $cart->lines($this->shopId);
 
         $gross = $lines->sum('line_total');
-        $net = $lines->sum(fn (array $line): float => round(
-            $line['line_total'] / (1 + $line['product']->vat_rate->fraction()), 2
-        ));
-
         $shop = $this->shop();
 
+        // Kod z koszyka sprawdzany na bieżącej zawartości — kasa MUSI pokazywać tę
+        // samą kwotę, którą zapisze zamówienie (OrderService liczy to ponownie).
+        $discountCode = $cart->discountCode($this->shopId);
+        $discount = $discountCode !== null
+            ? app(DiscountResolver::class)->resolve($shop, $discountCode, $lines, $this->authCustomer())
+            : null;
+        $discountApplies = $discount !== null && $discount->accepted();
+        $itemsDiscount = $discountApplies ? $discount->itemsDiscount : 0.0;
+        $freeShippingByCode = $discountApplies && $discount->freeShipping;
+
+        // Netto liczone PO rabacie, rozbitym na pozycje proporcjonalnie — ten sam
+        // podział co w OrderTotals, więc „netto" w kasie zgadza się z fakturą.
+        $shares = DiscountAllocation::spread($itemsDiscount, $lines->pluck('line_total')->all());
+        $net = $lines->values()->sum(fn (array $line, int $i): float => round(
+            ($line['line_total'] - ($shares[$i] ?? 0.0)) / (1 + $line['product']->vat_rate->fraction()), 2
+        ));
+
         // Koszt dostawy z cennika WYBRANEJ metody (każda ma własny koszt i próg
-        // darmowej dostawy; odbiór: 0). Suma = produkty + dostawa.
+        // darmowej dostawy; odbiór: 0). Kod „darmowa wysyłka" zeruje go wprost.
         $shipped = $this->shippedDelivery();
         $method = $this->selectedDelivery();
-        $deliveryCost = $method !== null ? $shop->deliveryCostFor($method, $gross) : 0.0;
+        $deliveryCost = $freeShippingByCode ? 0.0 : ($method !== null ? $shop->deliveryCostFor($method, $gross) : 0.0);
 
         $termsPage = $shop->pages()->where('is_system', true)->first();
 
@@ -489,9 +504,12 @@ class Checkout extends Component
             'addressDelivery' => $this->addressDelivery(),
             'parcelDelivery' => $this->parcelDelivery(),
             'deliveryCost' => $deliveryCost,
-            'formattedDelivery' => $deliveryCost > 0 ? Money::pln($deliveryCost) : 'Gratis',
+            'formattedDelivery' => $deliveryCost > 0 ? Money::pln($deliveryCost) : ($freeShippingByCode ? 'Gratis z kodem' : 'Gratis'),
             'deliveryMeta' => $deliveryMeta,
-            'formattedTotal' => Money::pln($gross + $deliveryCost),
+            'discountCode' => $discountApplies ? $discountCode : null,
+            'formattedItems' => Money::pln($gross),
+            'formattedDiscount' => $itemsDiscount > 0 ? Money::pln($itemsDiscount) : null,
+            'formattedTotal' => Money::pln($gross - $itemsDiscount + $deliveryCost),
             'formattedNet' => Money::pln($net),
             'bankName' => $shop->bank_name,
             'pickupAddress' => $this->pickupAddress($shop),

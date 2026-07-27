@@ -141,6 +141,16 @@
             <dt class="text-stone-500">Produkty (brutto)</dt>
             <dd class="tabular-nums text-stone-700">{{ \App\Support\Money::pln($order->items_total) }}</dd>
         </div>
+        @if ((float) $order->discount_amount > 0)
+            {{-- Rabat z kodu: sprzedawca musi widzieć, dlaczego suma jest niższa
+                 niż wartość pozycji — inaczej wygląda to na błąd rachunku. --}}
+            <div class="flex justify-between gap-3">
+                <dt class="min-w-0 text-stone-500">
+                    Rabat @if (filled($order->discount_code))<span class="font-medium uppercase tracking-wide text-stone-600">{{ $order->discount_code }}</span>@endif
+                </dt>
+                <dd class="shrink-0 tabular-nums font-medium text-stone-700">−{{ \App\Support\Money::pln($order->discount_amount) }}</dd>
+            </div>
+        @endif
         @if ($order->delivery_method->isShipped())
             <div class="flex justify-between">
                 <dt class="text-stone-500">Dostawa</dt>
