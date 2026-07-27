@@ -116,13 +116,28 @@ class Product extends Model
     }
 
     /**
-     * Czy produkt wystąpił kiedykolwiek w zamówieniu. Na teraz zawsze false —
-     * modułu zamówień jeszcze nie ma. Gdy powstanie, wystarczy tu zwrócić
-     * `$this->orderItems()->exists()` — reszta logiki usuwania nie drgnie.
+     * Pozycje zamówień, w których ten produkt wystąpił. Relacja historyczna —
+     * pozycja niesie własną migawkę nazwy i ceny, a `product_id` służy do
+     * powiązania z katalogiem (bestsellery w analityce, flaga zwrotów art. 38).
+     *
+     * @return HasMany<OrderItem, $this>
+     */
+    public function orderItems(): HasMany
+    {
+        return $this->hasMany(OrderItem::class);
+    }
+
+    /**
+     * Czy produkt wystąpił kiedykolwiek w zamówieniu — decyduje o tym, czy przy
+     * usuwaniu wolno go skasować trwale, czy tylko miękko.
+     *
+     * Liczą się TAKŻE zamówienia anulowane: one również są historią, a `purge()`
+     * zrywa powiązanie pozycji z katalogiem (FK `nullOnDelete`), przez co pozycja
+     * przestaje wiedzieć, jakiego produktu dotyczyła.
      */
     public function hasBeenOrdered(): bool
     {
-        return false; // TODO: z modułem zamówień → $this->orderItems()->exists();
+        return $this->orderItems()->exists();
     }
 
     /**
