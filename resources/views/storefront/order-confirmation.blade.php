@@ -1,5 +1,5 @@
 @php use App\Enums\PaymentMethod; use App\Enums\DeliveryMethod; use App\Enums\OrderStatus; @endphp
-<x-layouts.storefront :shop="$shop" title="Dziękujemy za zamówienie">
+<x-layouts.storefront :shop="$shop" title="Dziękujemy za zamówienie" :noindex="true">
     <main class="mx-auto max-w-6xl px-6 pt-10 pb-16">
         <x-storefront.breadcrumbs :items="[
             ['label' => $shop->name, 'url' => '/'],

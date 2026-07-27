@@ -27,6 +27,9 @@
 /storage/pail
 /*.code-workspace
 /vendor
+# Raporty audytowe (ursalogic itp.) — materiał roboczy dla nas, nie część kodu.
+# Wnioski trafiają do notatek projektu, nie do repozytorium.
+/docs/*.pdf
 _ide_helper.php
 Homestead.json
 Homestead.yaml

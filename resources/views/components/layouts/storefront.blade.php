@@ -1,4 +1,15 @@
-@props(['shop', 'title' => null, 'bare' => false])
+@props([
+    'shop',
+    'title' => null,
+    'bare' => false,
+    // Meta pod wyszukiwarki i social media. Domyślnie opisujemy SKLEP; widoki
+    // z bogatszą treścią (produkt, strona informacyjna) podają swoje.
+    'description' => null,
+    'image' => null,
+    // Strony transakcyjne (koszyk, kasa, konto, płatność) nie mają czego szukać
+    // w Google — a adres strony płatności niesie token.
+    'noindex' => false,
+])
 
 @php
     $tokens = $shop->themeTokens();
@@ -13,6 +24,13 @@
     // (na centrali, nie na subdomenie sklepu).
     $infoMenu = $shop->informationMenu();
     $logoUrl = $shop->logo_path ? \Illuminate\Support\Facades\Storage::disk('public')->url($shop->logo_path) : null;
+
+    // Meta: widok podaje swoje albo bierzemy opis sklepu. Tytuł OG celowo bez
+    // sufiksu z nazwą sklepu — na Facebooku nazwa idzie osobno (og:site_name).
+    $metaTitle = $title ?? $shop->name;
+    $metaDescription = $description ?? \App\Support\Seo::shopDescription($shop);
+    $metaImage = $image ?? \App\Support\Seo::shopImage($shop);
+    $canonical = \App\Support\Seo::canonical();
 @endphp
 <!doctype html>
 <html lang="pl" class="h-full">
@@ -21,6 +39,28 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $title ? $title.' · '.$shop->name : $shop->name }}</title>
+
+    {{-- Opis do wyników wyszukiwania. Bez niego Google wycina losowy fragment
+         strony — audyt ursalogic wskazał to jako problem numer jeden SEO. --}}
+    <meta name="description" content="{{ $metaDescription }}">
+    <link rel="canonical" href="{{ $canonical }}">
+    @if ($noindex)
+        <meta name="robots" content="noindex, follow">
+    @endif
+
+    {{-- Open Graph: tak wygląda link po wklejeniu na Facebooka czy Messengera.
+         Bez tego sprzedawca widzi goły adres zamiast karty ze zdjęciem. --}}
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="{{ $shop->name }}">
+    <meta property="og:title" content="{{ $metaTitle }}">
+    <meta property="og:description" content="{{ $metaDescription }}">
+    <meta property="og:url" content="{{ $canonical }}">
+    <meta property="og:locale" content="pl_PL">
+    @if ($metaImage)
+        <meta property="og:image" content="{{ $metaImage }}">
+    @endif
+    <meta name="twitter:card" content="{{ $metaImage ? 'summary_large_image' : 'summary' }}">
+
     @vite('resources/css/app.css')
 
     {{-- Motyw sklepu: tokeny palety → zmienne CSS. To jedyne miejsce, z którego

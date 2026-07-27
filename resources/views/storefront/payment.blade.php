@@ -1,5 +1,5 @@
 @php use App\Enums\OrderStatus; @endphp
-<x-layouts.storefront :shop="$shop" title="Płatność za zamówienie">
+<x-layouts.storefront :shop="$shop" title="Płatność za zamówienie" :noindex="true">
     <main class="mx-auto max-w-2xl px-6 pt-10 pb-16">
         <x-storefront.breadcrumbs :items="[
             ['label' => $shop->name, 'url' => '/'],

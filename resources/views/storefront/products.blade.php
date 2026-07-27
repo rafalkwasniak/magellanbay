@@ -1,4 +1,4 @@
-<x-layouts.storefront :shop="$shop" title="Produkty">
+<x-layouts.storefront :shop="$shop" title="Produkty" :description="\App\Support\Seo::listingDescription($shop)">
     <div class="mx-auto max-w-6xl px-6 pt-10">
         <x-storefront.breadcrumbs :items="[
             ['label' => $shop->name, 'url' => '/'],

@@ -1,4 +1,5 @@
-<x-storefront.information-shell :shop="$shop" :heading="$page->title">
+<x-storefront.information-shell :shop="$shop" :heading="$page->title"
+    :description="\App\Support\Seo::pageDescription($page, $shop)">
     @unless ($page->published)
         {{-- Podgląd właściciela/administratora: strona ukryta dla klientów. --}}
         <div class="st-border st-card mb-6 rounded-2xl border px-4 py-3 text-sm opacity-80">

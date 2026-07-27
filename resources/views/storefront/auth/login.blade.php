@@ -1,4 +1,4 @@
-<x-layouts.storefront :shop="$shop" title="Zaloguj się">
+<x-layouts.storefront :shop="$shop" title="Zaloguj się" :noindex="true">
     <main class="mx-auto max-w-6xl px-6 pt-10 pb-16">
         <x-storefront.breadcrumbs :items="[
             ['label' => $shop->name, 'url' => '/'],

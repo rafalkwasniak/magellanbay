@@ -20,7 +20,7 @@
     $stickyTop = filled($shop->logo_path) ? '13rem' : '8.5rem';
 @endphp
 
-<x-layouts.storefront :shop="$shop" :title="$heading">
+<x-layouts.storefront :shop="$shop" :title="$heading" :noindex="true">
     <main class="mx-auto max-w-6xl px-6 pt-10 pb-16">
         <x-storefront.breadcrumbs :items="$crumbs" :back="$back" />
 

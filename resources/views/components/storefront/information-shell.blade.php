@@ -1,4 +1,4 @@
-@props(['shop', 'heading'])
+@props(['shop', 'heading', 'description' => null])
 
 {{-- Wspólna skorupa działu „Informacje" na storefroncie. Pełną szerokością
      renderuje nagłówek (breadcrumbs → H1 → linia), a pod linią dwie kolumny:
@@ -20,7 +20,7 @@
     $stickyTop = filled($shop->logo_path) ? '13rem' : '8.5rem';
 @endphp
 
-<x-layouts.storefront :shop="$shop" :title="$heading">
+<x-layouts.storefront :shop="$shop" :title="$heading" :description="$description">
     <main class="mx-auto max-w-6xl px-6 pt-10 pb-16">
         <x-storefront.breadcrumbs :items="[
             ['label' => $shop->name, 'url' => '/'],

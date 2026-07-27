@@ -5,6 +5,7 @@ use App\Http\Middleware\EnsureConsentsAreCurrent;
 use App\Http\Middleware\EnsureUserHasRole;
 use App\Http\Middleware\RecordStorefrontTraffic;
 use App\Http\Middleware\ResolveShop;
+use App\Http\Middleware\SecurityHeaders;
 use App\Services\DiscordErrorReporter;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -25,6 +26,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'record.traffic' => RecordStorefrontTraffic::class,
             'auth.customer' => AuthenticateCustomer::class,
         ]);
+
+        // Nagłówki bezpieczeństwa na KAŻDEJ odpowiedzi webowej — centrala i
+        // wszystkie storefronty naraz (config/security.php).
+        $middleware->web(append: [SecurityHeaders::class]);
 
         // Niezalogowani trafiają na ekran logowania.
         $middleware->redirectGuestsTo(fn () => route('login'));
