@@ -41,7 +41,7 @@ class DiscountEngineTest extends TestCase
 
     public function test_percent_code_takes_its_share_of_the_cart(): void
     {
-        $shop = Shop::factory()->create();
+        $shop = Shop::factory()->withDiscountCodes()->create();
         $product = Product::factory()->create(['shop_id' => $shop->id, 'price_gross' => 200]);
         $code = DiscountCode::factory()->create(['shop_id' => $shop->id, 'code' => 'LATO10', 'value' => 10]);
 
@@ -55,7 +55,7 @@ class DiscountEngineTest extends TestCase
 
     public function test_amount_code_never_exceeds_the_cart(): void
     {
-        $shop = Shop::factory()->create();
+        $shop = Shop::factory()->withDiscountCodes()->create();
         $product = Product::factory()->create(['shop_id' => $shop->id, 'price_gross' => 30]);
         DiscountCode::factory()->amount(50)->create(['shop_id' => $shop->id, 'code' => 'ZANADTO']);
 
@@ -67,7 +67,7 @@ class DiscountEngineTest extends TestCase
 
     public function test_free_shipping_code_leaves_products_alone(): void
     {
-        $shop = Shop::factory()->create();
+        $shop = Shop::factory()->withDiscountCodes()->create();
         $product = Product::factory()->create(['shop_id' => $shop->id, 'price_gross' => 100]);
         DiscountCode::factory()->freeShipping()->create(['shop_id' => $shop->id, 'code' => 'DARMOWA']);
 
@@ -80,7 +80,7 @@ class DiscountEngineTest extends TestCase
 
     public function test_product_code_counts_only_its_own_line(): void
     {
-        $shop = Shop::factory()->create();
+        $shop = Shop::factory()->withDiscountCodes()->create();
         $target = Product::factory()->create(['shop_id' => $shop->id, 'price_gross' => 100]);
         $other = Product::factory()->create(['shop_id' => $shop->id, 'price_gross' => 400]);
         DiscountCode::factory()->forProduct($target)->create(['code' => 'NATEN', 'value' => 10]);
@@ -93,7 +93,7 @@ class DiscountEngineTest extends TestCase
 
     public function test_product_code_is_refused_when_its_product_is_missing(): void
     {
-        $shop = Shop::factory()->create();
+        $shop = Shop::factory()->withDiscountCodes()->create();
         $target = Product::factory()->create(['shop_id' => $shop->id, 'name' => 'Bukiet wiosenny']);
         $other = Product::factory()->create(['shop_id' => $shop->id]);
         DiscountCode::factory()->forProduct($target)->create(['code' => 'NATEN']);
@@ -106,7 +106,7 @@ class DiscountEngineTest extends TestCase
 
     public function test_threshold_is_measured_without_shipping(): void
     {
-        $shop = Shop::factory()->create();
+        $shop = Shop::factory()->withDiscountCodes()->create();
         $product = Product::factory()->create(['shop_id' => $shop->id, 'price_gross' => 150]);
         DiscountCode::factory()->minimum(200)->create(['shop_id' => $shop->id, 'code' => 'ODDWUSTU']);
 
@@ -118,7 +118,7 @@ class DiscountEngineTest extends TestCase
 
     public function test_states_are_explained_in_the_customers_language(): void
     {
-        $shop = Shop::factory()->create();
+        $shop = Shop::factory()->withDiscountCodes()->create();
         $product = Product::factory()->create(['shop_id' => $shop->id]);
         $lines = $this->cartWith($shop, $product);
         $resolver = app(DiscountResolver::class);
@@ -135,7 +135,7 @@ class DiscountEngineTest extends TestCase
 
     public function test_exhausted_code_is_refused(): void
     {
-        $shop = Shop::factory()->create();
+        $shop = Shop::factory()->withDiscountCodes()->create();
         $product = Product::factory()->create(['shop_id' => $shop->id]);
         $code = DiscountCode::factory()->limitedTo(1)->create(['shop_id' => $shop->id, 'code' => 'JEDNORAZ']);
         Order::factory()->create(['shop_id' => $shop->id, 'discount_code_id' => $code->id]);
@@ -147,7 +147,7 @@ class DiscountEngineTest extends TestCase
 
     public function test_personal_code_needs_its_owner_logged_in(): void
     {
-        $shop = Shop::factory()->create();
+        $shop = Shop::factory()->withDiscountCodes()->create();
         $product = Product::factory()->create(['shop_id' => $shop->id]);
         $owner = Customer::factory()->create(['shop_id' => $shop->id]);
         $someoneElse = Customer::factory()->create(['shop_id' => $shop->id]);
@@ -163,7 +163,7 @@ class DiscountEngineTest extends TestCase
 
     public function test_code_of_another_shop_is_unknown_here(): void
     {
-        $shop = Shop::factory()->create();
+        $shop = Shop::factory()->withDiscountCodes()->create();
         $product = Product::factory()->create(['shop_id' => $shop->id]);
         DiscountCode::factory()->create(['code' => 'OBCY']);
 

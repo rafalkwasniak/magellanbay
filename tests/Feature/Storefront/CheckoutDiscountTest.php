@@ -26,7 +26,7 @@ class CheckoutDiscountTest extends TestCase
 
     private function shop(): Shop
     {
-        return Shop::factory()->withCourierShipping()->create([
+        return Shop::factory()->withCourierShipping()->withDiscountCodes()->create([
             'courier_enabled' => true,
             'courier_cost' => 20,
             'bank_transfer_enabled' => true,

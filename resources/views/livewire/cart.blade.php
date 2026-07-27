@@ -100,7 +100,9 @@
                      „Przejdź do kasy" nikt by go nie szukał, a w środku podsumowania
                      rozbijał rachunek. Zastosowany pokazujemy jako plakietkę; gdy
                      przestał działać (koszyk zszedł poniżej progu, zniknął produkt) —
-                     zostaje z powodem, bo klient zwykle może go odzyskać. --}}
+                     zostaje z powodem, bo klient zwykle może go odzyskać.
+                     Cała karta znika w sklepie bez uprawnienia `discount_codes`. --}}
+                @if ($discountsEnabled)
                 <div class="st-card st-border rounded-3xl border p-6">
                     <h2 class="st-brand st-box-title">Kod rabatowy</h2>
 
@@ -142,6 +144,7 @@
                         </div>
                     @endif
                 </div>
+                @endif
 
                 <div class="st-card st-border rounded-3xl border p-6">
                     <h2 class="st-brand st-box-title">Podsumowanie</h2>

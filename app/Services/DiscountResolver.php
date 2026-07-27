@@ -37,6 +37,15 @@ class DiscountResolver
             return DiscountResult::reject('Dodaj coś do koszyka, zanim użyjesz kodu.');
         }
 
+        // Brama pakietu (`discount_codes`, Pawilon) — TU, a nie tylko w widoku:
+        // po zejściu z pakietu stare kody muszą przestać działać natychmiast, a
+        // ta metoda jest jedyną drogą do naliczenia rabatu (koszyk i kasa).
+        // Kupującemu mówimy neutralnie „nie znamy" — stan pakietu sprzedawcy nie
+        // jest jego sprawą.
+        if (! $shop->entitlement('discount_codes')) {
+            return DiscountResult::reject('Nie znamy takiego kodu.');
+        }
+
         /** @var DiscountCode|null $discount */
         $discount = $shop->discountCodes()->with('product')->where('code', $code)->first();
 

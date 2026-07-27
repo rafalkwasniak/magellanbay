@@ -138,15 +138,21 @@ class Cart extends Component
         // Przyklejony kod sprawdzamy PRZY KAŻDYM renderze, z aktualnym koszykiem.
         // Dzięki temu zniżka sama znika, gdy klient zejdzie poniżej progu albo
         // wyjmie produkt, którego kod dotyczył — i sama wraca, gdy dołoży.
-        $discount = $this->resolveStoredDiscount($lines);
+        // Kody to funkcja płatna (Pawilon). Sklep bez uprawnienia nie pokazuje
+        // nawet pola — obiecywanie zniżek, których nie ma jak wystawić, jest
+        // gorsze niż brak pola.
+        $discountsEnabled = (bool) Shop::find($this->shopId)?->entitlement('discount_codes');
+
+        $discount = $discountsEnabled ? $this->resolveStoredDiscount($lines) : null;
         $itemsTotal = (float) $lines->sum('line_total');
         $itemsDiscount = $discount?->accepted() ? $discount->itemsDiscount : 0.0;
 
         return view('livewire.cart', [
             'lines' => $lines,
             'itemsTotal' => $itemsTotal,
+            'discountsEnabled' => $discountsEnabled,
             'discount' => $discount,
-            'discountCode' => app(CartService::class)->discountCode($this->shopId),
+            'discountCode' => $discountsEnabled ? app(CartService::class)->discountCode($this->shopId) : null,
             'discountIssue' => $this->discountIssue($discount),
             'discountNote' => $this->discountNote($discount),
             'total' => round($itemsTotal - $itemsDiscount, 2),
