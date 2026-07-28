@@ -49,7 +49,7 @@ class PageController extends Controller
         // Nowa strona ląduje na końcu listy (najwyższa pozycja + 1).
         $position = (int) $shop->pages()->max('position') + 1;
 
-        $shop->pages()->create($request->safe()->only('title', 'slug', 'content', 'published', 'show_on_homepage') + [
+        $shop->pages()->create($request->safe()->only('title', 'slug', 'content', 'meta_description', 'published', 'show_on_homepage') + [
             'position' => $position,
         ]);
 
@@ -75,9 +75,9 @@ class PageController extends Controller
             // opublikowana i nie da się jej wyróżnić na głównej (regulamin jako
             // zajawka-witryna nie ma sensu). Formularz nie pokazuje tych pól, a tu
             // i tak ich nie przyjmujemy — dwie zapory, nie jedna.
-            $page->update($request->safe()->only('content'));
+            $page->update($request->safe()->only('content', 'meta_description'));
         } else {
-            $page->update($request->safe()->only('title', 'slug', 'content', 'published', 'show_on_homepage'));
+            $page->update($request->safe()->only('title', 'slug', 'content', 'meta_description', 'published', 'show_on_homepage'));
         }
 
         return redirect()->route('seller.pages.edit', $page)->with('success', 'Zapisano zmiany.');

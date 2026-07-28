@@ -19,7 +19,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * produktach — to samo pojęcie, więc to samo słowo).
  */
 #[Fillable([
-    'title', 'slug', 'content', 'position', 'published', 'show_on_homepage',
+    'title', 'slug', 'content', 'meta_description', 'position', 'published', 'show_on_homepage',
 ])]
 class Page extends Model
 {

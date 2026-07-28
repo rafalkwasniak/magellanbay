@@ -74,6 +74,15 @@
                     @endif
                 </div>
 
+                {{-- SEO: pole WYŁĄCZNIE ręczne — bez przycisku AI (brak `source-field`).
+                     Powód w migracji: to głównie Regulamin i Polityka prywatności,
+                     długie i niewyszukiwane, więc generowanie byłoby przepalaniem
+                     tokenów. Podpowiedź pokazuje, co wystawimy automatycznie. --}}
+                <x-seller.seo-box
+                    :value="$page->meta_description"
+                    :preview="$page->exists ? \App\Support\Seo::pageDescription($page, $page->shop) : null"
+                    hint="Zostaw puste, a opis weźmiemy z początku treści strony." />
+
                 <div class="flex items-center justify-between gap-3">
                     <a href="{{ route('seller.pages.index') }}" class="text-sm font-medium text-stone-500 transition hover:text-stone-800">← Wróć do listy</a>
                     <button type="submit"

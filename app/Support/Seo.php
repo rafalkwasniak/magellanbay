@@ -67,7 +67,16 @@ class Seo
             return $own;
         }
 
-        return self::clip($product->name.' — '.Money::pln($product->price_gross).'. Kup online w sklepie '.$shop->name.'.');
+        // Produkt bez opisu: zaczynamy od FAKTÓW O NIM (nazwa i cena), a resztę
+        // miejsca dopełniamy opisem sklepu. Sam opis sklepu byłby identyczny na
+        // wszystkich takich produktach, a zduplikowany meta opis Google traktuje
+        // jak jego brak — nazwa z ceną gwarantuje unikalność każdej strony.
+        $facts = $product->name.' — '.Money::pln($product->price_gross).'.';
+        $about = trim((string) ($shop->meta_description ?: $shop->aboutPlainText()));
+
+        return self::clip($about !== ''
+            ? $facts.' '.$about
+            : $facts.' Kup online w sklepie '.$shop->name.'.');
     }
 
     /**
@@ -76,6 +85,10 @@ class Seo
      */
     public static function pageDescription(Page $page, Shop $shop): string
     {
+        if (filled($page->meta_description)) {
+            return self::clip($page->meta_description);
+        }
+
         $own = self::clip($page->plainContent());
 
         return $own !== '' ? $own : self::clip($page->title.' — '.$shop->name.'.');

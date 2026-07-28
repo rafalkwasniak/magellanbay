@@ -71,7 +71,7 @@ class SeoMetaTest extends TestCase
 
     public function test_product_without_a_description_falls_back_to_facts(): void
     {
-        $shop = $this->shop(['name' => 'I like my bike']);
+        $shop = $this->shop(['name' => 'I like my bike', 'description' => null]);
         $product = Product::factory()->create([
             'shop_id' => $shop->id,
             'name' => 'Bidon',
@@ -84,6 +84,51 @@ class SeoMetaTest extends TestCase
         $this->get($this->host($shop).$product->storefrontPath())
             ->assertOk()
             ->assertSee('Bidon — 39,99 zł. Kup online w sklepie I like my bike.', escape: false);
+    }
+
+    public function test_product_without_a_description_borrows_the_shops_text(): void
+    {
+        $shop = $this->shop([
+            'name' => 'I like my bike',
+            'description' => '<p>Komis rowerowy z pasji do dwóch kółek. Sprawdzone szosy i gravele.</p>',
+        ]);
+        $product = Product::factory()->create([
+            'shop_id' => $shop->id,
+            'name' => 'Bidon',
+            'description' => null,
+            'price_gross' => 39.99,
+        ]);
+
+        // Zaczynamy od produktu (unikalne dla strony), dopełniamy sklepem
+        // (informacyjne). Sam opis sklepu byłby identyczny na wszystkich takich
+        // produktach, a zduplikowany meta opis Google traktuje jak jego brak.
+        $description = Seo::productDescription($product, $shop);
+        $this->assertStringStartsWith('Bidon — 39,99 zł.', $description);
+        $this->assertStringContainsString('Komis rowerowy z pasji', $description);
+    }
+
+    public function test_two_products_without_descriptions_still_differ(): void
+    {
+        $shop = $this->shop(['description' => '<p>Komis rowerowy z pasji do dwóch kółek.</p>']);
+        $first = Product::factory()->create(['shop_id' => $shop->id, 'name' => 'Bidon', 'description' => null, 'price_gross' => 39.99]);
+        $second = Product::factory()->create(['shop_id' => $shop->id, 'name' => 'Kask', 'description' => null, 'price_gross' => 299.00]);
+
+        $this->assertNotSame(
+            Seo::productDescription($first, $shop),
+            Seo::productDescription($second, $shop),
+        );
+    }
+
+    public function test_shop_seo_description_is_preferred_when_borrowing(): void
+    {
+        $shop = $this->shop([
+            'description' => '<p>Długi opis widoczny na stronie głównej sklepu.</p>',
+            'meta_description' => 'Rowery szosowe i gravelowe od 2011 roku.',
+        ]);
+        $product = Product::factory()->create(['shop_id' => $shop->id, 'name' => 'Bidon', 'description' => null]);
+
+        // Opis SEO sklepu jest pisany pod wyszukiwarkę, więc bije zwykły opis.
+        $this->assertStringContainsString('Rowery szosowe i gravelowe od 2011 roku.', Seo::productDescription($product, $shop));
     }
 
     public function test_information_page_describes_its_own_content(): void

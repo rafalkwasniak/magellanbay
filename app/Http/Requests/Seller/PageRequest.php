@@ -57,6 +57,8 @@ class PageRequest extends FormRequest
             'title' => ['required', 'string', 'max:120'],
             'slug' => ['required', 'string'],
             'content' => ['nullable', 'string', 'max:'.config('pages.content_max')],
+            // Opis SEO strony — wyłącznie ręczny (bez AI, patrz migracja).
+            'meta_description' => ['nullable', 'string', 'max:255'],
             'published' => ['boolean'],
             'show_on_homepage' => ['boolean'],
         ];
