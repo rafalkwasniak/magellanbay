@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Services\AiTextImprover;
+use App\Services\SeoDescriptionWriter;
+use App\Support\Excerpt;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -51,5 +53,37 @@ class AiController extends Controller
         }
 
         return response()->json(['text' => $improved]);
+    }
+
+    /**
+     * Napisanie opisu SEO na żądanie („Wygeneruj z AI" w boksie SEO). Zwraca sam
+     * tekst — NIE zapisuje. Sprzedawca ma go zobaczyć, ewentualnie poprawić i
+     * dopiero zatwierdzić przyciskiem „Zapisz"; inaczej kliknięcie byłoby ruchem
+     * w ciemno.
+     */
+    public function seoDescription(Request $request, SeoDescriptionWriter $writer): JsonResponse
+    {
+        $validated = $request->validate([
+            'text' => ['required', 'string', 'max:20000'],
+            'name' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $source = Excerpt::plainText($validated['text']);
+
+        if (! SeoDescriptionWriter::hasEnoughSource($source)) {
+            return response()->json([
+                'message' => 'Za mało treści, aby napisać opis. Uzupełnij opis i spróbuj ponownie.',
+            ], 422);
+        }
+
+        try {
+            $description = $writer->fromText($source, (string) ($validated['name'] ?? ''));
+        } catch (Throwable) {
+            return response()->json([
+                'message' => 'Usługa AI jest chwilowo niedostępna. Spróbuj ponownie później.',
+            ], 503);
+        }
+
+        return response()->json(['text' => $description]);
     }
 }

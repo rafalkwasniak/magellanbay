@@ -117,6 +117,17 @@ return [
             'timeout' => 180,
         ],
 
+        // Opis do wyników wyszukiwania (meta description). Zadanie WYJĄTKOWO
+        // małe: model dostaje gotową treść i ma z niej wycisnąć 1–2 zdania.
+        // Bez rozumowania i z niską temperaturą, bo to streszczenie faktów, nie
+        // twórczość — a wynik i tak przycinamy w kodzie. Krótki timeout: jeśli
+        // model marudzi nad dwoma zdaniami, lepiej zostawić opis automatyczny.
+        'seo_description' => [
+            'reasoning_effort' => '',
+            'temperature' => 0.4,
+            'timeout' => 45,
+        ],
+
     ],
 
 ];

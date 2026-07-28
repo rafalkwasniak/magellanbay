@@ -252,7 +252,8 @@
                 <x-seller.seo-box
                     :value="$shop->meta_description"
                     :preview="\App\Support\Seo::shopDescription($shop)"
-                    hint="Zostaw puste, a opis ułożymy z opisu Twojego sklepu." />
+                    hint="Zostaw puste, a opis ułożymy z opisu Twojego sklepu."
+                    source-field="description" />
 
                 <div class="flex justify-end">
                     <button type="submit"

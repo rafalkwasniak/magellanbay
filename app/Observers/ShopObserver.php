@@ -2,6 +2,7 @@
 
 namespace App\Observers;
 
+use App\Jobs\GenerateSeoDescription;
 use App\Jobs\GenerateShopOgImage;
 use App\Models\Shop;
 
@@ -48,6 +49,12 @@ class ShopObserver
     {
         if ($shop->wasChanged(self::OG_SOURCES)) {
             GenerateShopOgImage::dispatch($shop);
+        }
+
+        // Opis SEO przepisujemy tylko po zmianie treści, z której powstaje —
+        // i nigdy, gdy sprzedawca napisał go ręcznie.
+        if (! $shop->meta_description_manual && $shop->wasChanged(['description', 'name'])) {
+            GenerateSeoDescription::dispatch($shop);
         }
     }
 }

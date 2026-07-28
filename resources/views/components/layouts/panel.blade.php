@@ -6,6 +6,9 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ ($title ?? 'Panel') . ' · ' . config('app.name') }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    {{-- Elementy Alpine ukryte do czasu startu skryptu (np. „Piszę…" w boksie SEO).
+         Reguła inline, bo klasy `x-cloak` nie ma w zbudowanym arkuszu. --}}
+    <style>[x-cloak] { display: none !important; }</style>
     @livewireStyles
 </head>
 <body class="h-full bg-stone-100 text-stone-800 antialiased">

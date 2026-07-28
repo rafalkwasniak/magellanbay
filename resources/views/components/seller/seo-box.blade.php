@@ -1,4 +1,4 @@
-@props(['value' => null, 'preview' => null, 'hint' => null])
+@props(['value' => null, 'preview' => null, 'hint' => null, 'sourceField' => null, 'nameField' => 'name'])
 
 {{-- Box „SEO" — wspólny dla formularza produktu i sklepu. Nazwany wprost, żeby
      sprzedawca wiedział, że pisze pod wyszukiwarkę, a nie na stronę; z czasem
@@ -8,7 +8,40 @@
      znakach, ale dłuższy tekst nie jest błędem — po prostu nie cały się pokaże.
      Alpine jedzie z Livewire'em, który panel i tak ładuje. --}}
 <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur"
-    x-data="{ text: @js((string) $value), limit: {{ \App\Support\Seo::MAX_DESCRIPTION }} }">
+    x-data="{
+        text: @js((string) $value),
+        limit: {{ \App\Support\Seo::MAX_DESCRIPTION }},
+        busy: false,
+        error: null,
+        async generate() {
+            this.busy = true;
+            this.error = null;
+            try {
+                // Treść bierzemy WPROST Z FORMULARZA, nie z bazy — sprzedawca może
+                // poprosić o opis do tego, co właśnie napisał, przed zapisaniem.
+                const source = document.querySelector(@js($sourceField ? 'textarea[name=\''.$sourceField.'\'], input[name=\''.$sourceField.'\']' : 'body'));
+                const name = document.querySelector(@js('[name=\''.$nameField.'\']'));
+                const response = await fetch(@js(route('ai.seo-description')), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                    },
+                    body: JSON.stringify({ text: source ? source.value : '', name: name ? name.value : '' }),
+                });
+                const data = await response.json();
+                if (! response.ok) { this.error = data.message ?? 'Nie udało się napisać opisu.'; return; }
+                // Tekst LĄDUJE W POLU, ale się nie zapisuje — sprzedawca widzi, co dostał,
+                // może poprawić i dopiero zatwierdzić przyciskiem „Zapisz”.
+                this.text = data.text;
+            } catch (e) {
+                this.error = 'Nie udało się połączyć z usługą AI.';
+            } finally {
+                this.busy = false;
+            }
+        },
+    }">
     <div class="flex flex-wrap items-center justify-between gap-3">
         <h2 class="font-semibold text-stone-900">SEO</h2>
         <span class="text-xs tabular-nums" :class="text.length > limit ? 'text-amber-700' : 'text-stone-400'"
@@ -26,6 +59,20 @@
         @error('meta_description')
             <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
         @enderror
+
+        @if ($sourceField)
+            {{-- Przycisk domyka lukę, którą tworzy reguła „ręczna edycja wygrywa":
+                 kto raz napisał opis sam, bez tego przycisku nie mógłby już poprosić
+                 automatu o nową wersję. --}}
+            <div class="mt-3 flex flex-wrap items-center gap-3">
+                <button type="button" x-on:click="generate()" :disabled="busy"
+                    class="rounded-xl border border-stone-200 bg-white px-3 py-1.5 text-sm font-medium text-stone-700 transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60">
+                    <span x-show="! busy">✨ Wygeneruj z AI</span>
+                    <span x-show="busy" x-cloak>Piszę…</span>
+                </button>
+                <span x-show="error" x-cloak class="text-sm text-rose-600" x-text="error"></span>
+            </div>
+        @endif
     </div>
 
     <p class="mt-2 text-xs text-stone-400">

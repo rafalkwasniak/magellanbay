@@ -2,6 +2,7 @@
 
 namespace App\Observers;
 
+use App\Jobs\GenerateSeoDescription;
 use App\Models\Product;
 
 /**
@@ -31,6 +32,7 @@ class ProductObserver
     public function saved(Product $product): void
     {
         $this->sync($product);
+        $this->refreshSeoDescription($product);
     }
 
     public function deleted(Product $product): void
@@ -53,6 +55,25 @@ class ProductObserver
     private function sync(Product $product): void
     {
         $product->shop?->refreshVisibility();
+    }
+
+    /**
+     * Zleca napisanie opisu SEO, gdy zmieniła się treść, z której powstaje.
+     *
+     * Warunek `wasChanged` jest tu kluczowy: bez niego każde zapisanie produktu
+     * (zmiana ceny, stanu, wyróżnienia) paliłoby wywołanie AI za tekst, który
+     * się nie zmienił. Ręcznie napisanego opisu nie ruszamy — job to sprawdza
+     * jeszcze raz, ale nie ma po co go nawet kolejkować.
+     */
+    private function refreshSeoDescription(Product $product): void
+    {
+        if ($product->meta_description_manual) {
+            return;
+        }
+
+        if ($product->wasChanged(['description', 'name'])) {
+            GenerateSeoDescription::dispatch($product);
+        }
     }
 
     private function recordPrice(Product $product): void

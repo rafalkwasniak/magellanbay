@@ -207,6 +207,11 @@ Route::middleware('auth')->group(function () {
     // kilkanaście żądań (dzielenie w resources/js/ai.js), więc dawne 30/min
     // kończyłoby się błędem limitu w połowie roboty. Ochrona przed nadużyciem
     // zostaje — 120 wywołań modelu na minutę to i tak dużo powyżej normalnej pracy.
+    // Opis SEO pisany na żądanie z boksu „SEO" (zwraca tekst, nie zapisuje).
+    Route::post('/ai/opis-seo', [AiController::class, 'seoDescription'])
+        ->middleware('throttle:30,1')
+        ->name('ai.seo-description');
+
     Route::post('/ai/popraw', [AiController::class, 'improve'])
         ->middleware('throttle:120,1')
         ->name('ai.improve');
