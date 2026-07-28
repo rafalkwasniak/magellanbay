@@ -2,6 +2,8 @@
 
 namespace App\Services\Ai;
 
+use App\Models\Shop;
+use App\Services\AiQuota;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
@@ -14,20 +16,34 @@ use RuntimeException;
  */
 class AiClient
 {
+    public function __construct(private readonly AiQuota $quota) {}
+
     /**
      * Wykonaj zadanie: instrukcja systemowa + treść użytkownika → odpowiedź modelu.
      *
+     * Sklep jest OBOWIĄZKOWY, choć technicznie do wywołania modelu niepotrzebny:
+     * to jedyne miejsce w aplikacji rozmawiające z API, więc pobranie jednostki
+     * limitu ma się tu odbyć zawsze. Gdyby parametr był opcjonalny, nowe miejsce
+     * wołające AI ominęłoby limit przez zwykłe zapomnienie.
+     *
+     * `$taskId` scala fragmenty jednego kliknięcia w jedno zadanie (patrz AiQuota).
+     *
      * @param  string  $task  Nazwa zadania z `config('ai.tasks')`.
      *
-     * @throws RuntimeException gdy zadanie nie jest skonfigurowane lub wywołanie zawiedzie.
+     * @throws \App\Exceptions\AiQuotaExceededException gdy sklep wyczerpał tygodniowy limit
+     * @throws RuntimeException gdy zadanie nie jest skonfigurowane lub wywołanie zawiedzie
      */
-    public function run(string $task, string $system, string $content): string
+    public function run(string $task, string $system, string $content, Shop $shop, ?string $taskId = null): string
     {
         $profile = AiProfile::forTask($task);
 
         if (! $profile->isConfigured()) {
             throw new RuntimeException("Usługa AI nie jest skonfigurowana (zadanie: {$task}).");
         }
+
+        // Limit pobieramy PRZED wysłaniem żądania — po odpowiedzi byłoby za późno,
+        // bo koszt już powstał.
+        $this->quota->consume($shop, $taskId);
 
         $payload = [
             'model' => $profile->model,

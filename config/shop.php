@@ -145,8 +145,16 @@ return [
     |
     | Uprawnienia płatne (`online_payments`, `courier_shipping`, `invoices`,
     | `ga_analytics`) startują od Straganu; `order_editing`, `discount_codes`,
-    | `bulk_mail` są WYŁĄCZNIE w Pawilonie (uzasadniają 2× cenę). `bulk_mail` i
-    | `discount_codes` to na razie flagi „na wyrost" — same funkcje dojdą później.
+    | `bulk_mail` są WYŁĄCZNIE w Pawilonie (uzasadniają 2× cenę). `bulk_mail` to
+    | na razie flaga „na wyrost" — sama funkcja dojdzie później.
+    |
+    | `ai_weekly_limit` = liczba ZADAŃ AI na tydzień (okno wg numeru ISO). Jedno
+    | zadanie to jedno kliknięcie sprzedawcy, nawet gdy długi tekst dzieli się na
+    | kilkanaście wywołań modelu. Liczby są hojne z premedytacją: pomiar z
+    | 2026-07-28 pokazał, że wywołanie kosztuje 0,05–0,7 GROSZA, więc limit nie
+    | chroni budżetu przed sprzedawcą, tylko przed pętlą i skryptem (throttle
+    | 30/min pozwala na ~43 tys. wywołań dziennie ≈ 60 zł). Szczyt użycia wypada
+    | przy zakładaniu sklepu, potem ruch spada — stąd okno tygodniowe, nie dzienne.
     |
     */
 
@@ -158,6 +166,7 @@ return [
             'available' => true,
             'entitlements' => [
                 'max_products' => 24,
+                'ai_weekly_limit' => 100,
                 'online_payments' => false,
                 'courier_shipping' => false,
                 'invoices' => false,
@@ -174,6 +183,7 @@ return [
             'available' => true,
             'entitlements' => [
                 'max_products' => 48,
+                'ai_weekly_limit' => 400,
                 'online_payments' => true,
                 'courier_shipping' => true,
                 'invoices' => true,
@@ -190,6 +200,7 @@ return [
             'available' => true,
             'entitlements' => [
                 'max_products' => 96,
+                'ai_weekly_limit' => 800,
                 'online_payments' => true,
                 'courier_shipping' => true,
                 'invoices' => true,

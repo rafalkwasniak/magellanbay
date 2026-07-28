@@ -73,6 +73,12 @@
         @endif
     </p>
     @if ($aiField)
-        <x-ai-improve-button :field="$aiField" :target="$name" class="mt-0 shrink-0" />
+        {{-- Wyrównanie DO PRAWEJ: szerokość bloku wyznacza dłuższy od przycisku
+             licznik użyć, więc bez tego przycisk odklejałby się od prawej krawędzi
+             i wyglądał na zgubiony w środku wiersza. --}}
+        <div class="shrink-0 text-right">
+            <x-ai-improve-button :field="$aiField" :target="$name" class="mt-0" />
+            <x-seller.ai-quota inline />
+        </div>
     @endif
 </div>

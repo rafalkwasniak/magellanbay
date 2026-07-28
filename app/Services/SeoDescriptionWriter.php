@@ -51,6 +51,7 @@ class SeoDescriptionWriter
         return $this->write(
             'Produkt: '.$product->name."\n\nOpis:\n".$source,
             'produktu w sklepie internetowym',
+            $product->shop,
         );
     }
 
@@ -70,6 +71,7 @@ class SeoDescriptionWriter
         return $this->write(
             'Sklep: '.$shop->name."\n\nOpis:\n".$source,
             'sklepu internetowego',
+            $shop,
         );
     }
 
@@ -80,11 +82,11 @@ class SeoDescriptionWriter
      *
      * @throws RuntimeException gdy usługa nie jest skonfigurowana lub wywołanie zawiedzie
      */
-    public function fromText(string $source, string $name = ''): string
+    public function fromText(string $source, Shop $shop, string $name = ''): string
     {
         $content = ($name !== '' ? 'Nazwa: '.$name."\n\n" : '')."Opis:\n".$source;
 
-        return $this->write($content, 'strony w sklepie internetowym');
+        return $this->write($content, 'strony w sklepie internetowym', $shop);
     }
 
     /**
@@ -95,7 +97,7 @@ class SeoDescriptionWriter
         return mb_strlen(trim((string) $source)) >= self::MIN_SOURCE_CHARS;
     }
 
-    private function write(string $content, string $subject): string
+    private function write(string $content, string $subject, Shop $shop): string
     {
         $limit = Seo::MAX_DESCRIPTION;
 
@@ -108,7 +110,7 @@ class SeoDescriptionWriter
             .'nie używaj cudzysłowów, emoji ani Markdown. Odpowiedz wyłącznie samym opisem, '
             .'bez wstępu i komentarzy.';
 
-        return $this->clean($this->ai->run(self::TASK, $system, $content));
+        return $this->clean($this->ai->run(self::TASK, $system, $content, $shop));
     }
 
     /**

@@ -177,8 +177,16 @@ function splitContent(target, text, limit) {
     return trixFor(target.id) ? splitHtml(text, limit) : splitText(text, limit);
 }
 
+// Identyfikator JEDNEGO kliknięcia „Popraw przez AI". Wszystkie fragmenty tego
+// samego tekstu niosą go razem ze sobą, dzięki czemu serwer liczy do limitu
+// ZADANIE, a nie każdy fragment z osobna (patrz App\Services\AiQuota).
+function newTaskId() {
+    return (crypto.randomUUID && crypto.randomUUID())
+        || `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 // Jeden fragment → jedno wywołanie endpointu.
-function sendChunk(button, chunk) {
+function sendChunk(button, chunk, taskId) {
     const token = document.querySelector('meta[name="csrf-token"]');
 
     return fetch(button.getAttribute('data-ai-url'), {
@@ -188,7 +196,11 @@ function sendChunk(button, chunk) {
             Accept: 'application/json',
             'X-CSRF-TOKEN': token ? token.getAttribute('content') : '',
         },
-        body: JSON.stringify({ field: button.getAttribute('data-ai-field'), text: chunk }),
+        body: JSON.stringify({
+            field: button.getAttribute('data-ai-field'),
+            text: chunk,
+            task_id: taskId,
+        }),
     }).then((response) => (response.ok ? response.json() : Promise.reject(response)));
 }
 
@@ -234,7 +246,10 @@ async function improveWithAi(button) {
     // Wynik każdego fragmentu ląduje na swoim miejscu; brak wyniku = zostaje
     // oryginał, więc częściowa awaria nie kasuje tego, co się udało.
     const results = chunks.map((chunk) => chunk.send);
+    // Wspólny dla wszystkich fragmentów — dla limitu to JEDNO zadanie.
+    const taskId = newTaskId();
     let failed = false;
+    let failure = null;
     let next = 0;
 
     const worker = async () => {
@@ -244,11 +259,16 @@ async function improveWithAi(button) {
             if (index >= chunks.length) return;
 
             try {
-                results[index] = (await sendChunk(button, chunks[index].send)).text;
+                const answer = await sendChunk(button, chunks[index].send, taskId);
+                results[index] = answer.text;
+                // Serwer odsyła stan puli — zbijamy licznik od razu, zamiast
+                // czekać na odświeżenie strony.
+                if (window.setAiQuota) window.setAiQuota(answer.remaining);
                 done += 1;
                 tick();
-            } catch {
+            } catch (error) {
                 failed = true;
+                failure = error;
 
                 return;
             }
@@ -266,12 +286,23 @@ async function improveWithAi(button) {
     if (done) writeValue(target, reassemble(chunks, results, trixFor(target.id) ? '' : '\n\n'));
 
     if (failed) {
-        window.showToast(
-            done
-                ? `Poprawiono ${done} z ${chunks.length} fragmentów — resztę zostawiliśmy bez zmian. Spróbuj ponownie za chwilę.`
-                : 'Usługa AI jest chwilowo niedostępna. Spróbuj ponownie później.',
-            'error'
-        );
+        // Wyczerpany limit tygodniowy to nie awaria — serwer przysyła wtedy
+        // konkretny komunikat (ile było, kiedy wraca, co daje wyższy pakiet),
+        // więc pokazujemy JEGO, a nie ogólne „usługa niedostępna".
+        let message = done
+            ? `Poprawiono ${done} z ${chunks.length} fragmentów — resztę zostawiliśmy bez zmian. Spróbuj ponownie za chwilę.`
+            : 'Usługa AI jest chwilowo niedostępna. Spróbuj ponownie później.';
+        // Wyczerpany limit to INFORMACJA, nie błąd — czerwony dymek sugerowałby,
+        // że sprzedawca zrobił coś źle, a on po prostu wykorzystał swoją pulę.
+        let variant = 'error';
+
+        if (failure && failure.status === 429) {
+            const body = await failure.json().catch(() => ({}));
+            if (body.message) message = body.message;
+            variant = 'info';
+        }
+
+        window.showToast(message, variant);
     }
 
     // Kliknięcie liczy się jako jedno użycie niezależnie od liczby fragmentów.

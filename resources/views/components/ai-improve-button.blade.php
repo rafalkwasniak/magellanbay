@@ -4,9 +4,18 @@
     'label' => 'Popraw przez AI',
 ])
 
+@php
+    // Tygodniowy limit sklepu (inny niż limit „na pole", którego pilnuje JS):
+    // po wyczerpaniu przycisk jest wyłączony, żeby kliknięcie nie kończyło się
+    // komunikatem o błędzie za każdym razem.
+    $shop = auth()->user()?->shop;
+    $quotaLeft = $shop ? app(\App\Services\AiQuota::class)->remaining($shop) : null;
+@endphp
+
 {{-- Wywołuje redakcję AI pola o id $target. JS (resources/js/ai.js) pilnuje
      limitu użyć na pole/ładowanie strony. --}}
 <button type="button"
+    @disabled($quotaLeft === 0)
     data-ai-button
     data-ai-field="{{ $field }}"
     data-ai-target="{{ $target }}"

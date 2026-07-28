@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\AiQuotaExceededException;
+use App\Services\AiQuota;
 use App\Services\AiTextImprover;
 use App\Services\SeoDescriptionWriter;
 use App\Support\Excerpt;
@@ -32,9 +34,22 @@ class AiController extends Controller
         $validated = $request->validate([
             'field' => ['required', Rule::in(array_keys($fields))],
             'text' => ['required', 'string', 'max:'.$max],
+            // Identyfikator KLIKNIĘCIA, wspólny dla wszystkich fragmentów jednego
+            // pola. Dzięki niemu poprawa długiego opisu liczy się jako JEDNO
+            // zadanie, a nie kilkanaście (ustalenie Rafała 2026-07-28).
+            'task_id' => ['nullable', 'string', 'max:64'],
         ]);
 
         $config = $fields[$validated['field']];
+
+        // Limit AI jest przypisany do SKLEPU, więc bez sklepu nie ma z czego go
+        // pobrać. W praktyce nie zdarza się (sklep powstaje przy aktywacji konta),
+        // ale lepiej powiedzieć to wprost niż udawać awarię usługi.
+        $shop = $request->user()->shop;
+
+        if ($shop === null) {
+            return response()->json(['message' => 'Najpierw dokończ zakładanie sklepu.'], 403);
+        }
 
         // Przychodzi FRAGMENT, nie całe pole — dzieli przeglądarka (resources/js/ai.js),
         // bo długi tekst w jednym wywołaniu przekroczyłby timeout. Limit długości
@@ -44,15 +59,22 @@ class AiController extends Controller
 
         try {
             $improved = $config['html']
-                ? $ai->improveHtml($validated['text'], $maxOut)
-                : $ai->improve($validated['text'], $maxOut);
+                ? $ai->improveHtml($validated['text'], $shop, $maxOut, $validated['task_id'] ?? null)
+                : $ai->improve($validated['text'], $shop, $maxOut, $validated['task_id'] ?? null);
+        } catch (AiQuotaExceededException $e) {
+            return $this->quotaResponse($e);
         } catch (Throwable) {
             return response()->json([
                 'message' => 'Usługa AI jest chwilowo niedostępna. Spróbuj ponownie później.',
             ], 503);
         }
 
-        return response()->json(['text' => $improved]);
+        // Licznik odsyłamy razem z wynikiem, żeby przeglądarka mogła go zbić
+        // od razu — bez tego sprzedawca klika i widzi wciąż tę samą liczbę.
+        return response()->json([
+            'text' => $improved,
+            'remaining' => app(AiQuota::class)->remaining($shop),
+        ]);
     }
 
     /**
@@ -68,6 +90,12 @@ class AiController extends Controller
             'name' => ['nullable', 'string', 'max:255'],
         ]);
 
+        $shop = $request->user()->shop;
+
+        if ($shop === null) {
+            return response()->json(['message' => 'Najpierw dokończ zakładanie sklepu.'], 403);
+        }
+
         $source = Excerpt::plainText($validated['text']);
 
         if (! SeoDescriptionWriter::hasEnoughSource($source)) {
@@ -77,13 +105,36 @@ class AiController extends Controller
         }
 
         try {
-            $description = $writer->fromText($source, (string) ($validated['name'] ?? ''));
+            $description = $writer->fromText($source, $shop, (string) ($validated['name'] ?? ''));
+        } catch (AiQuotaExceededException $e) {
+            return $this->quotaResponse($e);
         } catch (Throwable) {
             return response()->json([
                 'message' => 'Usługa AI jest chwilowo niedostępna. Spróbuj ponownie później.',
             ], 503);
         }
 
-        return response()->json(['text' => $description]);
+        return response()->json([
+            'text' => $description,
+            'remaining' => app(AiQuota::class)->remaining($shop),
+        ]);
+    }
+
+    /**
+     * Odpowiedź po wyczerpaniu tygodniowego limitu. Mówi KIEDY limit wraca i co
+     * daje wyższy pakiet — to jedyny moment, w którym upsell jest na miejscu,
+     * a suchy komunikat o błędzie zostawiłby sprzedawcę bez odpowiedzi na
+     * pytanie „to kiedy znów mogę kliknąć?".
+     */
+    private function quotaResponse(AiQuotaExceededException $e): JsonResponse
+    {
+        return response()->json([
+            // Ton informacyjny, nie karcący: sprzedawca nie zrobił nic złego,
+            // tylko wykorzystał swoją pulę. Najpierw fakt, potem KIEDY wraca
+            // (jedyne, co go teraz interesuje), na końcu delikatny upsell.
+            'message' => 'Wykorzystałeś całą pulę AI na ten tydzień — '.$e->limit.' użyć. '
+                .'Nowa czeka już w '.$e->resetsAt->translatedFormat('l, j F').'. '
+                .'W wyższym pakiecie pula jest większa.',
+        ], 429);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Shop;
 use App\Services\Ai\AiClient;
 use App\Services\Ai\AiProfile;
 use Illuminate\Support\Facades\Http;
@@ -13,6 +14,16 @@ use Tests\TestCase;
  */
 class AiProfileTest extends TestCase
 {
+    use \Illuminate\Foundation\Testing\RefreshDatabase;
+
+    /** Sklep, na który liczy się limit AI (tu bez znaczenia — chodzi o payload). */
+    private function shop(): Shop
+    {
+        return $this->sklep ??= Shop::factory()->create();
+    }
+
+    private ?Shop $sklep = null;
+
     private function fakeOk(): void
     {
         Http::fake([
@@ -75,8 +86,8 @@ class AiProfileTest extends TestCase
         $this->fakeOk();
 
         $client = app(AiClient::class);
-        $client->run('proofread', 'instrukcja', 'tekst');
-        $client->run('product_copy', 'instrukcja', 'tekst');
+        $client->run('proofread', 'instrukcja', 'tekst', $this->shop());
+        $client->run('product_copy', 'instrukcja', 'tekst', $this->shop());
 
         $models = [];
         Http::recorded(function ($request) use (&$models) {
@@ -94,7 +105,7 @@ class AiProfileTest extends TestCase
         ]);
         $this->fakeOk();
 
-        app(AiClient::class)->run('product_copy', 'instrukcja', 'tekst');
+        app(AiClient::class)->run('product_copy', 'instrukcja', 'tekst', $this->shop());
 
         Http::assertSent(fn ($request) => $request->url() === 'https://api.inny-dostawca.test/chat/completions'
             && $request->hasHeader('Authorization', 'Bearer klucz-innego')
@@ -109,7 +120,7 @@ class AiProfileTest extends TestCase
         ]);
         $this->fakeOk();
 
-        app(AiClient::class)->run('proofread', 'instrukcja', 'tekst');
+        app(AiClient::class)->run('proofread', 'instrukcja', 'tekst', $this->shop());
 
         Http::assertSent(fn ($request) => ! array_key_exists('reasoning_effort', $request->data()));
     }

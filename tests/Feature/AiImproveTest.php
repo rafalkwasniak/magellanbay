@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Shop;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -21,6 +22,7 @@ class AiImproveTest extends TestCase
         ]);
 
         $seller = User::factory()->consented()->create();
+        Shop::factory()->create(['owner_id' => $seller->id]);   // limit AI wisi na sklepie
 
         $this->actingAs($seller)
             ->postJson(route('ai.improve'), [
@@ -41,6 +43,7 @@ class AiImproveTest extends TestCase
         ]);
 
         $seller = User::factory()->consented()->create();
+        Shop::factory()->create(['owner_id' => $seller->id]);   // limit AI wisi na sklepie
 
         $this->actingAs($seller)
             ->postJson(route('ai.improve'), [
@@ -61,6 +64,7 @@ class AiImproveTest extends TestCase
         ]);
 
         $seller = User::factory()->consented()->create();
+        Shop::factory()->create(['owner_id' => $seller->id]);   // limit AI wisi na sklepie
 
         $this->actingAs($seller)
             ->postJson(route('ai.improve'), [
@@ -85,6 +89,7 @@ class AiImproveTest extends TestCase
         ]);
 
         $seller = User::factory()->consented()->create();
+        Shop::factory()->create(['owner_id' => $seller->id]);   // limit AI wisi na sklepie
         $chunk = '<div>'.str_repeat('a', 289).'</div>'; // 300 znaków → limit 390
 
         $this->actingAs($seller)
@@ -111,6 +116,7 @@ class AiImproveTest extends TestCase
         ]);
 
         $seller = User::factory()->consented()->create();
+        Shop::factory()->create(['owner_id' => $seller->id]);   // limit AI wisi na sklepie
 
         $this->actingAs($seller)
             ->postJson(route('ai.improve'), ['field' => 'page_content', 'text' => '<h2>tytul</h2>'])
@@ -128,6 +134,7 @@ class AiImproveTest extends TestCase
         Http::fake();
 
         $seller = User::factory()->consented()->create();
+        Shop::factory()->create(['owner_id' => $seller->id]);   // limit AI wisi na sklepie
 
         $this->actingAs($seller)
             ->postJson(route('ai.improve'), [
@@ -140,6 +147,7 @@ class AiImproveTest extends TestCase
     public function test_invalid_field_is_rejected(): void
     {
         $seller = User::factory()->consented()->create();
+        Shop::factory()->create(['owner_id' => $seller->id]);   // limit AI wisi na sklepie
 
         $this->actingAs($seller)
             ->postJson(route('ai.improve'), [

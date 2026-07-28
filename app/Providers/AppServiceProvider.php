@@ -11,7 +11,11 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        //
+        // Jedna instancja na żądanie: `AiQuota` pamięta odczytane zużycie, a
+        // licznik użyć AI renderuje się przy każdym przycisku (formularz produktu
+        // ma ich dwa). Bez singletona każdy `app()` tworzyłby nowy obiekt z pustą
+        // pamięcią i to samo zapytanie szłoby do bazy kilka razy.
+        $this->app->singleton(\App\Services\AiQuota::class);
     }
 
     public function boot(): void

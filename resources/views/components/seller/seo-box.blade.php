@@ -13,9 +13,13 @@
         limit: {{ \App\Support\Seo::MAX_DESCRIPTION }},
         busy: false,
         error: null,
+        // Wyczerpana pula to informacja, nie awaria — trzymamy ją osobno, żeby
+        // pokazać ją spokojnym kafelkiem zamiast czerwonego komunikatu o błędzie.
+        notice: null,
         async generate() {
             this.busy = true;
             this.error = null;
+            this.notice = null;
             try {
                 // Treść bierzemy WPROST Z FORMULARZA, nie z bazy — sprzedawca może
                 // poprosić o opis do tego, co właśnie napisał, przed zapisaniem.
@@ -31,10 +35,19 @@
                     body: JSON.stringify({ text: source ? source.value : '', name: name ? name.value : '' }),
                 });
                 const data = await response.json();
-                if (! response.ok) { this.error = data.message ?? 'Nie udało się napisać opisu.'; return; }
+                if (! response.ok) {
+                    // 429 = wyczerpana pula: spokojny kafelek, nie czerwony błąd.
+                    if (response.status === 429) this.notice = data.message;
+                    else this.error = data.message ?? 'Nie udało się napisać opisu.';
+
+                    return;
+                }
                 // Tekst LĄDUJE W POLU, ale się nie zapisuje — sprzedawca widzi, co dostał,
                 // może poprawić i dopiero zatwierdzić przyciskiem „Zapisz”.
                 this.text = data.text;
+                // Licznik zbijamy NATYCHMIAST — bez tego pokazywałby starą liczbę
+                // aż do odświeżenia strony i wyglądałby na zepsuty.
+                if (window.setAiQuota) window.setAiQuota(data.remaining);
             } catch (e) {
                 this.error = 'Nie udało się połączyć z usługą AI.';
             } finally {
@@ -60,23 +73,38 @@
             <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
         @enderror
 
+        {{-- Objaśnienie POD POLEM, a nad przyciskiem — tak jak przy pozostałych
+             polach z AI w panelu: najpierw pole, potem zasada, na końcu akcja. --}}
+        <p class="mt-2 text-xs text-stone-400">
+            {{ $hint ?? 'Zostaw puste, a opis ułożymy automatycznie z Twojej treści.' }}
+            Po wpisaniu własnego tekstu zostaje on na stałe — automat go nie zmieni. Aby wrócić do automatycznego, wyczyść pole.
+        </p>
+
         @if ($sourceField)
             {{-- Przycisk domyka lukę, którą tworzy reguła „ręczna edycja wygrywa":
                  kto raz napisał opis sam, bez tego przycisku nie mógłby już poprosić
                  automatu o nową wersję. --}}
-            <div class="mt-3 flex flex-wrap items-center gap-3">
-                <button type="button" x-on:click="generate()" :disabled="busy"
-                    class="rounded-xl border border-stone-200 bg-white px-3 py-1.5 text-sm font-medium text-stone-700 transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60">
-                    <span x-show="! busy">✨ Wygeneruj z AI</span>
-                    <span x-show="busy" x-cloak>Piszę…</span>
-                </button>
-                <span x-show="error" x-cloak class="text-sm text-rose-600" x-text="error"></span>
+            @php($quotaLeft = auth()->user()?->shop ? app(\App\Services\AiQuota::class)->remaining(auth()->user()->shop) : null)
+            {{-- Blok AI wyrównany DO PRAWEJ — tak samo jak przy edytorze tekstu,
+                 żeby przyciski AI w całym panelu trzymały jedną krawędź. --}}
+            <div class="mt-3 text-right">
+                <div class="flex flex-wrap items-center justify-end gap-3">
+                    <span x-show="error" x-cloak class="text-sm text-rose-600" x-text="error"></span>
+                    <button type="button" data-ai-generate x-on:click="generate()" :disabled="busy" @disabled($quotaLeft === 0)
+                        class="rounded-xl border border-stone-200 bg-white px-3 py-1.5 text-sm font-medium text-stone-700 transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-60">
+                        <span x-show="! busy">✨ Wygeneruj z AI</span>
+                        <span x-show="busy" x-cloak>Piszę…</span>
+                    </button>
+                </div>
+                {{-- Wyczerpana pula: kafelek w tonie marki, z ikoną i wyraźną datą
+                     powrotu. Ten sam spokojny język, co przy kodach rabatowych. --}}
+                <div x-show="notice" x-cloak class="mt-3 flex gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-left">
+                    <span class="text-lg leading-none" aria-hidden="true">✨</span>
+                    <p class="min-w-0 text-sm text-amber-900" x-text="notice"></p>
+                </div>
+
+                <div x-show="! notice"><x-seller.ai-quota /></div>
             </div>
         @endif
     </div>
-
-    <p class="mt-2 text-xs text-stone-400">
-        {{ $hint ?? 'Zostaw puste, a opis ułożymy automatycznie z Twojej treści.' }}
-        Po wpisaniu własnego tekstu zostaje on na stałe — automat go nie zmieni. Aby wrócić do automatycznego, wyczyść pole.
-    </p>
 </div>
