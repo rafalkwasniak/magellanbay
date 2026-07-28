@@ -69,6 +69,8 @@ class ShopProfileRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:'.config('shop.description_max')],
+            // Opis SEO: w tagu przycinamy do ~155 znaków, w bazie zostawiamy zapas.
+            'meta_description' => ['nullable', 'string', 'max:255'],
             'contact_email' => ['required', 'email', 'max:255'],
             'contact_phone' => ['required', PhoneService::RULE], // 48 + 9 cyfr (po normalizacji)
             'company_name' => ['nullable', 'string', 'max:255'],

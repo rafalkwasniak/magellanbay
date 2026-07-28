@@ -232,6 +232,12 @@
                     </div>
                 </div>
 
+                {{-- SEO: opis do wyników wyszukiwania. Podpowiedź w polu pokazuje,
+                     co wystawimy automatycznie, gdy sprzedawca nic nie napisze. --}}
+                <x-seller.seo-box
+                    :value="$product->meta_description"
+                    :preview="$product->exists ? \App\Support\Seo::productDescription($product, $product->shop) : null" />
+
                 <div class="flex items-center justify-between gap-3">
                     <a href="{{ route('seller.products.index', $listQuery) }}" class="text-sm font-medium text-stone-500 transition hover:text-stone-800">← Wróć do listy</a>
                     <button type="submit"

@@ -1,0 +1,35 @@
+@props(['value' => null, 'preview' => null, 'hint' => null])
+
+{{-- Box „SEO" — wspólny dla formularza produktu i sklepu. Nazwany wprost, żeby
+     sprzedawca wiedział, że pisze pod wyszukiwarkę, a nie na stronę; z czasem
+     dojdą tu kolejne pola (tytuł, słowa kluczowe).
+
+     Licznik znaków jest ostrzeżeniem, nie blokadą: Google ucina opis po ~155
+     znakach, ale dłuższy tekst nie jest błędem — po prostu nie cały się pokaże.
+     Alpine jedzie z Livewire'em, który panel i tak ładuje. --}}
+<div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur"
+    x-data="{ text: @js((string) $value), limit: {{ \App\Support\Seo::MAX_DESCRIPTION }} }">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+        <h2 class="font-semibold text-stone-900">SEO</h2>
+        <span class="text-xs tabular-nums" :class="text.length > limit ? 'text-amber-700' : 'text-stone-400'"
+            x-text="text.length + ' / ' + limit"></span>
+    </div>
+    <p class="mt-1 text-sm text-stone-500">
+        Opis, który Google pokazuje pod tytułem w wynikach wyszukiwania. Jedno–dwa zdania zachęty.
+    </p>
+
+    <div class="mt-4">
+        <label for="meta_description" class="sr-only">Opis SEO</label>
+        <textarea id="meta_description" name="meta_description" rows="3" x-model="text" maxlength="255"
+            placeholder="{{ $preview }}"
+            class="block w-full rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">{{ old('meta_description', $value) }}</textarea>
+        @error('meta_description')
+            <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
+        @enderror
+    </div>
+
+    <p class="mt-2 text-xs text-stone-400">
+        {{ $hint ?? 'Zostaw puste, a opis ułożymy automatycznie z Twojej treści.' }}
+        Po wpisaniu własnego tekstu zostaje on na stałe — automat go nie zmieni. Aby wrócić do automatycznego, wyczyść pole.
+    </p>
+</div>

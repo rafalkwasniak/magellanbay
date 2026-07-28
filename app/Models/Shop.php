@@ -25,7 +25,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 #[ObservedBy(ShopObserver::class)]
 #[Fillable([
-    'name', 'slug', 'domain', 'status', 'description', 'company_name', 'nip', 'logo_path',
+    'name', 'slug', 'domain', 'status', 'description', 'meta_description', 'meta_description_manual', 'company_name', 'nip', 'logo_path',
     'contact_email', 'contact_phone',
     'template', 'theme',
     'country', 'province', 'city', 'postal_code', 'street', 'building_number', 'apartment_number',
@@ -49,6 +49,7 @@ class Shop extends Model
         return [
             'status' => ShopStatus::class,
             'theme' => 'array',
+            'meta_description_manual' => 'boolean',
             'default_vat_rate' => VatRate::class,
             'default_sale_unit' => SaleUnit::class,
             'bank_transfer_enabled' => 'boolean',

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Seller;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Seller\ShopProfileRequest;
+use App\Support\MetaDescription;
 use Illuminate\Contracts\Support\Renderable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -30,6 +31,11 @@ class ShopProfileController extends Controller
         $shop = $request->user()->shop;
 
         $shop->fill($request->validated());
+
+        // Opis SEO wpisany ręcznie należy do sprzedawcy — znacznik pilnuje, żeby
+        // automat go nie nadpisał. Wyczyszczenie pola oddaje kontrolę automatowi.
+        $shop->fill(MetaDescription::fields($request->input('meta_description')));
+
         $shop->save();
 
         return redirect()

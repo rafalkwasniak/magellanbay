@@ -33,6 +33,12 @@ class Seo
      */
     public static function shopDescription(Shop $shop): string
     {
+        // Opis wpisany w boksie SEO ma pierwszeństwo przed wszystkim innym —
+        // to jedyne pole, w którym sprzedawca pisze WPROST pod wyszukiwarkę.
+        if (filled($shop->meta_description)) {
+            return self::clip($shop->meta_description);
+        }
+
         $own = self::clip($shop->aboutPlainText());
 
         if ($own !== '') {
@@ -51,6 +57,10 @@ class Seo
      */
     public static function productDescription(Product $product, Shop $shop): string
     {
+        if (filled($product->meta_description)) {
+            return self::clip($product->meta_description);
+        }
+
         $own = self::clip(Excerpt::plainText($product->description));
 
         if ($own !== '') {

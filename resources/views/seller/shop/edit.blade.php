@@ -248,6 +248,12 @@
                     </div>
                 </div>
 
+                {{-- SEO: opis strony głównej sklepu w wynikach wyszukiwania. --}}
+                <x-seller.seo-box
+                    :value="$shop->meta_description"
+                    :preview="\App\Support\Seo::shopDescription($shop)"
+                    hint="Zostaw puste, a opis ułożymy z opisu Twojego sklepu." />
+
                 <div class="flex justify-end">
                     <button type="submit"
                         class="rounded-2xl bg-gradient-to-br from-amber-500 to-rose-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-rose-500/20 transition hover:brightness-105 focus:outline-none focus:ring-4 focus:ring-amber-500/25">

@@ -67,6 +67,9 @@ class ProductRequest extends FormRequest
             'is_active' => ['boolean'],
             'show_on_homepage' => ['boolean'],
             'tags' => ['nullable', 'string', 'max:500'],
+            // Opis SEO: w tagu i tak przycinamy do ~155 znaków, ale w bazie
+            // zostawiamy zapas na roboczy zapis sprzedawcy.
+            'meta_description' => ['nullable', 'string', 'max:255'],
             // Zdjęcia dodawane przy TWORZENIU produktu (na edycji galeria działa przez AJAX).
             'images' => ['nullable', 'array', 'max:8'],
             'images.*' => ['image', 'mimes:jpeg,jpg,png,webp', 'max:'.config('shop.product_images.max_upload_kb')],

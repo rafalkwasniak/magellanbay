@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Services\ProductImageService;
 use App\Services\SlugService;
 use App\Services\TagNormalizer;
+use App\Support\MetaDescription;
 use Illuminate\Contracts\Support\Renderable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -154,6 +155,12 @@ class ProductController extends Controller
     {
         $data = $request->safe()->except(['tags', 'images']);
         $data['stock'] = $data['track_stock'] ? ($data['stock'] ?? 0) : null;
+
+        // Opis SEO wpisany ręcznie należy do sprzedawcy — znacznik pilnuje, żeby
+        // automat go nie nadpisał. Wyczyszczenie pola oddaje kontrolę automatowi.
+        // (array_merge, nie `+=` — unia tablic NIE nadpisuje istniejącego klucza
+        // `meta_description`, więc przycięta wartość by nie weszła.)
+        $data = array_merge($data, MetaDescription::fields($data['meta_description'] ?? null));
 
         // Stan na sztuki to liczba całkowita; na wagę zostaje ułamkiem (2,50 kg).
         if ($data['stock'] !== null && ($data['sale_unit'] ?? 'piece') === \App\Enums\SaleUnit::Piece->value) {

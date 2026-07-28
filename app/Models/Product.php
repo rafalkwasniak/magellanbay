@@ -26,7 +26,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 #[Fillable([
     'name', 'slug', 'description', 'price_gross', 'vat_rate',
     'track_stock', 'stock', 'sale_unit', 'is_active', 'show_on_homepage',
-    'withdrawal_excluded',
+    'withdrawal_excluded', 'meta_description', 'meta_description_manual',
 ])]
 class Product extends Model
 {
@@ -44,6 +44,7 @@ class Product extends Model
             'price_gross' => 'decimal:2',
             'track_stock' => 'boolean',
             'withdrawal_excluded' => 'boolean',
+            'meta_description_manual' => 'boolean',
             'is_active' => 'boolean',
             'show_on_homepage' => 'boolean',
             'stock' => 'decimal:2',
