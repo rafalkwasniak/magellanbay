@@ -31,7 +31,18 @@ class BulkMailingController extends Controller
         return view('seller.mailings.index', [
             'shop' => $shop,
             'allowed' => $allowed,
-            'mailings' => $allowed ? $shop->bulkMailings()->paginate(10) : null,
+            // Postęp wysyłki liczymy podzapytaniami (`withCount`), a nie
+            // zapytaniem na wiersz — lista ma 10 pozycji, a każda mogłaby
+            // odpytywać outbox o setki maili.
+            'mailings' => $allowed
+                ? $shop->bulkMailings()
+                    ->withCount([
+                        'messages',
+                        'messages as delivered_count' => fn ($query) => $query->whereNotNull('sent_at'),
+                        'messages as failed_count' => fn ($query) => $query->whereNotNull('failed_at'),
+                    ])
+                    ->paginate(10)
+                : null,
             'recipients' => $allowed ? $mail->recipientsCount($shop) : 0,
             'blockedUntil' => $allowed ? $mail->nextAllowedAt($shop) : null,
         ]);

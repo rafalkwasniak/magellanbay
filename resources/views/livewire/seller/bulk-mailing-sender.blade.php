@@ -12,17 +12,45 @@
     @endif
 
     @if ($mailing->isSent())
-        {{-- Wysłane = zamknięte. Wiadomość jest już w skrzynkach klientów,
-             więc zostaje jako zapis historyczny. --}}
-        <div class="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm">
-            <p class="font-medium text-emerald-800">
-                ✓ Wysłano {{ $mailing->sent_at->format('d.m.Y, H:i') }}
-                do {{ $mailing->recipients_count }} {{ $mailing->recipients_count === 1 ? 'klienta' : 'klientów' }}.
-            </p>
-            <p class="mt-1 text-xs text-emerald-700">
-                Tej wiadomości nie da się wysłać ponownie ani zmienić. Aby napisać do klientów jeszcze raz, utwórz nową.
-            </p>
-        </div>
+        @if ($delivering)
+            {{-- Wysyłka w toku: kolejkę opróżnia cron paczkami po
+                 `per_minute`, więc odpytujemy co kilka sekund, aż licznik
+                 dobije do końca. Ten sam wzorzec co „FV w przygotowaniu". --}}
+            <div class="mt-4" wire:poll.5s>
+                <div class="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm">
+                    {{-- Licznik pokazuje, NAD KTÓRĄ wiadomością trwa praca
+                         (`delivered + 1`), a nie ile już poszło — „Wysyłam 0 z 1"
+                         czytałoby się jak awaria, bo zerowej wiadomości nikt nie
+                         wysyła. Pasek niżej pokazuje faktycznie ukończone. --}}
+                    <p class="font-medium text-amber-900">{{ 'Wysyłam '.min($delivered + 1, $total).' z '.$total.' '.trans_choice('{1}wiadomości|[2,*]wiadomości', $total).'…' }}</p>
+                    <div class="mt-3 h-2 w-full overflow-hidden rounded-full bg-amber-100">
+                        <div class="h-full rounded-full bg-gradient-to-br from-amber-500 to-rose-500" style="width: {{ $total > 0 ? round($delivered / $total * 100) : 0 }}%"></div>
+                    </div>
+                    <p class="mt-2 text-xs text-amber-800">
+                        Maile wychodzą po {{ config('bulk_mail.per_minute') }} na minutę, żeby nie obciążać serwera.
+                        Możesz zamknąć tę stronę — wysyłka idzie dalej w tle.
+                    </p>
+                </div>
+            </div>
+        @else
+            {{-- Wysłane = zamknięte. Wiadomość jest już w skrzynkach klientów,
+                 więc zostaje jako zapis historyczny. --}}
+            <div class="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm">
+                <p class="font-medium text-emerald-800">
+                    ✓ Wysłano {{ $delivered }} {{ trans_choice('{1}wiadomość|[2,4]wiadomości|[5,*]wiadomości', $delivered) }}
+                    — {{ $mailing->sent_at->format('d.m.Y, H:i') }}.
+                </p>
+                @if ($failed > 0)
+                    <p class="mt-1 text-xs text-rose-700">
+                        {{ $failed }} {{ trans_choice('{1}wiadomość nie dotarła|[2,4]wiadomości nie dotarły|[5,*]wiadomości nie dotarło', $failed) }}
+                        — adresy mogły być nieaktualne.
+                    </p>
+                @endif
+                <p class="mt-1 text-xs text-emerald-700">
+                    Tej wiadomości nie da się wysłać ponownie ani zmienić. Aby napisać do klientów jeszcze raz, utwórz nową.
+                </p>
+            </div>
+        @endif
     @else
         <p class="mt-1 text-sm text-stone-500">
             Najpierw wyślij próbkę do siebie i sprawdź, jak wiadomość wygląda w skrzynce. Do klientów wysyłasz ją raz.

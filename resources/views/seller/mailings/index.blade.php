@@ -47,6 +47,9 @@
                                             @if ($mailing->isSent())
                                                 Wysłano {{ $mailing->sent_at->format('d.m.Y, H:i') }}
                                                 · {{ $mailing->recipients_count }} {{ $mailing->recipients_count === 1 ? 'odbiorca' : 'odbiorców' }}
+                                                @if ($mailing->failed_count > 0)
+                                                    · <span class="text-rose-600">{{ $mailing->failed_count }} nie dotarło</span>
+                                                @endif
                                             @else
                                                 Szkic · utworzony {{ $mailing->created_at->format('d.m.Y') }}
                                                 @if ($mailing->test_sends > 0)
@@ -55,8 +58,24 @@
                                             @endif
                                         </p>
                                     </div>
-                                    @if ($mailing->isSent())
-                                        <span class="shrink-0 rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">Wysłana</span>
+                                    {{-- Stan wysyłki: dopóki kolejka nie opustoszeje,
+                                         pokazujemy POSTĘP na bursztynowo („Wysyłam
+                                         153 z 350"), bo przy tempie 10/min wysyłka
+                                         trwa długo i bez tego wygląda na zawieszoną. --}}
+                                    {{-- Kampanie sprzed wprowadzenia powiązania maili
+                                         z mailingiem nie mają wierszy w outboxie —
+                                         dla nich liczbą jest migawka `recipients_count`. --}}
+                                    @php($total = $mailing->messages_count > 0 ? $mailing->messages_count : (int) $mailing->recipients_count)
+                                    @php($delivered = $mailing->messages_count > 0 ? $mailing->delivered_count : (int) $mailing->recipients_count)
+                                    @php($inProgress = $mailing->isSent() && ($delivered + $mailing->failed_count) < $total)
+
+                                    @if ($inProgress)
+                                        {{-- `delivered + 1` = numer wiadomości W TOKU.
+                                             „Wysyłam 0 z 350" sugerowałoby, że nic się
+                                             nie dzieje. --}}
+                                        <span class="shrink-0 rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-800">{{ 'Wysyłam '.min($delivered + 1, $total).' z '.$total }}</span>
+                                    @elseif ($mailing->isSent())
+                                        <span class="shrink-0 rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">{{ 'Wysłano '.$delivered.' '.trans_choice('{1}wiadomość|[2,4]wiadomości|[5,*]wiadomości', $delivered) }}</span>
                                     @else
                                         <span class="shrink-0 rounded-full bg-stone-100 px-3 py-1 text-xs font-medium text-stone-500">Szkic</span>
                                     @endif
@@ -84,7 +103,11 @@
                         @endforeach
                     </ul>
 
-                    <div class="mt-6">{{ $mailings->links() }}</div>
+                    @if ($mailings->hasPages())
+                        <div class="mt-6">
+                            {{ $mailings->onEachSide(1)->links() }}
+                        </div>
+                    @endif
                 @endunless
             </div>
         </div>

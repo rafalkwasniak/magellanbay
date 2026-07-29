@@ -170,6 +170,9 @@ class BulkMailService
                     // potwierdzenia zamówienia ani linku aktywacyjnego.
                     'priority' => MailPriority::Low,
                     'shop_id' => $shop->id,
+                    // Po tym powiązaniu liczymy postęp wysyłki w panelu.
+                    // Próbki do siebie go NIE dostają — nie są częścią kampanii.
+                    'bulk_mailing_id' => $mailing->id,
                     'to_email' => $customer->email,
                     'to_name' => $customer->name,
                     'subject' => $mailing->subject,

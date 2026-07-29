@@ -113,6 +113,12 @@ class BulkMailingSender extends Component
         return view('livewire.seller.bulk-mailing-sender', [
             'recipients' => $mail->recipientsCount($shop),
             'blockedUntil' => $mail->nextAllowedAt($shop),
+            // Postęp wysyłki — liczony z outboxu, bo kolejkę opróżnia cron
+            // paczkami, a `sent_at` kampanii mówi tylko, kiedy ją zlecono.
+            'total' => $this->mailing->messagesTotal(),
+            'delivered' => $this->mailing->deliveredCount(),
+            'failed' => $this->mailing->failedCount(),
+            'delivering' => $this->mailing->isDelivering(),
         ]);
     }
 }
