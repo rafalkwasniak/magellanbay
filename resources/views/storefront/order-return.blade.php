@@ -169,8 +169,24 @@
                     <p class="font-semibold">Zamówienie zostało anulowane</p>
                     <p class="mt-1 text-sm opacity-70">Nie ma od czego odstąpić — jeśli zapłacono, skontaktuj się ze sklepem.</p>
                 @elseif (! $order->withinWithdrawalWindow())
-                    <p class="font-semibold">Termin na odstąpienie minął</p>
-                    <p class="mt-1 text-sm opacity-70">Upłynął {{ $order->withdrawalDeadline()->format('d.m.Y') }}. Jeśli towar ma wadę, napisz do sklepu — reklamacja to osobne uprawnienie, niezależne od zwrotu.</p>
+                    {{-- Świadomie NIE piszemy „prawo wygasło". Daty doręczenia nie
+                         znamy — szacujemy ją z zamówienia, więc możemy zamknąć
+                         formularz wcześniej, niż wygasa prawo klienta. Zamykamy
+                         drogę automatyczną (żeby nikt nie mieszał w zamówieniu po
+                         miesiącach), ale kierujemy do sprzedawcy. --}}
+                    <p class="font-semibold">Formularz zwrotu jest już zamknięty</p>
+                    <p class="mt-1 text-sm opacity-70">
+                        Czas na odstąpienie szacujemy do {{ $order->withdrawalDeadline()->format('d.m.Y') }}
+                        — {{ config('legal.withdrawal.days') }} dni od otrzymania przesyłki, z zapasem na jej dostarczenie.
+                    </p>
+                    <p class="mt-3 text-sm opacity-70">
+                        Jeśli przesyłka dotarła do Ciebie później, prawo odstąpienia wciąż Ci przysługuje — liczy się od dnia doręczenia, którego my nie znamy.
+                        Napisz wtedy wprost do sklepu, a sprzedawca przyjmie zwrot.
+                        @if (filled($shop->contact_email))
+                            Adres kontaktowy: <span class="font-medium">{{ $shop->contact_email }}</span>.
+                        @endif
+                    </p>
+                    <p class="mt-3 text-sm opacity-70">Jeśli towar ma wadę, to osobne uprawnienie (reklamacja) i nie zależy od tego terminu.</p>
                 @elseif ($order->hasReturns())
                     <p class="font-semibold">Wszystko już zgłoszone do zwrotu</p>
                     <p class="mt-1 text-sm opacity-70">Z tego zamówienia nie została żadna pozycja do oddania.</p>

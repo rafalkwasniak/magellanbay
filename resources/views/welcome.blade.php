@@ -95,6 +95,7 @@
                 <div class="max-w-2xl">
                     <h2 class="text-3xl font-semibold tracking-tight text-stone-900">Zacznij za darmo, rośnij, gdy zechcesz</h2>
                     <p class="mt-3 text-stone-600">Pakiet Kram jest bezpłatny bez limitu czasu. Płatne pakiety odblokowują płatności online, wysyłki i faktury — zmienisz je w każdej chwili.</p>
+                    <p class="mt-2 text-stone-600">Obsługa zwrotów konsumenckich jest w <span class="font-medium text-stone-800">każdym</span> pakiecie, także darmowym — razem z pouczeniem w mailu, formularzem odstąpienia dla klienta i rozliczeniem zwrotu w panelu.</p>
                 </div>
                 <div class="mt-8 grid gap-5 sm:grid-cols-3">
                     @foreach (config('shop.packages') as $pkg)
@@ -106,6 +107,11 @@
                             ['label' => 'Do '.$ent['max_products'].' produktów'],
                             ['label' => 'Własny adres i strona sklepu'],
                             ['label' => 'Opisy z korektą AI'],
+                            // Zwroty są w KAŻDYM pakiecie, także darmowym — prawo
+                            // odstąpienia od umowy przysługuje konsumentowi
+                            // niezależnie od tego, ile sprzedawca płaci nam za
+                            // sklep, więc nie da się tego zamknąć za bramką.
+                            ['label' => 'Zwroty 14 dni zgodne z prawem'],
                             ['label' => $ent['online_payments'] ? 'Płatności online Paynow' : 'Przelew i odbiór osobisty'],
                             $ent['courier_shipping'] ? ['label' => 'Wysyłka kurierem i przez InPost'] : null,
                             $ent['invoices'] ? ['label' => 'Integracja z Fakturownią'] : null,

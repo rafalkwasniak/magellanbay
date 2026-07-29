@@ -62,13 +62,23 @@ return [
     | czas dostawy. Zapas działa na korzyść konsumenta — wolno dać więcej czasu
     | niż wymaga ustawa, nie wolno mniej.
     |
+    | Zapas 6 DNI KALENDARZOWYCH odpowiada założeniu „sprzedawca nadaje w ciągu
+    | 4 dni roboczych": cztery dni robocze przeciętego weekendem to sześć dni
+    | kalendarzowych. Liczymy kalendarzowo, bo dni robocze wymagałyby kalendarza
+    | świąt — złożoność bez zysku, skoro i tak zgadujemy datę doręczenia.
+    |
+    | UWAGA: to jest OSZACOWANIE, nie ustawowy termin. Gdy sprzedawca nie
+    | oznaczy zamówienia jako „Zrealizowane", liczymy od jego złożenia i możemy
+    | zamknąć formularz WCZEŚNIEJ, niż wygasa prawo klienta. Dlatego strona
+    | zwrotu po terminie nie twierdzi, że prawo wygasło — kieruje do sprzedawcy.
+    |
     | Wyjątki (art. 38) ustawia sprzedawca per produkt: `products.withdrawal_excluded`.
     |
     */
 
     'withdrawal' => [
         'days' => 14,
-        'delivery_buffer_days' => 4,
+        'delivery_buffer_days' => 6,
     ],
 
 ];

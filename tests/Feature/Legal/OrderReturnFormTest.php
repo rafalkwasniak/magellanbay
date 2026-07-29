@@ -150,8 +150,12 @@ class OrderReturnFormTest extends TestCase
 
         $this->get($this->base($shop).'/zwrot/'.$token)
             ->assertOk()
-            ->assertSee('Termin na odstąpienie minął')
-            ->assertDontSee('Wyślij oświadczenie o odstąpieniu');
+            ->assertSee('Formularz zwrotu jest już zamknięty')
+            ->assertDontSee('Wyślij oświadczenie o odstąpieniu')
+            // Daty doręczenia nie znamy, więc strona nie może twierdzić, że
+            // prawo wygasło — ma skierować klienta do sprzedawcy.
+            ->assertSee('prawo odstąpienia wciąż Ci przysługuje')
+            ->assertDontSee('Termin na odstąpienie minął');
 
         $this->post($this->base($shop).'/zwrot/'.$token, $this->payload($item))
             ->assertRedirect($this->base($shop).'/zwrot/'.$token);
