@@ -98,27 +98,13 @@
                     <p class="mt-2 text-stone-600">Obsługa zwrotów konsumenckich jest w <span class="font-medium text-stone-800">każdym</span> pakiecie, także darmowym — razem z pouczeniem w mailu, formularzem odstąpienia dla klienta i rozliczeniem zwrotu w panelu.</p>
                 </div>
                 <div class="mt-8 grid gap-5 sm:grid-cols-3">
-                    @foreach (config('shop.packages') as $pkg)
-                        @php($ent = $pkg['entitlements'])
-                        @php($yearly = (int) $pkg['price_yearly'])
+                    {{-- Cechy pakietów liczy App\Support\PackageFeatures: zna kolejność
+                         pakietów, więc wie, co w każdym DOCHODZI względem tańszego. --}}
+                    @foreach (\App\Support\PackageFeatures::landing() as $pkg)
+                        @php($yearly = $pkg['price_yearly'])
                         @php($monthly = intdiv($yearly, 10))
-                        @php($featured = ($pkg['name'] ?? '') === 'Stragan')
-                        @php($features = array_values(array_filter([
-                            ['label' => 'Do '.$ent['max_products'].' produktów'],
-                            ['label' => 'Własny adres i strona sklepu'],
-                            ['label' => 'Opisy z korektą AI'],
-                            // Zwroty są w KAŻDYM pakiecie, także darmowym — prawo
-                            // odstąpienia od umowy przysługuje konsumentowi
-                            // niezależnie od tego, ile sprzedawca płaci nam za
-                            // sklep, więc nie da się tego zamknąć za bramką.
-                            ['label' => 'Zwroty 14 dni zgodne z prawem'],
-                            ['label' => $ent['online_payments'] ? 'Płatności online Paynow' : 'Przelew i odbiór osobisty'],
-                            $ent['courier_shipping'] ? ['label' => 'Wysyłka kurierem i przez InPost'] : null,
-                            $ent['invoices'] ? ['label' => 'Integracja z Fakturownią'] : null,
-                            $ent['order_editing'] ? ['label' => 'Edycja zamówień'] : null,
-                            $ent['discount_codes'] ? ['label' => 'Kody rabatowe w koszyku', 'soon' => true] : null,
-                            $ent['bulk_mail'] ? ['label' => 'Newsletter produktowy', 'soon' => true] : null,
-                        ])))
+                        @php($featured = $pkg['name'] === 'Stragan')
+                        @php($features = $pkg['features'])
                         <div class="relative rounded-3xl border bg-white/70 p-6 backdrop-blur {{ $featured ? 'border-amber-300 ring-2 ring-amber-400/50 shadow-lg shadow-amber-900/5' : 'border-white/60' }}">
                             @if ($featured)
                                 <span class="absolute -top-3 left-6 rounded-full bg-gradient-to-br from-amber-500 to-rose-500 px-3 py-1 text-[11px] font-semibold text-white shadow">Najczęściej wybierany</span>
@@ -136,20 +122,20 @@
                                 </p>
                                 <p class="mt-1 text-xs text-stone-500">To {{ $monthly }} zł/mies. — płacisz za 10 miesięcy, 2 gratis</p>
                             @endif
+                            {{-- Pogrubione = to, czego nie ma pakiet niżej. Karta ma
+                                 odpowiadać na pytanie „co dostanę, jeśli dopłacę",
+                                 bez porównywania trzech kolumn linijka po linijce. --}}
                             <ul class="mt-5 space-y-2 text-sm">
                                 @foreach ($features as $feature)
-                                    @php($soon = $feature['soon'] ?? false)
-                                    <li class="flex items-start gap-2 {{ $soon ? 'text-stone-400' : 'text-stone-600' }}">
-                                        <span class="mt-0.5 {{ $soon ? 'text-stone-300' : 'text-amber-600' }}">✓</span>
-                                        <span>
-                                            {{ $feature['label'] }}
-                                            @if ($soon)
-                                                <span class="ml-1 align-middle rounded-full bg-stone-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-stone-500">wkrótce</span>
-                                            @endif
-                                        </span>
+                                    <li class="flex items-start gap-2 {{ $feature['is_new'] ? 'font-medium text-stone-900' : 'text-stone-600' }}">
+                                        <span class="mt-0.5 {{ $feature['is_new'] ? 'text-amber-600' : 'text-stone-300' }}">✓</span>
+                                        <span>{{ $feature['label'] }}</span>
                                     </li>
                                 @endforeach
                             </ul>
+                            @if (collect($features)->contains('is_new', true))
+                                <p class="mt-4 text-xs text-stone-400">Pogrubione — nowe względem pakietu {{ $loop->index === 1 ? 'Kram' : 'Stragan' }}.</p>
+                            @endif
                         </div>
                     @endforeach
                 </div>

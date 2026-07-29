@@ -259,7 +259,7 @@
                     </li>
                     <li class="flex gap-3">
                         <span class="mt-0.5 shrink-0 text-amber-500">🔒</span>
-                        <span>Kod śledzenia działa tylko na Twoim sklepie. Kolejne integracje (płatności, wysyłki) dojdą tutaj wkrótce.</span>
+                        <span>Kod śledzenia działa tylko na Twoim sklepie. Kolejne integracje (m.in. wysyłki) dojdą tutaj z czasem.</span>
                     </li>
                 </ul>
             </div>

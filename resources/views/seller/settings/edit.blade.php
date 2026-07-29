@@ -345,7 +345,7 @@
                     </li>
                     <li class="flex gap-3">
                         <span class="mt-0.5 shrink-0 text-amber-500">🔧</span>
-                        <span>Płatności online (BLIK, karty) dojdą wkrótce jako integracja w wyższych pakietach.</span>
+                        <span>Płatności online (BLIK, karta, szybki przelew) włączysz w <a href="{{ route('seller.integrations.edit') }}" class="font-medium text-stone-700 underline decoration-amber-300 underline-offset-2">Integracjach</a> — wymagają pakietu Stragan lub Pawilon.</span>
                     </li>
                 </ul>
             </div>

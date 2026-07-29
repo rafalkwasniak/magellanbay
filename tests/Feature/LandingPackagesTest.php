@@ -1,0 +1,91 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Support\PackageFeatures;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+/**
+ * Cennik na stronie głównej: karta pakietu wyróżnia to, co DOCHODZI względem
+ * pakietu niżej, żeby kupujący nie musiał porównywać trzech kolumn linijka po
+ * linijce. Lista bierze się z `config('shop.packages')`, więc nie może
+ * rozjechać się z tym, co sklep faktycznie dostaje.
+ */
+class LandingPackagesTest extends TestCase
+{
+    use RefreshDatabase;
+
+    /**
+     * @return array<string, array<string, bool>>  pakiet => [etykieta => czy nowa]
+     */
+    private function featureMap(): array
+    {
+        $map = [];
+
+        foreach (PackageFeatures::landing() as $package) {
+            foreach ($package['features'] as $feature) {
+                $map[$package['name']][$feature['label']] = $feature['is_new'];
+            }
+        }
+
+        return $map;
+    }
+
+    public function test_cheapest_package_highlights_nothing(): void
+    {
+        // Nie ma się do czego porównywać — inaczej cała karta byłaby pogrubiona.
+        $this->assertNotContains(true, $this->featureMap()['Kram']);
+    }
+
+    public function test_middle_package_highlights_what_the_free_one_lacks(): void
+    {
+        $stragan = $this->featureMap()['Stragan'];
+
+        $this->assertTrue($stragan['Płatności online Paynow']);
+        $this->assertTrue($stragan['Wysyłka kurierem i przez InPost']);
+        $this->assertTrue($stragan['Integracja z Fakturownią']);
+        // Wyższy limit produktów to też różnica, choć cecha ta sama.
+        $this->assertTrue($stragan['Do 48 produktów']);
+
+        // Wspólne z Kramem — bez wyróżnienia.
+        $this->assertFalse($stragan['Własny adres i strona sklepu']);
+        $this->assertFalse($stragan['Zwroty 14 dni zgodne z prawem']);
+    }
+
+    public function test_top_package_highlights_only_what_the_middle_one_lacks(): void
+    {
+        $pawilon = $this->featureMap()['Pawilon'];
+
+        $this->assertTrue($pawilon['Edycja zamówień']);
+        $this->assertTrue($pawilon['Kody rabatowe w koszyku']);
+        $this->assertTrue($pawilon['Wiadomości do klientów']);
+        $this->assertTrue($pawilon['Do 96 produktów']);
+
+        // Ma je już Stragan, więc w Pawilonie to nie jest nowość.
+        $this->assertFalse($pawilon['Płatności online Paynow']);
+        $this->assertFalse($pawilon['Integracja z Fakturownią']);
+    }
+
+    public function test_landing_shows_shipped_features_without_a_coming_soon_badge(): void
+    {
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('Kody rabatowe w koszyku')
+            ->assertSee('Wiadomości do klientów')
+            ->assertSee('Zwroty 14 dni zgodne z prawem')
+            // Oba moduły są na produkcji — plakietka wprowadzałaby w błąd.
+            ->assertDontSee('wkrótce');
+    }
+
+    public function test_returns_are_listed_in_every_package(): void
+    {
+        foreach ($this->featureMap() as $package => $features) {
+            $this->assertArrayHasKey(
+                'Zwroty 14 dni zgodne z prawem',
+                $features,
+                "Pakiet {$package} musi mieć obsługę zwrotów — prawo odstąpienia nie zależy od opłaty.",
+            );
+        }
+    }
+}
