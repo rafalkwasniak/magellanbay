@@ -220,9 +220,60 @@ class Order extends Model
      */
     public function hasWithdrawableItems(): bool
     {
-        return $this->items->contains(
-            fn (OrderItem $item) => $item->product === null || $item->product->isWithdrawable(),
-        );
+        return $this->items->contains(fn (OrderItem $item) => $item->isWithdrawable());
+    }
+
+    /**
+     * Zgłoszenia zwrotu (od najnowszego). Jedno zamówienie może mieć ich wiele —
+     * klient wolno oddawać partiami, byle w sumie nie więcej, niż kupił.
+     *
+     * @return HasMany<OrderReturn, $this>
+     */
+    public function returns(): HasMany
+    {
+        return $this->hasMany(OrderReturn::class)->latest('id');
+    }
+
+    /**
+     * Czy z tego zamówienia cokolwiek już wróciło.
+     */
+    public function hasReturns(): bool
+    {
+        return $this->items->contains(fn (OrderItem $item) => $item->hasReturns());
+    }
+
+    /**
+     * Czy klient może TERAZ zgłosić zwrot z tego zamówienia: nie jest anulowane,
+     * termin na odstąpienie jeszcze biegnie i została choć jedna sztuka objęta
+     * prawem odstąpienia. Jedna bramka dla strony zwrotu, przycisku w „Moim
+     * koncie" i linku w mailu — żeby nigdzie nie zaprosić klienta do formularza,
+     * który i tak go odprawi.
+     */
+    public function acceptsReturns(): bool
+    {
+        return ! $this->status->isTerminal()
+            && $this->withinWithdrawalWindow()
+            && $this->items->contains(fn (OrderItem $item) => $item->returnableQuantity() > 0);
+    }
+
+    /**
+     * Pełny adres publicznego formularza zwrotu na hoście sklepu — do maila i
+     * „Mojego konta". Budujemy z `host()`, więc działa też z joba/CLI.
+     */
+    public function returnUrl(): string
+    {
+        return 'https://'.$this->shop->host().'/zwrot/'.$this->paymentToken();
+    }
+
+    /**
+     * Czy wróciły WSZYSTKIE pozycje — moment, w którym sprzedawcy należy
+     * przypomnieć, że oddaje również koszt dostawy (ustawa: najtańszą oferowaną).
+     * Pieniądze w v1 idą z ręki, więc to podpowiedź, a nie automat.
+     */
+    public function isFullyReturned(): bool
+    {
+        return $this->items->isNotEmpty()
+            && $this->items->every(fn (OrderItem $item) => $item->effectiveQuantity() <= 0);
     }
 
     /**
@@ -251,7 +302,12 @@ class Order extends Model
     }
 
     /**
-     * Token do publicznej strony płatności. Zaszyfrowany identyfikator zamówienia
+     * Token do publicznych stron zamówienia — płatności ORAZ zwrotu. Świadomie
+     * jeden klucz na zamówienie, nie osobny na każdą akcję: klient dostaje oba
+     * linki tym samym mailem, a drugi mechanizm tokenów byłby drugim miejscem
+     * do popsucia bez żadnego zysku (dostęp daje i tak sam token).
+     *
+     * Zaszyfrowany identyfikator zamówienia
      * (APP_KEY + MAC): nie do zgadnięcia i odporny na podmianę, więc link działa bez
      * logowania — dla kupującego z konta i gościa tak samo. Zero kolumn w bazie.
      * `strtr` na znaki bezpieczne w ścieżce URL (bez `+ / =`).

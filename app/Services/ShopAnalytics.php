@@ -194,7 +194,7 @@ class ShopAnalytics
                 ->where('created_at', '>=', $from)
                 ->where('created_at', '<', $to))
             ->with(['order' => fn ($query) => $query->select('id', 'buyer_email', 'buyer_name', 'buyer_surname')])
-            ->get(['order_id', 'quantity']);
+            ->get(['order_id', 'quantity', 'returned_quantity']);
 
         return $items
             ->filter(fn (OrderItem $item) => filled($item->order?->buyer_email))
@@ -205,7 +205,8 @@ class ShopAnalytics
 
                 return [
                     'label' => $name !== '' ? $name : (string) $order->buyer_email,
-                    'items' => (int) floor((float) $rows->sum(fn (OrderItem $r) => (float) $r->quantity)),
+                    // Sztuki zwrócone nie są sprzedażą — liczymy ilość efektywną.
+                    'items' => (int) floor((float) $rows->sum(fn (OrderItem $r) => $r->effectiveQuantity())),
                 ];
             })
             ->sortByDesc('items')
@@ -232,13 +233,13 @@ class ShopAnalytics
                 ->where('status', '!=', OrderStatus::Cancelled->value)
                 ->where('created_at', '>=', $from)
                 ->where('created_at', '<', $to))
-            ->get(['product_id', 'name', 'quantity', 'sale_unit']);
+            ->get(['product_id', 'name', 'quantity', 'returned_quantity', 'sale_unit']);
 
         return $items
             ->groupBy(fn (OrderItem $item) => $item->product_id ?? 'name:'.$item->name)
             ->map(fn (Collection $rows) => [
                 'name' => (string) $rows->first()->name,
-                'quantity' => (float) $rows->sum(fn (OrderItem $r) => (float) $r->quantity),
+                'quantity' => (float) $rows->sum(fn (OrderItem $r) => $r->effectiveQuantity()),
                 'unit' => ($rows->first()->sale_unit ?? SaleUnit::Piece)->value,
             ])
             ->sortByDesc('quantity')

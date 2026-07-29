@@ -117,6 +117,44 @@
             @endif
         </div>
 
+        {{-- Zwroty: przycisk do formularza, dopóki biegnie termin, oraz historia
+             złożonych oświadczeń. Prowadzi pod TEN SAM adres co link z maila —
+             klient ma jedno miejsce niezależnie od tego, którędy wszedł. --}}
+        @if ($order->acceptsReturns() || $order->returns->isNotEmpty())
+            <div class="st-card st-border rounded-3xl border p-6">
+                <h2 class="st-brand st-box-title">Zwrot</h2>
+
+                @if ($order->returns->isNotEmpty())
+                    <ul class="mt-4 space-y-2">
+                        @foreach ($order->returns as $return)
+                            <li class="flex justify-between gap-3 text-sm">
+                                <span class="min-w-0 opacity-80">
+                                    {{ $return->created_at->format('d.m.Y') }} —
+                                    {{ trans_choice('{1}:count pozycja|[2,4]:count pozycje|[5,*]:count pozycji', $return->items->count(), ['count' => $return->items->count()]) }}
+                                    @if ($return->isRefunded())
+                                        <span class="text-emerald-600">· pieniądze zwrócone</span>
+                                    @else
+                                        <span class="opacity-60">· czeka na rozliczenie</span>
+                                    @endif
+                                </span>
+                                <span class="shrink-0 tabular-nums">{{ \App\Support\Money::pln($return->refund_gross) }}</span>
+                            </li>
+                        @endforeach
+                    </ul>
+                @endif
+
+                @if ($order->acceptsReturns())
+                    <p class="mt-4 text-sm opacity-70">
+                        Możesz odstąpić od umowy bez podania przyczyny do {{ $order->withdrawalDeadline()->format('d.m.Y') }}.
+                    </p>
+                    <a href="/zwrot/{{ $order->paymentToken() }}"
+                        class="st-btn mt-4 inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold shadow-sm transition hover:brightness-105">
+                        {{ $order->hasReturns() ? 'Zgłoś kolejny zwrot' : 'Zgłoś zwrot' }}
+                    </a>
+                @endif
+            </div>
+        @endif
+
         @if ($order->hasInvoice() && $order->invoicePdfUrl())
             {{-- Faktura VAT na samym dole. --}}
             <div class="st-card st-border rounded-3xl border p-6">

@@ -60,7 +60,9 @@ class AccountController extends Controller
     {
         $this->authorizeOrder($order);
 
-        $order->load('items', 'statusEvents');
+        // `items.product` — sekcja zwrotów pyta każdą pozycję o wyłączenie z
+        // art. 38; `returns.items` — lista zgłoszonych już oświadczeń.
+        $order->load('items.product', 'statusEvents', 'returns.items');
 
         return view('storefront.account.order', [
             'order' => $order,

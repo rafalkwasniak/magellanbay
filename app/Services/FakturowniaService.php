@@ -191,15 +191,20 @@ class FakturowniaService
         // ŚWIADOMIE nie dopisujemy rabatu jako ujemnej pozycji: przy dwóch
         // stawkach w koszyku musiałaby dostać jedną stawkę, co zafałszowałoby
         // rozbicie podatku.
+        // Pozycje zwrócone w całości na fakturę nie trafiają, a częściowo
+        // zwrócone idą w ilości EFEKTYWNEJ — faktura ma opisywać to, za co
+        // klient faktycznie płaci, więc zgadza się z sumą zamówienia.
+        $items = $order->items->filter(fn ($item): bool => $item->effectiveQuantity() > 0)->values();
+
         $shares = DiscountAllocation::spread(
             (float) $order->discount_amount,
-            $order->items->pluck('line_total_gross')->map(fn ($v): float => (float) $v)->all(),
+            $items->pluck('line_total_gross')->map(fn ($v): float => (float) $v)->all(),
         );
 
-        $positions = $order->items->values()->map(fn ($item, int $i): array => [
+        $positions = $items->map(fn ($item, int $i): array => [
             'name' => $item->name,
             'tax' => $this->tax($item->vat_rate),
-            'quantity' => (float) $item->quantity,
+            'quantity' => $item->effectiveQuantity(),
             'quantity_unit' => $item->sale_unit->abbreviation(),
             'total_price_gross' => round((float) $item->line_total_gross - ($shares[$i] ?? 0.0), 2),
         ])->values()->all();

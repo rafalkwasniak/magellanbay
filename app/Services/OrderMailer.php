@@ -9,6 +9,7 @@ use App\Enums\PaymentMethod;
 use App\Models\EmailMessage;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\OrderReturn;
 use App\Models\OrderStatusEvent;
 use App\Models\Shop;
 use App\Support\Money;
@@ -471,9 +472,13 @@ class OrderMailer
 
         $lines = [
             '**Prawo odstąpienia od umowy**',
-            'Możesz odstąpić od tej umowy w ciągu '.$days.' dni od otrzymania zamówienia, bez podania przyczyny. '
-                .'Wystarczy, że prześlesz nam oświadczenie'
-                .($contact !== null ? ' — na adres '.$contact.' albo w odpowiedzi na tego e-maila.' : ' w odpowiedzi na tego e-maila.'),
+            'Możesz odstąpić od tej umowy w ciągu '.$days.' dni od otrzymania zamówienia, bez podania przyczyny.',
+            // Formularz najpierw: wypełniony online od razu trafia do sklepu i
+            // pomniejsza zamówienie. Droga mailowa zostaje jako równorzędna —
+            // ustawa nie pozwala narzucić konsumentowi jednej formy.
+            'Najprościej: **wypełnij formularz zwrotu** — '.$order->returnUrl(),
+            'Możesz też przesłać oświadczenie'
+                .($contact !== null ? ' na adres '.$contact.' albo w odpowiedzi na tego e-maila.' : ' w odpowiedzi na tego e-maila.'),
             'Wzór oświadczenia: „Niniejszym odstępuję od umowy sprzedaży następujących rzeczy: … '
                 .'(zamówienie #'.$order->number.'). Imię i nazwisko, adres, data."',
             'Towar odeślij w ciągu 14 dni od złożenia oświadczenia. Zwrócimy Ci zapłatę wraz z kosztem '
@@ -490,6 +495,129 @@ class OrderMailer
         }
 
         return $lines;
+    }
+
+    /**
+     * Powiadomienie sprzedawcy o zgłoszonym zwrocie. Zamówienie jest już
+     * pomniejszone (odstąpienie działa z mocy prawa, nie czeka na zgodę), więc
+     * mail jest informacją i listą zadań, a nie prośbą o decyzję.
+     */
+    public function returnSubmitted(Order $order, OrderReturn $return): void
+    {
+        $order->loadMissing(['items', 'shop.owner']);
+        $shop = $order->shop;
+        $owner = $shop->owner;
+
+        if ($owner === null) {
+            return;
+        }
+
+        EmailMessage::create($this->senderIdentity($shop) + [
+            'priority' => MailPriority::Mid,
+            'shop_id' => $shop->id,
+            'to_email' => $owner->email,
+            'to_name' => trim($owner->name.' '.$owner->surname),
+            'subject' => 'Zwrot z zamówienia #'.$order->number.' — '.$shop->name,
+            'preheader' => 'Klient odstąpił od umowy. Do zwrotu '.Money::pln($return->refund_gross).'.',
+            'heading' => 'Zgłoszono zwrot z zamówienia #'.$order->number,
+            'greeting' => Vocative::greeting($owner->name),
+            'intro_lines' => $this->blocks([
+                [
+                    'Klient odstąpił od umowy — **zamówienie #'.$order->number.'**.',
+                    'Zamówienie zostało już pomniejszone o zwrócone pozycje.',
+                ],
+                array_merge(
+                    ['**Zwracane pozycje:**'],
+                    $this->returnLines($return),
+                    ['Do zwrotu klientowi: **'.Money::pln($return->refund_gross).'**'],
+                ),
+                [
+                    '**Dane osoby odstępującej:**',
+                    'Imię i nazwisko: '.$return->customer_name,
+                    'Adres: '.$return->customer_address,
+                ],
+                filled($return->bank_account) ? ['Numer konta do zwrotu: **'.$return->bank_account.'**'] : [],
+                // Ustawa każe oddać także najtańszą OFEROWANĄ dostawę — ale tylko
+                // przy odstąpieniu od całości. Której dostawy dotyczy „najtańsza",
+                // wie sprzedawca, więc podpowiadamy kwotę, a nie liczymy za niego.
+                $order->isFullyReturned() && (float) $order->delivery_cost > 0
+                    ? ['Zwrot obejmuje **całe zamówienie** — oddaj również koszt dostawy (zapłacono '.Money::pln($order->delivery_cost).'; ustawa nakazuje zwrot najtańszej oferowanej przez Ciebie opcji).']
+                    : [],
+                filled($return->note) ? array_merge(['**Wiadomość od klienta:**'], $this->textLines($return->note)) : [],
+            ]),
+            'outro_lines' => [
+                'Pieniądze zwróć **do '.$return->refundDeadline()->format('d.m.Y').'** (14 dni od otrzymania oświadczenia). '
+                    .'Możesz wstrzymać wypłatę do chwili otrzymania towaru albo dowodu jego odesłania — to zawiesza wykonanie, nie przesuwa terminu.',
+                'Stan magazynowy nie został zmieniony — o tym, czy towar wraca do sprzedaży, decydujesz sam po jego obejrzeniu.',
+            ],
+        ]);
+    }
+
+    /**
+     * Potwierdzenie dla klienta, że oświadczenie do nas dotarło. To nie jest
+     * uprzejmość, tylko OBOWIĄZEK z art. 30 ust. 2 ustawy o prawach konsumenta:
+     * odstąpienie złożone drogą elektroniczną przedsiębiorca musi niezwłocznie
+     * potwierdzić na trwałym nośniku.
+     */
+    public function returnAcknowledged(Order $order, OrderReturn $return): void
+    {
+        $order->loadMissing(['items', 'shop']);
+        $shop = $order->shop;
+        $days = (int) config('legal.withdrawal.days');
+
+        EmailMessage::create($this->senderIdentity($shop) + [
+            'priority' => MailPriority::Mid,
+            'shop_id' => $shop->id,
+            'to_email' => $order->buyer_email,
+            'to_name' => trim($order->buyer_name.' '.$order->buyer_surname),
+            'subject' => 'Potwierdzenie odstąpienia od umowy — zamówienie #'.$order->number,
+            'preheader' => 'Przyjęliśmy Twoje oświadczenie o odstąpieniu od umowy.',
+            'heading' => 'Przyjęliśmy Twoje oświadczenie',
+            'greeting' => Vocative::greeting($order->buyer_name),
+            'intro_lines' => $this->blocks([
+                [
+                    'Potwierdzamy otrzymanie Twojego oświadczenia o odstąpieniu od umowy — **zamówienie #'.$order->number.'** w sklepie **'.$shop->name.'**.',
+                ],
+                array_merge(
+                    ['**Zwracasz:**'],
+                    $this->returnLines($return),
+                    ['Do zwrotu: **'.Money::pln($return->refund_gross).'**'],
+                ),
+                [
+                    '**Co dalej**',
+                    'Odeślij towar w ciągu '.$days.' dni od złożenia tego oświadczenia. Koszt odesłania ponosisz Ty, chyba że sklep ustalił inaczej.',
+                    'Sklep zwróci pieniądze w ciągu '.$days.' dni od otrzymania oświadczenia — może wstrzymać zwrot do chwili otrzymania towaru albo dowodu jego odesłania.',
+                ],
+            ]),
+            'action_text' => 'Zobacz swoje zwroty',
+            'action_url' => $order->returnUrl(),
+            'outro_lines' => [
+                'Masz pytania? Odpowiedz na tego e-maila — trafi wprost do sklepu.',
+            ],
+        ]);
+    }
+
+    /**
+     * Pozycje zgłoszenia zwrotu jako linie: „• 2 szt. × Nazwa — 100,00 zł".
+     * Nazwa i jednostka z migawki pozycji zamówienia, więc pozostają wierne.
+     *
+     * @return list<string>
+     */
+    private function returnLines(OrderReturn $return): array
+    {
+        $return->loadMissing('items.orderItem');
+
+        return $return->items
+            ->map(function ($line): string {
+                $item = $line->orderItem;
+                $quantity = $item !== null
+                    ? $item->sale_unit->formatQuantity((float) $line->quantity)
+                    : rtrim(rtrim((string) $line->quantity, '0'), '.');
+
+                return '• '.$quantity.' × '.($item->name ?? 'pozycja zamówienia').' — '.Money::pln($line->refund_gross);
+            })
+            ->values()
+            ->all();
     }
 
     private function blocks(array $blocks): array
@@ -519,8 +647,12 @@ class OrderMailer
      */
     private function productLines(Order $order): array
     {
+        // Ilość efektywna (bez tego, co klient już oddał) i bez pozycji zwróconych
+        // w całości — mail o zamówieniu ma pokazywać jego bieżący stan, zgodny
+        // z kwotą na dole. Historia zwrotów jest w panelu, nie tutaj.
         return $order->items
-            ->map(fn ($item): string => '• '.$item->sale_unit->formatQuantity((float) $item->quantity).' × '.$item->name.' — '.Money::pln($item->line_total_gross))
+            ->filter(fn ($item): bool => $item->effectiveQuantity() > 0)
+            ->map(fn ($item): string => '• '.$item->sale_unit->formatQuantity($item->effectiveQuantity()).' × '.$item->name.' — '.Money::pln($item->line_total_gross))
             ->values()
             ->all();
     }

@@ -42,6 +42,15 @@ class OrderEditor
                 throw new OrderEditException('Podaj ilość większą od zera — aby usunąć pozycję, użyj „Usuń".');
             }
 
+            // Nie wolno zejść poniżej tego, co klient już oddał — zamówienie
+            // pokazywałoby wtedy więcej zwróconych sztuk, niż w ogóle kupionych,
+            // a kwota zwrotu przestałaby mieć pokrycie w pozycji.
+            if ($newQuantity < (float) $item->returned_quantity) {
+                throw new OrderEditException(
+                    'Z tej pozycji zwrócono już '.$item->sale_unit->formatQuantity((float) $item->returned_quantity).' — nie można zejść poniżej tej ilości.',
+                );
+            }
+
             $this->guardStock($product, $newQuantity, (float) $item->quantity);
             $this->applyStockDelta($product, (float) $item->quantity, $newQuantity);
 
@@ -140,6 +149,12 @@ class OrderEditor
             $order = $item->order()->first();
 
             $this->guardEditable($order);
+
+            // Pozycja ze zgłoszonym zwrotem zostaje: skasowanie jej wymazałoby
+            // oświadczenie konsumenta razem z kwotą, którą sklep ma mu oddać.
+            if ($item->hasReturns()) {
+                throw new OrderEditException('Ta pozycja ma zgłoszony zwrot — nie można jej usunąć z zamówienia.');
+            }
 
             $this->applyStockDelta($product, (float) $item->quantity, 0.0);
 

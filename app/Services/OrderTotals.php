@@ -18,6 +18,10 @@ class OrderTotals
      * Przelicza pozycje i sumy zamówienia z bieżącej ceny/ilości pozycji i zapisuje.
      * Odświeża `line_total_gross` każdej pozycji (gdy drgnął) oraz `items_total`,
      * `total_net`, `total_vat`, `total_gross` zamówienia (brutto = produkty + dostawa).
+     *
+     * Liczymy z ilości EFEKTYWNEJ (kupiona minus zwrócona), więc zgłoszony zwrot
+     * pomniejsza zamówienie tą samą drogą, co edycja pozycji — jedną formułą, bez
+     * osobnego trybu. `quantity` zostaje nietknięte jako migawka zakupu.
      */
     public function recalculate(Order $order): void
     {
@@ -27,7 +31,7 @@ class OrderTotals
         foreach ($order->items as $index => $item) {
             [$lineGross] = $this->lineAmounts(
                 (float) $item->unit_price_gross,
-                (float) $item->quantity,
+                $item->effectiveQuantity(),
                 $item->vat_rate,
             );
 

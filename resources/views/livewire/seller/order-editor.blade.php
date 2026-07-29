@@ -83,6 +83,21 @@
                             {{ $item->sale_unit->formatQuantity((float) $item->quantity) }} × {{ \App\Support\Money::pln($item->unit_price_gross) }}
                             <span class="text-stone-400">· VAT {{ $item->vat_rate->label() }}</span>
                         </p>
+                        @if ($item->hasReturns())
+                            {{-- Kwota linii jest już pomniejszona o zwrot, więc bez tej
+                                 adnotacji „1 szt." przy kwocie 0,00 zł wyglądałoby na błąd.
+                                 Mówimy WPROST, co się stało z towarem i z pieniędzmi —
+                                 sama liczba sztuk („kwota dotyczy 0 szt.") niczego nie
+                                 tłumaczyła. --}}
+                            <p class="mt-1 inline-flex flex-wrap items-center gap-1.5 rounded-2xl bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800">
+                                <span aria-hidden="true">↩</span>
+                                @if ($item->effectiveQuantity() <= 0)
+                                    Klient zwrócił tę pozycję w całości ({{ $item->sale_unit->formatQuantity((float) $item->returned_quantity) }}) — nie wlicza się już do kwoty zamówienia
+                                @else
+                                    Klient zwrócił {{ $item->sale_unit->formatQuantity((float) $item->returned_quantity) }} z {{ $item->sale_unit->formatQuantity((float) $item->quantity) }} — kwota obok dotyczy pozostałych {{ $item->sale_unit->formatQuantity($item->effectiveQuantity()) }}
+                                @endif
+                            </p>
+                        @endif
                     @endif
                 </div>
                 <span class="shrink-0 font-semibold tabular-nums text-stone-900">{{ \App\Support\Money::pln($item->line_total_gross) }}</span>

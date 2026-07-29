@@ -33,6 +33,7 @@ use App\Http\Controllers\Storefront\CheckoutController as StorefrontCheckout;
 use App\Http\Controllers\Storefront\HomeController as StorefrontHome;
 use App\Http\Controllers\Storefront\RegisterController as StorefrontRegister;
 use App\Http\Controllers\Storefront\PageController as StorefrontPage;
+use App\Http\Controllers\Storefront\OrderReturnController as StorefrontOrderReturn;
 use App\Http\Controllers\Storefront\PaymentController as StorefrontPayment;
 use App\Http\Controllers\Storefront\ProductController as StorefrontProduct;
 use Illuminate\Support\Facades\Route;
@@ -258,6 +259,14 @@ Route::domain('{shop}.'.config('tenancy.central_domain'))
         // powrót z Paynow, ekran podziękowania. Działa bez logowania.
         Route::get('/platnosc/{token}', [StorefrontPayment::class, 'show'])->name('storefront.payment.show');
         Route::post('/platnosc/{token}', [StorefrontPayment::class, 'pay'])->name('storefront.payment.pay');
+
+        // Odstąpienie od umowy (14 dni) — publiczny formularz pod tym samym
+        // tokenem zamówienia co płatność. Bez logowania, bo ustawa wymaga, by
+        // złożenie oświadczenia było łatwe. Throttle chroni przed wysypem
+        // zgłoszeń z jednego linku, nie przed klientem (limit jest hojny).
+        Route::get('/zwrot/{token}', [StorefrontOrderReturn::class, 'show'])->name('storefront.return.show');
+        Route::post('/zwrot/{token}', [StorefrontOrderReturn::class, 'store'])
+            ->middleware('throttle:10,1')->name('storefront.return.store');
 
         /*
         |----------------------------------------------------------------------

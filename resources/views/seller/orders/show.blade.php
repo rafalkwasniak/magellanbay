@@ -6,6 +6,10 @@
         <div class="space-y-6 lg:col-span-8">
             <livewire:seller.order-editor :order="$order" />
 
+            {{-- Zwroty tuż pod pozycjami: to one wyjaśniają, czemu kwoty zamówienia
+                 są niższe niż pierwotnie. Karta sama się chowa, gdy zwrotów nie ma. --}}
+            <livewire:seller.order-returns :order="$order" />
+
             @if (filled($order->note))
                 <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
                     <h2 class="font-semibold text-stone-900">Uwagi klienta</h2>
