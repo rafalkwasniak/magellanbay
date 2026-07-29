@@ -27,6 +27,9 @@ class ShopManager extends Component
 
     public int $max_products = 0;
 
+    /** Tygodniowa pula zadań AI — uprawnienie liczbowe, jak limit produktów. */
+    public int $ai_weekly_limit = 0;
+
     public bool $online_payments = false;
 
     public bool $courier_shipping = false;
@@ -71,10 +74,15 @@ class ShopManager extends Component
     {
         $this->shop = $shop;
         $this->package = $shop->package ?? config('shop.default_package');
-        $this->max_products = (int) $shop->entitlement('max_products');
+        // `rawEntitlement`, nie `entitlement`: konsola pokazuje, CO KLIENT KUPIŁ.
+        // Po wygaśnięciu abonamentu odczyt efektywny dałby uprawnienia Kramu, a
+        // zapis takiego formularza wykasowałby snapshot — i po opłacie nie byłoby
+        // czego przywrócić.
+        $this->max_products = (int) $shop->rawEntitlement('max_products');
+        $this->ai_weekly_limit = (int) $shop->rawEntitlement('ai_weekly_limit');
 
         foreach (array_keys($this->booleanEntitlements()) as $key) {
-            $this->{$key} = (bool) $shop->entitlement($key);
+            $this->{$key} = (bool) $shop->rawEntitlement($key);
         }
 
         $this->price_yearly = (string) (int) round($shop->priceYearly());
@@ -96,6 +104,7 @@ class ShopManager extends Component
 
         $this->package = $slug;
         $this->max_products = (int) ($package['entitlements']['max_products'] ?? 0);
+        $this->ai_weekly_limit = (int) ($package['entitlements']['ai_weekly_limit'] ?? 0);
 
         foreach (array_keys($this->booleanEntitlements()) as $key) {
             $this->{$key} = (bool) ($package['entitlements'][$key] ?? false);
@@ -112,6 +121,7 @@ class ShopManager extends Component
         return [
             'package' => ['required', 'string', 'in:'.implode(',', array_keys(config('shop.packages')))],
             'max_products' => ['required', 'integer', 'min:0', 'max:100000'],
+            'ai_weekly_limit' => ['required', 'integer', 'min:0', 'max:100000'],
             'price_yearly' => ['required', 'numeric', 'min:0', 'max:1000000'],
             'subscription_ends_at' => ['nullable', 'date'],
             'comped' => ['boolean'],
@@ -122,7 +132,13 @@ class ShopManager extends Component
     {
         $this->validate();
 
-        $entitlements = ['max_products' => $this->max_products];
+        // Snapshot musi nieść WSZYSTKIE uprawnienia, także liczbowe — pominięcie
+        // `ai_weekly_limit` kasowało ręczne nadanie limitu AI przy każdym zapisie.
+        $entitlements = [
+            'max_products' => $this->max_products,
+            'ai_weekly_limit' => $this->ai_weekly_limit,
+        ];
+
         foreach (array_keys($this->booleanEntitlements()) as $key) {
             $entitlements[$key] = (bool) $this->{$key};
         }

@@ -59,6 +59,16 @@
                         class="rounded-xl border border-stone-200 bg-white px-3 py-2 text-right text-sm shadow-sm focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
                 </div>
                 @error('max_products') <p class="text-sm text-rose-600">{{ $message }}</p> @enderror
+
+                {{-- Tygodniowa pula zadań AI. Musi być w tym formularzu, bo zapis
+                     pisze CAŁY snapshot — bez tego pola każde „Zapisz" kasowało
+                     ręcznie nadany limit. --}}
+                <div class="flex items-center justify-between gap-4 rounded-2xl border border-stone-200 bg-white/60 px-4 py-3">
+                    <label for="ai_weekly_limit" class="text-sm font-medium text-stone-800">Zadania AI / tydzień</label>
+                    <input type="number" id="ai_weekly_limit" wire:model="ai_weekly_limit" min="0" style="width: 7rem"
+                        class="rounded-xl border border-stone-200 bg-white px-3 py-2 text-right text-sm shadow-sm focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
+                </div>
+                @error('ai_weekly_limit') <p class="text-sm text-rose-600">{{ $message }}</p> @enderror
             </div>
         </div>
 

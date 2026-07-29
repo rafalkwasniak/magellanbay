@@ -56,6 +56,28 @@ class PackageFeatures
     }
 
     /**
+     * Funkcje KONKRETNEGO SKLEPU — czytane z jego uprawnień, nie z presetu
+     * pakietu. Różnica jest istotna: sklep może mieć moduł nadany ręcznie poza
+     * pakietem, a wtedy lista z configu kłamałaby.
+     *
+     * Bierzemy stan EFEKTYWNY (`entitlement`), więc po wygaśnięciu abonamentu
+     * sprzedawca widzi to, co faktycznie działa, a nie to, co kiedyś kupił.
+     *
+     * @return list<string>
+     */
+    public static function forShop(\App\Models\Shop $shop): array
+    {
+        $keys = ['max_products', 'online_payments', 'courier_shipping', 'invoices', 'order_editing', 'discount_codes', 'bulk_mail'];
+
+        $entitlements = array_combine(
+            $keys,
+            array_map(fn (string $key): mixed => $shop->entitlement($key), $keys),
+        );
+
+        return array_values(self::labels($entitlements));
+    }
+
+    /**
      * Uprawnienia pakietu jako zdania dla kupującego. Klucz tablicy identyfikuje
      * CECHĘ (po nim porównujemy pakiety), wartość to jej opis.
      *

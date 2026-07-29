@@ -879,12 +879,58 @@ class Shop extends Model
     }
 
     /**
+     * Czy abonament sklepu jest opłacony i biegnie.
+     *
+     * Trzy drogi do „tak": dostęp gratisowy (`comped` — nie wygasa nigdy),
+     * pakiet darmowy (nie ma czego opłacać) albo data końca w przyszłości.
+     *
+     * PUSTA DATA przy płatnym pakiecie = BEZTERMINOWO. Świadomie na korzyść
+     * sklepu: konsola admina pozwala jej nie ustawić, a gdyby brak daty znaczył
+     * „wygasło", wszystkie dotychczasowe ręczne nadania zgasłyby z dnia na dzień.
+     */
+    public function subscriptionActive(): bool
+    {
+        if ($this->comped) {
+            return true;
+        }
+
+        // Pakiet bez opłaty nie ma jak wygasnąć.
+        if ((float) config("shop.packages.{$this->package}.price_yearly", 0) <= 0) {
+            return true;
+        }
+
+        return $this->subscription_ends_at === null
+            || $this->subscription_ends_at->isFuture();
+    }
+
+    /**
      * Resolver uprawnień: aplikacja pyta „ile/czy X?", nie „jaki pakiet?".
+     *
+     * Po wygaśnięciu abonamentu czytamy uprawnienia pakietu DARMOWEGO, ale
+     * SNAPSHOTU NIE RUSZAMY. To celowe: nadpisanie snapshotu skasowałoby ręczne
+     * nadania (moduł dany komuś gestem poza pakietem) i po opłacie nie byłoby
+     * jak ich odtworzyć. Dzięki temu odnowienie = zmiana jednej daty i wraca
+     * wszystko, łącznie z dodatkami.
+     *
      * Wygrywa zapisany snapshot sklepu; gdy brak klucza (sklep bez snapshotu —
      * legacy, albo nowe uprawnienie dodane po zakupie) — fallback do definicji
      * aktualnego pakietu w configu jako siatka bezpieczeństwa.
      */
     public function entitlement(string $key): mixed
+    {
+        if (! $this->subscriptionActive()) {
+            return config('shop.packages.'.config('shop.default_package').".entitlements.{$key}");
+        }
+
+        return $this->rawEntitlement($key);
+    }
+
+    /**
+     * Uprawnienie WPROST ZE SNAPSHOTU, bez patrzenia na abonament — „co klient
+     * kupił". Do konsoli admina, która musi pokazać stan zakupu także wtedy, gdy
+     * abonament właśnie wygasł, oraz wszędzie, gdzie edytujemy uprawnienia.
+     */
+    public function rawEntitlement(string $key): mixed
     {
         $snapshot = $this->entitlements ?? [];
 

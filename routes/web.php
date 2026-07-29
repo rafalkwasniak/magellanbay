@@ -19,6 +19,7 @@ use App\Http\Controllers\Seller\CompanyLookupController;
 use App\Http\Controllers\Seller\DashboardController as SellerDashboard;
 use App\Http\Controllers\Seller\BulkMailingController;
 use App\Http\Controllers\Seller\CustomerController;
+use App\Http\Controllers\Seller\PackageController;
 use App\Http\Controllers\Seller\DiscountCodeController;
 use App\Http\Controllers\Seller\IntegrationController;
 use App\Http\Controllers\Seller\OrderController;
@@ -162,6 +163,11 @@ Route::middleware(['auth', 'role:seller', 'ensure.consents'])
         // Zamówienia (podgląd + zmiana statusu). Lista i szczegół; zmiana statusu przez POST.
         Route::get('/zamowienia', [OrderController::class, 'index'])->name('orders.index');
         Route::get('/zamowienia/{order}', [OrderController::class, 'show'])->name('orders.show');
+
+        // „Mój pakiet" — co sprzedawca ma wykupione i do kiedy. Zakup online
+        // dojdzie osobno (wymaga konta płatniczego platformy); na razie ekran
+        // informuje i kieruje do kontaktu.
+        Route::get('/pakiet', [PackageController::class, 'show'])->name('package.show');
 
         // Kartoteka klientów — we wszystkich pakietach. Identyfikatorem jest
         // ADRES E-MAIL, bo klient bez konta (gość) nie ma `id`; `where` na
