@@ -4,9 +4,11 @@
     'heading' => null,
     'greeting' => null,
     'lines' => [],          // bloki przed przyciskiem: string = akapit, tablica = akapit z linii sklejonych <br>
+    'bodyHtml' => null,     // treść z edytora sprzedawcy (zsanityzowana na zapisie); zamiast `lines`
     'actionText' => null,   // tekst przycisku CTA (opcjonalny)
     'actionUrl' => null,
     'outroLines' => [],     // akapity po przycisku
+    'unsubscribeUrl' => null,   // TYLKO korespondencja seryjna; maile transakcyjne zostawiają puste
 ])
 
 @php
@@ -32,6 +34,16 @@
         <p style="margin:0 0 16px 0; font-size:15px; line-height:1.65; color:{{ $brand['muted'] }};">{!! $html !!}</p>
     @endforeach
 
+    @isset($bodyHtml)
+        {{-- Treść napisana w edytorze przez sprzedawcę. HTML przeszedł przez
+             HtmlSanitizer na zapisie (biała lista znaczników), a Prose układa go
+             w równe akapity — te same dwa filtry co treść stron sklepu.
+             Kolory i typografia inline, bo klienty pocztowe ignorują arkusze. --}}
+        <div style="font-size:15px; line-height:1.65; color:{{ $brand['muted'] }};">
+            {!! \App\Support\Prose::render($bodyHtml) !!}
+        </div>
+    @endisset
+
     @if ($actionText && $actionUrl)
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0;">
             <tr>
@@ -51,6 +63,16 @@
     @foreach ($outroLines as $line)
         <p style="margin:16px 0 0 0; font-size:15px; line-height:1.65; color:{{ $brand['muted'] }};">{!! \App\Support\MailMarkup::inline($line) !!}</p>
     @endforeach
+
+    @isset($unsubscribeUrl)
+        {{-- Stopka wypisu — obowiązkowa w każdej wiadomości marketingowej.
+             Zgoda ma być odwoływalna równie łatwo, jak została udzielona, więc
+             link działa bez logowania i wypisuje natychmiast. --}}
+        <p style="margin:28px 0 0 0; padding-top:16px; border-top:1px solid {{ $brand['border'] ?? '#e7e5e4' }}; font-size:13px; line-height:1.6; color:{{ $brand['muted'] }};">
+            Dostajesz tę wiadomość, bo zgodziłeś się na wiadomości od tego sklepu.
+            <a href="{{ $unsubscribeUrl }}" style="color:{{ $brand['accent'] }};">Wypisz się jednym kliknięciem</a>.
+        </p>
+    @endisset
 
     {{ $slot ?? '' }}
 </x-mail.layout>

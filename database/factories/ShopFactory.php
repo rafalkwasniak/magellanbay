@@ -139,4 +139,17 @@ class ShopFactory extends Factory
             ),
         ]);
     }
+
+    /**
+     * Sklep z korespondencją seryjną (pakiet Pawilon).
+     */
+    public function withBulkMail(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'entitlements' => array_merge(
+                $attributes['entitlements'] ?? config('shop.packages.'.config('shop.default_package').'.entitlements'),
+                ['bulk_mail' => true],
+            ),
+        ]);
+    }
 }

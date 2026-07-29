@@ -55,6 +55,16 @@ class Vocative
     }
 
     /**
+     * To samo powitanie, ale bez przecinka — do użycia jako NAGŁÓWEK maila,
+     * gdzie po nim nie idzie zdanie, tylko treść. „Cześć Rafale," w wielkim
+     * nagłówku wyglądałoby na urwane w pół słowa.
+     */
+    public static function headline(?string $name): string
+    {
+        return rtrim(self::greeting($name), ',');
+    }
+
+    /**
      * Czy CAŁE pole wygląda na imię (ewentualnie z nazwiskiem): same litery,
      * spacje i myślniki, sensowna długość pierwszego członu. Kropka, przecinek
      * czy cyfra zdradzają nazwę firmy („FIRMA XYZ SP. Z O.O.") albo śmieć —

@@ -26,6 +26,7 @@ class AiController extends Controller
             'shop_description' => ['max' => (int) config('shop.description_max'), 'html' => true],
             'product_description' => ['max' => (int) config('shop.product_description_max'), 'html' => true],
             'page_content' => ['max' => (int) config('pages.content_max'), 'html' => true],
+            'mailing_body' => ['max' => (int) config('bulk_mail.body_max'), 'html' => true],
         ];
 
         $field = (string) $request->input('field');

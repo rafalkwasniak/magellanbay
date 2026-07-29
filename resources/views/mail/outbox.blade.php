@@ -5,7 +5,9 @@
     :heading="$heading"
     :greeting="$greeting"
     :lines="$lines"
+    :bodyHtml="$bodyHtml"
     :actionText="$actionText"
     :actionUrl="$actionUrl"
     :outroLines="$outroLines"
+    :unsubscribeUrl="$unsubscribeUrl"
 />

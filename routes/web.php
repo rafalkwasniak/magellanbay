@@ -17,6 +17,7 @@ use App\Http\Controllers\Seller\AnalyticsController;
 use App\Http\Controllers\Seller\AppearanceController;
 use App\Http\Controllers\Seller\CompanyLookupController;
 use App\Http\Controllers\Seller\DashboardController as SellerDashboard;
+use App\Http\Controllers\Seller\BulkMailingController;
 use App\Http\Controllers\Seller\DiscountCodeController;
 use App\Http\Controllers\Seller\IntegrationController;
 use App\Http\Controllers\Seller\OrderController;
@@ -35,6 +36,7 @@ use App\Http\Controllers\Storefront\RegisterController as StorefrontRegister;
 use App\Http\Controllers\Storefront\PageController as StorefrontPage;
 use App\Http\Controllers\Storefront\OrderReturnController as StorefrontOrderReturn;
 use App\Http\Controllers\Storefront\PaymentController as StorefrontPayment;
+use App\Http\Controllers\Storefront\UnsubscribeController as StorefrontUnsubscribe;
 use App\Http\Controllers\Storefront\ProductController as StorefrontProduct;
 use Illuminate\Support\Facades\Route;
 
@@ -168,6 +170,16 @@ Route::middleware(['auth', 'role:seller', 'ensure.consents'])
         Route::post('/kody-rabatowe/{discountCode}/przelacz', [DiscountCodeController::class, 'toggle'])->name('discounts.toggle');
         Route::post('/kody-rabatowe/{discountCode}/usun', [DiscountCodeController::class, 'destroy'])->name('discounts.destroy');
 
+        // Wiadomości do klientów (korespondencja seryjna — uprawnienie `bulk_mail`,
+        // Pawilon). Kontroler prowadzi wyłącznie szkic; wysyłkę (próbka do siebie
+        // i wysyłka do klientów) obsługuje komponent Livewire na stronie edycji.
+        Route::get('/wiadomosci', [BulkMailingController::class, 'index'])->name('mailings.index');
+        Route::get('/wiadomosci/nowa', [BulkMailingController::class, 'create'])->name('mailings.create');
+        Route::post('/wiadomosci', [BulkMailingController::class, 'store'])->name('mailings.store');
+        Route::get('/wiadomosci/{bulkMailing}/edycja', [BulkMailingController::class, 'edit'])->name('mailings.edit');
+        Route::post('/wiadomosci/{bulkMailing}', [BulkMailingController::class, 'update'])->name('mailings.update');
+        Route::post('/wiadomosci/{bulkMailing}/usun', [BulkMailingController::class, 'destroy'])->name('mailings.destroy');
+
         // Informacje (strony tekstowe storefrontu). Edycja/usuwanie przez POST;
         // kolejność (drag & drop) zapisywana AJAX-em przez POST.
         Route::get('/informacje', [PageController::class, 'index'])->name('pages.index');
@@ -264,6 +276,15 @@ Route::domain('{shop}.'.config('tenancy.central_domain'))
         // tokenem zamówienia co płatność. Bez logowania, bo ustawa wymaga, by
         // złożenie oświadczenia było łatwe. Throttle chroni przed wysypem
         // zgłoszeń z jednego linku, nie przed klientem (limit jest hojny).
+        // Wypis z korespondencji seryjnej — podpisany link ze stopki mailingu,
+        // bez logowania. Samo wejście wypisuje (zgoda ma być odwoływalna równie
+        // łatwo, jak udzielona); POST obok przywraca zgodę klikniętą omyłkowo.
+        // Link NIE wygasa: mail sprzed roku musi dać się odsubskrybować.
+        Route::get('/wypisz-sie/{customer}', [StorefrontUnsubscribe::class, 'show'])
+            ->middleware('signed')->name('storefront.unsubscribe');
+        Route::post('/wypisz-sie/{customer}/przywroc', [StorefrontUnsubscribe::class, 'restore'])
+            ->middleware('signed')->name('storefront.unsubscribe.restore');
+
         Route::get('/zwrot/{token}', [StorefrontOrderReturn::class, 'show'])->name('storefront.return.show');
         Route::post('/zwrot/{token}', [StorefrontOrderReturn::class, 'store'])
             ->middleware('throttle:10,1')->name('storefront.return.store');

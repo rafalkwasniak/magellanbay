@@ -44,9 +44,15 @@ class OutboxMailable extends Mailable
                 'heading' => $this->message->heading,
                 'greeting' => $this->message->greeting,
                 'lines' => $this->message->intro_lines ?? [],
+                // Treść z edytora sprzedawcy (już zsanityzowana na zapisie).
+                // Puste dla maili systemowych — te idą blokami `lines`.
+                'bodyHtml' => $this->message->body_html,
                 'actionText' => $this->message->action_text,
                 'actionUrl' => $this->message->action_url,
                 'outroLines' => $this->message->outro_lines ?? [],
+                // Puste dla maili transakcyjnych — stopka wypisu pojawia się
+                // wyłącznie w korespondencji seryjnej.
+                'unsubscribeUrl' => $this->message->unsubscribe_url,
             ],
         );
     }

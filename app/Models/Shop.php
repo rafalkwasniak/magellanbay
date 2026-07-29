@@ -154,6 +154,18 @@ class Shop extends Model
     }
 
     /**
+     * Korespondencja seryjna sklepu (uprawnienie `bulk_mail`, pakiet Pawilon).
+     * Najnowsze pierwsze — szkic, nad którym sprzedawca właśnie pracuje, ma być
+     * na wierzchu. Z tej relacji liczy się też karencja między wysyłkami.
+     *
+     * @return HasMany<BulkMailing, $this>
+     */
+    public function bulkMailings(): HasMany
+    {
+        return $this->hasMany(BulkMailing::class)->latest('id');
+    }
+
+    /**
      * Alokuje kolejny numer zamówienia tego sklepu — atomowo, przez blokadę
      * wiersza sklepu (unika kolizji przy równoczesnych zamówieniach). Numeracja
      * jest ciągła i nieodzyskiwana: licznik rośnie niezależnie od anulowania czy

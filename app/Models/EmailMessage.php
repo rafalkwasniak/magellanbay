@@ -15,7 +15,7 @@ use Illuminate\Support\Carbon;
  */
 #[Fillable([
     'priority', 'shop_id', 'to_email', 'to_name', 'from_name', 'reply_to', 'subject', 'preheader',
-    'heading', 'greeting', 'intro_lines', 'action_text', 'action_url',
+    'heading', 'greeting', 'intro_lines', 'body_html', 'action_text', 'action_url', 'unsubscribe_url',
     'outro_lines', 'scheduled_at',
 ])]
 class EmailMessage extends Model
