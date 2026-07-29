@@ -18,6 +18,7 @@ use App\Http\Controllers\Seller\AppearanceController;
 use App\Http\Controllers\Seller\CompanyLookupController;
 use App\Http\Controllers\Seller\DashboardController as SellerDashboard;
 use App\Http\Controllers\Seller\BulkMailingController;
+use App\Http\Controllers\Seller\CustomerController;
 use App\Http\Controllers\Seller\DiscountCodeController;
 use App\Http\Controllers\Seller\IntegrationController;
 use App\Http\Controllers\Seller\OrderController;
@@ -161,6 +162,13 @@ Route::middleware(['auth', 'role:seller', 'ensure.consents'])
         // Zamówienia (podgląd + zmiana statusu). Lista i szczegół; zmiana statusu przez POST.
         Route::get('/zamowienia', [OrderController::class, 'index'])->name('orders.index');
         Route::get('/zamowienia/{order}', [OrderController::class, 'show'])->name('orders.show');
+
+        // Kartoteka klientów — we wszystkich pakietach. Identyfikatorem jest
+        // ADRES E-MAIL, bo klient bez konta (gość) nie ma `id`; `where` na
+        // wzorcu przepuszcza kropki i małpę w segmencie ścieżki.
+        Route::get('/klienci', [CustomerController::class, 'index'])->name('customers.index');
+        Route::get('/klienci/{email}', [CustomerController::class, 'show'])
+            ->where('email', '.*')->name('customers.show');
 
         // Kody rabatowe (funkcja płatna — uprawnienie `discount_codes`, Pawilon).
         // Bez uprawnienia strona pokazuje zachętę zamiast narzędzia.

@@ -30,6 +30,7 @@
             ['label' => 'Mój sklep', 'route' => 'seller.shop.edit', 'icon' => '🛍️'],
             ['label' => 'Produkty', 'route' => 'seller.products.index', 'active' => 'seller.products.*', 'icon' => '🏷️'],
             ['label' => 'Zamówienia', 'route' => 'seller.orders.index', 'active' => 'seller.orders.*', 'icon' => '📦', 'badge' => (int) ($user->shop?->unseen_orders_count ?? 0)],
+            ['label' => 'Klienci', 'route' => 'seller.customers.index', 'active' => 'seller.customers.*', 'icon' => '👥'],
             ['label' => 'Kody rabatowe', 'route' => 'seller.discounts.index', 'active' => 'seller.discounts.*', 'icon' => '🎟️'],
             ['label' => 'Wiadomości', 'route' => 'seller.mailings.index', 'active' => 'seller.mailings.*', 'icon' => '📣'],
             ['label' => 'Analityka', 'route' => 'seller.analytics.index', 'icon' => '📊'],
