@@ -16,7 +16,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  *
  * `shop_id` nie jest mass-assignable — mailing tworzymy przez relację sklepu.
  */
-#[Fillable(['subject', 'body'])]
+#[Fillable(['subject', 'body', 'product_id'])]
 class BulkMailing extends Model
 {
     /** @use HasFactory<BulkMailingFactory> */
@@ -38,6 +38,18 @@ class BulkMailing extends Model
     public function shop(): BelongsTo
     {
         return $this->belongsTo(Shop::class);
+    }
+
+    /**
+     * Promowany produkt (opcjonalny) — jego karta stoi pod treścią wiadomości.
+     * Null także wtedy, gdy produkt skasowano z katalogu po wysyłce; wysłane
+     * maile niosą własną migawkę, więc nic z nich nie znika.
+     *
+     * @return BelongsTo<Product, $this>
+     */
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class);
     }
 
     /**

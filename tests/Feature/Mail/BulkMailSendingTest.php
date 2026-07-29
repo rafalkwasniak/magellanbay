@@ -216,6 +216,78 @@ class BulkMailSendingTest extends TestCase
         $this->assertSame(1, $this->service()->send($mailing->fresh()));
     }
 
+    public function test_promoted_product_travels_as_a_frozen_card(): void
+    {
+        $shop = $this->shopWithBulkMail();
+        $this->consentingCustomer($shop);
+
+        $product = \App\Models\Product::factory()->create([
+            'shop_id' => $shop->id,
+            'name' => 'Naszyjnik Lato',
+            'price_gross' => 149.00,
+            'description' => '<div>Ręcznie robiony naszyjnik z bursztynem.</div>',
+        ]);
+
+        $mailing = $shop->bulkMailings()->create([
+            'subject' => 'Nowa kolekcja',
+            'body' => '<div>Zajrzyj do sklepu.</div>',
+            'product_id' => $product->id,
+        ]);
+
+        EmailMessage::query()->delete();
+        $this->service()->send($mailing);
+
+        $card = EmailMessage::firstOrFail()->product_card;
+        $this->assertSame('Naszyjnik Lato', $card['name']);
+        $this->assertSame('149,00 zł', $card['price']);
+        $this->assertStringContainsString('Ręcznie robiony', $card['excerpt']);
+        $this->assertStringContainsString('/produkt/'.$product->id.'-', $card['url']);
+
+        // Migawka, nie odczyt: zmiana ceny po wysyłce nie rusza wysłanego maila.
+        $product->update(['price_gross' => 199.00]);
+        $this->assertSame('149,00 zł', EmailMessage::firstOrFail()->product_card['price']);
+    }
+
+    public function test_product_card_renders_in_the_mail_with_a_link_to_the_shop(): void
+    {
+        $shop = $this->shopWithBulkMail();
+        $this->consentingCustomer($shop);
+
+        $product = \App\Models\Product::factory()->create([
+            'shop_id' => $shop->id,
+            'name' => 'Naszyjnik Lato',
+            'price_gross' => 149.00,
+        ]);
+
+        EmailMessage::query()->delete();
+        $this->service()->send($shop->bulkMailings()->create([
+            'subject' => 'Nowa kolekcja',
+            'body' => '<div>Zajrzyj.</div>',
+            'product_id' => $product->id,
+        ]));
+
+        $rendered = (new \App\Mail\OutboxMailable(EmailMessage::firstOrFail()))->render();
+
+        // Karta musi być czytelna także wtedy, gdy skrzynka zablokuje grafikę —
+        // nazwa, cena i przycisk są tekstem.
+        $this->assertStringContainsString('Naszyjnik Lato', $rendered);
+        $this->assertStringContainsString('149,00', $rendered);
+        $this->assertStringContainsString('Zobacz w sklepie', $rendered);
+        $this->assertStringContainsString($shop->host().'/produkt/'.$product->id, $rendered);
+    }
+
+    public function test_mailing_without_a_product_has_no_card(): void
+    {
+        $shop = $this->shopWithBulkMail();
+        $this->consentingCustomer($shop);
+
+        EmailMessage::query()->delete();
+        $this->service()->send($this->draftFor($shop));
+
+        $this->assertNull(EmailMessage::firstOrFail()->product_card);
+        $this->assertStringNotContainsString('Zobacz w sklepie', (new \App\Mail\OutboxMailable(EmailMessage::firstOrFail()))->render());
+    }
+
     public function test_heading_greets_by_name_instead_of_repeating_the_subject(): void
     {
         $shop = $this->shopWithBulkMail();

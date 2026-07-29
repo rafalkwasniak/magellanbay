@@ -18,6 +18,13 @@
                         <p class="text-xs font-medium uppercase tracking-wide text-stone-400">Temat</p>
                         <p class="mt-1 font-medium text-stone-900">{{ $mailing->subject }}</p>
                     </div>
+                    @if ($mailing->product !== null)
+                        <div class="mt-4">
+                            <p class="text-xs font-medium uppercase tracking-wide text-stone-400">Promowany produkt</p>
+                            <p class="mt-1 font-medium text-stone-900">{{ $mailing->product->name }}</p>
+                        </div>
+                    @endif
+
                     <div class="mt-4">
                         <p class="text-xs font-medium uppercase tracking-wide text-stone-400">Treść</p>
                         {{-- Ten sam układ co w mailu: sanitizer na zapisie, Prose na wyjściu. --}}
@@ -52,6 +59,29 @@
                             <x-rich-editor name="body" :value="old('body', $mailing?->body)" ai-field="mailing_body" :max="config('bulk_mail.body_max')">Napisz, co nowego u Ciebie — o nowym produkcie, promocji albo zmianie w sklepie.</x-rich-editor>
                             @error('body')
                                 <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        {{-- Promowany produkt: jego karta (zdjęcie, cena, zajawka,
+                             przycisk) stanie POD treścią maila. Opcjonalny — nie
+                             każda wiadomość dotyczy konkretnej rzeczy. --}}
+                        <div>
+                            <label for="product_id" class="block text-sm font-medium text-stone-700">Promowany produkt <span class="text-stone-400">— opcjonalnie</span></label>
+                            <select id="product_id" name="product_id"
+                                class="mt-1 block w-full rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-800 focus:border-amber-400 focus:outline-none">
+                                <option value="">Bez produktu — sama treść</option>
+                                @foreach ($products as $product)
+                                    <option value="{{ $product->id }}" @selected((int) old('product_id', $mailing?->product_id) === $product->id)>
+                                        {{ $product->name }} — {{ \App\Support\Money::pln($product->price_gross) }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <p class="mt-1 text-xs text-stone-400">
+                                Pod treścią pojawi się karta produktu ze zdjęciem, ceną i przyciskiem do sklepu.
+                                Przy obniżce dopiszemy starą cenę i najniższą z 30 dni.
+                            </p>
+                            @error('product_id')
+                                <p class="mt-1 text-sm text-rose-600">{{ $message }}</p>
                             @enderror
                         </div>
 

@@ -4,6 +4,7 @@ namespace App\Http\Requests\Seller;
 
 use App\Services\HtmlSanitizer;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 /**
  * Treść wiadomości do klientów. Temat trafia w linię tematu maila i zarazem
@@ -24,6 +25,12 @@ class BulkMailingRequest extends FormRequest
         return [
             'subject' => ['required', 'string', 'max:150'],
             'body' => ['required', 'string', 'max:'.config('bulk_mail.body_max')],
+            // Promowany produkt musi należeć do TEGO sklepu — inaczej sprzedawca
+            // wypromowałby cudzy towar (i wysłał klientów do konkurencji).
+            'product_id' => [
+                'nullable',
+                Rule::exists('products', 'id')->where('shop_id', $this->user()->shop?->id),
+            ],
         ];
     }
 
@@ -37,6 +44,7 @@ class BulkMailingRequest extends FormRequest
             'subject.max' => 'Temat jest za długi — zmieść się w 150 znakach, inaczej skrzynki go utną.',
             'body.required' => 'Napisz treść wiadomości.',
             'body.max' => 'Treść jest za długa — skróć ją nieco.',
+            'product_id.exists' => 'Wybierz produkt ze swojego sklepu.',
         ];
     }
 

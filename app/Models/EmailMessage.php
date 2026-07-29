@@ -15,7 +15,7 @@ use Illuminate\Support\Carbon;
  */
 #[Fillable([
     'priority', 'shop_id', 'to_email', 'to_name', 'from_name', 'reply_to', 'subject', 'preheader',
-    'heading', 'greeting', 'intro_lines', 'body_html', 'action_text', 'action_url', 'unsubscribe_url',
+    'heading', 'greeting', 'intro_lines', 'body_html', 'product_card', 'action_text', 'action_url', 'unsubscribe_url',
     'outro_lines', 'scheduled_at',
 ])]
 class EmailMessage extends Model
@@ -26,6 +26,7 @@ class EmailMessage extends Model
             'priority' => MailPriority::class,
             'intro_lines' => 'array',
             'outro_lines' => 'array',
+            'product_card' => 'array',
             'scheduled_at' => 'datetime',
             'sent_at' => 'datetime',
             'failed_at' => 'datetime',

@@ -9,6 +9,8 @@ use App\Models\BulkMailing;
 use App\Models\Customer;
 use App\Models\EmailMessage;
 use App\Models\Shop;
+use App\Support\Excerpt;
+use App\Support\Money;
 use App\Support\Vocative;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Collection;
@@ -111,6 +113,7 @@ class BulkMailService
             'heading' => Vocative::headline($name),
             'greeting' => null,
             'body_html' => $mailing->body,
+            'product_card' => $this->productCard($mailing),
             'outro_lines' => [
                 'To jest podgląd — Twoi klienci jeszcze go nie dostali. Wyślij wiadomość z panelu, gdy treść będzie gotowa.',
                 'W wersji dla klientów na dole znajdzie się link do wypisania się z wiadomości.',
@@ -155,8 +158,12 @@ class BulkMailService
 
         $perMinute = max(1, (int) config('bulk_mail.per_minute'));
         $startedAt = Carbon::now();
+        // Karta produktu jest ta sama dla wszystkich odbiorców — liczymy ją RAZ,
+        // przed pętlą, żeby nie odpytywać o zdjęcia i historię cen przy każdym
+        // kliencie z osobna.
+        $card = $this->productCard($mailing);
 
-        DB::transaction(function () use ($mailing, $shop, $recipients, $perMinute, $startedAt): void {
+        DB::transaction(function () use ($mailing, $shop, $recipients, $perMinute, $startedAt, $card): void {
             foreach ($recipients->values() as $index => $customer) {
                 EmailMessage::create($this->senderIdentity($shop) + [
                     // Najniższy priorytet: mailing NIGDY nie może opóźnić
@@ -171,6 +178,7 @@ class BulkMailService
                     'heading' => Vocative::headline($customer->name),
                     'greeting' => null,
                     'body_html' => $mailing->body,
+                    'product_card' => $card,
                     // Stopka wypisu — obowiązkowa w każdej wiadomości
                     // marketingowej. Link jest BEZTERMINOWY: mail sprzed roku
                     // musi dać się odsubskrybować tak samo jak dzisiejszy.
@@ -191,6 +199,44 @@ class BulkMailService
         });
 
         return $recipients->count();
+    }
+
+    /**
+     * Migawka karty promowanego produktu — wszystko, czego mail potrzebuje, by
+     * pokazać go bez zaglądania do bazy przy renderowaniu.
+     *
+     * Zamrażamy, bo mail jest statyczny: cena to informacja handlowa i musi
+     * zgadzać się z chwilą wysyłki, a produkt może później podrożeć, zniknąć
+     * albo zmienić zdjęcie.
+     *
+     * Karta ma być czytelna także wtedy, gdy skrzynka zablokuje grafikę (a
+     * blokuje domyślnie), dlatego zdjęcie jest dodatkiem — nazwa, cena i
+     * przycisk niosą treść same z siebie.
+     *
+     * @return array<string, string|null>|null
+     */
+    private function productCard(BulkMailing $mailing): ?array
+    {
+        $product = $mailing->product;
+
+        if ($product === null) {
+            return null;
+        }
+
+        $product->loadMissing(['images', 'priceHistory']);
+        $excerpt = Excerpt::fromHtml($product->description, 160);
+        $previous = $product->lowestPriceLast30Days();
+
+        return [
+            'name' => $product->name,
+            'price' => Money::pln($product->price_gross),
+            // Wypełnione tylko przy realnej obniżce — wtedy dokładamy też
+            // wymagany prawem komunikat o najniższej cenie z 30 dni (Omnibus).
+            'previous_price' => $previous !== null ? Money::pln($previous) : null,
+            'excerpt' => $excerpt->isEmpty() ? null : $excerpt->text,
+            'image_url' => $product->mainImage()?->url(),
+            'url' => 'https://'.$mailing->shop->host().$product->storefrontPath(),
+        ];
     }
 
     /**

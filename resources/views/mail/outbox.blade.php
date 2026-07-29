@@ -6,6 +6,7 @@
     :greeting="$greeting"
     :lines="$lines"
     :bodyHtml="$bodyHtml"
+    :productCard="$productCard"
     :actionText="$actionText"
     :actionUrl="$actionUrl"
     :outroLines="$outroLines"

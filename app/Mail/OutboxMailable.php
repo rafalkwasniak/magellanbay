@@ -47,6 +47,8 @@ class OutboxMailable extends Mailable
                 // Treść z edytora sprzedawcy (już zsanityzowana na zapisie).
                 // Puste dla maili systemowych — te idą blokami `lines`.
                 'bodyHtml' => $this->message->body_html,
+                // Migawka promowanego produktu (korespondencja seryjna).
+                'productCard' => $this->message->product_card,
                 'actionText' => $this->message->action_text,
                 'actionUrl' => $this->message->action_url,
                 'outroLines' => $this->message->outro_lines ?? [],

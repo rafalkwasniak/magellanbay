@@ -39,9 +39,12 @@ class BulkMailingController extends Controller
 
     public function create(Request $request): Renderable
     {
-        $this->allowedShop($request);
+        $shop = $this->allowedShop($request);
 
-        return view('seller.mailings.form', ['mailing' => null]);
+        return view('seller.mailings.form', [
+            'mailing' => null,
+            'products' => $this->promotableProducts($shop),
+        ]);
     }
 
     public function store(BulkMailingRequest $request): RedirectResponse
@@ -62,7 +65,25 @@ class BulkMailingController extends Controller
         $shop = $this->allowedShop($request);
         $this->authorizeMailing($shop, $bulkMailing);
 
-        return view('seller.mailings.form', ['mailing' => $bulkMailing]);
+        return view('seller.mailings.form', [
+            'mailing' => $bulkMailing,
+            'products' => $this->promotableProducts($shop),
+        ]);
+    }
+
+    /**
+     * Produkty do wypromowania: tylko AKTYWNE, bo mail prowadzi klienta wprost
+     * na kartę produktu — wysłanie go do wyłączonego byłoby zaproszeniem
+     * donikąd. Najnowsze pierwsze: mailing zwykle dotyczy nowości.
+     *
+     * @return \Illuminate\Support\Collection<int, \App\Models\Product>
+     */
+    private function promotableProducts(Shop $shop): \Illuminate\Support\Collection
+    {
+        return $shop->products()
+            ->where('is_active', true)
+            ->latest('id')
+            ->get(['id', 'name', 'price_gross']);
     }
 
     public function update(BulkMailingRequest $request, BulkMailing $bulkMailing): RedirectResponse
