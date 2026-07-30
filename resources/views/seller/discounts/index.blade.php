@@ -19,15 +19,13 @@
                 </div>
 
                 @unless ($allowed)
-                    {{-- Bez uprawnienia `discount_codes` (Pawilon) — zachęta zamiast
-                         narzędzia, ten sam wzorzec co pusta strona Integracji. --}}
-                    <div class="mt-6 rounded-2xl border border-dashed border-stone-300 bg-white/40 p-8 text-center">
-                        <span class="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-stone-100 text-2xl">🎟️</span>
-                        <p class="mt-4 font-medium text-stone-700">Kody rabatowe w pakiecie Pawilon</p>
-                        <p class="mx-auto mt-1 max-w-sm text-sm text-stone-500">
-                            Wystawiaj kody na cały koszyk lub wybrany produkt, ograniczaj je terminem i liczbą użyć.
-                            Twój obecny pakiet: <span class="font-medium text-stone-700">{{ $shop?->packageName() ?? 'brak sklepu' }}</span>.
-                        </p>
+                    {{-- Bez uprawnienia `discount_codes` — wspólna zachęta z drogą do
+                         zakupu (nazwa i cena pakietu z configu, nie z treści). --}}
+                    <div class="mt-6">
+                        <x-seller.locked-feature feature="discount_codes" icon="🎟️" title="Kody rabatowe" :shop="$shop">
+                            Wystawiaj kody na cały koszyk lub wybrany produkt, ograniczaj je terminem, liczbą użyć
+                            albo minimalną wartością zakupów.
+                        </x-seller.locked-feature>
                     </div>
                 @elseif ($total === 0)
                     <div class="mt-8 flex flex-col items-center justify-center rounded-2xl border border-dashed border-stone-300 px-6 py-12 text-center">

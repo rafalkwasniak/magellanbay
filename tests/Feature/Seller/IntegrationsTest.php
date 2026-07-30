@@ -512,7 +512,12 @@ class IntegrationsTest extends TestCase
         $this->actingAs($seller)
             ->get(route('seller.integrations.edit'))
             ->assertOk()
-            ->assertSee('Integracje w wyższych pakietach')
+            // Nazwa pakietu czytana z configu, nie wpisana w treść — patrz
+            // PackageFeatures::cheapestWith().
+            ->assertSee('Integracje w pakiecie Stragan')
+            // Zachęta prowadzi do zakupu; wcześniej kończyła się na „nie masz".
+            ->assertSee(route('seller.package.show'), false)
+            ->assertSee('Zobacz pakiet Stragan')
             ->assertDontSee('Klucz obliczania podpisu')   // pole karty Paynow
             ->assertDontSee('Identyfikator śledzenia')     // pole karty GA
             ->assertDontSee('Token API')                   // pole karty Fakturowni

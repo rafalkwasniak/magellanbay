@@ -43,7 +43,10 @@ class BulkMailingController extends Controller
                     ])
                     ->paginate(10)
                 : null,
-            'recipients' => $allowed ? $mail->recipientsCount($shop) : 0,
+            // Liczba zgód liczona TAKŻE przy zablokowanym pakiecie: „12 klientów już
+            // się zgodziło na Twoje wiadomości" to najmocniejsza zachęta, jaką mamy
+            // na tym ekranie — mocniejsza od opisu funkcji.
+            'recipients' => $shop !== null ? $mail->recipientsCount($shop) : 0,
             'blockedUntil' => $allowed ? $mail->nextAllowedAt($shop) : null,
         ]);
     }

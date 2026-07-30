@@ -128,8 +128,14 @@
                                     </div>
                                 </label>
 
-                                {{-- Palety w ramach szablonu --}}
-                                <div class="flex flex-wrap items-center gap-2 px-4 pb-4 pt-3">
+                                {{-- Palety w ramach szablonu.
+                                     `mt-auto` dokleja rząd kropek do DOŁU karty: opisy
+                                     szablonów mają różną długość, więc bez tego kropki
+                                     wisiały na czterech różnych wysokościach i rząd
+                                     czytał się jak przypadek, a nie jak jeden wybór.
+                                     Karta jest `flex flex-col`, więc wystarczy ta jedna
+                                     klasa — bez sztywnych wysokości opisów. --}}
+                                <div class="mt-auto flex flex-wrap items-center gap-2 px-4 pb-4 pt-3">
                                     @foreach ($template['palettes'] as $key => $palette)
                                         <label class="cursor-pointer" title="{{ $palette['name'] }}">
                                             <input type="radio" name="palettes[{{ $slug }}]" value="{{ $key }}" class="peer sr-only"

@@ -20,6 +20,38 @@ namespace App\Support;
 class PackageFeatures
 {
     /**
+     * NAJTAŃSZY pakiet zawierający daną funkcję — do zachęt na zablokowanych
+     * ekranach („Kody rabatowe w pakiecie Pawilon, 1500 zł/rok").
+     *
+     * Czytane z configu, a NIE wpisane w treść widoku. Nazwy pakietów wklejone na
+     * twardo w Blade były prawdziwe w dniu pisania i zaczęłyby kłamać przy pierwszej
+     * zmianie presetów albo nowym pakiecie — a to nieprawda, której nikt nie
+     * zauważy, bo brzmi wiarygodnie.
+     *
+     * @return array{key: string, name: string, price_yearly: int}|null  null, gdy funkcji nie ma nigdzie
+     */
+    public static function cheapestWith(string $entitlement): ?array
+    {
+        $found = null;
+
+        foreach (config('shop.packages') as $key => $package) {
+            if (($package['entitlements'][$entitlement] ?? false) !== true) {
+                continue;
+            }
+
+            $price = (int) ($package['price_yearly'] ?? 0);
+
+            if ($found !== null && $price >= $found['price_yearly']) {
+                continue;
+            }
+
+            $found = ['key' => $key, 'name' => $package['name'], 'price_yearly' => $price];
+        }
+
+        return $found;
+    }
+
+    /**
      * Pakiety w kolejności z konfiguracji, każdy z listą cech.
      *
      * @return list<array{key: string, name: string, price_yearly: int, features: list<array{label: string, is_new: bool}>}>

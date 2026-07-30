@@ -10,11 +10,13 @@
                 @php($hasAnyIntegration = $shop->entitlement('online_payments') || $shop->entitlement('invoices') || $shop->entitlement('ga_analytics'))
 
                 @unless ($hasAnyIntegration)
-                    <div class="rounded-3xl border border-dashed border-stone-300 bg-white/40 p-8 text-center">
-                        <span class="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-stone-100 text-2xl">🔌</span>
-                        <p class="mt-4 font-medium text-stone-700">Integracje w wyższych pakietach</p>
-                        <p class="mx-auto mt-1 max-w-sm text-sm text-stone-500">Płatności online, wysyłki, faktury i Google Analytics dołączają od pakietu <span class="font-medium text-stone-700">Stragan</span>. Twój obecny pakiet: {{ $shop->packageName() }}.</p>
-                    </div>
+                    {{-- Bramkowane są trzy osobne uprawnienia; do zachęty bierzemy
+                         `online_payments`, bo to ta integracja, po którą sprzedawcy
+                         tu przychodzą. --}}
+                    <x-seller.locked-feature feature="online_payments" icon="🔌" title="Integracje" :shop="$shop">
+                        Płatności online, faktury i Google Analytics podłączysz na własne konta — pieniądze i dane idą
+                        wprost do Ciebie, Kramio nie jest stroną transakcji.
+                    </x-seller.locked-feature>
                 @endunless
 
                 {{-- Płatności online (Paynow / mBank) — najważniejsza integracja, na

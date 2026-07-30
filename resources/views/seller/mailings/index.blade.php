@@ -19,14 +19,11 @@
                 </div>
 
                 @unless ($allowed)
-                    {{-- Bez uprawnienia `bulk_mail` (Pawilon) — zachęta zamiast narzędzia. --}}
-                    <div class="mt-6 rounded-2xl border border-dashed border-stone-300 bg-white/40 p-8 text-center">
-                        <span class="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-stone-100 text-2xl">📣</span>
-                        <p class="mt-4 font-medium text-stone-700">Wiadomości do klientów w pakiecie Pawilon</p>
-                        <p class="mx-auto mt-1 max-w-sm text-sm text-stone-500">
-                            Napisz o nowościach albo promocji do klientów, którzy się na to zgodzili — bez zewnętrznych narzędzi.
-                            Twój obecny pakiet: <span class="font-medium text-stone-700">{{ $shop?->packageName() ?? 'brak sklepu' }}</span>.
-                        </p>
+                    <div class="mt-6">
+                        <x-seller.locked-feature feature="bulk_mail" icon="📣" title="Wiadomości do klientów" :shop="$shop">
+                            Napisz o nowościach albo promocji do klientów, którzy się na to zgodzili — z kartą promowanego
+                            produktu i bez zewnętrznych narzędzi.
+                        </x-seller.locked-feature>
                     </div>
                 @elseif ($mailings->isEmpty())
                     <div class="mt-8 flex flex-col items-center justify-center rounded-2xl border border-dashed border-stone-300 px-6 py-12 text-center">
@@ -112,21 +109,24 @@
             </div>
         </div>
 
-        {{-- Kolumna boczna: kto dostanie i kiedy można wysłać --}}
-        @if ($allowed)
-            <aside class="space-y-6 lg:col-span-4">
-                <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
-                    <h2 class="font-semibold text-stone-900">Odbiorcy</h2>
-                    <p class="mt-3 text-3xl font-semibold tracking-tight text-stone-900">{{ $recipients }}</p>
-                    <p class="mt-1 text-sm text-stone-500">
-                        {{ $recipients === 1 ? 'klient zgodził się' : 'klientów zgodziło się' }} na wiadomości od Twojego sklepu.
-                    </p>
-                    <p class="mt-3 text-xs text-stone-400">
-                        Zgodę zaznacza sam klient — przy zakładaniu konta albo później w swoim profilu. Nie da się jej dodać za niego,
-                        a wypisanie działa natychmiast.
-                    </p>
-                </div>
+        {{-- Kolumna boczna: kto dostanie i kiedy można wysłać.
+             ZAWSZE widoczna — przy zablokowanym pakiecie zostawała pusta, więc ekran
+             wyglądał na zepsuty, a nie na zamknięty (Rafał wyłapał niespójność z
+             Kodami rabatowymi, gdzie prawa kolumna zostaje). --}}
+        <aside class="space-y-6 lg:col-span-4">
+            <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                <h2 class="font-semibold text-stone-900">Odbiorcy</h2>
+                <p class="mt-3 text-3xl font-semibold tracking-tight text-stone-900">{{ $recipients }}</p>
+                <p class="mt-1 text-sm text-stone-500">
+                    {{ $recipients === 1 ? 'klient zgodził się' : 'klientów zgodziło się' }} na wiadomości od Twojego sklepu.
+                </p>
+                <p class="mt-3 text-xs text-stone-400">
+                    Zgodę zaznacza sam klient — przy zakładaniu konta albo później w swoim profilu. Nie da się jej dodać za niego,
+                    a wypisanie działa natychmiast.
+                </p>
+            </div>
 
+            @if ($allowed)
                 <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
                     <h2 class="font-semibold text-stone-900">Kiedy możesz wysłać</h2>
                     @if ($blockedUntil !== null)
@@ -141,7 +141,31 @@
                         </p>
                     @endif
                 </div>
-            </aside>
-        @endif
+            @else
+                {{-- Odpowiednik „Jak to działa" z Kodów rabatowych: przy blokadzie
+                     tłumaczymy zasady, żeby prawa kolumna niosła treść, a nie ciszę. --}}
+                <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                    <h2 class="font-semibold text-stone-900">Jak to działa</h2>
+                    <ul class="mt-4 space-y-3 text-sm text-stone-500">
+                        <li class="flex gap-3">
+                            <span class="mt-0.5 shrink-0 text-amber-500">✍️</span>
+                            <span>Piszesz wiadomość jak zwykły list, a <span class="font-medium text-stone-700">próbki do siebie</span> wysyłasz bez limitu — dopiero potem puszczasz ją do klientów.</span>
+                        </li>
+                        <li class="flex gap-3">
+                            <span class="mt-0.5 shrink-0 text-amber-500">🛍️</span>
+                            <span>Możesz dołączyć <span class="font-medium text-stone-700">kartę promowanego produktu</span> ze zdjęciem i ceną — klient klika i trafia wprost na jego stronę.</span>
+                        </li>
+                        <li class="flex gap-3">
+                            <span class="mt-0.5 shrink-0 text-amber-500">📅</span>
+                            <span>Jedna wiadomość na {{ config('bulk_mail.cooldown_days') }} dni — dla spokoju Twoich klientów i dostarczalności Twoich maili.</span>
+                        </li>
+                        <li class="flex gap-3">
+                            <span class="mt-0.5 shrink-0 text-amber-500">🔓</span>
+                            <span>Każdy mail ma <span class="font-medium text-stone-700">link do wypisania się</span>, który działa natychmiast i bezterminowo.</span>
+                        </li>
+                    </ul>
+                </div>
+            @endif
+        </aside>
     </div>
 </x-layouts.panel>

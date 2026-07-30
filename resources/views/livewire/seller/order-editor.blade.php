@@ -14,8 +14,17 @@
                     'border border-amber-200 bg-amber-100 text-amber-800 hover:bg-amber-200' => ! $editing,
                 ])
             >{{ $editing ? 'Gotowe' : 'Edytuj zamówienie' }}</button>
-        @else
+        @elseif ($this->order->status->isTerminal())
             <span class="rounded-full bg-stone-100 px-3 py-1 text-xs font-medium text-stone-500">Anulowane — tylko podgląd</span>
+        @else
+            {{-- DWA różne powody braku przycisku zlewały się w jeden komunikat:
+                 sklep bez uprawnienia `order_editing` czytał „Anulowane — tylko
+                 podgląd" o zamówieniu, które anulowane NIE JEST. Fałszywa informacja
+                 o cudzym zamówieniu, więc rozdzielone. --}}
+            <a href="{{ route('seller.package.show') }}"
+                class="rounded-full bg-stone-100 px-3 py-1 text-xs font-medium text-stone-500 underline decoration-stone-300 underline-offset-2 transition hover:text-stone-700">
+                Edycja zamówień w pakiecie {{ \App\Support\PackageFeatures::cheapestWith('order_editing')['name'] ?? 'wyższym' }}
+            </a>
         @endif
     </div>
 
