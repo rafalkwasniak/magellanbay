@@ -48,6 +48,8 @@ class RegisterRequest extends FormRequest
             // Hasło ustawiane jest później, w formularzu aktywacji (ActivationController).
             'terms' => ['accepted'],
             'privacy' => ['accepted'],
+            // Zgoda marketingowa jest DOBROWOLNA — `boolean`, nie `accepted`.
+            'marketing' => ['nullable', 'boolean'],
         ];
     }
 

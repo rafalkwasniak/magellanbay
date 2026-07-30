@@ -49,6 +49,30 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Zgoda marketingowa SPRZEDAWCY (informacje handlowe od Kramio)
+    |--------------------------------------------------------------------------
+    |
+    | Osobna od zgody klienta sklepu: tu nadawcą jesteśmy MY, a odbiorcą
+    | sprzedawca. Zbierana przy rejestracji (osobny checkbox, niezaznaczony
+    | domyślnie) i edytowalna w profilu.
+    |
+    | Ta sama reguła co wyżej: **zmieniasz `text` → podbij `version`**, bo
+    | zapisujemy wersję przy każdej zgodzie i po roku musi dać się odtworzyć,
+    | na co dokładnie ktoś klikał.
+    |
+    | NIE dotyczy maili niezbędnych do wykonania umowy — faktura za pakiet,
+    | wygaśnięcie abonamentu, awaria, zmiana regulaminu idą BEZ tej zgody
+    | i nigdy nie wolno ich nią blokować.
+    |
+    */
+
+    'seller_marketing_consent' => [
+        'version' => 'v1',
+        'text' => 'Chcę otrzymywać e-maile o nowościach, ofertach i kodach rabatowych Kramio.',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Prawo odstąpienia od umowy (zwroty)
     |--------------------------------------------------------------------------
     |

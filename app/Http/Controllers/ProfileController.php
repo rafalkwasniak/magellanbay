@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ConsentChannel;
 use App\Http\Requests\ProfileRequest;
 use Illuminate\Contracts\Support\Renderable;
 use Illuminate\Http\RedirectResponse;
@@ -44,6 +45,17 @@ class ProfileController extends Controller
         }
 
         $user->save();
+
+        // Zgoda marketingowa: zapisujemy TYLKO przy faktycznej zmianie stanu.
+        // Inaczej każde „Zapisz" w profilu przestemplowywałoby `granted_at` i
+        // `ip_address` na dzisiejsze — i przepadałby dowód, KIEDY zgoda naprawdę
+        // padła (RODO art. 7 każe wykazać właśnie to). Ta sama pułapka, którą
+        // pilnujemy przy zgodach klientów sklepu.
+        $wants = $request->boolean('marketing');
+
+        if ($wants !== $user->hasMarketingConsent()) {
+            $user->setMarketingConsent(ConsentChannel::Email, $wants, $request->ip());
+        }
 
         return redirect()->route('profile.edit')->with('success', 'Zapisano dane profilu.');
     }

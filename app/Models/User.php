@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\ConsentChannel;
 use App\Enums\LegalDocumentType;
 use App\Enums\UserRole;
 use Database\Factories\UserFactory;
@@ -50,6 +51,59 @@ class User extends Authenticatable
     public function consents(): HasMany
     {
         return $this->hasMany(UserConsent::class);
+    }
+
+    /**
+     * Zgody marketingowe sprzedawcy (informacje handlowe od Kramio). Osobne od
+     * `consents()`, gdzie żyją akceptacje regulaminu i polityki — tamte są
+     * obowiązkowe i nieodwoływalne, te dobrowolne i kanałowe.
+     *
+     * @return HasMany<UserMarketingConsent, $this>
+     */
+    public function marketingConsents(): HasMany
+    {
+        return $this->hasMany(UserMarketingConsent::class);
+    }
+
+    /**
+     * Czy sprzedawca zgodził się na informacje handlowe w tym kanale (i nie
+     * wycofał zgody). TO jest jedyne pytanie, które wolno zadać przed wysłaniem
+     * mu oferty — sama rejestracja w Kramio zgodą NIE jest (art. 10 uśude).
+     *
+     * Maili niezbędnych do umowy (faktura, wygaśnięcie pakietu, awaria) ta zgoda
+     * nie dotyczy i nie wolno nią ich blokować.
+     */
+    public function hasMarketingConsent(ConsentChannel $channel = ConsentChannel::Email): bool
+    {
+        return (bool) $this->marketingConsents
+            ->firstWhere('channel', $channel)
+            ?->isActive();
+    }
+
+    /**
+     * Włącza albo wycofuje zgodę marketingową. Idempotentne — jeden wiersz na
+     * parę (użytkownik, kanał).
+     *
+     * Przy udzielaniu zapisujemy DOWÓD: kiedy, z jakiego IP i na jaką wersję
+     * treści (RODO art. 7 każe wykazać, na co dokładnie ktoś się zgodził).
+     * Przy wycofaniu zostawiamy wiersz z `revoked_at`, żeby odróżnić „wypisał
+     * się" od „nigdy się nie zgodził".
+     */
+    public function setMarketingConsent(ConsentChannel $channel, bool $granted, ?string $ip = null): void
+    {
+        $this->marketingConsents()->updateOrCreate(
+            ['channel' => $channel],
+            $granted
+                ? [
+                    'granted_at' => now(),
+                    'revoked_at' => null,
+                    'version' => config('legal.seller_marketing_consent.version'),
+                    'ip_address' => $ip,
+                ]
+                : ['revoked_at' => now()],
+        );
+
+        $this->unsetRelation('marketingConsents');
     }
 
     /**

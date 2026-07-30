@@ -89,6 +89,22 @@
                 @error('privacy')
                     <p class="text-sm text-rose-600">{{ $message }}</p>
                 @enderror
+
+                {{-- Zgoda marketingowa: DOBROWOLNA i niezaznaczona domyślnie
+                     (art. 10 uśude wymaga zgody uprzedniej i wyraźnej). Oddzielona
+                     kreską od obowiązkowych akceptacji, żeby nikt jej nie wziął za
+                     kolejny warunek założenia konta. Bez niej konto działa
+                     normalnie — maile o fakturach i pakiecie i tak dochodzą. --}}
+                <div class="border-t border-stone-100 pt-3">
+                    <label class="flex items-start gap-3 text-sm text-stone-600">
+                        <input type="checkbox" name="marketing" value="1"
+                            @checked(old('marketing')) class="mt-0.5 shrink-0">
+                        <span>
+                            {{ config('legal.seller_marketing_consent.text') }}
+                            <span class="mt-0.5 block text-xs text-stone-400">Nieobowiązkowe — zgodę wycofasz w każdej chwili w swoim profilu.</span>
+                        </span>
+                    </label>
+                </div>
             </div>
 
             <button type="submit"

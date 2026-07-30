@@ -100,6 +100,26 @@
                     </div>
                 </div>
 
+                {{-- Zgoda na informacje handlowe od Kramio. Odwoływalna w każdej
+                     chwili — zgoda musi dać się wycofać tak łatwo, jak udzielić
+                     (RODO art. 7 ust. 3). Maile o fakturach i pakiecie idą
+                     niezależnie od niej, więc mówimy o tym wprost. --}}
+                <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                    <h2 class="font-semibold text-stone-900">Wiadomości od Kramio</h2>
+                    <p class="mt-1 text-sm text-stone-500">Nowości w platformie, oferty i kody rabatowe.</p>
+
+                    <label class="mt-4 flex items-start gap-3 text-sm text-stone-600">
+                        <input type="checkbox" name="marketing" value="1"
+                            @checked(old('marketing', $user->hasMarketingConsent())) class="mt-0.5 shrink-0">
+                        <span>{{ config('legal.seller_marketing_consent.text') }}</span>
+                    </label>
+
+                    <p class="mt-3 text-xs text-stone-400">
+                        Niezależnie od tej zgody wysyłamy wiadomości niezbędne do obsługi konta — faktury za pakiet,
+                        informacje o terminie abonamentu i ważne komunikaty techniczne.
+                    </p>
+                </div>
+
                 {{-- Zmiana hasła --}}
                 <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
                     <h2 class="font-semibold text-stone-900">Zmiana hasła <span class="text-sm font-normal text-stone-400">(opcjonalnie)</span></h2>

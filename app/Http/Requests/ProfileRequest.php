@@ -43,6 +43,8 @@ class ProfileRequest extends FormRequest
             // z pominięciem własnego. Ten sam adres jako klient sklepu to osobna baza.
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->ignore($this->user()->id)],
             'phone' => ['nullable', PhoneService::RULE],
+            // Zgoda marketingowa: DOBROWOLNA, więc boolean (nie accepted).
+            'marketing' => ['nullable', 'boolean'],
             'avatar' => [
                 'nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:2048',
                 Rule::dimensions()->minWidth(100)->minHeight(100)->maxWidth(2000)->maxHeight(2000),
