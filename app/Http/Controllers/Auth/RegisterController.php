@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Auth;
 
-use App\Enums\ConsentChannel;
 use App\Enums\LegalDocumentType;
 use App\Enums\ShopStatus;
 use App\Enums\UserRole;
@@ -65,14 +64,9 @@ class RegisterController extends Controller
 
             $consents->record($user, $documents, $request->ip());
 
-            // Zgoda na informacje handlowe od Kramio — tylko gdy sprzedawca sam
-            // zaznaczył. Zapisujemy wyłącznie „tak": brak wiersza znaczy „nigdy
-            // się nie zgodził" i tak ma zostać (inaczej gubimy różnicę między
-            // niezgodą a wypisaniem się).
-            if ($request->boolean('marketing')) {
-                $user->setMarketingConsent(ConsentChannel::Email, true, $request->ip());
-            }
-
+            // Zgody marketingowej TU NIE zbieramy — pyta o nią ekran AKTYWACJI,
+            // gdzie adres jest już potwierdzony linkiem z własnej skrzynki
+            // (ten sam wzorzec co u klientów sklepu).
             return $user;
         });
 

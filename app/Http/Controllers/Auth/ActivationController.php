@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Enums\ConsentChannel;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\ActivationRequest;
 use App\Models\LegalDocument;
@@ -72,6 +73,14 @@ class ActivationController extends Controller
             ->map(fn ($type) => LegalDocument::current($type))
             ->filter();
         $consents->record($user, $documents, $request->ip());
+
+        // Zgoda na informacje handlowe od Kramio — zbierana TUTAJ, bo na tym
+        // ekranie adres jest już potwierdzony kliknięciem w link z własnej
+        // skrzynki (ten sam wzorzec co u klientów sklepu). Zapisujemy tylko
+        // „tak": brak wiersza znaczy „nigdy się nie zgodził".
+        if ($request->boolean('marketing')) {
+            $user->setMarketingConsent(ConsentChannel::Email, true, $request->ip());
+        }
 
         Auth::login($user);
         $request->session()->regenerate();

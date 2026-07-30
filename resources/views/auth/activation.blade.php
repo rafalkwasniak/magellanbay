@@ -108,6 +108,22 @@
                 @error('privacy')
                     <p class="text-sm text-rose-600">{{ $message }}</p>
                 @enderror
+
+                {{-- Zgoda marketingowa zbierana TUTAJ, nie przy rejestracji — tak
+                     samo jak u klientów sklepu. Powód: sprzedawca trafił na ten
+                     ekran, klikając link z WŁASNEJ skrzynki, więc adres jest już
+                     potwierdzony i zgoda ma dowód praktycznie nie do podważenia.
+                     Dobrowolna i niezaznaczona domyślnie (art. 10 uśude). --}}
+                <div class="border-t border-stone-100 pt-3">
+                    <label class="flex items-start gap-3 text-sm text-stone-600">
+                        <input type="checkbox" name="marketing" value="1"
+                            @checked(old('marketing')) class="mt-0.5 shrink-0">
+                        <span>
+                            {{ config('legal.seller_marketing_consent.text') }}
+                            <span class="mt-0.5 block text-xs text-stone-400">Nieobowiązkowe — zgodę wycofasz w każdej chwili w swoim profilu.</span>
+                        </span>
+                    </label>
+                </div>
             </div>
 
             <button type="submit"

@@ -8,14 +8,17 @@ use App\Models\LegalDocument;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Password;
 use Tests\TestCase;
 
 /**
  * Zgoda SPRZEDAWCY na informacje handlowe od Kramio (kody, oferty, nowości).
  *
- * Zbierana przy rejestracji osobnym, niezaznaczonym checkboxem — sama
- * rejestracja zgodą NIE jest (art. 10 uśude). Odwoływalna w profilu. Maili
- * niezbędnych do umowy (faktura, pakiet) ta zgoda nie dotyczy.
+ * Zbierana na ekranie AKTYWACJI konta (nie przy rejestracji) — dokładnie jak
+ * u klientów sklepu: tam sprzedawca trafia, klikając link z WŁASNEJ skrzynki,
+ * więc adres jest już potwierdzony i zgoda ma mocny dowód. Osobny,
+ * niezaznaczony checkbox — sama rejestracja zgodą NIE jest (art. 10 uśude).
+ * Odwoływalna w profilu. Maili niezbędnych do umowy ta zgoda nie dotyczy.
  *
  * Zgoda nie działa wstecz, dlatego zbieranie musiało wejść ZANIM pojawią się
  * realni sprzedawcy — inaczej nigdy nie dałoby się do nich napisać.
@@ -56,52 +59,94 @@ class SellerMarketingConsentTest extends TestCase
         ];
     }
 
-    public function test_registration_form_offers_an_optional_marketing_checkbox(): void
+    /**
+     * @return array<string, string>
+     */
+    private function activationPayload(User $user, string $token, array $overrides = []): array
     {
+        return [
+            'token' => $token,
+            'token_email' => $user->email,
+            'name' => $user->name,
+            'surname' => $user->surname,
+            'email' => $user->email,
+            'password' => 'TajneHaslo123',
+            'password_confirmation' => 'TajneHaslo123',
+            'terms' => '1',
+            'privacy' => '1',
+            ...$overrides,
+        ];
+    }
+
+    public function test_registration_does_not_ask_about_marketing(): void
+    {
+        // Pytamy dopiero na aktywacji — rejestracja zostaje krótka, a adres
+        // jest wtedy jeszcze niepotwierdzony.
         $this->get(route('register'))
+            ->assertOk()
+            ->assertDontSee('name="marketing"', false);
+
+        $this->post(route('register.store'), $this->payload())->assertRedirect();
+
+        $this->assertSame(0, User::where('email', 'anna@example.test')->firstOrFail()->marketingConsents()->count());
+    }
+
+    public function test_activation_screen_offers_an_optional_marketing_checkbox(): void
+    {
+        $user = User::factory()->create(['email_verified_at' => null]);
+        $token = Password::broker('activation')->createToken($user);
+
+        $this->get(route('activation.show', ['token' => $token, 'email' => $user->email]))
             ->assertOk()
             ->assertSee('Chcę otrzymywać e-maile o nowościach, ofertach i kodach rabatowych Kramio.')
             ->assertSee('Nieobowiązkowe')
-            // Checkbox NIE może być `required` ani domyślnie zaznaczony.
+            // Nie może być wymagany ani domyślnie zaznaczony.
             ->assertSee('name="marketing" value="1"', false)
             ->assertDontSee('name="marketing" value="1" required', false);
     }
 
-    public function test_checked_box_records_the_consent_with_proof(): void
+    public function test_checked_box_on_activation_records_the_consent_with_proof(): void
     {
-        $this->post(route('register.store'), $this->payload(['marketing' => '1']))->assertRedirect();
+        $user = User::factory()->create(['email_verified_at' => null]);
+        $token = Password::broker('activation')->createToken($user);
 
-        $user = User::where('email', 'anna@example.test')->firstOrFail();
+        $this->post(route('activation.store'), $this->activationPayload($user, $token, ['marketing' => '1']))
+            ->assertRedirect();
 
+        $user->refresh();
         $this->assertTrue($user->hasMarketingConsent());
 
         $consent = $user->marketingConsents()->firstOrFail();
         $this->assertSame(ConsentChannel::Email, $consent->channel);
-        $this->assertNotNull($consent->granted_at);
         $this->assertNull($consent->revoked_at);
         // Dowód: wersja treści i IP — RODO art. 7 każe wykazać, na co ktoś klikał.
         $this->assertSame(config('legal.seller_marketing_consent.version'), $consent->version);
         $this->assertNotNull($consent->ip_address);
     }
 
-    public function test_registration_without_the_box_leaves_no_consent_row(): void
+    public function test_activation_without_the_box_leaves_no_consent_row(): void
     {
-        $this->post(route('register.store'), $this->payload())->assertRedirect();
+        $user = User::factory()->create(['email_verified_at' => null]);
+        $token = Password::broker('activation')->createToken($user);
 
-        $user = User::where('email', 'anna@example.test')->firstOrFail();
+        $this->post(route('activation.store'), $this->activationPayload($user, $token))->assertRedirect();
 
         // BRAK WIERSZA = „nigdy się nie zgodził". Odróżnienie od „wypisał się"
         // (wiersz z revoked_at) ma znaczenie dowodowe.
+        $user->refresh();
         $this->assertFalse($user->hasMarketingConsent());
         $this->assertSame(0, $user->marketingConsents()->count());
     }
 
-    public function test_registration_still_works_without_the_consent(): void
+    public function test_activation_works_without_the_consent(): void
     {
-        // Zgoda jest dobrowolna — jej brak nie może blokować założenia konta.
-        $this->post(route('register.store'), $this->payload())->assertRedirect();
+        $user = User::factory()->create(['email_verified_at' => null]);
+        $token = Password::broker('activation')->createToken($user);
 
-        $this->assertNotNull(User::where('email', 'anna@example.test')->first()?->shop);
+        // Zgoda jest dobrowolna — jej brak nie może blokować aktywacji konta.
+        $this->post(route('activation.store'), $this->activationPayload($user, $token))->assertRedirect();
+
+        $this->assertNotNull($user->fresh()->email_verified_at);
     }
 
     public function test_seller_can_grant_and_revoke_the_consent_in_the_profile(): void

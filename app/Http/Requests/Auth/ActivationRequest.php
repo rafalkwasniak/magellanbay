@@ -44,6 +44,8 @@ class ActivationRequest extends FormRequest
             'password' => $this->passwordRules(),
             'terms' => ['accepted'],
             'privacy' => ['accepted'],
+            // Zgoda marketingowa DOBROWOLNA — boolean, nie accepted.
+            'marketing' => ['nullable', 'boolean'],
         ];
     }
 
