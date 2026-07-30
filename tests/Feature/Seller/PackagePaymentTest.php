@@ -279,7 +279,7 @@ class PackagePaymentTest extends TestCase
         $this->assertStringContainsString('Pakiet Stragan jest aktywny', $mail->subject);
         $this->assertStringContainsString('750,00', $body);
         $this->assertStringContainsString('30.07.2027', $body);              // okres
-        $this->assertStringContainsString('• Płatności online Paynow', $body); // lista funkcji
+        $this->assertStringContainsString('• Integracja płatności online (własne konto Paynow)', $body); // lista funkcji
         $this->assertStringContainsString('• Do 48 produktów', $body);
     }
 

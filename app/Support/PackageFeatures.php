@@ -93,7 +93,10 @@ class PackageFeatures
             // Zwroty są w KAŻDYM pakiecie — prawo odstąpienia przysługuje
             // konsumentowi niezależnie od tego, ile sprzedawca nam płaci.
             'returns' => 'Zwroty 14 dni zgodne z prawem',
-            'payments' => $entitlements['online_payments'] ? 'Płatności online Paynow' : 'Przelew i odbiór osobisty',
+            // „Integracja z Paynow", nie „Płatności online Paynow" — pakiet daje
+            // podłączenie, a nie usługę płatniczą: umowę z operatorem sprzedawca
+            // zawiera sam i wkleja własne klucze (patrz Integracje).
+            'payments' => $entitlements['online_payments'] ? 'Integracja płatności online (własne konto Paynow)' : 'Przelew i odbiór osobisty',
             'shipping' => $entitlements['courier_shipping'] ? 'Wysyłka kurierem i przez InPost' : null,
             'invoices' => $entitlements['invoices'] ? 'Integracja z Fakturownią' : null,
             'order_editing' => $entitlements['order_editing'] ? 'Edycja zamówień' : null,

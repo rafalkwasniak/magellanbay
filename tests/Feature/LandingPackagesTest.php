@@ -42,7 +42,7 @@ class LandingPackagesTest extends TestCase
     {
         $stragan = $this->featureMap()['Stragan'];
 
-        $this->assertTrue($stragan['Płatności online Paynow']);
+        $this->assertTrue($stragan['Integracja płatności online (własne konto Paynow)']);
         $this->assertTrue($stragan['Wysyłka kurierem i przez InPost']);
         $this->assertTrue($stragan['Integracja z Fakturownią']);
         // Wyższy limit produktów to też różnica, choć cecha ta sama.
@@ -63,7 +63,7 @@ class LandingPackagesTest extends TestCase
         $this->assertTrue($pawilon['Do 96 produktów']);
 
         // Ma je już Stragan, więc w Pawilonie to nie jest nowość.
-        $this->assertFalse($pawilon['Płatności online Paynow']);
+        $this->assertFalse($pawilon['Integracja płatności online (własne konto Paynow)']);
         $this->assertFalse($pawilon['Integracja z Fakturownią']);
     }
 

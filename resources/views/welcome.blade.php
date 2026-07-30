@@ -94,8 +94,14 @@
             <section id="pakiety" class="py-10">
                 <div class="max-w-2xl">
                     <h2 class="text-3xl font-semibold tracking-tight text-stone-900">Zacznij za darmo, rośnij, gdy zechcesz</h2>
-                    <p class="mt-3 text-stone-600">Pakiet Kram jest bezpłatny bez limitu czasu. Płatne pakiety odblokowują płatności online, wysyłki i faktury — zmienisz je w każdej chwili.</p>
+                    <p class="mt-3 text-stone-600">Pakiet Kram jest bezpłatny bez limitu czasu. Płatne pakiety odblokowują integrację płatności online, wysyłki i faktury — zmienisz je w każdej chwili.</p>
                     <p class="mt-2 text-stone-600">Obsługa zwrotów konsumenckich jest w <span class="font-medium text-stone-800">każdym</span> pakiecie, także darmowym — razem z pouczeniem w mailu, formularzem odstąpienia dla klienta i rozliczeniem zwrotu w panelu.</p>
+                    {{-- Doprecyzowanie postawione WPROST, bo poprzednia wersja („pakiet
+                         odblokowuje płatności online") czytała się tak, jakbyśmy
+                         odsprzedawali usługę płatniczą w abonamencie. Nie robimy tego:
+                         pakiet daje integrację, umowę z operatorem sprzedawca zawiera
+                         sam, a pieniądze nigdy nie przechodzą przez Kramio. --}}
+                    <p class="mt-2 text-stone-600">Płatności online działają na <span class="font-medium text-stone-800">Twojej własnej umowie z Paynow</span> (bramka mBanku) — konto płatnicze zakładasz u operatora i to on Cię weryfikuje. Pakiet daje gotową integrację, w którą wklejasz swoje klucze; pieniądze od klientów idą wprost na Twoje konto, a Kramio nie jest stroną tych transakcji ani ich nie pośredniczy.</p>
                 </div>
                 <div class="mt-8 grid gap-5 sm:grid-cols-3">
                     {{-- Cechy pakietów liczy App\Support\PackageFeatures: zna kolejność
@@ -207,7 +213,10 @@
                              strukturalnych produktu NIE ma (świadomie odłożone przy
                              audycie), więc nie obiecujemy ich tutaj. --}}
                         ['🔎', 'SEO od ręki', 'Przyjazne adresy, opisy dla wyszukiwarek pisane przez AI i podglądy linków w mediach społecznościowych.'],
-                        ['💳', 'Płatności online', 'BLIK, karta i szybki przelew przez Paynow — pieniądze idą wprost na Twoje konto.'],
+                        {{-- „Integracja", nie „płatności": usługę płatniczą świadczy
+                             operator na własnej umowie ze sprzedawcą, my dajemy tylko
+                             podłączenie. Patrz komentarz w sekcji Pakiety. --}}
+                        ['💳', 'Integracja płatności online', 'Podłącz swoje konto Paynow (umowa i weryfikacja po stronie operatora) — klient zapłaci BLIK-iem, kartą lub szybkim przelewem, a pieniądze idą wprost na Twoje konto.'],
                         ['📦', 'Wysyłka i odbiór', 'Paczkomat, kurier, odbiór osobisty i przelew — wybierasz, co oferujesz klientom.'],
                         ['↩', 'Zwroty zgodne z prawem', 'Pouczenie o odstąpieniu w mailu, formularz zwrotu dla klienta i rozliczenie w panelu.'],
                         ['📣', 'Wiadomości do klientów', 'Napisz o nowościach do klientów, którzy się zgodzili — z kartą produktu w mailu.'],
