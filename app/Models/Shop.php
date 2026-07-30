@@ -10,6 +10,7 @@ use App\Enums\VatRate;
 use App\Observers\ShopObserver;
 use App\Support\Color;
 use App\Support\Excerpt;
+use Carbon\CarbonInterface;
 use Database\Factories\ShopFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
@@ -738,6 +739,24 @@ class Shop extends Model
     }
 
     /**
+     * Czy zamówienie ZŁOŻONE WCZEŚNIEJ może jeszcze dokończyć płatność online,
+     * choć uprawnienie pakietu już zgasło.
+     *
+     * Wyjątek celowy: gdyby bramka zamknęła się z dnia na dzień, klient nie
+     * dokończyłby przelewu za wczorajsze zamówienie, pieniądze utknęłyby w
+     * pół drogi, a winnym byłby sklep. Data nie jest tu potrzebna — zamówienie
+     * czekające na płatność online mogło powstać TYLKO przy otwartej bramce,
+     * więc samo jego istnienie jest dowodem. Czytamy `rawEntitlement`, bo pytamy
+     * o to, co klient kupił, nie o stan po wygaśnięciu.
+     */
+    public function canFinishOnlinePayment(): bool
+    {
+        return $this->rawEntitlement('online_payments') === true
+            && $this->integration(IntegrationType::Payments)?->enabled === true
+            && $this->onlinePaymentsConfigured();
+    }
+
+    /**
      * Czy po opłaceniu online sklep chce automatycznie wystawić FV. Wygodny skrót
      * dla widoku Ustawień (checkbox pod włącznikiem Paynow) — deleguje do bramki
      * płatności, bo to na jej wierszu żyje flaga `auto_invoice`. Miejsce wyzwalania
@@ -1002,7 +1021,8 @@ class Shop extends Model
      * Czy abonament sklepu jest opłacony i biegnie.
      *
      * Trzy drogi do „tak": dostęp gratisowy (`comped` — nie wygasa nigdy),
-     * pakiet darmowy (nie ma czego opłacać) albo data końca w przyszłości.
+     * pakiet darmowy (nie ma czego opłacać) albo termin (wraz z karencją)
+     * jeszcze nie minął.
      *
      * PUSTA DATA przy płatnym pakiecie = BEZTERMINOWO. Świadomie na korzyść
      * sklepu: konsola admina pozwala jej nie ustawić, a gdyby brak daty znaczył
@@ -1019,8 +1039,81 @@ class Shop extends Model
             return true;
         }
 
-        return $this->subscription_ends_at === null
-            || $this->subscription_ends_at->isFuture();
+        $locksAt = $this->subscriptionLocksAt();
+
+        return $locksAt === null || $locksAt->isFuture();
+    }
+
+    /**
+     * Moment, w którym funkcje płatnego pakietu FAKTYCZNIE gasną: termin
+     * opłacenia plus karencja. Rozdzielenie „termin zapłaty" od „chwili
+     * wyłączenia" jest sednem karencji — data na fakturze zostaje ta sama, a
+     * sklep dostaje kilka dni na przelew. null = nie ma czego gasić.
+     */
+    public function subscriptionLocksAt(): ?CarbonInterface
+    {
+        if ($this->comped || $this->subscription_ends_at === null) {
+            return null;
+        }
+
+        if ((float) config("shop.packages.{$this->package}.price_yearly", 0) <= 0) {
+            return null;
+        }
+
+        return $this->subscription_ends_at
+            ->copy()
+            ->addDays((int) config('shop.subscription.grace_days'));
+    }
+
+    /**
+     * Czy sklep jest PO terminie, ale jeszcze w karencji — pełne funkcje plus
+     * baner „opłać do…". Stan przejściowy, o którym trzeba mówić głośno; cicha
+     * karencja byłaby dla sprzedawcy nieodróżnialna od „wszystko w porządku".
+     */
+    public function inSubscriptionGrace(): bool
+    {
+        return $this->subscription_ends_at !== null
+            && $this->subscription_ends_at->isPast()
+            && $this->subscriptionActive()
+            && ! $this->comped
+            && (float) config("shop.packages.{$this->package}.price_yearly", 0) > 0;
+    }
+
+    /**
+     * Ile dni karencji zostało (0, gdy właśnie się kończy). Do banera i maila.
+     */
+    public function graceDaysLeft(): int
+    {
+        $locksAt = $this->subscriptionLocksAt();
+
+        if ($locksAt === null) {
+            return 0;
+        }
+
+        return max(0, (int) now()->startOfDay()->diffInDays($locksAt->copy()->startOfDay(), false));
+    }
+
+    /**
+     * Slug pakietu, którego zasady FAKTYCZNIE obowiązują: po wygaśnięciu to
+     * pakiet darmowy, choć w bazie dalej stoi kupiony (snapshot nietknięty —
+     * odnowienie to zmiana jednej daty). Do wszystkich miejsc, gdzie mówimy
+     * sprzedawcy o limitach; konsola admina używa `package` wprost, bo ma
+     * pokazywać, co klient kupił.
+     */
+    public function effectivePackage(): string
+    {
+        return $this->subscriptionActive()
+            ? $this->package
+            : config('shop.default_package');
+    }
+
+    /**
+     * Nazwa pakietu, którego zasady faktycznie obowiązują — patrz
+     * `effectivePackage()`.
+     */
+    public function effectivePackageName(): string
+    {
+        return config("shop.packages.{$this->effectivePackage()}.name", $this->effectivePackage());
     }
 
     /**

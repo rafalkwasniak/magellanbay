@@ -158,6 +158,36 @@ class OnlinePaymentCheckoutTest extends TestCase
         $this->assertSame('NEW', $order->payment_status);
     }
 
+    public function test_order_from_before_expiry_can_still_be_paid(): void
+    {
+        // Decyzja Rafała: zamówienie złożone przed wygaśnięciem abonamentu musi
+        // dać się dopłacić. Gdyby bramka zamknęła się z dnia na dzień, pieniądze
+        // utknęłyby w pół drogi, a winnym byłby sklep.
+        Http::fake(['*/v1/payments' => Http::response([
+            'paymentId' => 'PAY-11', 'redirectUrl' => 'https://paynow.pl/go/11', 'status' => 'NEW',
+        ], 201)]);
+
+        $shop = $this->shopWithOnlinePayments();
+        $order = Order::factory()->for($shop)->create([
+            'status' => OrderStatus::AwaitingPayment,
+            'payment_method' => PaymentMethod::Online,
+            'total_gross' => 50,
+        ]);
+
+        // Abonament wygasł po złożeniu zamówienia (poza karencją).
+        $shop->forceFill([
+            'package' => 'pavilion',
+            'price_yearly' => 1500,
+            'subscription_ends_at' => now()->subDays(60),
+        ])->save();
+
+        $this->assertFalse($shop->fresh()->onlinePaymentsEnabled(), 'nowych płatności już nie przyjmujemy');
+        $this->assertTrue($shop->fresh()->canFinishOnlinePayment(), 'ale rozpoczętą trzeba dokończyć');
+
+        $this->post($this->base($shop).'/platnosc/'.$order->paymentToken())
+            ->assertRedirect('https://paynow.pl/go/11');
+    }
+
     public function test_pay_refuses_non_online_order(): void
     {
         Http::fake();

@@ -106,14 +106,24 @@
 
                         <div class="mt-5 flex flex-wrap items-center justify-between gap-2">
                             <a href="{{ route('seller.package.show') }}" class="text-sm font-medium text-stone-800 underline decoration-amber-300 underline-offset-2 transition hover:text-amber-700">
-                                Pakiet {{ $shop->packageName() }}
+                                {{-- Nazwa EFEKTYWNA: po wygaśnięciu sklep działa
+                                     na zasadach Kramu, więc tak ma się nazywać.
+                                     Co wygasło, mówi plakietka obok. --}}
+                                Pakiet {{ $shop->effectivePackageName() }}
                             </a>
                             @if (! $shop->subscriptionActive())
-                                <span class="rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-medium text-rose-700">wygasł</span>
+                                <span class="rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-medium text-rose-700">{{ $shop->packageName() }} wygasł</span>
+                            @elseif ($shop->inSubscriptionGrace())
+                                {{-- Karencja = własny kolor, patrz baner w layoucie. --}}
+                                <span class="rounded-full bg-sky-50 px-2 py-0.5 text-[11px] font-medium text-sky-700">czeka na opłatę</span>
                             @elseif ($shop->comped)
                                 <span class="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">bezpłatny</span>
-                            @elseif ($daysLeft !== null && $daysLeft <= 30)
-                                <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">kończy się {{ $endsAt->format('d.m.Y') }}</span>
+                            @elseif ($daysLeft !== null && $daysLeft <= (int) config('shop.subscription.notice_days'))
+                                {{-- Ostatni tydzień na czerwono, tak samo jak na
+                                     „Mój pakiet" — jeden próg, jeden kolor, żeby
+                                     dwa ekrany nie mówiły o tym samym inaczej. --}}
+                                @php($urgent = $daysLeft <= (int) config('shop.subscription.urgent_days'))
+                                <span class="rounded-full px-2 py-0.5 text-[11px] font-medium {{ $urgent ? 'bg-rose-50 text-rose-700' : 'bg-amber-100 text-amber-800' }}">kończy się {{ $endsAt->format('d.m.Y') }}</span>
                             @elseif ($endsAt !== null)
                                 <span class="text-xs text-stone-500">do {{ $endsAt->format('d.m.Y') }}</span>
                             @endif

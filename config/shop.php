@@ -215,4 +215,31 @@ return [
     // Slug pakietu domyślnego (darmowego) — przypisywany nowym sklepom.
     'default_package' => 'stall',
 
+    /*
+    |--------------------------------------------------------------------------
+    | Cykl życia abonamentu
+    |--------------------------------------------------------------------------
+    |
+    | `grace_days` — karencja po dacie opłacenia. Abonament roczny płacony
+    | przelewem znaczy, że przegapienie terminu jest NORMALNE, nie złośliwe;
+    | zgaszenie funkcji sekundę po północy generowałoby wyłącznie telefony.
+    | W karencji sklep ma PEŁNE funkcje i widzi baner. Zero = zamek w terminie.
+    |
+    | `reminder_days` — ile dni PRZED terminem wychodzi przypomnienie. Treść
+    | maila jest jedna dla wszystkich progów (mówi datę, nie „za ile dni"),
+    | więc progi można zmieniać bez pisania nowych tekstów.
+    |
+    | `notice_days` / `urgent_days` — od kiedy ekran „Mój pakiet" przypomina o
+    | terminie i od kiedy robi to na czerwono. Osobno od progów mailowych, bo
+    | ekran widzi się przy każdej wizycie, a mail przychodzi raz.
+    |
+    */
+
+    'subscription' => [
+        'grace_days' => 7,
+        'reminder_days' => [14, 7, 1],
+        'notice_days' => 30,
+        'urgent_days' => 7,
+    ],
+
 ];

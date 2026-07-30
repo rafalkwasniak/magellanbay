@@ -2,8 +2,9 @@
     <x-slot:heading>Mój pakiet</x-slot:heading>
 
     @php($active = $shop->subscriptionActive())
+    @php($grace = $shop->inSubscriptionGrace())
     @php($endsAt = $shop->subscription_ends_at)
-    @php($daysLeft = $endsAt !== null && $active && ! $shop->comped ? (int) now()->startOfDay()->diffInDays($endsAt->copy()->startOfDay(), false) : null)
+    @php($daysLeft = $endsAt !== null && $active && ! $grace && ! $shop->comped ? (int) now()->startOfDay()->diffInDays($endsAt->copy()->startOfDay(), false) : null)
 
     <div class="grid gap-6 lg:grid-cols-12">
         <div class="space-y-6 lg:col-span-8">
@@ -36,10 +37,17 @@
                 <div class="flex flex-wrap items-start justify-between gap-3">
                     <div>
                         <p class="text-sm text-stone-500">Twój pakiet</p>
-                        <p class="mt-1 text-3xl font-semibold tracking-tight text-stone-900">{{ $shop->packageName() }}</p>
+                        {{-- Nazwa EFEKTYWNA (decyzja Rafała): po wygaśnięciu sklep
+                             działa na zasadach Kramu i tak ma być nazwany. Co
+                             klient kupił, mówi plakietka i Historia opłat — w
+                             bazie snapshot zostaje nietknięty, więc odnowienie to
+                             wciąż zmiana jednej daty. --}}
+                        <p class="mt-1 text-3xl font-semibold tracking-tight text-stone-900">{{ $shop->effectivePackageName() }}</p>
                     </div>
                     @if (! $active)
-                        <span class="shrink-0 rounded-full bg-rose-50 px-3 py-1 text-xs font-medium text-rose-700">Abonament wygasł</span>
+                        <span class="shrink-0 rounded-full bg-rose-50 px-3 py-1 text-xs font-medium text-rose-700">Pakiet {{ $shop->packageName() }} wygasł</span>
+                    @elseif ($grace)
+                        <span class="shrink-0 rounded-full bg-sky-50 px-3 py-1 text-xs font-medium text-sky-700">Po terminie — czeka na opłatę</span>
                     @elseif ($shop->comped)
                         <span class="shrink-0 rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">Dostęp bezpłatny</span>
                     @elseif ($shop->priceYearly() <= 0)
@@ -58,7 +66,7 @@
                     @endif
 
                     <div class="rounded-2xl border border-stone-200 bg-white/60 px-4 py-3">
-                        <dt class="text-xs text-stone-400">{{ $active ? 'Opłacony do' : 'Wygasł' }}</dt>
+                        <dt class="text-xs text-stone-400">{{ $grace ? 'Termin minął' : ($active ? 'Opłacony do' : 'Wygasł') }}</dt>
                         <dd class="mt-0.5 font-semibold text-stone-900">
                             @if ($shop->comped)
                                 bezterminowo
@@ -77,22 +85,44 @@
                      terminem przypominamy dopiero, gdy zostało ≤ 30 dni. --}}
                 @if (! $active)
                     <div class="mt-5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
-                        <p class="font-medium">Twój sklep działa teraz na zasadach pakietu {{ config('shop.packages.'.config('shop.default_package').'.name') }}</p>
+                        <p class="font-medium">Pakiet {{ $shop->packageName() }} wygasł {{ $endsAt?->format('d.m.Y') }}</p>
                         <p class="mt-1 text-xs text-rose-800">
-                            Sklep i zamówienia działają dalej — wyłączone są funkcje płatnego pakietu. Po opłaceniu wszystko wraca
-                            takie, jak było, razem z ustawieniami.
+                            Sklep i zamówienia działają dalej — wyłączone są funkcje płatnego pakietu, a produkty ponad limit są
+                            ukryte (nic nie zostało usunięte). Po opłaceniu wszystko wraca takie, jak było, razem z ustawieniami.
                         </p>
                     </div>
-                @elseif ($daysLeft !== null && $daysLeft <= 30)
-                    <div class="mt-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                @elseif ($grace)
+                    {{-- Karencja: termin minął, ale funkcje jeszcze działają.
+                         Mówimy to wprost i podajemy datę wyłączenia, żeby nie
+                         było niespodzianki. --}}
+                    <div class="mt-5 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+                        <p class="font-medium">Termin minął {{ $endsAt->format('d.m.Y') }} — sklep działa dalej, ale czeka na opłatę</p>
+                        <p class="mt-1 text-xs text-sky-800">
+                            Wszystkie funkcje pakietu są włączone do {{ $shop->subscriptionLocksAt()->format('d.m.Y') }}. Po tym dniu
+                            sklep zejdzie na zasady pakietu {{ config('shop.packages.'.config('shop.default_package').'.name') }},
+                            a produkty ponad limit zostaną ukryte — do odwrócenia jedną opłatą.
+                        </p>
+                    </div>
+                @elseif ($daysLeft !== null && $daysLeft <= (int) config('shop.subscription.notice_days'))
+                    {{-- Ostatni tydzień na czerwono: żółty przez cały miesiąc
+                         przestaje cokolwiek znaczyć, a im bliżej terminu, tym
+                         mniej czasu na przelew. --}}
+                    @php($urgent = $daysLeft <= (int) config('shop.subscription.urgent_days'))
+                    <div class="mt-5 rounded-2xl border px-4 py-3 text-sm {{ $urgent ? 'border-rose-200 bg-rose-50 text-rose-900' : 'border-amber-200 bg-amber-50 text-amber-900' }}">
                         <p class="font-medium">
                             @if ($daysLeft <= 0)
                                 Abonament kończy się dziś
                             @else
                                 Abonament kończy się za {{ $daysLeft }} {{ trans_choice('{1}dzień|[2,4]dni|[5,*]dni', $daysLeft) }}
                             @endif
+                            — {{ $endsAt->format('d.m.Y') }}
                         </p>
-                        <p class="mt-1 text-xs text-amber-800">Napisz do nas, żeby przedłużyć — zdążymy bez przerwy w działaniu sklepu.</p>
+                        <p class="mt-1 text-xs {{ $urgent ? 'text-rose-800' : 'text-amber-800' }}">
+                            Napisz do nas, żeby przedłużyć — zdążymy bez przerwy w działaniu sklepu.
+                            @if ($urgent)
+                                Po terminie masz jeszcze {{ (int) config('shop.subscription.grace_days') }} dni karencji, więc sklep nie wyłączy się nagle.
+                            @endif
+                        </p>
                     </div>
                 @endif
             </div>

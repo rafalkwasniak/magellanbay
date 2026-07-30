@@ -17,6 +17,10 @@ use Tests\TestCase;
  * czyta uprawnienia pakietu darmowego, a `rawEntitlement()` dalej pokazuje, co
  * klient kupił. Dzięki temu odnowienie to zmiana JEDNEJ DATY i wracają też
  * ręczne nadania — moduły dane komuś gestem poza pakietem.
+ *
+ * Daty „wygasłe" są tu o 30 dni w tyle, bo między terminem a wyłączeniem stoi
+ * KARENCJA (`shop.subscription.grace_days`) — dzień po terminie funkcje jeszcze
+ * działają. Testy karencji poniżej.
  */
 class SubscriptionExpiryTest extends TestCase
 {
@@ -51,7 +55,7 @@ class SubscriptionExpiryTest extends TestCase
 
     public function test_expired_package_falls_back_to_free_entitlements(): void
     {
-        $shop = $this->paidShop(['subscription_ends_at' => now()->subDay()]);
+        $shop = $this->paidShop(['subscription_ends_at' => now()->subDays(30)]);
 
         $this->assertFalse($shop->subscriptionActive());
 
@@ -67,7 +71,7 @@ class SubscriptionExpiryTest extends TestCase
 
     public function test_renewal_is_a_single_date_change(): void
     {
-        $shop = $this->paidShop(['subscription_ends_at' => now()->subDay()]);
+        $shop = $this->paidShop(['subscription_ends_at' => now()->subDays(30)]);
         $this->assertFalse($shop->entitlement('discount_codes'));
 
         $shop->forceFill(['subscription_ends_at' => now()->addYear()])->save();
@@ -85,7 +89,7 @@ class SubscriptionExpiryTest extends TestCase
             // istniejących kluczy, a Stragan ma `bulk_mail => false`.
             'entitlements' => array_merge(config('shop.packages.booth.entitlements'), ['bulk_mail' => true]),
             'price_yearly' => 750,
-            'subscription_ends_at' => now()->subDay(),
+            'subscription_ends_at' => now()->subDays(30),
         ]);
 
         $this->assertFalse($shop->entitlement('bulk_mail'), 'po wygaśnięciu nie działa');
@@ -116,7 +120,7 @@ class SubscriptionExpiryTest extends TestCase
     public function test_expiry_closes_real_gates_in_the_app(): void
     {
         $seller = User::factory()->consented()->create();
-        $shop = $this->paidShop(['owner_id' => $seller->id, 'subscription_ends_at' => now()->subDay()]);
+        $shop = $this->paidShop(['owner_id' => $seller->id, 'subscription_ends_at' => now()->subDays(30)]);
 
         // Bramki pytają `entitlement()`, więc gasną bez żadnych zmian u siebie.
         $this->actingAs($seller)->get(route('seller.mailings.index'))
@@ -126,10 +130,68 @@ class SubscriptionExpiryTest extends TestCase
         $this->actingAs($seller)->get(route('seller.mailings.create'))->assertForbidden();
     }
 
+    public function test_grace_keeps_full_features_after_the_deadline(): void
+    {
+        $shop = $this->paidShop(['subscription_ends_at' => now()->subDay()]);
+
+        // Spóźniony przelew nie może zgasić sklepu z dnia na dzień.
+        $this->assertTrue($shop->subscriptionActive());
+        $this->assertTrue($shop->inSubscriptionGrace());
+        $this->assertTrue($shop->entitlement('bulk_mail'));
+        $this->assertSame(96, $shop->entitlement('max_products'));
+    }
+
+    public function test_features_die_when_the_grace_period_runs_out(): void
+    {
+        $grace = (int) config('shop.subscription.grace_days');
+        $shop = $this->paidShop(['subscription_ends_at' => now()->subDays($grace + 1)]);
+
+        $this->assertFalse($shop->subscriptionActive());
+        $this->assertFalse($shop->inSubscriptionGrace(), 'karencja się skończyła');
+        $this->assertFalse($shop->entitlement('bulk_mail'));
+    }
+
+    public function test_grace_is_counted_from_the_paid_through_date(): void
+    {
+        $grace = (int) config('shop.subscription.grace_days');
+        $endsAt = now()->subDays(2);
+        $shop = $this->paidShop(['subscription_ends_at' => $endsAt]);
+
+        // Data wyłączenia = termin + karencja; termin na fakturze zostaje ten sam.
+        $this->assertSame(
+            $endsAt->copy()->addDays($grace)->format('Y-m-d'),
+            $shop->subscriptionLocksAt()->format('Y-m-d'),
+        );
+        $this->assertSame($grace - 2, $shop->graceDaysLeft());
+    }
+
+    public function test_free_and_comped_shops_have_nothing_to_lock(): void
+    {
+        $free = Shop::factory()->create(['package' => 'stall', 'subscription_ends_at' => now()->subYear()]);
+        $comped = $this->paidShop(['comped' => true, 'subscription_ends_at' => now()->subYear()]);
+
+        $this->assertNull($free->subscriptionLocksAt());
+        $this->assertNull($comped->subscriptionLocksAt());
+        $this->assertFalse($free->inSubscriptionGrace());
+        $this->assertFalse($comped->inSubscriptionGrace());
+    }
+
+    public function test_effective_package_reads_as_the_free_one_after_expiry(): void
+    {
+        $shop = $this->paidShop(['subscription_ends_at' => now()->subDays(30)]);
+
+        // Sprzedawca widzi Kram (decyzja Rafała), ale w bazie snapshot i pakiet
+        // zostają — inaczej odnowienie nie byłoby zmianą jednej daty.
+        $this->assertSame('stall', $shop->effectivePackage());
+        $this->assertSame('Kram', $shop->effectivePackageName());
+        $this->assertSame('pavilion', $shop->package);
+        $this->assertSame('Pawilon', $shop->packageName());
+    }
+
     public function test_admin_console_shows_what_the_client_bought_even_after_expiry(): void
     {
         $admin = User::factory()->consented()->create(['role' => 'admin']);
-        $shop = $this->paidShop(['subscription_ends_at' => now()->subDay()]);
+        $shop = $this->paidShop(['subscription_ends_at' => now()->subDays(30)]);
 
         $this->actingAs($admin);
 

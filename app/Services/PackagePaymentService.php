@@ -112,6 +112,10 @@ class PackagePaymentService
 
         $shop->refresh()->recordPackageChange(\App\Models\PackageChange::SOURCE_PAYMENT, $payment);
 
+        // Produkty schowane przez zamek limitu wracają same — na tym opiera się
+        // obietnica „po opłaceniu wszystko wraca takie, jak było".
+        app(ProductLimitLock::class)->restore($shop->fresh());
+
         Log::channel('paynow')->info('Pakiet ustawiony po wpłacie.', [
             'shop_id' => $shop->id,
             'package' => $payment->target_package,

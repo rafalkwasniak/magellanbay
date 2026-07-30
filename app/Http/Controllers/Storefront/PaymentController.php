@@ -53,7 +53,9 @@ class PaymentController extends Controller
 
         $shop = $request->attributes->get('shop');
 
-        if (! $order->isAwaitingOnlinePayment() || ! $shop->onlinePaymentsEnabled()) {
+        // `canFinishOnlinePayment`, nie `onlinePaymentsEnabled`: zamówienie
+        // złożone przed wygaśnięciem abonamentu musi dać się dopłacić.
+        if (! $order->isAwaitingOnlinePayment() || ! $shop->canFinishOnlinePayment()) {
             return redirect()->to('/platnosc/'.$token);
         }
 

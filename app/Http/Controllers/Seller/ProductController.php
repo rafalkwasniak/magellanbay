@@ -257,7 +257,7 @@ class ProductController extends Controller
     {
         $shop = $request->user()->shop;
 
-        return 'Pakiet '.$shop->packageName().' pozwala na maksymalnie '.(int) $shop->entitlement('max_products').' produktów.';
+        return 'Pakiet '.$shop->effectivePackageName().' pozwala na maksymalnie '.(int) $shop->entitlement('max_products').' produktów.';
     }
 
     /**

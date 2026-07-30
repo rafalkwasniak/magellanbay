@@ -8,7 +8,7 @@
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <div>
                         <h2 class="font-semibold text-stone-900">Twoje produkty</h2>
-                        <p class="mt-1 text-sm text-stone-500">{{ $total }} / {{ $max }} w pakiecie {{ $shop?->packageName() }}</p>
+                        <p class="mt-1 text-sm text-stone-500">{{ $total }} / {{ $max }} w pakiecie {{ $shop?->effectivePackageName() }}</p>
                     </div>
                     <div class="flex flex-wrap items-center gap-2">
                         {{-- Sortowanie: GET bez `page` → zmiana zeruje paginację; hidden pola
@@ -211,7 +211,7 @@
             </div>
 
             <div class="rounded-3xl border border-amber-200/70 bg-amber-50/70 p-6 backdrop-blur">
-                <h2 class="font-semibold text-stone-900">Pakiet {{ $shop?->packageName() }}</h2>
+                <h2 class="font-semibold text-stone-900">Pakiet {{ $shop?->effectivePackageName() }}</h2>
                 <p class="mt-2 text-sm text-stone-600">
                     Wykorzystano <span class="font-medium text-amber-800">{{ $total }} z {{ $max }}</span> miejsc na produkty.
                     Wyższe pakiety dają więcej miejsca i dodatkowe funkcje.

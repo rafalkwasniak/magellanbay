@@ -74,14 +74,37 @@ class PackageScreenTest extends TestCase
 
     public function test_expired_shop_is_told_what_changed_and_that_it_comes_back(): void
     {
-        [$seller] = $this->sellerWith('pavilion', ['subscription_ends_at' => now()->subDay()]);
+        // Poza karencją, więc funkcje faktycznie zgasły.
+        [$seller] = $this->sellerWith('pavilion', ['subscription_ends_at' => now()->subDays(30)]);
 
         $this->actingAs($seller)->get(route('seller.package.show'))
             ->assertOk()
-            ->assertSee('Abonament wygasł')
-            ->assertSee('działa teraz na zasadach pakietu Kram')
+            // Stan czyta się jako Kram (decyzja Rafała), a co wygasło mówi plakietka.
+            ->assertSee('Pakiet Pawilon wygasł')
+            ->assertSee('Kram')
             // Ton bez straszenia: sklep działa, a po opłacie wraca stan sprzed.
             ->assertSee('Sklep i zamówienia działają dalej');
+    }
+
+    public function test_shop_just_past_the_deadline_is_in_grace_with_full_features(): void
+    {
+        // Abonament roczny płacony przelewem znaczy, że spóźnienie o dzień jest
+        // normalne — funkcje jeszcze działają, ale ekran mówi o tym wprost.
+        [$seller, $shop] = $this->sellerWith('pavilion', ['subscription_ends_at' => now()->subDay()]);
+
+        $this->assertTrue($shop->inSubscriptionGrace());
+        $this->assertTrue($shop->entitlement('bulk_mail'), 'w karencji funkcje działają');
+
+        $this->actingAs($seller)->get(route('seller.package.show'))
+            ->assertOk()
+            ->assertSee('czeka na opłatę')
+            ->assertSee('Termin minął')
+            // Karencja ma WŁASNY kolor: nie amber (to „zbliża się termin") i nie
+            // róż (to „wygasło") — trzeci stan, inna akcja.
+            ->assertSee('border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900', escape: false)
+            // Data wyłączenia podana wprost, żeby nie było niespodzianki.
+            ->assertSee(now()->subDay()->addDays((int) config('shop.subscription.grace_days'))->format('d.m.Y'))
+            ->assertDontSee('wygasł');
     }
 
     public function test_expiring_soon_shows_a_reminder(): void
@@ -91,6 +114,29 @@ class PackageScreenTest extends TestCase
         $this->actingAs($seller)->get(route('seller.package.show'))
             ->assertOk()
             ->assertSee('Abonament kończy się za 9 dni');
+    }
+
+    public function test_the_last_week_turns_the_reminder_red(): void
+    {
+        // Żółty przez cały miesiąc przestaje cokolwiek znaczyć — ostatni tydzień
+        // musi wyglądać inaczej.
+        [$seller] = $this->sellerWith('booth', ['subscription_ends_at' => now()->addDays(5)]);
+
+        $this->actingAs($seller)->get(route('seller.package.show'))
+            ->assertOk()
+            ->assertSee('Abonament kończy się za 5 dni')
+            ->assertSee('bg-rose-50 text-rose-900', escape: false)
+            ->assertSee('dni karencji');
+    }
+
+    public function test_a_month_ahead_the_reminder_is_still_calm(): void
+    {
+        [$seller] = $this->sellerWith('booth', ['subscription_ends_at' => now()->addDays(20)]);
+
+        $this->actingAs($seller)->get(route('seller.package.show'))
+            ->assertOk()
+            ->assertSee('Abonament kończy się za 20 dni')
+            ->assertSee('bg-amber-50 text-amber-900', escape: false);
     }
 
     public function test_reminder_stays_quiet_when_the_date_is_far_away(): void

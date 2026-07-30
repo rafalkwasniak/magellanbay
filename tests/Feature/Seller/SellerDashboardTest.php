@@ -83,7 +83,28 @@ class SellerDashboardTest extends TestCase
 
         $this->actingAs($seller)->get(route('seller.dashboard'))
             ->assertOk()
-            ->assertSee('kończy się '.now()->addDays(12)->format('d.m.Y'));
+            ->assertSee('kończy się '.now()->addDays(12)->format('d.m.Y'))
+            // 12 dni to jeszcze spokojny żółty.
+            ->assertSee('bg-amber-100 text-amber-800', escape: false);
+    }
+
+    public function test_dashboard_turns_the_expiry_badge_red_in_the_last_week(): void
+    {
+        $seller = User::factory()->consented()->create();
+        Shop::factory()->create([
+            'owner_id' => $seller->id,
+            'package' => 'booth',
+            'entitlements' => config('shop.packages.booth.entitlements'),
+            'price_yearly' => 750,
+            'subscription_ends_at' => now()->addDays(5),
+        ]);
+
+        // Ten sam próg co na „Mój pakiet" — dwa ekrany nie mogą mówić o tym
+        // samym terminie różnym kolorem.
+        $this->actingAs($seller)->get(route('seller.dashboard'))
+            ->assertOk()
+            ->assertSee('kończy się '.now()->addDays(5)->format('d.m.Y'))
+            ->assertSee('bg-rose-50 text-rose-700', escape: false);
     }
 
     public function test_dashboard_flags_an_expired_package(): void
@@ -94,12 +115,37 @@ class SellerDashboardTest extends TestCase
             'package' => 'pavilion',
             'entitlements' => config('shop.packages.pavilion.entitlements'),
             'price_yearly' => 1500,
-            'subscription_ends_at' => now()->subDay(),
+            // Poza karencją — dzień po terminie sklep jeszcze działa normalnie.
+            'subscription_ends_at' => now()->subDays(30),
         ]);
 
         $this->actingAs($seller)->get(route('seller.dashboard'))
             ->assertOk()
-            ->assertSee('wygasł');
+            // Pulpit nazywa pakiet EFEKTYWNY (Kram), a plakietka mówi, co wygasło.
+            ->assertSee('Pakiet Kram')
+            ->assertSee('Pawilon wygasł');
+    }
+
+    public function test_dashboard_flags_a_package_waiting_for_payment(): void
+    {
+        $seller = User::factory()->consented()->create();
+        Shop::factory()->create([
+            'owner_id' => $seller->id,
+            'package' => 'pavilion',
+            'entitlements' => config('shop.packages.pavilion.entitlements'),
+            'price_yearly' => 1500,
+            'subscription_ends_at' => now()->subDay(),
+        ]);
+
+        // W karencji pakiet dalej działa, ale sprzedawca musi to zobaczyć.
+        $this->actingAs($seller)->get(route('seller.dashboard'))
+            ->assertOk()
+            ->assertSee('Pakiet Pawilon')
+            ->assertSee('czeka na opłatę')
+            // Własny kolor karencji — patrz baner w layoucie panelu.
+            ->assertSee('bg-sky-50 px-2 py-0.5 text-[11px] font-medium text-sky-700', escape: false)
+            // Baner nad każdym ekranem panelu mówi to samo, tym samym kolorem.
+            ->assertSee('border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900', escape: false);
     }
 
     public function test_completed_shop_shows_full_setup_progress(): void

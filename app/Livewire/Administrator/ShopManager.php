@@ -3,6 +3,7 @@
 namespace App\Livewire\Administrator;
 
 use App\Models\Shop;
+use App\Services\ProductLimitLock;
 use Illuminate\Support\Carbon;
 use Livewire\Component;
 
@@ -157,6 +158,13 @@ class ShopManager extends Component
         // inaczej pakiet w panelu wygląda, jakby wziął się z powietrza.
         // Metoda sama pomija wpis, gdy zmieniły się tylko uprawnienia.
         $this->shop->refresh()->recordPackageChange(\App\Models\PackageChange::SOURCE_ADMIN);
+
+        // Zamek limitu w obie strony: przedłużenie terminu z ręki przywraca
+        // schowane produkty, obniżenie limitu chowa nadwyżkę. Bez tego ręczna
+        // zmiana zostawiałaby sklep w stanie niezgodnym z jego uprawnieniami.
+        $lock = app(ProductLimitLock::class);
+        $lock->restore($this->shop->fresh());
+        $lock->enforce($this->shop->fresh());
 
         session()->flash('success', 'Zapisano ustawienia sklepu „'.$this->shop->name.'".');
 

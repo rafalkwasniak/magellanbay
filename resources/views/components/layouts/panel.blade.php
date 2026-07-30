@@ -106,6 +106,42 @@
                 </header>
 
                 <main class="p-6">
+                    {{-- Stan abonamentu nad KAŻDYM ekranem panelu, nie tylko na
+                         „Mój pakiet": w karencji sprzedawca musi zobaczyć termin
+                         nawet wtedy, gdy przyszedł tu po coś innego, a po
+                         wygaśnięciu — dowiedzieć się, dlaczego funkcje zniknęły.
+                         Cicha karencja byłaby nieodróżnialna od „wszystko OK". --}}
+                    @php($panelShop = $user->shop)
+                    @if ($panelShop !== null && ! request()->routeIs('seller.package.show'))
+                        @if ($panelShop->inSubscriptionGrace())
+                            {{-- Karencja NIEBIESKO, nie żółto: amber znaczy „zbliża
+                                 się termin", róż „wygasło", a to trzeci stan z inną
+                                 akcją — zapłać, choć nic jeszcze nie przestało
+                                 działać. Jedyny zimny kolor w ciepłej palecie
+                                 paneli, dlatego miękki `sky`, nie błękit. --}}
+                            <div class="mb-6 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+                                <p class="font-medium">Abonament pakietu {{ $panelShop->packageName() }} czeka na opłatę</p>
+                                <p class="mt-1 text-xs text-sky-800">
+                                    Termin minął {{ $panelShop->subscription_ends_at->format('d.m.Y') }}. Sklep działa normalnie
+                                    @if ($panelShop->graceDaysLeft() > 0)
+                                        jeszcze {{ $panelShop->graceDaysLeft() }} {{ trans_choice('{1}dzień|[2,4]dni|[5,*]dni', $panelShop->graceDaysLeft()) }} —
+                                    @else
+                                        do końca dnia —
+                                    @endif
+                                    <a href="{{ route('seller.package.show') }}" class="font-medium underline">opłać pakiet</a>, żeby nic się nie wyłączyło.
+                                </p>
+                            </div>
+                        @elseif (! $panelShop->subscriptionActive())
+                            <div class="mb-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+                                <p class="font-medium">Pakiet {{ $panelShop->packageName() }} wygasł — sklep działa na zasadach pakietu {{ $panelShop->effectivePackageName() }}</p>
+                                <p class="mt-1 text-xs text-rose-800">
+                                    Nic nie zostało usunięte. Po opłaceniu wszystko wraca takie, jak było —
+                                    <a href="{{ route('seller.package.show') }}" class="font-medium underline">przejdź do pakietu</a>.
+                                </p>
+                            </div>
+                        @endif
+                    @endif
+
                     {{ $slot }}
                 </main>
             </div>

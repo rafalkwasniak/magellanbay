@@ -46,6 +46,9 @@ class Product extends Model
             'withdrawal_excluded' => 'boolean',
             'meta_description_manual' => 'boolean',
             'is_active' => 'boolean',
+            // Ukryty PRZEZ SYSTEM (zamek limitu po wygaśnięciu abonamentu).
+            // Nie jest mass-assignable — ustawia go wyłącznie zamek.
+            'auto_hidden_at' => 'datetime',
             'show_on_homepage' => 'boolean',
             'stock' => 'decimal:2',
         ];

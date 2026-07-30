@@ -19,3 +19,8 @@ Schedule::command('email:dispatch')->everyMinute()->withoutOverlapping();
 Schedule::command('queue:work database --stop-when-empty --max-time=50 --tries=1')
     ->everyMinute()
     ->withoutOverlapping();
+
+// Abonamenty: przypomnienia przed terminem i zamek po karencji. Raz na dobę o
+// świcie — maile idą przez outbox, więc godzina jest tylko chwilą, w której
+// wpadają do kolejki. Komenda jest idempotentna, więc powtórka nic nie psuje.
+Schedule::command('subscriptions:check')->dailyAt('06:10')->withoutOverlapping();

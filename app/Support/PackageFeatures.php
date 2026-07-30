@@ -60,18 +60,24 @@ class PackageFeatures
      * pakietu. Różnica jest istotna: sklep może mieć moduł nadany ręcznie poza
      * pakietem, a wtedy lista z configu kłamałaby.
      *
-     * Bierzemy stan EFEKTYWNY (`entitlement`), więc po wygaśnięciu abonamentu
-     * sprzedawca widzi to, co faktycznie działa, a nie to, co kiedyś kupił.
+     * Domyślnie bierzemy stan EFEKTYWNY (`entitlement`), więc po wygaśnięciu
+     * abonamentu sprzedawca widzi to, co faktycznie działa, a nie to, co kiedyś
+     * kupił. `raw: true` czyta snapshot — do jednego pytania odwrotnego: „co
+     * wróci po opłacie" (mail o wygaśnięciu), gdzie stan efektywny mówiłby o
+     * pakiecie darmowym, czyli o niczym.
      *
      * @return list<string>
      */
-    public static function forShop(\App\Models\Shop $shop): array
+    public static function forShop(\App\Models\Shop $shop, bool $raw = false): array
     {
         $keys = ['max_products', 'online_payments', 'courier_shipping', 'invoices', 'order_editing', 'discount_codes', 'bulk_mail'];
 
         $entitlements = array_combine(
             $keys,
-            array_map(fn (string $key): mixed => $shop->entitlement($key), $keys),
+            array_map(
+                fn (string $key): mixed => $raw ? $shop->rawEntitlement($key) : $shop->entitlement($key),
+                $keys,
+            ),
         );
 
         return array_values(self::labels($entitlements));
