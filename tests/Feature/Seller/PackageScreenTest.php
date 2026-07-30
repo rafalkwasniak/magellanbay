@@ -139,14 +139,21 @@ class PackageScreenTest extends TestCase
             ->assertSee('Wiadomości do klientów');
     }
 
-    public function test_change_of_package_goes_through_contact_for_now(): void
+    public function test_change_box_matches_the_purchase_configuration(): void
     {
         [$seller] = $this->sellerWith('booth', ['subscription_ends_at' => now()->addYear()]);
 
-        // Zakup online dojdzie osobno — ekran nie może udawać, że już działa.
+        // Z kluczami platformy (są w .env) box kieruje na przyciski „Kup"…
         $this->actingAs($seller)->get(route('seller.package.show'))
             ->assertOk()
             ->assertSee('Zmiana pakietu')
-            ->assertSee('mailto:', false);
+            ->assertSee('Kupisz od razu');
+
+        // …a bez nich wraca ścieżka kontaktowa — żadnych martwych przycisków.
+        config(['services.paynow.platform.api_key' => null]);
+        $this->actingAs($seller)->get(route('seller.package.show'))
+            ->assertOk()
+            ->assertSee('mailto:', false)
+            ->assertDontSee('Kupisz od razu');
     }
 }

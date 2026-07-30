@@ -35,7 +35,8 @@ return [
 
     'name' => 'Red Paprika Rafał Kwaśniak',
     'address' => 'Okrzei 73, 42-582 Rogoźnik',
-    'email' => 'rafal@kwasniak.org',
+    // Oficjalny adres kontaktowy platformy: stopki maili + ekran „Mój pakiet".
+    'email' => 'kontakt@kramio.pl',
     'phone' => '+48 668 196 229',
 
 ];

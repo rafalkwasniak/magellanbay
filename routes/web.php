@@ -90,6 +90,11 @@ Route::post('/aktywacja', [ActivationController::class, 'store'])->name('activat
 // kontroler). Na domenie centrali; adres wpisujemy w panelu Paynow sprzedawcy.
 Route::post('/platnosci/paynow/webhook', PaynowWebhookController::class)->name('payments.paynow.webhook');
 
+// Webhooki opłat za PAKIETY Kramio (konto platformy) — osobna trasa, bo podpis
+// weryfikuje klucz platformy z `.env`, nie klucz sklepu.
+Route::post('/platnosci/paynow/pakiety/webhook', \App\Http\Controllers\PackagePaymentWebhookController::class)
+    ->name('payments.paynow.packages.webhook');
+
 /*
 |--------------------------------------------------------------------------
 | Dokumenty prawne (publiczne, bez logowania)
@@ -168,6 +173,8 @@ Route::middleware(['auth', 'role:seller', 'ensure.consents'])
         // dojdzie osobno (wymaga konta płatniczego platformy); na razie ekran
         // informuje i kieruje do kontaktu.
         Route::get('/pakiet', [PackageController::class, 'show'])->name('package.show');
+        Route::post('/pakiet/kup/{package}', [PackageController::class, 'purchase'])
+            ->middleware('throttle:10,1')->name('package.purchase');
 
         // Kartoteka klientów — we wszystkich pakietach. Identyfikatorem jest
         // ADRES E-MAIL, bo klient bez konta (gość) nie ma `id`; `where` na

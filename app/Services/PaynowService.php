@@ -127,6 +127,71 @@ class PaynowService
     }
 
     /**
+     * Płatność na konto PLATFORMY (opłata za pakiet Kramio) — klucze z `.env`
+     * (`services.paynow.platform`), nie z integracji sklepu: pieniądze idą do
+     * nas, więc konfiguracja sprzedawcy nie ma tu nic do rzeczy.
+     *
+     * @return array{paymentId: string, redirectUrl: string, status: string}|null
+     */
+    public function createPlatformPayment(float $amount, string $description, string $buyerEmail, string $externalId, string $continueUrl): ?array
+    {
+        $config = config('services.paynow.platform');
+        $baseUrl = config('services.paynow.base_url.'.($config['environment'] ?? 'sandbox'));
+
+        if (blank($config['api_key'] ?? null) || blank($config['signature_key'] ?? null) || blank($baseUrl)) {
+            Log::channel('paynow')->warning('Paynow platformy pominięty: brak konfiguracji.', ['external_id' => $externalId]);
+
+            return null;
+        }
+
+        $body = $this->encode([
+            'amount' => $this->grosze($amount),
+            'currency' => 'PLN',
+            'externalId' => $externalId,
+            'description' => $description,
+            'buyer' => ['email' => $buyerEmail],
+            'continueUrl' => $continueUrl,
+        ]);
+
+        Log::channel('paynow')->info('Paynow platformy: tworzenie płatności.', [
+            'external_id' => $externalId,
+            'amount' => $this->grosze($amount),
+            'environment' => $config['environment'],
+        ]);
+
+        try {
+            $response = Http::withHeaders([
+                'Api-Key' => $config['api_key'],
+                'Signature' => $this->sign($config['signature_key'], $body),
+                'Idempotency-Key' => (string) Str::uuid(),
+                'Content-Type' => 'application/json',
+                'Accept' => 'application/json',
+            ])->timeout(20)->withBody($body, 'application/json')
+                ->post(rtrim($baseUrl, '/').'/v1/payments');
+        } catch (\Throwable $e) {
+            Log::channel('paynow')->error('Paynow platformy: wyjątek połączenia.', ['external_id' => $externalId, 'message' => $e->getMessage()]);
+
+            return null;
+        }
+
+        if (! $response->successful() || blank($response->json('paymentId')) || blank($response->json('redirectUrl'))) {
+            Log::channel('paynow')->error('Paynow platformy: nieoczekiwana odpowiedź.', [
+                'external_id' => $externalId,
+                'http_status' => $response->status(),
+                'body' => $response->json(),
+            ]);
+
+            return null;
+        }
+
+        return [
+            'paymentId' => (string) $response->json('paymentId'),
+            'redirectUrl' => (string) $response->json('redirectUrl'),
+            'status' => (string) $response->json('status'),
+        ];
+    }
+
+    /**
      * Czy podpis powiadomienia zgadza się z ciałem żądania. Weryfikacja niewrażliwa
      * na czas (`hash_equals`), żeby nie wyciekać informacji timingiem. Wołający
      * najpierw odnajduje zamówienie po `paymentId`, stąd ma klucz podpisu sklepu.

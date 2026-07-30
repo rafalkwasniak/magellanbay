@@ -166,6 +166,16 @@ class Shop extends Model
     }
 
     /**
+     * Opłaty za pakiety Kramio (płatności do platformy), najnowsze pierwsze.
+     *
+     * @return HasMany<PackagePayment, $this>
+     */
+    public function packagePayments(): HasMany
+    {
+        return $this->hasMany(PackagePayment::class)->latest('id');
+    }
+
+    /**
      * Alokuje kolejny numer zamówienia tego sklepu — atomowo, przez blokadę
      * wiersza sklepu (unika kolizji przy równoczesnych zamówieniach). Numeracja
      * jest ciągła i nieodzyskiwana: licznik rośnie niezależnie od anulowania czy

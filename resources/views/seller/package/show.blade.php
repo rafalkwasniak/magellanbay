@@ -7,6 +7,30 @@
 
     <div class="grid gap-6 lg:grid-cols-12">
         <div class="space-y-6 lg:col-span-8">
+            @if (session('error'))
+                <div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{{ session('error') }}</div>
+            @endif
+
+            {{-- Stan ostatniej płatności. O zakupie rozstrzyga webhook, więc:
+                 pending = „sprawdzamy", failed = „spróbuj ponownie" (ponowienie
+                 to nowy wiersz, który przejmuje ten baner). Opłaconej nie
+                 ogłaszamy tutaj — widać ją w stanie pakietu wyżej i w mailu. --}}
+            @if ($latestPayment?->status === \App\Models\PackagePayment::STATUS_PENDING)
+                <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                    <p class="font-medium">Płatność za pakiet {{ config('shop.packages.'.$latestPayment->target_package.'.name') }} czeka na potwierdzenie</p>
+                    <p class="mt-1 text-xs text-amber-800">
+                        Gdy operator potwierdzi wpłatę ({{ \App\Support\Money::pln($latestPayment->amount) }}), pakiet włączy się sam —
+                        zwykle w ciągu minuty. Odśwież stronę za chwilę.
+                    </p>
+                </div>
+            @elseif ($latestPayment?->status === 'failed' && ! $latestPayment->isApplied())
+                <div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+                    <p class="font-medium">Płatność za pakiet {{ config('shop.packages.'.$latestPayment->target_package.'.name') }} nie doszła do skutku</p>
+                    <p class="mt-1 text-xs">
+                        Nic nie zostało pobrane. Możesz spróbować ponownie przyciskiem „Kup" poniżej — wycena policzy się od nowa.
+                    </p>
+                </div>
+            @endif
             {{-- Stan abonamentu na wierzchu: nazwa pakietu, termin, cena. --}}
             <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
                 <div class="flex flex-wrap items-start justify-between gap-3">
@@ -119,6 +143,17 @@
                                         <span class="block text-xs text-amber-800">pełny rok, licząc od dnia opłacenia</span>
                                     </p>
                                 @endif
+
+                                @if ($onlinePurchase && $quote !== null && $quote['amount'] > 0)
+                                    <form method="POST" action="{{ route('seller.package.purchase', ['package' => $package['key']]) }}" class="mt-3">
+                                        @csrf
+                                        <button type="submit"
+                                            class="w-full rounded-2xl bg-gradient-to-br from-amber-500 to-rose-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-rose-500/20 transition hover:brightness-105">
+                                            Kup {{ $package['name'] }} — {{ \App\Support\Money::pln($quote['amount']) }}
+                                        </button>
+                                        <p class="mt-1.5 text-center text-xs text-stone-400">BLIK, karta lub szybki przelew (Paynow)</p>
+                                    </form>
+                                @endif
                                 <ul class="mt-4 space-y-2 text-sm">
                                     @foreach ($package['features'] as $feature)
                                         <li class="flex items-start gap-2 {{ $feature['is_new'] ? 'font-medium text-stone-900' : 'text-stone-500' }}">
@@ -208,19 +243,62 @@
                         </p>
                     @endif
 
-                    <p class="mt-3 text-sm text-stone-500">Napisz do nas, a przestawimy pakiet od razu.</p>
+                    @if ($onlinePurchase)
+                        <p class="mt-3 text-sm text-stone-500">Kupisz od razu — przyciski „Kup" znajdziesz przy pakietach powyżej.</p>
+                    @else
+                        <a href="mailto:{{ $contactEmail }}?subject={{ rawurlencode('Zmiana pakietu — '.$shop->name) }}"
+                            class="mt-4 inline-flex rounded-2xl bg-gradient-to-br from-amber-500 to-rose-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-rose-500/20 transition hover:brightness-105">
+                            Napisz do nas
+                        </a>
+                    @endif
                 @else
                     <p class="mt-2 text-sm text-stone-500">
-                        Masz najwyższy pakiet. Jeśli chcesz zejść niżej, napisz do nas — obniżka wejdzie przy odnowieniu,
-                        a do końca opłaconego terminu korzystasz z tego, co masz teraz.
+                        Masz najwyższy pakiet — wyżej już nic nie ma.
+                    </p>
+                    <p class="mt-2 text-xs text-stone-400">
+                        Gdybyś chciał zejść niżej: obniżka wchodzi przy odnowieniu, a do końca opłaconego terminu korzystasz
+                        z tego, co masz — <a href="mailto:{{ $contactEmail }}?subject={{ rawurlencode('Zmiana pakietu — '.$shop->name) }}" class="font-medium text-stone-600 underline decoration-amber-300 underline-offset-2">daj nam znać</a>.
                     </p>
                 @endif
-                <a href="mailto:{{ $contactEmail }}?subject={{ rawurlencode('Zmiana pakietu — '.$shop->name) }}"
-                    class="mt-4 inline-flex rounded-2xl bg-gradient-to-br from-amber-500 to-rose-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-rose-500/20 transition hover:brightness-105">
-                    Napisz do nas
-                </a>
-                <p class="mt-3 text-xs text-stone-400">{{ $contactEmail }}</p>
             </div>
+
+            {{-- Log opłat: co, kiedy, za ile i do kiedy obowiązuje. Sierot po
+                 nieudanym starcie bramki tu nie ma (kontroler je odfiltrował). --}}
+            @if ($payments->isNotEmpty())
+                <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                    <h2 class="font-semibold text-stone-900">Historia opłat</h2>
+                    <ul class="mt-4 space-y-3">
+                        @foreach ($payments as $payment)
+                            {{-- Opłata, z której wynika BIEŻĄCY stan pakietu (ten sam
+                                 pakiet i termin) — delikatnie wyróżniona. --}}
+                            {{-- Porównanie po sformatowanej dacie, nie equalTo():
+                                 cast potrafi przemycić mikrosekundy i ciche „różne". --}}
+                            @php($isCurrent = $payment->isApplied() && $payment->target_package === $shop->package && $payment->new_ends_at->format('Y-m-d H:i') === $shop->subscription_ends_at?->format('Y-m-d H:i'))
+                            <li class="rounded-2xl border px-4 py-3 text-sm {{ $isCurrent ? 'border-amber-300 bg-amber-50/60' : 'border-stone-200 bg-white/60' }}">
+                                <div class="flex items-center justify-between gap-3">
+                                    <span class="flex items-center gap-2 font-medium text-stone-800">
+                                        {{ config('shop.packages.'.$payment->target_package.'.name', $payment->target_package) }}
+                                        @if ($isCurrent)
+                                            <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">obecny</span>
+                                        @endif
+                                    </span>
+                                    <span class="shrink-0 font-semibold tabular-nums text-stone-900">{{ \App\Support\Money::pln($payment->amount) }}</span>
+                                </div>
+                                <div class="mt-1 flex items-center justify-between gap-3 text-xs text-stone-400">
+                                    <span>{{ $payment->created_at->format('d.m.Y') }}</span>
+                                    @if ($payment->status === \App\Models\PackagePayment::STATUS_PAID)
+                                        <span class="text-emerald-700">opłacony · ważny do {{ $payment->new_ends_at->format('d.m.Y') }}</span>
+                                    @elseif ($payment->status === 'failed')
+                                        <span class="text-rose-600">płatność nieudana</span>
+                                    @else
+                                        <span class="text-amber-700">czeka na potwierdzenie</span>
+                                    @endif
+                                </div>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
         </aside>
     </div>
 </x-layouts.panel>

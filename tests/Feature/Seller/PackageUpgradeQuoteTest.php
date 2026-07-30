@@ -172,6 +172,6 @@ class PackageUpgradeQuoteTest extends TestCase
         $this->actingAs($seller)->get(route('seller.package.show'))
             ->assertOk()
             ->assertSee('Masz najwyższy pakiet')
-            ->assertSee('obniżka wejdzie przy odnowieniu');
+            ->assertSee('obniżka wchodzi przy odnowieniu');
     }
 }

@@ -38,6 +38,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // (weryfikowany w kontrolerze), nie sesja. To jedyny wyjątek.
         $middleware->validateCsrfTokens(except: [
             'platnosci/paynow/webhook',
+            'platnosci/paynow/pakiety/webhook',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

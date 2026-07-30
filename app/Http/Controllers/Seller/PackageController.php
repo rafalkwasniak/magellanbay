@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Seller;
 
 use App\Http\Controllers\Controller;
 use App\Services\AiQuota;
+use App\Services\PackagePaymentService;
+use Illuminate\Http\RedirectResponse;
 use App\Support\PackageFeatures;
 use App\Support\PackageUpgrade;
 use Illuminate\Contracts\Support\Renderable;
@@ -50,6 +52,39 @@ class PackageController extends Controller
                 'ai_limit' => $aiLimit,
             ],
             'contactEmail' => config('company.email') ?: config('mail.from.address'),
+            // Zakup online działa dopiero ze skonfigurowanym kontem platformy —
+            // bez niego ekran pokazuje ścieżkę kontaktową, żadnych martwych przycisków.
+            'onlinePurchase' => filled(config('services.paynow.platform.api_key')),
+            // NAJNOWSZA płatność (nie „najnowsza pending"): po odrzuceniu ekran ma
+            // powiedzieć „nie udało się, spróbuj ponownie", a ponowienie tworzy
+            // nowszy wiersz, który naturalnie przejmuje baner.
+            'latestPayment' => $shop->packagePayments()->whereNotNull('payment_id')->latest('id')->first(),
+            // Historia opłat za pakiety — log z kwotami i terminami. Bez
+            // wierszy-sierot po nieudanym starcie bramki (brak payment_id).
+            'payments' => $shop->packagePayments()->whereNotNull('payment_id')->get(),
         ]);
+    }
+
+    /**
+     * Start zakupu pakietu: wycena → migawka → przekierowanie do Paynow.
+     * Kwotę i termin liczy PackageUpgrade — dokładnie te same liczby, które
+     * sprzedawca widział na ekranie.
+     */
+    public function purchase(Request $request, string $package, PackagePaymentService $payments): RedirectResponse
+    {
+        $shop = $request->user()->shop;
+
+        abort_if($shop === null, 404);
+        abort_unless(array_key_exists($package, config('shop.packages')), 404);
+
+        $redirectUrl = $payments->start($shop, $package, route('seller.package.show', ['platnosc' => 'powrot']));
+
+        if ($redirectUrl === null) {
+            return redirect()
+                ->route('seller.package.show')
+                ->with('error', 'Nie udało się rozpocząć płatności. Spróbuj za chwilę albo napisz do nas.');
+        }
+
+        return redirect()->away($redirectUrl);
     }
 }

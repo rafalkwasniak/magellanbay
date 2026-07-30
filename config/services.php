@@ -83,6 +83,15 @@ return [
             'sandbox' => 'https://api.sandbox.paynow.pl',
             'production' => 'https://api.paynow.pl',
         ],
+
+        // Konto PLATFORMY — opłaty za pakiety Kramio (pieniądze idą do nas,
+        // nie do sprzedawcy). Jedyna konfiguracja Paynow w `.env`; kluczy
+        // sklepów tu nie ma i nie będzie.
+        'platform' => [
+            'api_key' => env('PAYNOW_PLATFORM_API_KEY'),
+            'signature_key' => env('PAYNOW_PLATFORM_SIGNATURE_KEY'),
+            'environment' => env('PAYNOW_PLATFORM_ENVIRONMENT', 'sandbox'),
+        ],
     ],
 
 ];
