@@ -244,9 +244,13 @@ class BulkMailingPanelTest extends TestCase
         [$seller, $shop] = $this->sellerWithShop();
         $mailing = BulkMailing::factory()->sent()->create(['shop_id' => $shop->id]);
 
+        // Podgląd bez pól edycji — i BEZ napisu „tylko do odczytu": brak
+        // formularza mówi to sam, a zdanie psuło widok wysłanej treści.
         $this->actingAs($seller)->get(route('seller.mailings.edit', $mailing))
             ->assertOk()
-            ->assertSee('jest tylko do odczytu');
+            ->assertSee($mailing->subject)
+            ->assertDontSee('tylko do odczytu')
+            ->assertDontSee('Zapisz zmiany');
 
         $this->actingAs($seller)->post(route('seller.mailings.update', $mailing), [
             'subject' => 'Podmieniony temat',

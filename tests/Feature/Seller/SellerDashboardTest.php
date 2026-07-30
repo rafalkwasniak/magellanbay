@@ -60,7 +60,46 @@ class SellerDashboardTest extends TestCase
             ->get(route('seller.dashboard'))
             ->assertOk()
             ->assertSee('Pakiet Kram')
-            ->assertSee('2 / 24 produktów');
+            // Dwa paski wykorzystania — te same liczby co na „Mój pakiet",
+            // żeby oba ekrany mówiły to samo.
+            ->assertSee('Produkty')
+            ->assertSee('2 / 24')
+            ->assertSee('Zadania AI (tydzień)')
+            ->assertSee('0 / 100')
+            // Skrót do ekranu pakietu wprost z Pulpitu.
+            ->assertSee(route('seller.package.show'), false);
+    }
+
+    public function test_dashboard_warns_about_an_expiring_package(): void
+    {
+        $seller = User::factory()->consented()->create();
+        Shop::factory()->create([
+            'owner_id' => $seller->id,
+            'package' => 'booth',
+            'entitlements' => config('shop.packages.booth.entitlements'),
+            'price_yearly' => 750,
+            'subscription_ends_at' => now()->addDays(12),
+        ]);
+
+        $this->actingAs($seller)->get(route('seller.dashboard'))
+            ->assertOk()
+            ->assertSee('kończy się '.now()->addDays(12)->format('d.m.Y'));
+    }
+
+    public function test_dashboard_flags_an_expired_package(): void
+    {
+        $seller = User::factory()->consented()->create();
+        Shop::factory()->create([
+            'owner_id' => $seller->id,
+            'package' => 'pavilion',
+            'entitlements' => config('shop.packages.pavilion.entitlements'),
+            'price_yearly' => 1500,
+            'subscription_ends_at' => now()->subDay(),
+        ]);
+
+        $this->actingAs($seller)->get(route('seller.dashboard'))
+            ->assertOk()
+            ->assertSee('wygasł');
     }
 
     public function test_completed_shop_shows_full_setup_progress(): void

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Seller;
 
 use App\Http\Controllers\Controller;
+use App\Services\AiQuota;
 use Illuminate\Contracts\Support\Renderable;
 use Illuminate\Http\Request;
 
@@ -43,6 +44,10 @@ class DashboardController extends Controller
 
         return view('seller.dashboard', [
             'shop' => $shop,
+            // Wykorzystanie AI — ten sam licznik co na „Mój pakiet", żeby oba
+            // ekrany mówiły to samo. Tygodniowa pula zadań, nie wywołań modelu.
+            'aiUsed' => $shop ? app(AiQuota::class)->used($shop) : 0,
+            'aiLimit' => $shop ? (int) $shop->entitlement('ai_weekly_limit') : 0,
             'steps' => $steps,
             'productCount' => $productCount,
             'activeProductCount' => $activeProductCount,

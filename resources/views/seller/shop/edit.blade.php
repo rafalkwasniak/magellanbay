@@ -7,10 +7,12 @@
             <form method="POST" action="{{ route('seller.shop.update') }}" class="space-y-6" novalidate data-validate>
                 @csrf
 
-                {{-- Dane podstawowe --}}
+                {{-- Dane podstawowe: nazwa i adres. Opis („O sklepie") stoi w OSOBNYM
+                     boxie niżej — edytor tekstu z paskiem narzędzi jest wizualnie
+                     ciężki i zlewał się z krótkimi polami nad nim. --}}
                 <div id="dane-podstawowe" class="scroll-mt-24 rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
                     <h2 class="font-semibold text-stone-900">Dane podstawowe</h2>
-                    <p class="mt-1 text-sm text-stone-500">Nazwa i opis prezentowane klientom w Twoim sklepie.</p>
+                    <p class="mt-1 text-sm text-stone-500">Nazwa i adres Twojego sklepu.</p>
 
                     <div class="mt-6 space-y-5">
                         <div class="grid gap-5 sm:grid-cols-2">
@@ -34,13 +36,19 @@
                             </div>
                         </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-stone-700">O sklepie <span class="text-stone-400">(opcjonalnie)</span></label>
-                            <x-rich-editor name="description" :value="old('description', $shop->description)" ai-field="shop_description" :max="config('shop.description_max')">Krótko o tym, co sprzedajesz — pojawi się na stronie głównej sklepu.</x-rich-editor>
-                            @error('description')
-                                <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
-                            @enderror
-                        </div>
+                    </div>
+                </div>
+
+                {{-- O sklepie — własny box, bo to jedyne pole z edytorem i AI. --}}
+                <div id="o-sklepie" class="scroll-mt-24 rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                    <h2 class="font-semibold text-stone-900">O sklepie <span class="text-sm font-normal text-stone-400">(opcjonalnie)</span></h2>
+                    <p class="mt-1 text-sm text-stone-500">Krótko o tym, co sprzedajesz — pojawi się na stronie głównej sklepu.</p>
+
+                    <div class="mt-6">
+                        <x-rich-editor name="description" :value="old('description', $shop->description)" ai-field="shop_description" :max="config('shop.description_max')">Napisz kilka zdań o swoim sklepie — możesz też skorzystać z pomocy AI.</x-rich-editor>
+                        @error('description')
+                            <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
+                        @enderror
                     </div>
                 </div>
 

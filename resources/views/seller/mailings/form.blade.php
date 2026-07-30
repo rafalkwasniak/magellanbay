@@ -7,32 +7,28 @@
              dublowałby ten sam komunikat w dwóch miejscach. --}}
         <div class="space-y-6 lg:col-span-8">
             <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
-                <h2 class="font-semibold text-stone-900">Treść</h2>
-
                 @if ($mailing?->isSent())
-                    {{-- Wysłanej wiadomości nie edytujemy — klienci mają ją w skrzynkach,
-                         więc zapis musi zostać zgodny z tym, co dostali. --}}
-                    <p class="mt-1 text-sm text-stone-500">Ta wiadomość została już wysłana, więc jest tylko do odczytu.</p>
+                    {{-- Wysłana wiadomość = ZRZUT TEGO, CO POSZŁO do klientów. Bez
+                         nagłówka „Treść" i bez etykiet nad ciałem: temat stoi tam,
+                         gdzie w skrzynce (na górze), a pod kreską jest sam mail.
+                         Wysłanej nie edytujemy — brak formularza mówi to sam. --}}
+                    <p class="text-xs font-medium uppercase tracking-wide text-stone-400">Temat</p>
+                    <p class="mt-1 text-lg font-semibold text-stone-900">{{ $mailing->subject }}</p>
 
-                    <div class="mt-5">
-                        <p class="text-xs font-medium uppercase tracking-wide text-stone-400">Temat</p>
-                        <p class="mt-1 font-medium text-stone-900">{{ $mailing->subject }}</p>
-                    </div>
                     @if ($mailing->product !== null)
-                        <div class="mt-4">
-                            <p class="text-xs font-medium uppercase tracking-wide text-stone-400">Promowany produkt</p>
-                            <p class="mt-1 font-medium text-stone-900">{{ $mailing->product->name }}</p>
-                        </div>
+                        <p class="mt-3 inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-800">
+                            <span aria-hidden="true">🏷️</span> Promowany produkt: {{ $mailing->product->name }}
+                        </p>
                     @endif
 
-                    <div class="mt-4">
-                        <p class="text-xs font-medium uppercase tracking-wide text-stone-400">Treść</p>
-                        {{-- Ten sam układ co w mailu: sanitizer na zapisie, Prose na wyjściu. --}}
-                        {{-- `legal-content` = gotowa typografia prozy w panelu (jest
-                             w zbudowanym CSS); własna klasa wymagałaby builda. --}}
-                        <div class="legal-content mt-1">{!! \App\Support\Prose::render($mailing->body) !!}</div>
+                    {{-- Ciało maila: sanitizer na zapisie, Prose na wyjściu — ten sam
+                         układ, który zobaczył klient. `legal-content` = gotowa
+                         typografia prozy w panelu (jest w zbudowanym CSS). --}}
+                    <div class="mt-5 border-t border-stone-100 pt-5">
+                        <div class="legal-content">{!! \App\Support\Prose::render($mailing->body) !!}</div>
                     </div>
                 @else
+                    <h2 class="font-semibold text-stone-900">Treść</h2>
                     <p class="mt-1 text-sm text-stone-500">
                         Pisz jak w opisie produktu — pogrubienia, listy i odnośniki trafią do skrzynki klienta tak, jak je widzisz.
                     </p>
@@ -100,23 +96,48 @@
                  którą da się pobrać z bazy. --}}
             {{-- Usuwanie mieszka na LIŚCIE wiadomości (jak przy kodach rabatowych),
                  a nie tutaj: edycja ma służyć pisaniu i wysyłce, a nie kasowaniu. --}}
+        </div>
+
+        {{-- Prawa kolumna: wysyłka (stan i akcje) + instrukcja. Sender stał wcześniej
+             pod treścią, gdzie ginął, a kolumna boczna świeciła pustką. --}}
+        <aside class="space-y-6 lg:col-span-4">
             @if ($mailing)
                 <livewire:seller.bulk-mailing-sender :mailing="$mailing" />
             @endif
-        </div>
 
-        <aside class="space-y-6 lg:col-span-4">
             <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
                 <h2 class="font-semibold text-stone-900">Jak to działa</h2>
-                <ol class="mt-3 space-y-2 text-sm text-stone-600">
-                    <li>1. Napisz treść i zapisz szkic.</li>
-                    <li>2. Wyślij próbkę do siebie — tyle razy, ile trzeba.</li>
-                    <li>3. Gdy wygląda dobrze, wyślij ją do klientów. Ten krok jest jednorazowy.</li>
+                <ol class="mt-4 space-y-3">
+                    @foreach ([
+                        ['Napisz treść', 'Zapisz szkic — możesz do niego wracać.'],
+                        ['Sprawdź na sobie', 'Wyślij próbkę na swój adres, tyle razy, ile trzeba.'],
+                        ['Wyślij do klientów', 'Ten krok jest jednorazowy i nieodwracalny.'],
+                    ] as $i => [$title, $desc])
+                        <li class="flex items-start gap-3">
+                            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-100 text-xs font-semibold text-amber-800">{{ $i + 1 }}</span>
+                            <span class="min-w-0">
+                                <span class="block text-sm font-medium text-stone-800">{{ $title }}</span>
+                                <span class="block text-xs text-stone-500">{{ $desc }}</span>
+                            </span>
+                        </li>
+                    @endforeach
                 </ol>
-                <p class="mt-4 text-xs text-stone-400">
-                    Wiadomość trafia wyłącznie do klientów Twojego sklepu, którzy zaznaczyli zgodę. W stopce każdej z nich
-                    jest link do wypisania się — wymaga tego prawo, a działa natychmiast.
-                </p>
+            </div>
+
+            <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                <h2 class="font-semibold text-stone-900">Kto dostanie wiadomość</h2>
+                <ul class="mt-4 space-y-3 text-sm text-stone-600">
+                    @foreach ([
+                        ['👥', 'Tylko klienci Twojego sklepu, którzy zaznaczyli zgodę na wiadomości.'],
+                        ['↩', 'W stopce każdej wiadomości jest link do wypisania się — wymaga tego prawo i działa natychmiast.'],
+                        ['📬', 'Maile o zamówieniach idą niezależnie od tej zgody.'],
+                    ] as [$icon, $text])
+                        <li class="flex items-start gap-2">
+                            <span class="mt-0.5 shrink-0" aria-hidden="true">{{ $icon }}</span>
+                            <span class="min-w-0">{{ $text }}</span>
+                        </li>
+                    @endforeach
+                </ul>
             </div>
         </aside>
     </div>

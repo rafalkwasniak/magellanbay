@@ -92,25 +92,60 @@
                         @endif
                     </p>
 
-                    {{-- Pakiet + wykorzystanie limitu produktów --}}
+                    {{-- Pakiet: termin + oba wykorzystania (produkty i AI). Te same
+                         liczby i te same paski co na „Mój pakiet" — sprzedawca ma
+                         widzieć spójny obraz niezależnie od ekranu. --}}
                     @php($maxProducts = (int) $shop->entitlement('max_products'))
                     @php($usagePct = $maxProducts > 0 ? min(100, (int) round($productCount / $maxProducts * 100)) : 0)
+                    @php($aiPct = $aiLimit > 0 ? min(100, (int) round($aiUsed / $aiLimit * 100)) : 0)
+                    @php($endsAt = $shop->subscription_ends_at)
+                    @php($daysLeft = $endsAt !== null && ! $shop->comped && $shop->priceYearly() > 0 ? (int) now()->startOfDay()->diffInDays($endsAt->copy()->startOfDay(), false) : null)
                     <div class="mt-6 w-full text-left">
                         {{-- HR oddzielający sekcję pakietu od danych sklepu --}}
                         <div class="mx-auto w-4/5 border-t border-rose-200"></div>
-                        <div class="mt-5 flex items-center justify-between gap-2">
-                            <span class="text-sm font-medium text-stone-800">Pakiet {{ $shop->packageName() }}</span>
-                            <span class="text-xs text-stone-500">{{ $productCount }} / {{ $maxProducts }} produktów</span>
+
+                        <div class="mt-5 flex flex-wrap items-center justify-between gap-2">
+                            <a href="{{ route('seller.package.show') }}" class="text-sm font-medium text-stone-800 underline decoration-amber-300 underline-offset-2 transition hover:text-amber-700">
+                                Pakiet {{ $shop->packageName() }}
+                            </a>
+                            @if (! $shop->subscriptionActive())
+                                <span class="rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-medium text-rose-700">wygasł</span>
+                            @elseif ($shop->comped)
+                                <span class="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">bezpłatny</span>
+                            @elseif ($daysLeft !== null && $daysLeft <= 30)
+                                <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">kończy się {{ $endsAt->format('d.m.Y') }}</span>
+                            @elseif ($endsAt !== null)
+                                <span class="text-xs text-stone-500">do {{ $endsAt->format('d.m.Y') }}</span>
+                            @endif
                         </div>
-                        <div class="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-stone-100">
-                            <div class="h-full min-w-[0.5rem] rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600 transition-all duration-500" style="width: {{ $usagePct }}%"></div>
+
+                        <div class="mt-3 flex items-center justify-between gap-2">
+                            <span class="text-xs text-stone-500">Produkty</span>
+                            <span class="text-xs tabular-nums text-stone-500">{{ $productCount }} / {{ $maxProducts }}</span>
+                        </div>
+                        <div class="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-stone-100">
+                            <div class="h-full min-w-[0.5rem] rounded-full transition-all duration-500 {{ $usagePct >= 100 ? 'bg-rose-400' : 'bg-gradient-to-r from-emerald-400 to-emerald-600' }}" style="width: {{ $usagePct }}%"></div>
+                        </div>
+
+                        <div class="mt-3 flex items-center justify-between gap-2">
+                            <span class="text-xs text-stone-500">Zadania AI (tydzień)</span>
+                            <span class="text-xs tabular-nums text-stone-500">{{ $aiUsed }} / {{ $aiLimit }}</span>
+                        </div>
+                        <div class="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-stone-100">
+                            <div class="h-full min-w-[0.5rem] rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600 transition-all duration-500" style="width: {{ $aiPct }}%"></div>
                         </div>
                     </div>
 
-                    <a href="{{ route('seller.shop.edit') }}"
-                        class="mt-5 inline-flex rounded-2xl border border-stone-200 bg-white/70 px-5 py-2.5 text-sm font-semibold text-stone-700 transition hover:bg-white">
-                        Edytuj sklep
-                    </a>
+                    <div class="mt-5 flex flex-wrap items-center justify-center gap-2">
+                        <a href="{{ route('seller.shop.edit') }}"
+                            class="inline-flex rounded-2xl border border-stone-200 bg-white/70 px-5 py-2.5 text-sm font-semibold text-stone-700 transition hover:bg-white">
+                            Edytuj sklep
+                        </a>
+                        <a href="{{ route('seller.package.show') }}"
+                            class="inline-flex rounded-2xl border border-stone-200 bg-white/70 px-5 py-2.5 text-sm font-semibold text-stone-700 transition hover:bg-white">
+                            Mój pakiet
+                        </a>
+                    </div>
                 </div>
             @else
                 <div class="mt-6 flex flex-col items-center justify-center text-center">
