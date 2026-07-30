@@ -24,7 +24,7 @@ class PackageScreenTest extends TestCase
     {
         $seller = User::factory()->consented()->create();
 
-        $shop = Shop::factory()->create([
+        $shop = Shop::factory()->withInvoiceData()->create([
             'owner_id' => $seller->id,
             'package' => $package,
             'entitlements' => config("shop.packages.{$package}.entitlements"),

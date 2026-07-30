@@ -141,6 +141,39 @@ class ShopFactory extends Factory
     }
 
     /**
+     * Sklep z danymi wystarczającymi do wystawienia faktury (nazwa firmy, NIP,
+     * pełny adres) — warunek zakupu pakietu.
+     */
+    public function withInvoiceData(): static
+    {
+        return $this->state(fn (): array => [
+            'company_name' => 'Kwiaciarnia Anna Kowalska',
+            'nip' => '1234563218',
+            'street' => 'Polna',
+            'building_number' => '7',
+            'postal_code' => '00-001',
+            'city' => 'Warszawa',
+            'province' => 'mazowieckie',
+        ]);
+    }
+
+    /**
+     * Sklep z adresem, ale BEZ danych firmowych — faktura imienna na właściciela.
+     */
+    public function withPersonalInvoiceData(): static
+    {
+        return $this->state(fn (): array => [
+            'company_name' => null,
+            'nip' => null,
+            'street' => 'Polna',
+            'building_number' => '7',
+            'postal_code' => '00-001',
+            'city' => 'Warszawa',
+            'province' => 'mazowieckie',
+        ]);
+    }
+
+    /**
      * Sklep z korespondencją seryjną (pakiet Pawilon).
      */
     public function withBulkMail(): static

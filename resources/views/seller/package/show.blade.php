@@ -170,6 +170,42 @@
         </div>
 
         <aside class="space-y-6 lg:col-span-4">
+            {{-- Dane do faktury POKAZANE PRZED zakupem: sprzedawca ma wiedzieć, na
+                 co dokument zostanie wystawiony, zanim zapłaci. Brak adresu blokuje
+                 zakup (faktura bez niego jest nieważna), brak NIP-u nie blokuje —
+                 wychodzi faktura imienna, co też jest w porządku. --}}
+            <div class="rounded-3xl border p-6 backdrop-blur {{ $invoiceDataMissing ? 'border-rose-200 bg-rose-50' : 'border-white/60 bg-white/70' }}">
+                <h2 class="font-semibold text-stone-900">Dane do faktury</h2>
+
+                @if ($invoiceDataMissing)
+                    <p class="mt-2 text-sm text-rose-800">
+                        Uzupełnij nazwę i adres w <a href="{{ route('seller.shop.edit') }}#adres" class="font-medium underline decoration-rose-300 underline-offset-2">Mój sklep</a>,
+                        żeby kupić pakiet. Bez nich nie wystawimy faktury.
+                    </p>
+                @else
+                    <p class="mt-2 text-xs text-stone-400">Fakturę za pakiet wystawimy na te dane:</p>
+                    <address class="mt-2 text-sm not-italic leading-relaxed text-stone-700">
+                        <span class="font-medium">{{ $invoiceRecipient['name'] }}</span><br>
+                        @if ($invoiceRecipient['nip'])
+                            NIP {{ $invoiceRecipient['nip'] }}<br>
+                        @endif
+                        {{ $invoiceRecipient['street'] }}<br>
+                        {{ $invoiceRecipient['postal_code'] }} {{ $invoiceRecipient['city'] }}
+                    </address>
+
+                    @if ($invoiceRecipient['personal'])
+                        <p class="mt-3 text-xs text-stone-400">
+                            Bez danych firmowych wystawimy <span class="font-medium text-stone-600">fakturę imienną</span>.
+                            Jeśli rozliczasz sklep na firmę, dodaj nazwę i NIP w <a href="{{ route('seller.shop.edit') }}" class="underline decoration-amber-300 underline-offset-2">Mój sklep</a>.
+                        </p>
+                    @else
+                        <p class="mt-3 text-xs text-stone-400">
+                            Zmienisz je w <a href="{{ route('seller.shop.edit') }}" class="underline decoration-amber-300 underline-offset-2">Mój sklep</a>.
+                        </p>
+                    @endif
+                @endif
+            </div>
+
             {{-- Zużycie limitów — jedyne liczby, które sprzedawca musi pilnować sam. --}}
             <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
                 <h2 class="font-semibold text-stone-900">Wykorzystanie</h2>
@@ -262,37 +298,69 @@
                 @endif
             </div>
 
-            {{-- Log opłat: co, kiedy, za ile i do kiedy obowiązuje. Sierot po
-                 nieudanym starcie bramki tu nie ma (kontroler je odfiltrował). --}}
-            @if ($payments->isNotEmpty())
+            {{-- Historia PAKIETU, nie tylko opłat: pakiet zmienia się dwiema
+                 drogami (płatność sprzedawcy i konsola admina), więc log musi
+                 pokazywać obie. Inaczej ręcznie nadany pakiet wygląda, jakby
+                 wziął się z powietrza. Pod spodem nieudane próby płatności. --}}
+            @if ($changes->isNotEmpty() || $failedPayments->isNotEmpty())
                 <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
-                    <h2 class="font-semibold text-stone-900">Historia opłat</h2>
+                    <h2 class="font-semibold text-stone-900">Historia pakietu</h2>
                     <ul class="mt-4 space-y-3">
-                        @foreach ($payments as $payment)
-                            {{-- Opłata, z której wynika BIEŻĄCY stan pakietu (ten sam
-                                 pakiet i termin) — delikatnie wyróżniona. --}}
-                            {{-- Porównanie po sformatowanej dacie, nie equalTo():
-                                 cast potrafi przemycić mikrosekundy i ciche „różne". --}}
-                            @php($isCurrent = $payment->isApplied() && $payment->target_package === $shop->package && $payment->new_ends_at->format('Y-m-d H:i') === $shop->subscription_ends_at?->format('Y-m-d H:i'))
+                        @foreach ($changes as $index => $change)
+                            {{-- Najnowszy wpis = stan obecny (lista jest od najnowszych). --}}
+                            @php($isCurrent = $index === 0)
                             <li class="rounded-2xl border px-4 py-3 text-sm {{ $isCurrent ? 'border-amber-300 bg-amber-50/60' : 'border-stone-200 bg-white/60' }}">
                                 <div class="flex items-center justify-between gap-3">
                                     <span class="flex items-center gap-2 font-medium text-stone-800">
-                                        {{ config('shop.packages.'.$payment->target_package.'.name', $payment->target_package) }}
+                                        {{ config('shop.packages.'.$change->package.'.name', $change->package) }}
                                         @if ($isCurrent)
                                             <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">obecny</span>
                                         @endif
                                     </span>
-                                    <span class="shrink-0 font-semibold tabular-nums text-stone-900">{{ \App\Support\Money::pln($payment->amount) }}</span>
+                                    <span class="shrink-0 font-semibold tabular-nums text-stone-900">
+                                        @if ($change->payment !== null)
+                                            {{ \App\Support\Money::pln($change->payment->amount) }}
+                                        @else
+                                            <span class="text-stone-400">—</span>
+                                        @endif
+                                    </span>
+                                </div>
+                                <div class="mt-1 flex flex-wrap items-center justify-between gap-x-3 text-xs text-stone-400">
+                                    <span>
+                                        {{ $change->created_at->format('d.m.Y') }}
+                                        @if ($change->fromPayment())
+                                            · opłacony
+                                            @if ($change->payment?->invoicePdfUrl())
+                                                · <a href="{{ $change->payment->invoicePdfUrl() }}" target="_blank" rel="noopener" class="font-medium text-stone-600 underline decoration-amber-300 underline-offset-2">faktura{{ filled($change->payment->invoice_number) ? ' '.$change->payment->invoice_number : '' }}</a>
+                                            @endif
+                                        @else
+                                            · nadany przez Kramio
+                                        @endif
+                                    </span>
+                                    <span>
+                                        @if ($change->comped)
+                                            <span class="text-emerald-700">dostęp bezpłatny</span>
+                                        @elseif ($change->ends_at !== null)
+                                            ważny do {{ $change->ends_at->format('d.m.Y') }}
+                                        @else
+                                            bez terminu
+                                        @endif
+                                    </span>
+                                </div>
+                            </li>
+                        @endforeach
+
+                        {{-- Nieudane próby: nie zmieniły pakietu, więc nie ma ich
+                             w logu zmian, ale sprzedawca ma prawo wiedzieć. --}}
+                        @foreach ($failedPayments as $payment)
+                            <li class="rounded-2xl border border-stone-200 bg-white/60 px-4 py-3 text-sm">
+                                <div class="flex items-center justify-between gap-3">
+                                    <span class="font-medium text-stone-800">{{ config('shop.packages.'.$payment->target_package.'.name', $payment->target_package) }}</span>
+                                    <span class="shrink-0 font-semibold tabular-nums text-stone-400">{{ \App\Support\Money::pln($payment->amount) }}</span>
                                 </div>
                                 <div class="mt-1 flex items-center justify-between gap-3 text-xs text-stone-400">
                                     <span>{{ $payment->created_at->format('d.m.Y') }}</span>
-                                    @if ($payment->status === \App\Models\PackagePayment::STATUS_PAID)
-                                        <span class="text-emerald-700">opłacony · ważny do {{ $payment->new_ends_at->format('d.m.Y') }}</span>
-                                    @elseif ($payment->status === 'failed')
-                                        <span class="text-rose-600">płatność nieudana</span>
-                                    @else
-                                        <span class="text-amber-700">czeka na potwierdzenie</span>
-                                    @endif
+                                    <span class="text-rose-600">płatność nieudana</span>
                                 </div>
                             </li>
                         @endforeach

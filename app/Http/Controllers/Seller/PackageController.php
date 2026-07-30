@@ -54,14 +54,22 @@ class PackageController extends Controller
             'contactEmail' => config('company.email') ?: config('mail.from.address'),
             // Zakup online działa dopiero ze skonfigurowanym kontem platformy —
             // bez niego ekran pokazuje ścieżkę kontaktową, żadnych martwych przycisków.
-            'onlinePurchase' => filled(config('services.paynow.platform.api_key')),
+            // Zakup wymaga DWÓCH rzeczy: konta płatniczego platformy i danych
+            // do faktury. Bez drugiego wzięlibyśmy pieniądze, których nie da się
+            // udokumentować — dlatego blokujemy przed płatnością, nie po.
+            'onlinePurchase' => filled(config('services.paynow.platform.api_key')) && $shop->canBeInvoicedForPackage(),
+            'invoiceRecipient' => $shop->packageInvoiceRecipient(),
+            'invoiceDataMissing' => ! $shop->canBeInvoicedForPackage(),
             // NAJNOWSZA płatność (nie „najnowsza pending"): po odrzuceniu ekran ma
             // powiedzieć „nie udało się, spróbuj ponownie", a ponowienie tworzy
             // nowszy wiersz, który naturalnie przejmuje baner.
             'latestPayment' => $shop->packagePayments()->whereNotNull('payment_id')->latest('id')->first(),
-            // Historia opłat za pakiety — log z kwotami i terminami. Bez
-            // wierszy-sierot po nieudanym starcie bramki (brak payment_id).
-            'payments' => $shop->packagePayments()->whereNotNull('payment_id')->get(),
+            // Historia PAKIETU: zmiany z płatności i nadane ręcznie, plus
+            // nieudane próby płatności (żeby sprzedawca wiedział, że coś nie
+            // przeszło). Sieroty po nieudanym starcie bramki pomijamy.
+            'changes' => $shop->packageChanges()->with('payment')->get(),
+            'failedPayments' => $shop->packagePayments()
+                ->where('status', 'failed')->whereNotNull('payment_id')->get(),
         ]);
     }
 
@@ -76,6 +84,13 @@ class PackageController extends Controller
 
         abort_if($shop === null, 404);
         abort_unless(array_key_exists($package, config('shop.packages')), 404);
+
+        // Twarda bramka: bez danych do faktury nie przyjmujemy płatności.
+        if (! $shop->canBeInvoicedForPackage()) {
+            return redirect()
+                ->route('seller.package.show')
+                ->with('error', 'Uzupełnij dane do faktury w „Mój sklep", zanim kupisz pakiet — bez nich nie wystawimy dokumentu.');
+        }
 
         $redirectUrl = $payments->start($shop, $package, route('seller.package.show', ['platnosc' => 'powrot']));
 

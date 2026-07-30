@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\MailPriority;
+use App\Jobs\GeneratePackageInvoice;
 use App\Models\EmailMessage;
 use App\Models\PackagePayment;
 use App\Models\Shop;
@@ -109,6 +110,8 @@ class PackagePaymentService
             'applied_at' => now(),
         ])->save();
 
+        $shop->refresh()->recordPackageChange(\App\Models\PackageChange::SOURCE_PAYMENT, $payment);
+
         Log::channel('paynow')->info('Pakiet ustawiony po wpłacie.', [
             'shop_id' => $shop->id,
             'package' => $payment->target_package,
@@ -116,6 +119,48 @@ class PackagePaymentService
         ]);
 
         $this->mailPackageActivated($shop->fresh(), $payment);
+
+        // Faktura w tle: sprzedawca nie czeka na Fakturownię, a webhook Paynow
+        // dostaje szybką odpowiedź (operator ponawia powiadomienia po timeoucie).
+        GeneratePackageInvoice::dispatch($payment->fresh());
+    }
+
+    /**
+     * Mail z gotową fakturą — osobno od podziękowania, bo dokument powstaje
+     * chwilę później (job w kolejce). Przycisk prowadzi wprost do PDF-a.
+     */
+    public function mailInvoiceReady(PackagePayment $payment): void
+    {
+        $owner = $payment->shop->owner;
+        $pdfUrl = $payment->invoicePdfUrl();
+
+        if ($owner === null || $pdfUrl === null) {
+            return;
+        }
+
+        $number = filled($payment->invoice_number) ? ' nr '.$payment->invoice_number : '';
+
+        EmailMessage::create([
+            'priority' => MailPriority::Mid,
+            'to_email' => $owner->email,
+            'to_name' => trim($owner->name.' '.$owner->surname),
+            'subject' => 'Faktura'.$number.' za pakiet — Kramio',
+            'preheader' => 'Twoja faktura za pakiet jest gotowa.',
+            'heading' => 'Faktura za pakiet',
+            'greeting' => Vocative::greeting($owner->name),
+            'intro_lines' => [
+                [
+                    'Do opłaty za pakiet **'.config("shop.packages.{$payment->target_package}.name").'** wystawiliśmy fakturę'
+                        .($number !== '' ? ' **'.trim($number).'**' : '').'.',
+                    'Kwota: **'.Money::pln($payment->amount).'**.',
+                ],
+            ],
+            'action_text' => 'Pobierz fakturę',
+            'action_url' => $pdfUrl,
+            'outro_lines' => [
+                'Masz pytania do faktury? Odpowiedz na tę wiadomość.',
+            ],
+        ]);
     }
 
     /**

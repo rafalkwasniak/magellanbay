@@ -176,6 +176,49 @@ class Shop extends Model
     }
 
     /**
+     * Historia pakietu — zmiany z płatności ORAZ nadane ręcznie, najnowsze
+     * pierwsze.
+     *
+     * @return HasMany<PackageChange, $this>
+     */
+    public function packageChanges(): HasMany
+    {
+        return $this->hasMany(PackageChange::class)->latest('id');
+    }
+
+    /**
+     * Zapisuje BIEŻĄCY stan pakietu do historii. Wołane po każdej zmianie —
+     * z konsoli admina i po zaksięgowanej wpłacie.
+     *
+     * Nie zapisuje wpisu, gdy stan jest identyczny z ostatnim (ten sam pakiet,
+     * cena, termin i `comped`): admin klika „Zapisz" także po zmianie samych
+     * uprawnień, a wtedy historia pakietu nie ma o czym mówić.
+     */
+    public function recordPackageChange(string $source, ?PackagePayment $payment = null): ?PackageChange
+    {
+        $last = $this->packageChanges()->first();
+
+        $unchanged = $last !== null
+            && $last->package === $this->package
+            && (float) $last->price_yearly === (float) $this->price_yearly
+            && $last->ends_at?->format('Y-m-d H:i') === $this->subscription_ends_at?->format('Y-m-d H:i')
+            && $last->comped === (bool) $this->comped;
+
+        if ($unchanged) {
+            return null;
+        }
+
+        return $this->packageChanges()->create([
+            'package_payment_id' => $payment?->id,
+            'package' => $this->package,
+            'price_yearly' => $this->price_yearly ?? 0,
+            'ends_at' => $this->subscription_ends_at,
+            'source' => $source,
+            'comped' => (bool) $this->comped,
+        ]);
+    }
+
+    /**
      * Alokuje kolejny numer zamówienia tego sklepu — atomowo, przez blokadę
      * wiersza sklepu (unika kolizji przy równoczesnych zamówieniach). Numeracja
      * jest ciągła i nieodzyskiwana: licznik rośnie niezależnie od anulowania czy
@@ -249,6 +292,73 @@ class Shop extends Model
         }
 
         return true;
+    }
+
+    /**
+     * Dane nabywcy NASZEJ faktury za pakiet (Kramio → sprzedawca). Bierzemy je
+     * z danych sklepu, bo sprzedawca już je tam wpisał — nie pytamy drugi raz
+     * o to samo przy zakupie.
+     *
+     * Bez NIP-u i nazwy firmy wychodzi **faktura imienna** na właściciela konta:
+     * część sprzedawców to osoby fizyczne (rękodzieło) i one też muszą móc kupić
+     * pakiet. Adres jest jednak OBOWIĄZKOWY — faktura bez niego jest nieważna,
+     * stąd `canBeInvoicedForPackage()`.
+     *
+     * @return array{name: string, nip: string|null, street: string|null, postal_code: string|null, city: string|null, country: string|null, personal: bool}
+     */
+    public function packageInvoiceRecipient(): array
+    {
+        $owner = $this->owner;
+        $company = trim((string) $this->company_name);
+        $nip = trim((string) $this->nip);
+
+        return [
+            'name' => $company !== ''
+                ? $company
+                : trim(($owner?->name ?? '').' '.($owner?->surname ?? '')),
+            'nip' => $nip !== '' ? $nip : null,
+            'street' => $this->streetLine(),
+            'postal_code' => $this->postal_code,
+            'city' => $this->city,
+            'country' => $this->country ?: 'PL',
+            // Faktura imienna = brak danych firmowych. UI mówi o tym wprost,
+            // żeby nikt nie odkrył tego dopiero na dokumencie.
+            'personal' => $company === '' || $nip === '',
+        ];
+    }
+
+    /**
+     * Czy da się wystawić sprzedawcy fakturę za pakiet. Wymagany jest adres
+     * (ulica z numerem, kod, miasto) oraz nazwa nabywcy — firmowa albo imię
+     * i nazwisko właściciela. Bez tego blokujemy ZAKUP, nie tylko fakturę:
+     * lepiej zatrzymać przed płatnością niż wziąć pieniądze i nie móc
+     * udokumentować sprzedaży.
+     */
+    public function canBeInvoicedForPackage(): bool
+    {
+        $recipient = $this->packageInvoiceRecipient();
+
+        return filled($recipient['name'])
+            && filled($recipient['street'])
+            && filled($recipient['postal_code'])
+            && filled($recipient['city']);
+    }
+
+    /**
+     * Ulica z numerem domu i lokalu, BEZ kodu i miasta — faktura trzyma je
+     * w osobnych polach. Nie mylić z `addressLine()`, które składa cały adres
+     * w jedną linię do wyświetlenia.
+     */
+    private function streetLine(): ?string
+    {
+        if (blank($this->street) || blank($this->building_number)) {
+            return null;
+        }
+
+        $house = trim((string) $this->building_number)
+            .(filled($this->apartment_number) ? '/'.trim((string) $this->apartment_number) : '');
+
+        return trim($this->street).' '.$house;
     }
 
     /**

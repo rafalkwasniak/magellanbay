@@ -43,4 +43,29 @@ class PackagePayment extends Model
     {
         return $this->applied_at !== null;
     }
+
+    /**
+     * Czy faktura za tę opłatę już powstała. `invoice_id` jest gardem
+     * idempotencji — wystawiamy dokładnie raz.
+     */
+    public function hasInvoice(): bool
+    {
+        return filled($this->invoice_id);
+    }
+
+    /**
+     * Publiczny link do PDF faktury w Fakturowni (`{konto}/invoice/{token}.pdf`).
+     * Token nie wymaga api_token, więc link działa wprost ze skrzynki. null, gdy
+     * FV jeszcze nie ma albo brak konfiguracji konta platformy.
+     */
+    public function invoicePdfUrl(): ?string
+    {
+        $accountUrl = config('services.fakturownia.url');
+
+        if (blank($this->invoice_token) || blank($accountUrl)) {
+            return null;
+        }
+
+        return rtrim($accountUrl, '/').'/invoice/'.$this->invoice_token.'.pdf';
+    }
 }

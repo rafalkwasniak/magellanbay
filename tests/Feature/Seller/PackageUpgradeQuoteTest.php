@@ -39,7 +39,7 @@ class PackageUpgradeQuoteTest extends TestCase
 
     private function shopOn(string $package, array $attributes = []): Shop
     {
-        return Shop::factory()->create([
+        return Shop::factory()->withInvoiceData()->create([
             'package' => $package,
             'entitlements' => config("shop.packages.{$package}.entitlements"),
             'price_yearly' => config("shop.packages.{$package}.price_yearly"),

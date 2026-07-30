@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\VatRate;
 use App\Models\Order;
+use App\Models\PackagePayment;
 use App\Support\DiscountAllocation;
 use App\Support\Money;
 use Illuminate\Support\Facades\Http;
@@ -101,6 +102,120 @@ class FakturowniaService
             'token' => $data['token'] ?? null,
             'view_url' => $data['view_url'] ?? null,
         ];
+    }
+
+    /**
+     * Faktura KRAMIO za pakiet (my → sprzedawca). Konto PLATFORMY z `.env`
+     * (`services.fakturownia`), nie integracja sklepu: sprzedawca jest tu
+     * NABYWCĄ, a nie wystawcą.
+     *
+     * Nabywcę bierzemy z danych sklepu (`packageInvoiceRecipient()`): z NIP-em
+     * wychodzi faktura firmowa, bez niego imienna. Kwota jest BRUTTO z migawki
+     * opłaty — ta sama, którą sprzedawca zapłacił.
+     *
+     * @return array{id: mixed, number: mixed, token: mixed, view_url: mixed}|null
+     */
+    public function createPackageInvoice(PackagePayment $payment): ?array
+    {
+        $accountUrl = config('services.fakturownia.url');
+        $token = config('services.fakturownia.token');
+
+        if (blank($accountUrl) || blank($token)) {
+            Log::channel('fakturownia')->warning('FV pakietu pominięta: brak konfiguracji platformy.', [
+                'payment_id' => $payment->id,
+            ]);
+
+            return null;
+        }
+
+        $payload = $this->buildPackageInvoicePayload($payment);
+
+        Log::channel('fakturownia')->info('FV pakietu: wysyłka żądania.', [
+            'payment_id' => $payment->id,
+            'invoice' => $payload['invoice'],
+        ]);
+
+        try {
+            $response = Http::acceptJson()
+                ->timeout(20)
+                ->post(rtrim($accountUrl, '/').'/invoices.json', ['api_token' => $token] + $payload);
+        } catch (\Throwable $e) {
+            Log::channel('fakturownia')->error('FV pakietu: wyjątek połączenia.', [
+                'payment_id' => $payment->id,
+                'message' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
+
+        if (! $response->successful()) {
+            Log::channel('fakturownia')->error('FV pakietu: Fakturownia zwróciła błąd.', [
+                'payment_id' => $payment->id,
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+
+            return null;
+        }
+
+        $data = $response->json();
+
+        Log::channel('fakturownia')->info('FV pakietu: faktura utworzona.', [
+            'payment_id' => $payment->id,
+            'invoice_id' => $data['id'] ?? null,
+            'number' => $data['number'] ?? null,
+        ]);
+
+        return [
+            'id' => $data['id'] ?? null,
+            'number' => $data['number'] ?? null,
+            'token' => $data['token'] ?? null,
+            'view_url' => $data['view_url'] ?? null,
+        ];
+    }
+
+    /**
+     * Ciało faktury za pakiet: jedna pozycja usługowa (roczny abonament) w kwocie
+     * brutto z migawki, VAT 23%. `status: paid` — pieniądze już wpłynęły przez
+     * bramkę, więc dokument od razu jest rozliczony.
+     *
+     * @return array{invoice: array<string, mixed>}
+     */
+    public function buildPackageInvoicePayload(PackagePayment $payment): array
+    {
+        $today = now()->toDateString();
+        $recipient = $payment->shop->packageInvoiceRecipient();
+        $packageName = config("shop.packages.{$payment->target_package}.name", $payment->target_package);
+
+        $invoice = [
+            'kind' => 'vat',
+            'sell_date' => $today,
+            'issue_date' => $today,
+            'payment_to' => $today,
+            'status' => 'paid',
+            'payment_type' => 'transfer',
+            'buyer_name' => $recipient['name'],
+            'buyer_tax_no' => $recipient['nip'],
+            'buyer_street' => $recipient['street'],
+            'buyer_post_code' => $recipient['postal_code'],
+            'buyer_city' => $recipient['city'],
+            'buyer_country' => $recipient['country'],
+            'buyer_email' => $payment->shop->owner?->email,
+            'positions' => [[
+                'name' => 'Kramio — pakiet '.$packageName.' (abonament roczny do '.$payment->new_ends_at->format('d.m.Y').')',
+                'tax' => 23,
+                'quantity' => 1,
+                'quantity_unit' => 'szt.',
+                'total_price_gross' => (float) $payment->amount,
+            ]],
+            // Ślad zniżki za niewykorzystany okres — bez niej nie dałoby się
+            // odtworzyć, dlaczego kwota jest niższa niż cennikowa.
+            'description' => (float) $payment->credit > 0
+                ? 'Uwzględniono zniżkę '.Money::pln($payment->credit).' za niewykorzystany okres poprzedniego pakietu.'
+                : null,
+        ];
+
+        return ['invoice' => array_filter($invoice, fn ($value): bool => $value !== null)];
     }
 
     /**

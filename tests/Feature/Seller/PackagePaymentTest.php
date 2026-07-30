@@ -44,7 +44,9 @@ class PackagePaymentTest extends TestCase
     private function sellerOn(string $package, array $attributes = []): array
     {
         $seller = User::factory()->consented()->create();
-        $shop = Shop::factory()->create([
+        // `withInvoiceData`: bez danych do faktury zakup jest ZABLOKOWANY, więc
+        // każdy test płatności musi mieć sklep gotowy do fakturowania.
+        $shop = Shop::factory()->withInvoiceData()->create([
             'owner_id' => $seller->id,
             'package' => $package,
             'entitlements' => config("shop.packages.{$package}.entitlements"),
@@ -300,7 +302,7 @@ class PackagePaymentTest extends TestCase
         // ładuje użytkownika świeżo).
         $this->actingAs($seller->fresh())->get(route('seller.package.show'))
             ->assertOk()
-            ->assertSee('Historia opłat')
+            ->assertSee('Historia pakietu')
             ->assertSee('płatność nieudana')
             ->assertSee('ważny do 30.07.2027')
             // Opłata, z której wynika bieżący pakiet — z plakietką.
@@ -317,6 +319,60 @@ class PackagePaymentTest extends TestCase
             ->assertOk()
             ->assertSee('przyciski „Kup" znajdziesz przy pakietach powyżej', false)
             ->assertDontSee('Napisz do nas, a przestawimy');
+    }
+
+    public function test_shop_without_invoice_data_cannot_buy(): void
+    {
+        $this->fakePaynow();
+        $seller = User::factory()->consented()->create();
+        // Sklep bez adresu — faktury nie da się wystawić, więc nie bierzemy pieniędzy.
+        $shop = Shop::factory()->create(['owner_id' => $seller->id, 'package' => 'stall']);
+
+        $this->actingAs($seller)->get(route('seller.package.show'))
+            ->assertOk()
+            ->assertSee('Uzupełnij nazwę i adres')
+            ->assertDontSee('Kup Stragan');
+
+        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']))
+            ->assertRedirect(route('seller.package.show'))
+            ->assertSessionHas('error');
+
+        $this->assertSame(0, $shop->packagePayments()->count());
+        Http::assertNothingSent();
+    }
+
+    public function test_shop_without_company_data_buys_with_a_personal_invoice(): void
+    {
+        $this->fakePaynow();
+        $seller = User::factory()->consented()->create(['name' => 'Anna', 'surname' => 'Kowalska']);
+        // Osoba fizyczna (rękodzieło): brak NIP-u nie blokuje — faktura imienna.
+        $shop = Shop::factory()->withPersonalInvoiceData()->create(['owner_id' => $seller->id, 'package' => 'stall']);
+
+        $this->actingAs($seller)->get(route('seller.package.show'))
+            ->assertOk()
+            ->assertSee('fakturę imienną')
+            ->assertSee('Anna Kowalska')
+            ->assertSee('Kup Stragan');
+
+        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']))
+            ->assertRedirect('https://sandbox.paynow.pl/pay/PAY-123');
+
+        $this->assertSame(1, $shop->packagePayments()->count());
+    }
+
+    public function test_invoice_recipient_is_shown_before_paying(): void
+    {
+        $this->fakePaynow();
+        [$seller] = $this->sellerOn('stall');
+
+        // Sprzedawca widzi, na co pójdzie dokument, ZANIM zapłaci.
+        $this->actingAs($seller)->get(route('seller.package.show'))
+            ->assertOk()
+            ->assertSee('Dane do faktury')
+            ->assertSee('Kwiaciarnia Anna Kowalska')
+            ->assertSee('NIP 1234563218')
+            ->assertSee('Polna 7')
+            ->assertSee('00-001 Warszawa');
     }
 
     public function test_without_platform_keys_there_are_no_buy_buttons(): void

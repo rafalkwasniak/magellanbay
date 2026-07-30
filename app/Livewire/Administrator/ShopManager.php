@@ -153,6 +153,11 @@ class ShopManager extends Component
             'comped' => $this->comped,
         ])->save();
 
+        // Historia pakietu: ręczne nadanie musi być widoczne dla sprzedawcy,
+        // inaczej pakiet w panelu wygląda, jakby wziął się z powietrza.
+        // Metoda sama pomija wpis, gdy zmieniły się tylko uprawnienia.
+        $this->shop->refresh()->recordPackageChange(\App\Models\PackageChange::SOURCE_ADMIN);
+
         session()->flash('success', 'Zapisano ustawienia sklepu „'.$this->shop->name.'".');
 
         $this->redirect(route('administrator.shops.edit', $this->shop), navigate: false);
