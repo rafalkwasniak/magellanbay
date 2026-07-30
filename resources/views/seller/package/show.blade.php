@@ -5,6 +5,10 @@
     @php($grace = $shop->inSubscriptionGrace())
     @php($endsAt = $shop->subscription_ends_at)
     @php($daysLeft = $endsAt !== null && $active && ! $grace && ! $shop->comped ? (int) now()->startOfDay()->diffInDays($endsAt->copy()->startOfDay(), false) : null)
+    {{-- Czy któryś box już mówi o terminie (a więc niesie przycisk przedłużenia).
+         Jeśli tak, karta „Przedłużenie" w kolumnie obok się nie pokazuje — dwa
+         identyczne przyciski na jednym ekranie tylko rozmywają akcję. --}}
+    @php($termNoticeShown = ! $active || $grace || ($daysLeft !== null && $daysLeft <= (int) config('shop.subscription.notice_days')))
 
     <div class="grid gap-6 lg:grid-cols-12">
         <div class="space-y-6 lg:col-span-8">
@@ -90,6 +94,7 @@
                             Sklep i zamówienia działają dalej — wyłączone są funkcje płatnego pakietu, a produkty ponad limit są
                             ukryte (nic nie zostało usunięte). Po opłaceniu wszystko wraca takie, jak było, razem z ustawieniami.
                         </p>
+                        @include('seller.package._renew')
                     </div>
                 @elseif ($grace)
                     {{-- Karencja: termin minął, ale funkcje jeszcze działają.
@@ -102,6 +107,7 @@
                             sklep zejdzie na zasady pakietu {{ config('shop.packages.'.config('shop.default_package').'.name') }},
                             a produkty ponad limit zostaną ukryte — do odwrócenia jedną opłatą.
                         </p>
+                        @include('seller.package._renew')
                     </div>
                 @elseif ($daysLeft !== null && $daysLeft <= (int) config('shop.subscription.notice_days'))
                     {{-- Ostatni tydzień na czerwono: żółty przez cały miesiąc
@@ -117,12 +123,12 @@
                             @endif
                             — {{ $endsAt->format('d.m.Y') }}
                         </p>
-                        <p class="mt-1 text-xs {{ $urgent ? 'text-rose-800' : 'text-amber-800' }}">
-                            Napisz do nas, żeby przedłużyć — zdążymy bez przerwy w działaniu sklepu.
-                            @if ($urgent)
+                        @if ($urgent)
+                            <p class="mt-1 text-xs text-rose-800">
                                 Po terminie masz jeszcze {{ (int) config('shop.subscription.grace_days') }} dni karencji, więc sklep nie wyłączy się nagle.
-                            @endif
-                        </p>
+                            </p>
+                        @endif
+                        @include('seller.package._renew')
                     </div>
                 @endif
             </div>
@@ -162,7 +168,9 @@
                                     <p class="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
                                         Zmiana teraz: <span class="font-semibold">{{ \App\Support\Money::pln($quote['amount']) }}</span>
                                         <span class="block text-xs text-amber-800">
-                                            rok w nowym pakiecie minus {{ \App\Support\Money::pln($quote['credit']) }} zniżki
+                                            {{-- Zniżka z RÓŻNICY kwot: cena roku minus to, co widać wyżej.
+                                                 Surowa proporcja nie domykałaby rachunku po zaokrągleniu. --}}
+                                            rok w nowym pakiecie minus {{ \App\Support\Money::pln(\App\Support\PackageUpgrade::discountShown($quote)) }} zniżki
                                             za {{ $quote['days_left'] }} {{ trans_choice('{1}niewykorzystany dzień|[2,4]niewykorzystane dni|[5,*]niewykorzystanych dni', $quote['days_left']) }}
                                         </span>
                                         <span class="mt-1 block text-xs text-amber-800">Nowy termin: {{ $quote['new_ends_at']->format('d.m.Y') }}</span>
@@ -177,11 +185,13 @@
                                 @if ($onlinePurchase && $quote !== null && $quote['amount'] > 0)
                                     <form method="POST" action="{{ route('seller.package.purchase', ['package' => $package['key']]) }}" class="mt-3">
                                         @csrf
+                                        {{-- `inline-flex`, nie `w-full`: przycisk ma być przyciskiem,
+                                             nie paskiem przez całą kartę (tak jak przy przedłużeniu). --}}
                                         <button type="submit"
-                                            class="w-full rounded-2xl bg-gradient-to-br from-amber-500 to-rose-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-rose-500/20 transition hover:brightness-105">
+                                            class="inline-flex rounded-2xl bg-gradient-to-br from-amber-500 to-rose-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-rose-500/20 transition hover:brightness-105">
                                             Kup {{ $package['name'] }} — {{ \App\Support\Money::pln($quote['amount']) }}
                                         </button>
-                                        <p class="mt-1.5 text-center text-xs text-stone-400">BLIK, karta lub szybki przelew (Paynow)</p>
+                                        <p class="mt-1.5 text-xs text-stone-400">BLIK, karta lub szybki przelew (Paynow)</p>
                                     </form>
                                 @endif
                                 <ul class="mt-4 space-y-2 text-sm">
@@ -270,8 +280,23 @@
                 </div>
             </div>
 
-            {{-- Zmiana pakietu: zakup online dojdzie osobno, więc mówimy wprost,
-                 jak to zrobić dziś, zamiast pokazywać martwy przycisk. --}}
+            {{-- Przedłużenie z wyprzedzeniem: sprzedawca ma móc opłacić rok, kiedy
+                 chce, nie tylko gdy ekran zaczyna o tym przypominać. Przy bliskim
+                 terminie przycisk siedzi już w boksie z przypomnieniem, więc tej
+                 karty wtedy nie pokazujemy. --}}
+            @if ($renewal['kind'] === 'renewal' && ! $termNoticeShown)
+                <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                    <h2 class="font-semibold text-stone-900">Przedłużenie</h2>
+                    <p class="mt-2 text-sm text-stone-500">
+                        Rok <span class="font-medium text-stone-700">dokleja się do obecnego terminu</span> — płacąc teraz,
+                        nie tracisz ani jednego opłaconego dnia.
+                    </p>
+                    @include('seller.package._renew')
+                </div>
+            @endif
+
+            {{-- Zmiana pakietu na wyższy: kwoty wprost, żeby sprzedawca decydował
+                 na podstawie liczb, nie domysłów. --}}
             <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
                 <h2 class="font-semibold text-stone-900">Zmiana pakietu</h2>
 
@@ -304,7 +329,7 @@
                         <p class="mt-3 text-xs text-stone-400">
                             Zniżka to Twoja opłata roczna × {{ $sample['days_left'] }}
                             {{ trans_choice('{1}dzień|[2,4]dni|[5,*]dni', $sample['days_left']) }} ÷ 365
-                            (dziś {{ \App\Support\Money::pln($sample['credit']) }}), zaokrąglone na Twoją korzyść.
+                            (dziś {{ \App\Support\Money::pln(\App\Support\PackageUpgrade::discountShown($sample)) }}), zaokrąglone na Twoją korzyść.
                             Im wcześniej zmienisz pakiet, tym większa zniżka.
                         </p>
                     @endif
@@ -320,10 +345,26 @@
                 @else
                     <p class="mt-2 text-sm text-stone-500">
                         Masz najwyższy pakiet — wyżej już nic nie ma.
+                        @if ($renewal['kind'] === 'renewal')
+                            Zostaje przedłużenie o kolejny rok — {{ \App\Support\Money::pln($renewal['amount']) }}.
+                        @endif
                     </p>
+                    {{-- Zejście niżej: mówimy OD KIEDY, a nie „napisz do nas".
+                         Przycisk pojawia się w oknie odnowienia (≤ 30 dni do końca),
+                         bo tylko wtedy zniżka za resztówkę nie robi się większa od
+                         kwoty do zapłaty. --}}
                     <p class="mt-2 text-xs text-stone-400">
-                        Gdybyś chciał zejść niżej: obniżka wchodzi przy odnowieniu, a do końca opłaconego terminu korzystasz
-                        z tego, co masz — <a href="mailto:{{ $contactEmail }}?subject={{ rawurlencode('Zmiana pakietu — '.$shop->name) }}" class="font-medium text-stone-600 underline decoration-amber-300 underline-offset-2">daj nam znać</a>.
+                        @if ($downsizes !== [])
+                            Chcesz zejść na mniejszy pakiet? Kupisz go przyciskiem w boksie o terminie — mniejsze limity wchodzą od razu,
+                            a resztę obecnego okresu odliczamy jako zniżkę.
+                        @elseif ($endsAt !== null && $shop->priceYearly() > 0 && ! $shop->comped)
+                            Na mniejszy pakiet przejdziesz w ostatnich {{ (int) config('shop.subscription.notice_days') }} dniach abonamentu,
+                            czyli od {{ $endsAt->copy()->subDays((int) config('shop.subscription.notice_days'))->format('d.m.Y') }} —
+                            wcześniej nie ma sensu, bo płacisz za okres, który jeszcze trwa.
+                        @else
+                            Zmiana na mniejszy pakiet wchodzi przy odnowieniu —
+                            <a href="mailto:{{ $contactEmail }}?subject={{ rawurlencode('Zmiana pakietu — '.$shop->name) }}" class="font-medium text-stone-600 underline decoration-amber-300 underline-offset-2">daj nam znać</a>.
+                        @endif
                     </p>
                 @endif
             </div>

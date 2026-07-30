@@ -45,6 +45,13 @@ class PackageController extends Controller
             // Wycena przejścia na każdy droższy pakiet — sprzedawca ma widzieć
             // kwotę, nie musieć o nią pytać.
             'quotes' => PackageUpgrade::upgradeQuotes($shop),
+            // Przedłużenie TEGO SAMEGO pakietu — osobno od wycen wyższych, bo
+            // rządzi się inną regułą terminu (rok dokleja się do posiadanego).
+            'renewal' => PackageUpgrade::renewal($shop),
+            // Zejście niżej WYŁĄCZNIE w oknie odnowienia (≤ 30 dni do końca albo
+            // po terminie) — poza nim lista jest pusta i ekran o tym nie mówi
+            // przyciskiem, tylko zdaniem „od kiedy".
+            'downsizes' => PackageUpgrade::downsizeQuotes($shop),
             'usage' => [
                 'products' => $shop->products()->count(),
                 'products_limit' => $productLimit,

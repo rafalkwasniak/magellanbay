@@ -139,6 +139,54 @@ class PackageScreenTest extends TestCase
             ->assertSee('bg-amber-50 text-amber-900', escape: false);
     }
 
+    public function test_the_top_package_can_be_renewed_instead_of_upgraded(): void
+    {
+        // Dotąd Pawilon dostawał tylko „napisz do nas" — płatność istniała, ale
+        // nie dla przedłużenia. Teraz kupuje je z ekranu.
+        [$seller] = $this->sellerWith('pavilion', ['subscription_ends_at' => now()->addMonths(6)]);
+
+        $this->actingAs($seller)->get(route('seller.package.show'))
+            ->assertOk()
+            ->assertSee('Przedłużenie')
+            ->assertSee('Przedłuż o rok — 1 500,00 zł')
+            // Rok dokleja się do terminu, a nie liczy od dziś.
+            ->assertSee('Opłacone do '.now()->addMonths(6)->addYear()->format('d.m.Y'))
+            ->assertDontSee('Napisz do nas, żeby przedłużyć');
+    }
+
+    public function test_the_expiry_reminder_carries_the_renewal_button(): void
+    {
+        // Blisko terminu przycisk jest TAM, gdzie sprzedawca patrzy — w boksie
+        // z przypomnieniem. Osobna karta „Przedłużenie" wtedy nie dubluje akcji.
+        [$seller] = $this->sellerWith('booth', ['subscription_ends_at' => now()->addDays(5)]);
+
+        $this->actingAs($seller)->get(route('seller.package.show'))
+            ->assertOk()
+            ->assertSee('Przedłuż o rok — 750,00 zł')
+            ->assertDontSee('Przedłużenie</h2>', escape: false);
+    }
+
+    public function test_grace_and_expired_shops_are_offered_the_renewal_too(): void
+    {
+        foreach ([now()->subDay(), now()->subDays(30)] as $endsAt) {
+            [$seller] = $this->sellerWith('pavilion', ['subscription_ends_at' => $endsAt]);
+
+            $this->actingAs($seller)->get(route('seller.package.show'))
+                ->assertOk()
+                ->assertSee('Przedłuż o rok — 1 500,00 zł');
+        }
+    }
+
+    public function test_free_shop_is_not_offered_a_renewal(): void
+    {
+        // Kram nie ma czego przedłużać — dla niego drogą wyjścia jest zakup wyżej.
+        [$seller] = $this->sellerWith('stall');
+
+        $this->actingAs($seller)->get(route('seller.package.show'))
+            ->assertOk()
+            ->assertDontSee('Przedłuż o rok');
+    }
+
     public function test_reminder_stays_quiet_when_the_date_is_far_away(): void
     {
         [$seller] = $this->sellerWith('booth', ['subscription_ends_at' => now()->addMonths(6)]);

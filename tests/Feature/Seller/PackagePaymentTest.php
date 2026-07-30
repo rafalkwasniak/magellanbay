@@ -221,6 +221,139 @@ class PackagePaymentTest extends TestCase
         Http::assertNothingSent();
     }
 
+    public function test_renewal_of_the_same_package_extends_the_existing_term(): void
+    {
+        $this->fakePaynow();
+        // Pawilon opłacony do 30.09 przedłużany DZIŚ (29.07) — rok dokleja się
+        // do terminu, więc wychodzi 30.09.2027, a nie 29.07.2027.
+        [$seller, $shop] = $this->sellerOn('pavilion', ['subscription_ends_at' => Carbon::parse('2026-09-30')]);
+
+        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'pavilion']))
+            ->assertRedirect('https://sandbox.paynow.pl/pay/PAY-123');
+
+        $payment = $shop->packagePayments()->firstOrFail();
+        $this->assertSame('pavilion', $payment->target_package);
+        $this->assertSame('1500.00', $payment->amount);
+        $this->assertSame('2027-09-30', $payment->new_ends_at->format('Y-m-d'));
+
+        $this->webhook('PAY-123', 'CONFIRMED')->assertOk();
+
+        $shop->refresh();
+        $this->assertSame('pavilion', $shop->package);
+        $this->assertSame('2027-09-30', $shop->subscription_ends_at->format('Y-m-d'));
+    }
+
+    public function test_renewal_mails_speak_of_extending_not_buying(): void
+    {
+        $this->fakePaynow();
+        [$seller, $shop] = $this->sellerOn('pavilion', ['subscription_ends_at' => Carbon::parse('2026-09-30')]);
+
+        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'pavilion']));
+
+        $started = \App\Models\EmailMessage::latest('id')->firstOrFail();
+        $this->assertStringContainsString('Przedłużenie pakietu Pawilon', $started->subject);
+        $this->assertStringContainsString('30.09.2027', json_encode($started->intro_lines, JSON_UNESCAPED_UNICODE));
+
+        $this->webhook('PAY-123', 'CONFIRMED')->assertOk();
+
+        $activated = \App\Models\EmailMessage::latest('id')->firstOrFail();
+        $this->assertStringContainsString('przedłużony do 30.09.2027', $activated->subject);
+        // „Kupiłeś" byłoby nieprawdą — sprzedawca nic nowego nie dostaje.
+        $this->assertStringNotContainsString('jest aktywny', $activated->subject);
+    }
+
+    public function test_renewal_does_not_overwrite_an_individual_price(): void
+    {
+        $this->fakePaynow();
+        // Cena indywidualna (900 zamiast 1500): przedłużenie idzie na warunkach
+        // sklepu i nie może po cichu podnieść ceny na kolejny rok.
+        [$seller, $shop] = $this->sellerOn('pavilion', [
+            'price_yearly' => 900,
+            'subscription_ends_at' => Carbon::parse('2026-09-30'),
+        ]);
+
+        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'pavilion']));
+
+        $this->assertSame('900.00', $shop->packagePayments()->firstOrFail()->amount);
+
+        $this->webhook('PAY-123', 'CONFIRMED')->assertOk();
+
+        $this->assertSame('900.00', $shop->fresh()->price_yearly);
+    }
+
+    public function test_downsize_drops_the_higher_package_features_and_hides_excess_products(): void
+    {
+        $this->fakePaynow();
+        // Pawilon 4 dni przed końcem, z ręcznie nadanym dodatkiem i 60 produktami.
+        [$seller, $shop] = $this->sellerOn('pavilion', [
+            'entitlements' => array_merge(config('shop.packages.pavilion.entitlements'), ['bulk_mail' => true]),
+            'subscription_ends_at' => Carbon::parse('2026-08-03'),
+        ]);
+        \App\Models\Product::factory()->count(60)->create(['shop_id' => $shop->id, 'is_active' => true]);
+
+        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']))
+            ->assertRedirect('https://sandbox.paynow.pl/pay/PAY-123');
+
+        // 750 − (1500 × 4/365 = 16,44) = 733,56 → 733.
+        $this->assertSame('733.00', $shop->packagePayments()->firstOrFail()->amount);
+
+        $this->webhook('PAY-123', 'CONFIRMED')->assertOk();
+
+        $shop->refresh();
+        $this->assertSame('booth', $shop->package);
+        $this->assertSame('750.00', $shop->price_yearly);
+        // Lepkość MUSI ustąpić, inaczej zejście byłoby pozorne.
+        $this->assertFalse($shop->entitlement('bulk_mail'));
+        $this->assertFalse($shop->entitlement('order_editing'));
+        $this->assertSame(48, (int) $shop->entitlement('max_products'));
+        // Limit zmalał, więc nadwyżka schodzi z witryny — ale nic nie ginie.
+        $this->assertSame(48, $shop->products()->where('is_active', true)->count());
+        $this->assertSame(12, $shop->products()->whereNotNull('auto_hidden_at')->count());
+        $this->assertSame(60, $shop->products()->count());
+    }
+
+    public function test_downsize_mail_explains_the_hidden_products(): void
+    {
+        $this->fakePaynow();
+        [$seller, $shop] = $this->sellerOn('pavilion', ['subscription_ends_at' => Carbon::parse('2026-08-03')]);
+        \App\Models\Product::factory()->count(50)->create(['shop_id' => $shop->id, 'is_active' => true]);
+
+        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']));
+        $this->webhook('PAY-123', 'CONFIRMED')->assertOk();
+
+        $mail = \App\Models\EmailMessage::latest('id')->firstOrFail();
+        // Bez tego zdania sprzedawca szukałby, gdzie podziały się produkty.
+        $this->assertStringContainsString('2 produkty zostały ukryte', json_encode($mail->outro_lines, JSON_UNESCAPED_UNICODE));
+    }
+
+    public function test_downsize_outside_the_window_is_rejected_by_the_endpoint(): void
+    {
+        $this->fakePaynow();
+        // Nie wystarczy nie pokazywać przycisku — sam adres też musi odmówić.
+        [$seller, $shop] = $this->sellerOn('pavilion', ['subscription_ends_at' => Carbon::parse('2027-07-28')]);
+
+        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']))
+            ->assertRedirect(route('seller.package.show'))
+            ->assertSessionHas('error');
+
+        $this->assertSame(0, $shop->packagePayments()->count());
+        Http::assertNothingSent();
+    }
+
+    public function test_free_package_cannot_be_renewed(): void
+    {
+        $this->fakePaynow();
+        [$seller, $shop] = $this->sellerOn('stall');
+
+        // Kram jest darmowy — nie ma czego przedłużać za zero złotych.
+        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'stall']))
+            ->assertRedirect(route('seller.package.show'))
+            ->assertSessionHas('error');
+
+        $this->assertSame(0, $shop->packagePayments()->count());
+        Http::assertNothingSent();
+    }
+
     public function test_gateway_failure_marks_the_payment_failed(): void
     {
         Http::fake(['*/v1/payments' => Http::response(['error' => 'boom'], 500)]);

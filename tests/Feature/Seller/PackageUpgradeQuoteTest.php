@@ -150,6 +150,170 @@ class PackageUpgradeQuoteTest extends TestCase
         $this->assertSame(1500.0, $quotes['pavilion']['amount']);
     }
 
+    public function test_the_displayed_discount_closes_the_arithmetic(): void
+    {
+        // Rafał wyłapał: 16,44 zł zniżki obok 733 zł do zapłaty nie daje się
+        // zsumować w głowie (750 − 16,44 = 733,56). Pokazujemy RÓŻNICĘ kwot, więc
+        // rachunek zawsze się domyka — także przy przejściu wyżej.
+        $down = PackageUpgrade::quote(
+            $this->shopOn('pavilion', ['subscription_ends_at' => Carbon::parse('2026-08-02')]),
+            'booth',
+        );
+
+        $this->assertSame(733.0, $down['amount']);
+        $this->assertSame(16.44, $down['credit'], 'surowa proporcja zostaje w danych');
+        $this->assertSame(17.0, PackageUpgrade::discountShown($down));
+
+        $up = PackageUpgrade::quote(
+            $this->shopOn('booth', ['subscription_ends_at' => Carbon::parse('2026-09-30')]),
+            'pavilion',
+        );
+
+        $this->assertSame(1370.0, $up['amount']);
+        $this->assertSame(130.0, PackageUpgrade::discountShown($up));
+    }
+
+    public function test_downsize_is_refused_outside_the_renewal_window(): void
+    {
+        // Sedno zabezpieczenia: kto kupił Pawilon, nie zejdzie nazajutrz na
+        // Stragan po zniżce równej niemal całej wpłacie.
+        $shop = $this->shopOn('pavilion', ['subscription_ends_at' => Carbon::parse('2027-07-28')]);
+
+        $quote = PackageUpgrade::quote($shop, 'booth');
+
+        $this->assertSame('downgrade', $quote['kind']);
+        $this->assertSame(0.0, $quote['amount']);
+    }
+
+    public function test_downsize_in_the_window_costs_the_lower_price_minus_the_leftover(): void
+    {
+        // 30 dni do końca Pawilonu → Stragan. Zniżka: 1500 × 30/365 = 123,29,
+        // do zapłaty: 750 − 123,29 = 626,71 → 626 (zaokrąglone na korzyść klienta).
+        $shop = $this->shopOn('pavilion', ['subscription_ends_at' => Carbon::parse('2026-08-28')]);
+
+        $quote = PackageUpgrade::quote($shop, 'booth');
+
+        $this->assertSame('downsize', $quote['kind']);
+        $this->assertSame(30, $quote['days_left']);
+        $this->assertSame(123.29, $quote['credit']);
+        $this->assertSame(626.0, $quote['amount']);
+        // Resztówka się zużyła, więc rok liczy się od dziś — inaczej niż przy
+        // przedłużeniu tego samego pakietu.
+        $this->assertSame('2027-07-29', $quote['new_ends_at']->format('Y-m-d'));
+    }
+
+    public function test_the_window_boundary_is_exactly_thirty_days(): void
+    {
+        $inside = $this->shopOn('pavilion', ['subscription_ends_at' => Carbon::parse('2026-08-28')]);
+        $outside = $this->shopOn('pavilion', ['subscription_ends_at' => Carbon::parse('2026-08-29')]);
+
+        $this->assertSame('downsize', PackageUpgrade::quote($inside, 'booth')['kind']);
+        $this->assertSame('downgrade', PackageUpgrade::quote($outside, 'booth')['kind']);
+    }
+
+    public function test_expired_shop_pays_the_full_lower_price_with_no_discount(): void
+    {
+        $shop = $this->shopOn('pavilion', ['subscription_ends_at' => Carbon::parse('2026-01-29')]);
+
+        $quote = PackageUpgrade::quote($shop, 'booth');
+
+        $this->assertSame('downsize', $quote['kind']);
+        $this->assertSame(0.0, $quote['credit']);
+        $this->assertSame(750.0, $quote['amount']);
+    }
+
+    public function test_a_discount_can_never_swallow_the_whole_amount(): void
+    {
+        // Twarda blokada obok okna: cennik takiego przypadku nie zna, ale cena
+        // indywidualna z konsoli admina nie zna cennika. Zwrot gotówki nie ma się
+        // wydarzyć NIGDY, nie tylko „przy typowych cenach".
+        $shop = $this->shopOn('pavilion', [
+            'price_yearly' => 20000,
+            'subscription_ends_at' => Carbon::parse('2026-08-28'),
+        ]);
+
+        $this->assertSame('unavailable', PackageUpgrade::quote($shop, 'booth')['kind']);
+    }
+
+    public function test_the_free_package_cannot_be_bought_as_a_downsize(): void
+    {
+        // Zejście na Kram dzieje się samo przez wygaśnięcie — nie ma czego kupować.
+        $shop = $this->shopOn('booth', ['subscription_ends_at' => Carbon::parse('2026-08-01')]);
+
+        $this->assertSame('unavailable', PackageUpgrade::quote($shop, 'stall')['kind']);
+        $this->assertSame([], PackageUpgrade::downsizeQuotes($shop));
+    }
+
+    public function test_renewal_glues_a_year_to_the_existing_term(): void
+    {
+        // Płacę 30 dni przed końcem → mam opłacone przez 13 miesięcy, nie tracę
+        // tych 30 dni (decyzja Rafała). Pełna cena, bez zniżek.
+        $shop = $this->shopOn('pavilion', ['subscription_ends_at' => Carbon::parse('2026-08-28')]);
+
+        $quote = PackageUpgrade::renewal($shop);
+
+        $this->assertSame('renewal', $quote['kind']);
+        $this->assertSame(1500.0, $quote['amount']);
+        $this->assertSame(0.0, $quote['credit']);
+        $this->assertSame('2027-08-28', $quote['new_ends_at']->format('Y-m-d'));
+    }
+
+    public function test_paying_late_in_grace_shortens_the_year_by_those_days(): void
+    {
+        // 3 dni po terminie, wciąż w karencji: rok liczy się od TERMINU, więc
+        // wychodzi o te 3 dni krócej. Spóźnienie nie jest premiowane.
+        $shop = $this->shopOn('pavilion', ['subscription_ends_at' => Carbon::parse('2026-07-26')]);
+
+        $quote = PackageUpgrade::renewal($shop);
+
+        $this->assertSame('renewal', $quote['kind']);
+        $this->assertSame(1500.0, $quote['amount']);
+        $this->assertSame('2027-07-26', $quote['new_ends_at']->format('Y-m-d'));
+    }
+
+    public function test_renewal_after_the_subscription_lapsed_starts_a_fresh_year(): void
+    {
+        // Pół roku po wygaśnięciu doklejanie do starej daty sprzedałoby pół roku
+        // dostępu za cenę roku — dlatego liczymy od dziś.
+        $shop = $this->shopOn('pavilion', ['subscription_ends_at' => Carbon::parse('2026-01-29')]);
+
+        $quote = PackageUpgrade::renewal($shop);
+
+        $this->assertSame('2027-07-29', $quote['new_ends_at']->format('Y-m-d'));
+    }
+
+    public function test_renewal_charges_the_shops_own_price_not_the_list_one(): void
+    {
+        // Cena indywidualna: przedłużenie idzie na warunkach TEGO sklepu.
+        $shop = $this->shopOn('pavilion', [
+            'price_yearly' => 900,
+            'subscription_ends_at' => Carbon::parse('2026-08-28'),
+        ]);
+
+        $this->assertSame(900.0, PackageUpgrade::renewal($shop)['amount']);
+    }
+
+    public function test_free_and_comped_shops_have_nothing_to_renew(): void
+    {
+        $this->assertSame('unavailable', PackageUpgrade::renewal($this->shopOn('stall'))['kind']);
+
+        $comped = $this->shopOn('pavilion', ['comped' => true, 'subscription_ends_at' => Carbon::parse('2026-08-28')]);
+        $this->assertSame('unavailable', PackageUpgrade::renewal($comped)['kind']);
+    }
+
+    public function test_buying_the_same_package_is_treated_as_a_renewal(): void
+    {
+        // Ścieżka zakupu woła quote() z nazwą pakietu — ten sam pakiet nie może
+        // wpaść w „tańszy pakiet" i wrócić z zerową kwotą.
+        $shop = $this->shopOn('booth', ['subscription_ends_at' => Carbon::parse('2026-08-28')]);
+
+        $quote = PackageUpgrade::quote($shop, 'booth');
+
+        $this->assertSame('renewal', $quote['kind']);
+        $this->assertSame(750.0, $quote['amount']);
+        $this->assertSame('2027-08-28', $quote['new_ends_at']->format('Y-m-d'));
+    }
+
     public function test_screen_shows_the_amount_discount_and_new_term(): void
     {
         $seller = User::factory()->consented()->create();
@@ -159,7 +323,10 @@ class PackageUpgradeQuoteTest extends TestCase
             ->assertOk()
             ->assertSee('Zmiana pakietu')
             ->assertSee('1 370,00')                     // do zapłaty
-            ->assertSee('129,45')                       // zniżka za resztówkę
+            // Zniżka POKAZANA jako różnica (1500 − 1370), żeby rachunek się
+            // domykał; surowe 129,45 zostaje w danych, nie na ekranie.
+            ->assertSee('130,00')
+            ->assertDontSee('129,45')
             ->assertSee('29.07.2027')                   // nowy termin (rok od dziś)
             ->assertSee('odejmujemy jako zniżkę');
     }
@@ -172,6 +339,12 @@ class PackageUpgradeQuoteTest extends TestCase
         $this->actingAs($seller)->get(route('seller.package.show'))
             ->assertOk()
             ->assertSee('Masz najwyższy pakiet')
-            ->assertSee('obniżka wchodzi przy odnowieniu');
+            // Poza oknem odnowienia ekran mówi OD KIEDY zejście będzie możliwe,
+            // zamiast odsyłać do kontaktu.
+            ->assertSee('w ostatnich 30 dniach abonamentu')
+            ->assertSee('od 31.08.2026')
+            // Przedłużenie w TYM SAMYM pakiecie jest dostępne zawsze — ograniczone
+            // do okna jest tylko zejście niżej.
+            ->assertSee('Przedłuż o rok — 1 500,00 zł');
     }
 }
