@@ -105,7 +105,10 @@
                         @php($monthly = intdiv($yearly, 10))
                         @php($featured = $pkg['name'] === 'Stragan')
                         @php($features = $pkg['features'])
-                        <div class="relative rounded-3xl border bg-white/70 p-6 backdrop-blur {{ $featured ? 'border-amber-300 ring-2 ring-amber-400/50 shadow-lg shadow-amber-900/5' : 'border-white/60' }}">
+                        {{-- `flex h-full flex-col` + `mt-auto` na przycisku: karty
+                             w gridzie mają równą wysokość, więc przyciski wypadają
+                             w jednej linii niezależnie od długości listy funkcji. --}}
+                        <div class="relative flex h-full flex-col rounded-3xl border bg-white/70 p-6 backdrop-blur {{ $featured ? 'border-amber-300 ring-2 ring-amber-400/50 shadow-lg shadow-amber-900/5' : 'border-white/60' }}">
                             @if ($featured)
                                 <span class="absolute -top-3 left-6 rounded-full bg-gradient-to-br from-amber-500 to-rose-500 px-3 py-1 text-[11px] font-semibold text-white shadow">Najczęściej wybierany</span>
                             @endif
@@ -136,10 +139,57 @@
                             @if (collect($features)->contains('is_new', true))
                                 <p class="mt-4 text-xs text-stone-400">Pogrubione — nowe względem pakietu {{ $loop->index === 1 ? 'Kram' : 'Stragan' }}.</p>
                             @endif
+
+                            {{-- Przycisk odpowiada na intencję „chcę TEN pakiet".
+                                 Prowadzi do rejestracji (jedyna droga), ale nie każe
+                                 się domyślać, że trzeba iść przez darmowe konto. --}}
+                            {{-- `mt-auto` na wrapperze, nie na linku: przycisk siedzi
+                                 na dole karty, a `pt-5` trzyma odstęp od treści także
+                                 w najwyższej karcie, gdzie nic go już nie odpycha. --}}
+                            <div class="mt-auto pt-5">
+                            <a href="{{ route('register') }}"
+                                class="block rounded-2xl px-5 py-2.5 text-center text-sm font-semibold transition {{ $featured ? 'bg-gradient-to-br from-amber-500 to-rose-500 text-white shadow-lg shadow-rose-500/20 hover:brightness-105' : 'border border-stone-200 bg-white/70 text-stone-700 hover:bg-white' }}">
+                                {{ $yearly === 0 ? 'Zacznij za darmo' : 'Wybierz '.$pkg['name'] }}
+                            </a>
+                            </div>
                         </div>
                     @endforeach
                 </div>
                 <p class="mt-4 text-xs text-stone-500">Ceny brutto, rozliczenie roczne. Pakiet zmienisz w każdej chwili.</p>
+
+                {{-- „Jak kupić pakiet" — bo ceny same nie mówią, CO ZROBIĆ. Świadomie
+                     nie budujemy tu drugiej ścieżki zakupu: każda i tak przechodzi
+                     przez rejestrację (bez sklepu nie ma czego ulepszać), więc
+                     wyjaśniamy drogę zamiast dublować ekrany zakupowe. --}}
+                <div class="mt-8 rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                    <h3 class="text-lg font-semibold text-stone-900">Jak kupić pakiet?</h3>
+                    <ol class="mt-5 grid gap-5 sm:grid-cols-3">
+                        @foreach ([
+                            ['Załóż darmowe konto', 'Bez karty, bez zobowiązań. Sklep dostajesz od razu.'],
+                            ['Wejdź w „Mój pakiet"', 'W panelu zobaczysz ceny i kwotę do zapłaty.'],
+                            ['Zapłać i sprzedawaj', 'BLIK, karta lub przelew. Pakiet włącza się od razu, fakturę dostajesz mailem.'],
+                        ] as $i => [$title, $desc])
+                            <li class="flex items-start gap-3">
+                                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-rose-500 text-xs font-semibold text-white">{{ $i + 1 }}</span>
+                                <span class="min-w-0">
+                                    <span class="block text-sm font-medium text-stone-900">{{ $title }}</span>
+                                    <span class="mt-0.5 block text-sm text-stone-500">{{ $desc }}</span>
+                                </span>
+                            </li>
+                        @endforeach
+                    </ol>
+
+                    <div class="mt-6 flex flex-wrap items-center gap-3 border-t border-stone-100 pt-5">
+                        <a href="{{ route('register') }}" class="rounded-2xl bg-gradient-to-br from-amber-500 to-rose-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-rose-500/20 transition hover:brightness-105">
+                            Załóż konto i wybierz pakiet
+                        </a>
+                        {{-- Reguła zmiany pakietu wyłożona wprost: to argument ZA
+                             wejściem od razu wyżej, a nie ukryty haczyk. --}}
+                        <p class="text-xs text-stone-500">
+                            Zmiana pakietu w trakcie roku? Płacisz tylko różnicę — niewykorzystany okres wraca jako zniżka.
+                        </p>
+                    </div>
+                </div>
             </section>
 
             {{-- Funkcje --}}
@@ -153,9 +203,15 @@
                         ['🏪', 'Własny adres sklepu', 'Każdy sklep dostaje subdomenę {nazwa}.'.$domain.' od razu po rejestracji.'],
                         ['⚡', 'Gotowy w kilka minut', 'Rejestracja, dodanie produktu i publikacja — bez wiedzy technicznej.'],
                         ['✨', 'Korekta opisów przez AI', 'Napisz szkic — AI poprawi styl, ortografię i interpunkcję jednym kliknięciem.'],
-                        ['🔎', 'SEO od ręki', 'Przyjazne adresy, meta opisy, mapy strony i dane produktów dla wyszukiwarek.'],
-                        ['💳', 'Płatności i dostawy', 'Odbiór osobisty, przelew i kolejne metody — konfigurowane w kilka chwil.'],
-                        ['🧾', 'Dane firmy z NIP', 'Pobierz nazwę i adres firmy po numerze NIP i przyspiesz konfigurację.'],
+                        {{-- SEO: WYŁĄCZNIE to, co realnie mamy. Sitemapy i danych
+                             strukturalnych produktu NIE ma (świadomie odłożone przy
+                             audycie), więc nie obiecujemy ich tutaj. --}}
+                        ['🔎', 'SEO od ręki', 'Przyjazne adresy, opisy dla wyszukiwarek pisane przez AI i podglądy linków w mediach społecznościowych.'],
+                        ['💳', 'Płatności online', 'BLIK, karta i szybki przelew przez Paynow — pieniądze idą wprost na Twoje konto.'],
+                        ['📦', 'Wysyłka i odbiór', 'Paczkomat, kurier, odbiór osobisty i przelew — wybierasz, co oferujesz klientom.'],
+                        ['↩', 'Zwroty zgodne z prawem', 'Pouczenie o odstąpieniu w mailu, formularz zwrotu dla klienta i rozliczenie w panelu.'],
+                        ['📣', 'Wiadomości do klientów', 'Napisz o nowościach do klientów, którzy się zgodzili — z kartą produktu w mailu.'],
+                        ['🧾', 'Faktury i dane z NIP', 'Faktury przez Fakturownię, a dane firmy pobierzesz po numerze NIP.'],
                     ] as [$icon, $title, $desc])
                         <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-amber-900/5">
                             <span class="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-100 to-rose-100 text-xl">{{ $icon }}</span>

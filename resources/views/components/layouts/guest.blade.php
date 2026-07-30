@@ -18,10 +18,13 @@
 
         <div class="relative flex min-h-full items-center justify-center px-6 py-12">
             <div class="w-full max-w-md">
-                <div class="mb-6 flex items-center justify-center gap-2">
+                {{-- Logo klikalne — jak w layoucie stron publicznych. Z logowania,
+                     rejestracji, aktywacji i resetu hasła nie było jak wrócić na
+                     stronę główną; nazwa platformy to naturalne wyjście. --}}
+                <a href="{{ url('/') }}" class="mb-6 flex items-center justify-center gap-2 transition hover:opacity-80" title="Strona główna {{ config('app.name') }}">
                     <span class="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-rose-500 text-white">◐</span>
                     <span class="text-xl font-semibold tracking-tight text-stone-900">{{ config('app.name') }}</span>
-                </div>
+                </a>
 
                 {{ $slot }}
             </div>

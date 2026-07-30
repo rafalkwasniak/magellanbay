@@ -78,6 +78,46 @@ class LandingPackagesTest extends TestCase
             ->assertDontSee('wkrótce');
     }
 
+    public function test_landing_explains_how_to_buy_a_package(): void
+    {
+        // Ceny same nie mówią, CO ZROBIĆ — ktoś, kto chce od razu Pawilon, musi
+        // wiedzieć, że droga wiedzie przez darmowe konto.
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('Jak kupić pakiet?')
+            ->assertSee('Załóż darmowe konto')
+            // Bez cudzysłowu w asercji — Blade escapuje go na `&quot;`.
+            ->assertSee('Wejdź w')
+            ->assertSee('Załóż konto i wybierz pakiet')
+            // Reguła zmiany pakietu wyłożona wprost, nie jako haczyk.
+            ->assertSee('niewykorzystany okres wraca jako zniżka');
+    }
+
+    public function test_each_package_card_has_its_own_call_to_action(): void
+    {
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('Zacznij za darmo')       // Kram
+            ->assertSee('Wybierz Stragan')
+            ->assertSee('Wybierz Pawilon');
+    }
+
+    public function test_features_do_not_promise_what_we_do_not_have(): void
+    {
+        $html = $this->get('/')->assertOk()->getContent();
+
+        // Sitemapy ani danych strukturalnych produktu NIE mamy — kafelek SEO
+        // obiecywał je wcześniej, mimo audytu, który je świadomie odłożył.
+        $this->assertStringNotContainsString('mapy strony', $html);
+        $this->assertStringNotContainsString('dane produktów dla wyszukiwarek', $html);
+
+        // …a to, co mamy, jest wymienione po imieniu, nie jako „kolejne metody".
+        $this->assertStringNotContainsString('i kolejne metody', $html);
+        $this->assertStringContainsString('BLIK', $html);
+        $this->assertStringContainsString('Paczkomat', $html);
+        $this->assertStringContainsString('Zwroty zgodne z prawem', $html);
+    }
+
     public function test_returns_are_listed_in_every_package(): void
     {
         foreach ($this->featureMap() as $package => $features) {
