@@ -18,6 +18,6 @@ return [
     |
     */
 
-    'og_image' => 'images/d22b71ea2279444799d81a5bcb0bf1f1.png',
+    'og_image' => 'images/4163f74a55c4ae5f3580ef0212884c21.jpg',
 
 ];

@@ -37,6 +37,18 @@ class PlatformOgTest extends TestCase
         $this->assertSame(630, $height);
     }
 
+    public function test_og_image_stays_light_enough_to_serve(): void
+    {
+        // Grafike pobiera robot przy KAZDYM pierwszym udostepnieniu linku, a my
+        // siedzimy na shared hoscie. Pierwsza wersja wazyla 1 MB jako PNG; ta
+        // sama grafika w JPG to ~165 KB przy nieodroznialnej jakosci. Prog jest
+        // z zapasem — ma zlapac powrot do nieskompresowanego pliku, nie czepiac
+        // sie kilkudziesieciu kilobajtow.
+        $kilobytes = filesize(public_path(config('seo.og_image'))) / 1024;
+
+        $this->assertLessThan(400, $kilobytes, 'Grafika OG urosla — skompresuj ja przed wgraniem.');
+    }
+
     public function test_platform_image_url_is_absolute(): void
     {
         // Facebook pobiera grafikę własnym robotem — ścieżki względnej nie rozwiąże.
