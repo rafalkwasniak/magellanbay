@@ -97,13 +97,16 @@ return [
         // Redakcja tego, co sprzedawca już napisał: ortografia, interpunkcja,
         // styl. Zadanie proste i częste — ma być tanie i szybkie.
         //
-        // Rozumowanie WYŁĄCZONE świadomie: poprawianie literówek nie wymaga
-        // planowania, a pomiar na realnym opisie (2 tys. znaków) dał ~28 s bez
-        // rozumowania wobec ~40 s z „low" — przy identycznym wyniku.
-        // Uwaga: czas i tak jest zdominowany przez przepisywanie całego tekstu
-        // na wyjściu, więc rośnie liniowo z długością pola.
+        // Rozumowanie NA „low" JAWNIE — historia zatoczyła koło. Puste ''
+        // (nie wysyłaj parametru) było zmierzone na deepseek-chat, który nie
+        // rozumował, więc brak parametru znaczył „bez myślenia". Na
+        // deepseek-v4-flash jest ODWROTNIE: brak parametru = domyślne, ciężkie
+        // rozumowanie (pomiar 31.07 na opisie 1,1 tys. znaków: bez parametru
+        // 1,8–6,6 tys. tokenów myślenia i 20–67 s; z „low" 1,0–3,5 tys. i
+        // 14–37 s; „medium" — 47 s lub timeout). Rozrzut czasów jest po
+        // stronie dostawcy i zostaje; „low" ścina jego górną połowę.
         'proofread' => [
-            'reasoning_effort' => '',
+            'reasoning_effort' => 'low',
         ],
 
         // Tworzenie opisu produktu od zera. Jeszcze nieużywane — profil czeka
