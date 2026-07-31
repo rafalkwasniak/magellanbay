@@ -1,7 +1,7 @@
 @php($centralDomain = config('tenancy.central_domain'))
 <x-layouts.guest title="Załóż sklep">
     <div class="rounded-3xl border border-white/60 bg-white/70 p-8 shadow-xl shadow-amber-900/5 backdrop-blur-xl">
-        <h1 class="text-3xl font-semibold tracking-tight text-stone-900">Załóż sklep w 5 minut</h1>
+        <h1 class="text-3xl font-semibold tracking-tight text-stone-900">Załóż sklep w 15 minut</h1>
         <p class="mt-2 text-stone-500">Utwórz konto sprzedawcy i zacznij sprzedawać jeszcze dziś.</p>
 
         <form method="POST" action="{{ route('register.store') }}" class="mt-8 space-y-5" novalidate data-validate>

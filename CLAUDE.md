@@ -40,7 +40,7 @@ Specyfika projektu **Kramio** (`kramio.pl`). Plik czytany przez asystenta na sta
 **Ustalone:**
 
 1. **Stos / sposób renderowania frontu** — USTALONE.
-   - **Panele Admina i Sprzedawcy: Livewire dla obu.** Jeden spójny, lekki stos; pełna kontrola nad UX onboardingu „5 minut". Filament świadomie odrzucony na start — zostaje jako opcja na później, gdyby panel admina się rozrósł (Filament i Livewire mogą żyć obok siebie).
+   - **Panele Admina i Sprzedawcy: Livewire dla obu.** Jeden spójny, lekki stos; pełna kontrola nad UX onboardingu „15 minut" (obietnica urealniona 31.07 — Rafał zmierzył: 5 było nierealne). Filament świadomie odrzucony na start — zostaje jako opcja na później, gdyby panel admina się rozrósł (Filament i Livewire mogą żyć obok siebie).
    - **Storefront: Blade-first** (priorytet SEO + szybkość, czysty HTML od razu) **+ Livewire punktowo** tam, gdzie zarabia (koszyk itp.) **+ warstwa motywów** na wierzchu. Motywy to osobny, późniejszy temat — patrz pamięć „storefront-theme-system" (i zwykły Blade, i komponenty Livewire muszą respektować aktywny motyw).
    - Wspólny fundament: Laravel + Blade + Livewire dla całości; storefront używa go tylko inaczej (Blade-first), panele — w pełni.
 

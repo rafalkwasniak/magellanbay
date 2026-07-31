@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ config('app.name') }} — Twój sklep internetowy w 5 minut</title>
+    <title>{{ config('app.name') }} — Twój sklep internetowy w 15 minut</title>
     <meta name="description" content="{{ config('app.name') }} to platforma, na której uruchomisz własny sklep internetowy w kilka minut — bez wiedzy technicznej. Własny adres, gotowa strona, płatności i dostawy.">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
@@ -40,7 +40,7 @@
                         Pakiet Kram — zacznij bez opłat
                     </span>
                     <h1 class="mt-5 text-4xl font-semibold leading-tight tracking-tight text-stone-900 sm:text-5xl">
-                        Twój sklep internetowy <span class="bg-gradient-to-br from-amber-500 to-rose-500 bg-clip-text text-transparent">w 5 minut</span>
+                        Twój sklep internetowy <span class="bg-gradient-to-br from-amber-500 to-rose-500 bg-clip-text text-transparent">w 15 minut</span>
                     </h1>
                     <p class="mt-5 max-w-xl text-lg text-stone-600">
                         Kiedy konkurencja dopiero konfiguruje sklep, Ty już sprzedajesz. Załóż konto, dodaj pierwszy produkt i publikuj — bez wiedzy technicznej.
