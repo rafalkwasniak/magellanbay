@@ -176,6 +176,35 @@
                     </dl>
                 </div>
             @endif
+
+            {{-- „Jak to działa" — BEZWARUNKOWO, jak w Kodach rabatowych: przy pustej
+                 liście kolumna nie może świecić pustką (filtry i statystyki mają
+                 sens dopiero przy danych, ale kontekst działu — zawsze). --}}
+            <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                <h2 class="font-semibold text-stone-900">Jak to działa</h2>
+                <ul class="mt-4 space-y-3 text-sm text-stone-500">
+                    <li class="flex gap-3">
+                        <span class="mt-0.5 shrink-0 text-amber-500">🛒</span>
+                        <span>Zamówienia spływają tu prosto z <span class="font-medium text-stone-700">kasy Twojego sklepu</span>. Nowe zgłasza plakietka w menu i kafelek na Pulpicie.</span>
+                    </li>
+                    <li class="flex gap-3">
+                        <span class="mt-0.5 shrink-0 text-amber-500">✉️</span>
+                        <span>Każda zmiana statusu wysyła klientowi <span class="font-medium text-stone-700">automatyczny e-mail</span> — w barwach Twojego sklepu, bez Twojego udziału.</span>
+                    </li>
+                    <li class="flex gap-3">
+                        <span class="mt-0.5 shrink-0 text-amber-500">🚚</span>
+                        <span>Ścieżka statusów dopasowuje się do płatności i dostawy — karta zamówienia zawsze podpowiada <span class="font-medium text-stone-700">następny krok</span>.</span>
+                    </li>
+                    <li class="flex gap-3">
+                        <span class="mt-0.5 shrink-0 text-amber-500">↩️</span>
+                        <span>Anulowanie <span class="font-medium text-stone-700">oddaje produkty na stan</span>, a zgłoszenia zwrotów znajdziesz w karcie zamówienia.</span>
+                    </li>
+                    <li class="flex gap-3">
+                        <span class="mt-0.5 shrink-0 text-amber-500">🧾</span>
+                        <span>Po włączeniu integracji z Fakturownią wystawisz <span class="font-medium text-stone-700">fakturę VAT jednym przyciskiem</span> — klient dostanie ją mailem.</span>
+                    </li>
+                </ul>
+            </div>
         </aside>
     </div>
 </x-layouts.panel>

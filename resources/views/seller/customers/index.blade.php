@@ -162,6 +162,35 @@
                     </div>
                 @endif
             @endif
+
+            {{-- „Jak to działa" — BEZWARUNKOWO, jak w Kodach rabatowych: przy pustej
+                 liście kolumna nie może świecić pustką (filtry i podsumowanie mają
+                 sens dopiero przy danych, ale kontekst działu — zawsze). --}}
+            <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                <h2 class="font-semibold text-stone-900">Jak to działa</h2>
+                <ul class="mt-4 space-y-3 text-sm text-stone-500">
+                    <li class="flex gap-3">
+                        <span class="mt-0.5 shrink-0 text-amber-500">👥</span>
+                        <span>Kartoteka buduje się <span class="font-medium text-stone-700">sama, z zamówień</span> — nie dodajesz tu nikogo ręcznie.</span>
+                    </li>
+                    <li class="flex gap-3">
+                        <span class="mt-0.5 shrink-0 text-amber-500">✉️</span>
+                        <span>Kluczem jest <span class="font-medium text-stone-700">adres e-mail</span>: zakupy gościa i konta z tym samym adresem to jeden klient.</span>
+                    </li>
+                    <li class="flex gap-3">
+                        <span class="mt-0.5 shrink-0 text-amber-500">🛍️</span>
+                        <span>W karcie klienta zobaczysz historię zamówień i <span class="font-medium text-stone-700">łączne wydatki</span> (bez anulowanych).</span>
+                    </li>
+                    <li class="flex gap-3">
+                        <span class="mt-0.5 shrink-0 text-amber-500">✅</span>
+                        <span>Zgoda marketingowa — zbierana per sklep, z dowodem — decyduje, kto dostanie Twoje <span class="font-medium text-stone-700">wiadomości do klientów</span>.</span>
+                    </li>
+                    <li class="flex gap-3">
+                        <span class="mt-0.5 shrink-0 text-amber-500">🔍</span>
+                        <span>Gdy klientów przybędzie, do gry wejdą filtry: konto czy gość, zgoda, wydatki, daty zakupów.</span>
+                    </li>
+                </ul>
+            </div>
         </aside>
     </div>
 </x-layouts.panel>
