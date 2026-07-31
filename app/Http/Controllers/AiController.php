@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Exceptions\AiQuotaExceededException;
+use App\Models\Shop;
 use App\Services\AiQuota;
 use App\Services\AiTextImprover;
 use App\Services\SeoDescriptionWriter;
@@ -10,6 +11,7 @@ use App\Support\Excerpt;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
 
 /**
@@ -19,7 +21,7 @@ use Throwable;
  */
 class AiController extends Controller
 {
-    public function improve(Request $request, AiTextImprover $ai): JsonResponse
+    public function improve(Request $request, AiTextImprover $ai): JsonResponse|StreamedResponse
     {
         // Pola, które AI może redagować: maksymalna długość + tryb (html|tekst).
         $fields = [
@@ -58,6 +60,13 @@ class AiController extends Controller
         // tekst nie ma prawa spuchnąć. Limitu całego pola pilnuje walidacja zapisu.
         $maxOut = max(200, (int) ceil(mb_strlen($validated['text']) * 1.3));
 
+        // Strumień na wyraźne życzenie przeglądarki I przy włączonej fladze —
+        // flaga to wyłącznik awaryjny (patrz config/ai.php), a front bez
+        // `stream` w payloadzie dostaje sprawdzoną odpowiedź JSON jak dotąd.
+        if ($request->boolean('stream') && config('ai.streaming')) {
+            return $this->improveStream($ai, $validated, $config, $shop, $maxOut);
+        }
+
         try {
             $improved = $config['html']
                 ? $ai->improveHtml($validated['text'], $shop, $maxOut, $validated['task_id'] ?? null)
@@ -75,6 +84,73 @@ class AiController extends Controller
         return response()->json([
             'text' => $improved,
             'remaining' => app(AiQuota::class)->remaining($shop),
+        ]);
+    }
+
+    /**
+     * Redakcja strumieniem (SSE): kawałki tekstu lecą do przeglądarki w trakcie
+     * pisania przez model, więc sprzedawca patrzy na powstający tekst, a nie na
+     * licznik sekund. Zdarzenia:
+     *   {"delta": "..."}                        — kolejny kawałek odpowiedzi,
+     *   {"done": true, "text": ..., "remaining": ...} — koniec, z tekstem OSTATECZNYM
+     *                                             (po zdjęciu ```-opakowania — dlatego
+     *                                             front na końcu podmienia całość),
+     *   {"error": true, "status": ..., "message": ...} — błąd zamiast wyniku.
+     *
+     * Błędy jadą W strumieniu, nie statusem HTTP: nagłówki (200) wychodzą przed
+     * startem pracy modelu, więc na kod odpowiedzi jest już za późno. Front
+     * mapuje `status` ze zdarzenia na tę samą obsługę co przy ścieżce JSON.
+     *
+     * @param  array{field: string, text: string, task_id?: string|null}  $validated
+     * @param  array{max: int, html: bool}  $config
+     */
+    private function improveStream(AiTextImprover $ai, array $validated, array $config, Shop $shop, int $maxOut): StreamedResponse
+    {
+        return response()->stream(function () use ($ai, $validated, $config, $shop, $maxOut): void {
+            // Bufory wyjściowe PHP sklejałyby zdarzenia w jedną paczkę na końcu
+            // — czyli dokładnie to, co streaming ma wyeliminować. W testach
+            // bufor należy do PHPUnit (przechwytuje odpowiedź) i zostaje.
+            if (! app()->runningUnitTests()) {
+                while (ob_get_level() > 0) {
+                    ob_end_flush();
+                }
+            }
+
+            $emit = function (array $event): void {
+                echo 'data: '.json_encode($event, JSON_UNESCAPED_UNICODE)."\n\n";
+
+                if (! app()->runningUnitTests()) {
+                    flush();
+                }
+            };
+
+            try {
+                $onDelta = fn (string $delta) => $emit(['delta' => $delta]);
+
+                $improved = $config['html']
+                    ? $ai->improveHtml($validated['text'], $shop, $maxOut, $validated['task_id'] ?? null, $onDelta)
+                    : $ai->improve($validated['text'], $shop, $maxOut, $validated['task_id'] ?? null, $onDelta);
+            } catch (AiQuotaExceededException $e) {
+                $emit(['error' => true, 'status' => 429, 'message' => $this->quotaMessage($e)]);
+
+                return;
+            } catch (Throwable) {
+                $emit(['error' => true, 'status' => 503, 'message' => 'Usługa AI jest chwilowo niedostępna. Spróbuj ponownie później.']);
+
+                return;
+            }
+
+            $emit([
+                'done' => true,
+                'text' => $improved,
+                'remaining' => app(AiQuota::class)->remaining($shop),
+            ]);
+        }, 200, [
+            'Content-Type' => 'text/event-stream',
+            'Cache-Control' => 'no-cache',
+            // LiteSpeed honoruje ten nagłówek i nie buforuje odpowiedzi —
+            // zweryfikowane testem bramkowym na tym hostingu (2026-07-31).
+            'X-Accel-Buffering' => 'no',
         ]);
     }
 
@@ -129,13 +205,19 @@ class AiController extends Controller
      */
     private function quotaResponse(AiQuotaExceededException $e): JsonResponse
     {
-        return response()->json([
-            // Ton informacyjny, nie karcący: sprzedawca nie zrobił nic złego,
-            // tylko wykorzystał swoją pulę. Najpierw fakt, potem KIEDY wraca
-            // (jedyne, co go teraz interesuje), na końcu delikatny upsell.
-            'message' => 'Wykorzystałeś całą pulę AI na ten tydzień — '.$e->limit.' użyć. '
-                .'Nowa czeka już w '.$e->resetsAt->translatedFormat('l, j F').'. '
-                .'W wyższym pakiecie pula jest większa.',
-        ], 429);
+        return response()->json(['message' => $this->quotaMessage($e)], 429);
+    }
+
+    /**
+     * Jedna treść komunikatu o limicie dla obu transportów (JSON i strumień).
+     * Ton informacyjny, nie karcący: sprzedawca nie zrobił nic złego, tylko
+     * wykorzystał swoją pulę. Najpierw fakt, potem KIEDY wraca (jedyne, co go
+     * teraz interesuje), na końcu delikatny upsell.
+     */
+    private function quotaMessage(AiQuotaExceededException $e): string
+    {
+        return 'Wykorzystałeś całą pulę AI na ten tydzień — '.$e->limit.' użyć. '
+            .'Nowa czeka już w '.$e->resetsAt->translatedFormat('l, j F').'. '
+            .'W wyższym pakiecie pula jest większa.';
     }
 }

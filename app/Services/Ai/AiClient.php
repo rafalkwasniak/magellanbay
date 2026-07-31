@@ -77,4 +77,94 @@ class AiClient
 
         return trim($answer);
     }
+
+    /**
+     * Jak run(), ale STRUMIENIEM: model odsyła odpowiedź kawałkami (SSE),
+     * a każdy kawałek tekstu trafia od razu do $onDelta — dzięki temu
+     * użytkownik widzi tekst w trakcie pisania, nie po jego zakończeniu.
+     * Zwraca pełną, sklejoną odpowiedź (ta sama wartość, którą dałoby run()).
+     *
+     * Limit pobierany jak w run() — przed wysłaniem żądania. Fragmenty toku
+     * myślenia („reasoning_content") są pomijane: to nie jest treść odpowiedzi.
+     *
+     * @param  callable(string): void  $onDelta  Wołane dla każdego kawałka tekstu odpowiedzi.
+     *
+     * @throws \App\Exceptions\AiQuotaExceededException gdy sklep wyczerpał tygodniowy limit
+     * @throws RuntimeException gdy zadanie nie jest skonfigurowane lub wywołanie zawiedzie
+     */
+    public function stream(string $task, string $system, string $content, Shop $shop, ?string $taskId, callable $onDelta): string
+    {
+        $profile = AiProfile::forTask($task);
+
+        if (! $profile->isConfigured()) {
+            throw new RuntimeException("Usługa AI nie jest skonfigurowana (zadanie: {$task}).");
+        }
+
+        $this->quota->consume($shop, $taskId);
+
+        $payload = [
+            'model' => $profile->model,
+            'temperature' => $profile->temperature,
+            'stream' => true,
+            'messages' => [
+                ['role' => 'system', 'content' => $system],
+                ['role' => 'user', 'content' => $content],
+            ],
+        ];
+
+        if ($profile->reasoningEffort !== null) {
+            $payload['reasoning_effort'] = $profile->reasoningEffort;
+        }
+
+        $response = Http::baseUrl($profile->baseUrl)
+            ->withToken($profile->key)
+            ->timeout($profile->timeout)
+            // Bez tej opcji klient HTTP i tak zbuforowałby całe body przed
+            // zwróceniem odpowiedzi — strumień istniałby tylko na papierze.
+            ->withOptions(['stream' => true])
+            ->post('/chat/completions', $payload);
+
+        if ($response->failed()) {
+            throw new RuntimeException("Wywołanie AI zakończyło się błędem (zadanie: {$task}).");
+        }
+
+        $body = $response->toPsrResponse()->getBody();
+        $buffer = '';
+        $answer = '';
+
+        // Protokół SSE: zdarzenia to linie „data: {json}", odpowiedź kończy
+        // „data: [DONE]". Kawałki sieci nie respektują granic linii, więc
+        // trzymamy niedokończoną linię w buforze do następnego odczytu.
+        while (! $body->eof()) {
+            $buffer .= $body->read(1024);
+
+            while (($newline = strpos($buffer, "\n")) !== false) {
+                $line = trim(substr($buffer, 0, $newline));
+                $buffer = substr($buffer, $newline + 1);
+
+                if (! str_starts_with($line, 'data:')) {
+                    continue;
+                }
+
+                $data = trim(substr($line, 5));
+
+                if ($data === '[DONE]') {
+                    break 2;
+                }
+
+                $delta = json_decode($data, true)['choices'][0]['delta']['content'] ?? '';
+
+                if ($delta !== '') {
+                    $answer .= $delta;
+                    $onDelta($delta);
+                }
+            }
+        }
+
+        if (trim($answer) === '') {
+            throw new RuntimeException("AI zwróciło pustą odpowiedź (zadanie: {$task}).");
+        }
+
+        return trim($answer);
+    }
 }

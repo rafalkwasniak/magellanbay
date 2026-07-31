@@ -185,9 +185,89 @@ function newTaskId() {
         || `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-// Jeden fragment → jedno wywołanie endpointu.
-function sendChunk(button, chunk, taskId) {
+// Utnij z końca niedokończony znacznik („<stro") i encję („&am") — strumień
+// przerywa w dowolnym miejscu, a edytor pokazałby taki ogon dosłownie. Tylko
+// do podglądu na żywo; ostateczny tekst przychodzi w zdarzeniu końcowym cały.
+function trimIncomplete(html) {
+    return html.replace(/<[^>]*$/, '').replace(/&[a-zA-Z0-9#]{0,8}$/, '');
+}
+
+// Efekt „AI zabiera tekst do poprawy": treść znika od KOŃCA, po kilka znaków
+// na tyknięcie, w ~2,5 s — a chwilę później poprawiona wersja pisze się w
+// puste pole od góry. Przy okazji maskuje fazę myślenia modelu (kilkanaście
+// sekund przed pierwszym tokenem), w trakcie której nic by się nie działo.
+// Trix wymazuje własnym mechanizmem (zaznaczenie od końca + backspace), więc
+// formatowanie znika naturalnie razem z tekstem; zwykłe pole przycina wartość.
+function eraseBackwards(target, duration = 2500) {
+    return new Promise((resolve) => {
+        const trix = trixFor(target.id);
+        const interval = 30;
+        const length = trix ? trix.editor.getDocument().getLength() : (target.value || '').length;
+        const step = Math.max(1, Math.ceil(length / (duration / interval)));
+
+        const timer = setInterval(() => {
+            try {
+                if (trix) {
+                    // Pusty dokument Trixa ma długość 1 (końcowy znak nowej linii).
+                    const len = trix.editor.getDocument().getLength();
+                    if (len <= 1) { clearInterval(timer); resolve(); return; }
+                    trix.editor.setSelectedRange([Math.max(0, len - 1 - step), len - 1]);
+                    trix.editor.deleteInDirection('backward');
+                } else {
+                    if (!target.value) { clearInterval(timer); resolve(); return; }
+                    target.value = target.value.slice(0, -step);
+                }
+            } catch (error) {
+                // Efekt jest ozdobą — gdy edytor odmówi, czyścimy pole od razu
+                // i jedziemy dalej, zamiast wywracać całą poprawę.
+                writeValue(target, '');
+                clearInterval(timer);
+                resolve();
+            }
+        }, interval);
+    });
+}
+
+// Czyta strumień SSE ze zwykłego fetch() — EventSource nie umie POST-a, więc
+// linie „data: {json}" parsujemy sami. Kończy się zdarzeniem {done, text,
+// remaining} (ten sam kształt co odpowiedź JSON); zdarzenie {error} zamienia
+// się w odrzucenie o kształcie Response (status + json()), żeby obsługa
+// błędów niżej była wspólna dla obu transportów.
+async function readStream(response, onDelta) {
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        let cut;
+        while ((cut = buffer.indexOf('\n')) !== -1) {
+            const line = buffer.slice(0, cut).trim();
+            buffer = buffer.slice(cut + 1);
+            if (!line.startsWith('data:')) continue;
+
+            const event = JSON.parse(line.slice(5));
+            if (event.error) throw { status: event.status, json: async () => ({ message: event.message }) };
+            if (event.done) return event;
+            if (event.delta) onDelta(event.delta);
+        }
+    }
+
+    // Połączenie padło w pół strumienia (restart PHP, sieć) — dla wołającego
+    // to zwykła awaria fragmentu: oryginał zostaje.
+    throw new Error('Strumień urwał się przed zakończeniem.');
+}
+
+// Jeden fragment → jedno wywołanie endpointu. Przy strumieniu kawałki tekstu
+// lecą do onDelta w trakcie pisania; serwer może strumienia ODMÓWIĆ
+// (wyłącznik awaryjny AI_STREAMING) i wtedy wraca zwykły JSON — poznajemy to
+// po Content-Type, nie po tym, o co prosiliśmy.
+function sendChunk(button, chunk, taskId, onDelta) {
     const token = document.querySelector('meta[name="csrf-token"]');
+    const streaming = button.hasAttribute('data-ai-stream');
 
     return fetch(button.getAttribute('data-ai-url'), {
         method: 'POST',
@@ -200,8 +280,17 @@ function sendChunk(button, chunk, taskId) {
             field: button.getAttribute('data-ai-field'),
             text: chunk,
             task_id: taskId,
+            stream: streaming,
         }),
-    }).then((response) => (response.ok ? response.json() : Promise.reject(response)));
+    }).then((response) => {
+        if (!response.ok) return Promise.reject(response);
+
+        const type = response.headers.get('Content-Type') || '';
+
+        return streaming && type.includes('text/event-stream')
+            ? readStream(response, onDelta)
+            : response.json();
+    });
 }
 
 async function improveWithAi(button) {
@@ -252,6 +341,65 @@ async function improveWithAi(button) {
     let failure = null;
     let next = 0;
 
+    // Pisanie na żywo (streaming): fragmenty lecą RÓWNOLEGLE (czas ściany jak
+    // przy ścieżce JSON), ale w polu pisze zawsze tylko NAJWCZEŚNIEJSZY
+    // nieukończony. Kawałki późniejszych fragmentów czekają w buforach i
+    // odsłaniają się, gdy przyjdzie ich kolej — tekst płynie jedną falą,
+    // od góry do dołu, w pole opróżnione efektem wymazywania.
+    //
+    // Wersja „fragmenty po kolei" przetestowana i odrzucona: każdy fragment
+    // płaci osobno fazę myślenia modelu, więc sekwencja wyglądała jak dwa
+    // osobne pisania przedzielone martwą ciszą i podwajała czas całkowity.
+    const streaming = button.hasAttribute('data-ai-stream');
+    const isTrix = !!trixFor(target.id);
+    const buffers = chunks.map(() => '');
+    const finals = chunks.map(() => null);
+    // Osobna warstwa WIDOKU: po wymazaniu pole zapełnia się wyłącznie tym, co
+    // już poprawione (sloty startują puste). `results` zostaje warstwą PRAWDY
+    // do ostatecznego zapisu — trzyma oryginały na wypadek awarii fragmentu.
+    const display = chunks.map(() => '');
+    let reveal = 0;
+    let lastPaint = 0;
+    let erasing = false;
+
+    const paint = (force) => {
+        // W trakcie wymazywania nie odrysowujemy — pisanie zacznie się w
+        // pustym polu zaraz po nim (paint(true) w domknięciu efektu).
+        if (erasing) return;
+
+        const now = Date.now();
+        // Nie częściej niż co 250 ms — loadHTML przy każdym tokenie migotałoby.
+        if (!force && now - lastPaint < 250) return;
+        lastPaint = now;
+        writeValue(target, reassemble(chunks, display, isTrix ? '' : '\n\n'));
+    };
+
+    // Przesuń odsłanianie: ukończone fragmenty wchodzą w wersji ostatecznej,
+    // a kolejny w trakcie pisania pokazuje od razu to, co zdążył zbuforować.
+    const advance = () => {
+        while (reveal < chunks.length && finals[reveal] !== null) {
+            display[reveal] = finals[reveal];
+            reveal += 1;
+        }
+
+        if (reveal < chunks.length && buffers[reveal] !== '') {
+            display[reveal] = isTrix ? trimIncomplete(buffers[reveal]) : buffers[reveal];
+        }
+
+        paint(true);
+    };
+
+    // Efekt startuje razem z żądaniami — wymazywanie i myślenie modelu biegną
+    // RÓWNOLEGLE, więc ozdoba nie dokłada ani sekundy do całości.
+    let erased = Promise.resolve();
+    if (streaming) {
+        erasing = true;
+        erased = eraseBackwards(target).then(() => {
+            erasing = false;
+            paint(true);
+        });
+    }
+
     const worker = async () => {
         while (!failed) {
             const index = next;
@@ -259,14 +407,29 @@ async function improveWithAi(button) {
             if (index >= chunks.length) return;
 
             try {
-                const answer = await sendChunk(button, chunks[index].send, taskId);
+                const answer = await sendChunk(button, chunks[index].send, taskId, (delta) => {
+                    buffers[index] += delta;
+
+                    if (index === reveal) {
+                        display[index] = isTrix ? trimIncomplete(buffers[index]) : buffers[index];
+                        paint(false);
+                    }
+                });
+                // Wersja OSTATECZNA fragmentu — serwer mógł zdjąć z niej
+                // opakowanie ```, którego kawałki nie znały.
+                finals[index] = answer.text;
                 results[index] = answer.text;
+                if (streaming && index === reveal) advance();
                 // Serwer odsyła stan puli — zbijamy licznik od razu, zamiast
                 // czekać na odświeżenie strony.
                 if (window.setAiQuota) window.setAiQuota(answer.remaining);
                 done += 1;
                 tick();
             } catch (error) {
+                // Warstwa prawdy wraca do oryginału — „częściowa awaria nie
+                // kasuje udanego" ma zostać prawdą co do znaku, a wymazane
+                // pole i tak odtworzy się z `results` w zapisie końcowym.
+                results[index] = chunks[index].send;
                 failed = true;
                 failure = error;
 
@@ -279,11 +442,17 @@ async function improveWithAi(button) {
         Array.from({ length: Math.min(CONCURRENCY, chunks.length) }, () => worker())
     );
 
+    // Dograj efekt do końca: przy błyskawicznej odpowiedzi zapis końcowy nie
+    // może wskoczyć w środek wymazywania.
+    await erased;
+
     clearInterval(ticker);
 
     // HTML sklejamy wprost (bloki niosą własne znaczniki), zwykły tekst — pustą
-    // linią, czyli tym, po czym go dzieliliśmy.
-    if (done) writeValue(target, reassemble(chunks, results, trixFor(target.id) ? '' : '\n\n'));
+    // linią, czyli tym, po czym go dzieliliśmy. Przy strumieniu zapis idzie
+    // ZAWSZE: pole zostało wymazane efektem, więc nawet po całkowitej awarii
+    // musi się odtworzyć — wtedy z samych oryginałów w `results`.
+    if (done || streaming) writeValue(target, reassemble(chunks, results, trixFor(target.id) ? '' : '\n\n'));
 
     if (failed) {
         // Wyczerpany limit tygodniowy to nie awaria — serwer przysyła wtedy

@@ -128,6 +128,96 @@ class AiImproveTest extends TestCase
         ));
     }
 
+    public function test_streaming_emits_deltas_and_final_text_as_sse(): void
+    {
+        config(['ai.providers.deepseek.key' => 'test-key', 'ai.streaming' => true]);
+        // Odpowiedź modelu w formacie strumienia (SSE): dwa kawałki i koniec.
+        Http::fake([
+            '*/chat/completions' => Http::response(
+                'data: {"choices":[{"delta":{"content":"Popra"}}]}'."\n\n"
+                .'data: {"choices":[{"delta":{"content":"wione."}}]}'."\n\n"
+                ."data: [DONE]\n\n",
+            ),
+        ]);
+
+        $seller = User::factory()->consented()->create();
+        Shop::factory()->create(['owner_id' => $seller->id]);   // limit AI wisi na sklepie
+
+        $response = $this->actingAs($seller)
+            ->postJson(route('ai.improve'), [
+                'field' => 'shop_description',
+                'text' => '<div>tekst do poprawy</div>',
+                'stream' => true,
+            ]);
+
+        $response->assertOk()->assertHeader('Content-Type', 'text/event-stream; charset=utf-8');
+
+        $content = $response->streamedContent();
+
+        // Kawałki po drodze + zdarzenie końcowe z pełnym tekstem i stanem puli.
+        $this->assertStringContainsString('data: {"delta":"Popra"}', $content);
+        $this->assertStringContainsString('data: {"delta":"wione."}', $content);
+        $this->assertStringContainsString('"done":true', $content);
+        $this->assertStringContainsString('"text":"Poprawione."', $content);
+        $this->assertStringContainsString('"remaining"', $content);
+    }
+
+    public function test_streaming_request_falls_back_to_json_when_flag_is_off(): void
+    {
+        // Wyłącznik awaryjny AI_STREAMING=false: front może prosić o strumień,
+        // ale serwer odpowiada sprawdzonym JSON-em — i front to honoruje
+        // (rozpoznanie po Content-Type, nie po tym, o co prosił).
+        config(['ai.providers.deepseek.key' => 'test-key', 'ai.streaming' => false]);
+        Http::fake([
+            '*/chat/completions' => Http::response([
+                'choices' => [['message' => ['content' => 'Poprawiony tekst.']]],
+            ]),
+        ]);
+
+        $seller = User::factory()->consented()->create();
+        Shop::factory()->create(['owner_id' => $seller->id]);   // limit AI wisi na sklepie
+
+        $this->actingAs($seller)
+            ->postJson(route('ai.improve'), [
+                'field' => 'shop_description',
+                'text' => 'tekst do poprawy',
+                'stream' => true,
+            ])
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/json')
+            ->assertJson(['text' => 'Poprawiony tekst.']);
+    }
+
+    public function test_streaming_reports_exhausted_quota_inside_the_stream(): void
+    {
+        // Nagłówki strumienia (200) wychodzą przed pobraniem limitu, więc 429
+        // nie ma jak wrócić statusem HTTP — jedzie zdarzeniem w strumieniu,
+        // z tą samą treścią, którą dostaje ścieżka JSON.
+        config(['ai.providers.deepseek.key' => 'test-key', 'ai.streaming' => true]);
+        Http::fake();
+
+        $seller = User::factory()->consented()->create();
+        Shop::factory()->create([
+            'owner_id' => $seller->id,
+            'entitlements' => ['ai_weekly_limit' => 0],  // pula wyczerpana od startu
+        ]);
+
+        $response = $this->actingAs($seller)
+            ->postJson(route('ai.improve'), [
+                'field' => 'shop_description',
+                'text' => 'tekst do poprawy',
+                'stream' => true,
+            ]);
+
+        $response->assertOk()->assertHeader('Content-Type', 'text/event-stream; charset=utf-8');
+
+        $content = $response->streamedContent();
+
+        $this->assertStringContainsString('"error":true', $content);
+        $this->assertStringContainsString('"status":429', $content);
+        $this->assertStringContainsString('pulę AI', $content);
+    }
+
     public function test_unconfigured_service_returns_503(): void
     {
         config(['ai.providers.deepseek.key' => '']);

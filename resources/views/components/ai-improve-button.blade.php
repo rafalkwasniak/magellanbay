@@ -24,6 +24,11 @@
     {{-- Docelowa wielkość fragmentu; JS tnie po blokach, żeby długi tekst nie
          przekroczył timeoutu w jednym wywołaniu. --}}
     data-ai-chunk="{{ (int) config('ai.chunk_chars') }}"
+    {{-- Streaming: tekst pojawia się w polu w trakcie pisania przez model.
+         Atrybut steruje też współbieżnością w JS (strumień = fragmenty po
+         kolei, żeby dwa nie pisały w polu naraz). Brak atrybutu = ścieżka
+         JSON jak dotąd — to wyłącznik awaryjny AI_STREAMING w .env. --}}
+    @if (config('ai.streaming')) data-ai-stream @endif
     data-ai-label="{{ $label }}"
     {{ $attributes->merge(['class' => 'mt-2 inline-flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-800 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50']) }}>
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="h-4 w-4">

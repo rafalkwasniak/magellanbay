@@ -27,9 +27,15 @@ class AiTextImprover
     /**
      * Redakcja zwykłego tekstu.
      *
+     * Z $onDelta odpowiedź płynie strumieniem: każdy kawałek tekstu trafia do
+     * callbacka w trakcie pisania przez model (patrz AiClient::stream()).
+     * Zwracana wartość jest w obu trybach ta sama — pełny poprawiony tekst.
+     *
+     * @param  callable(string): void|null  $onDelta
+     *
      * @throws RuntimeException gdy usługa nie jest skonfigurowana lub wywołanie zawiedzie.
      */
-    public function improve(string $text, Shop $shop, ?int $maxChars = null, ?string $taskId = null): string
+    public function improve(string $text, Shop $shop, ?int $maxChars = null, ?string $taskId = null, ?callable $onDelta = null): string
     {
         $system = 'Jesteś redaktorem języka polskiego. Popraw przesłany tekst: ortografię, '
             .'interpunkcję, styl i czytelność; możesz poprawić formatowanie. Nie dodawaj żadnych '
@@ -41,16 +47,25 @@ class AiTextImprover
             $system .= " Wynik nie może przekroczyć {$maxChars} znaków.";
         }
 
-        return $this->ai->run(self::TASK, $system, $text, $shop, $taskId);
+        return $onDelta !== null
+            ? $this->ai->stream(self::TASK, $system, $text, $shop, $taskId, $onDelta)
+            : $this->ai->run(self::TASK, $system, $text, $shop, $taskId);
     }
 
     /**
      * Redakcja fragmentu HTML — model pracuje WYŁĄCZNIE w obrębie tekstu, nie
      * zmieniając znaczników, ich kolejności ani atrybutów.
      *
+     * Z $onDelta odpowiedź płynie strumieniem (jak w improve()). Kawałki lecą
+     * SUROWE — ewentualne opakowanie w blok kodu zdejmujemy dopiero z pełnej
+     * odpowiedzi, więc ostateczną wersją pola jest ZAWSZE wartość zwrócona,
+     * nie suma kawałków.
+     *
+     * @param  callable(string): void|null  $onDelta
+     *
      * @throws RuntimeException gdy usługa nie jest skonfigurowana lub wywołanie zawiedzie.
      */
-    public function improveHtml(string $html, Shop $shop, ?int $maxChars = null, ?string $taskId = null): string
+    public function improveHtml(string $html, Shop $shop, ?int $maxChars = null, ?string $taskId = null, ?callable $onDelta = null): string
     {
         $system = 'Jesteś redaktorem języka polskiego pracującym na fragmencie HTML. Otrzymujesz '
             .'treść z prostymi znacznikami formatowania (m.in. <strong>, <em>, <del>, <h2>, <ul>, '
@@ -66,12 +81,12 @@ class AiTextImprover
             $system .= " Wynik nie może przekroczyć {$maxChars} znaków.";
         }
 
+        $raw = $onDelta !== null
+            ? $this->ai->stream(self::TASK, $system, $html, $shop, $taskId, $onDelta)
+            : $this->ai->run(self::TASK, $system, $html, $shop, $taskId);
+
         // Zdejmij ewentualne opakowanie w blok kodu (```html ... ```), gdyby model je dodał.
-        $result = preg_replace(
-            '/^```[a-z]*\s*|\s*```$/i',
-            '',
-            $this->ai->run(self::TASK, $system, $html, $shop, $taskId)
-        );
+        $result = preg_replace('/^```[a-z]*\s*|\s*```$/i', '', $raw);
 
         return trim((string) $result);
     }

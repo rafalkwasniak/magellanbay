@@ -80,6 +80,25 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Streaming odpowiedzi (SSE)
+    |--------------------------------------------------------------------------
+    |
+    | „Popraw przez AI" pokazuje tekst W TRAKCIE pisania przez model, zamiast
+    | kazać patrzeć w licznik sekund do końca odpowiedzi. Czas całkowity się
+    | nie zmienia — zmienia się czas do PIERWSZEGO znaku (z kilkunastu sekund
+    | na ~1 s), a czekanie, w trakcie którego coś widać, przestaje boleć.
+    |
+    | Wyłącznik awaryjny: hosting współdzielony bywa kapryśny (buforowanie
+    | odpowiedzi zabija strumień — test bramkowy 31.07 przeszedł, ale gdyby po
+    | zmianach po stronie LiteSpeed strumień zaczął docierać hurtem, ustaw
+    | false i front wraca do sprawdzonej ścieżki JSON bez dotykania kodu).
+    |
+    */
+
+    'streaming' => (bool) env('AI_STREAMING', true),
+
+    /*
+    |--------------------------------------------------------------------------
     | Zadania
     |--------------------------------------------------------------------------
     |
