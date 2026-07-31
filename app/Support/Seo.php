@@ -115,6 +115,16 @@ class Seo
     }
 
     /**
+     * Obrazek stron PLATFORMY (landing, logowanie, regulamin) — jeden stały
+     * plik z `config/seo.php`, nie generowana karta sklepu. Adres absolutny,
+     * bo Facebook nie rozwiąże ścieżki względnej.
+     */
+    public static function platformImage(): string
+    {
+        return asset(config('seo.og_image'));
+    }
+
+    /**
      * Obrazek karty produktu: zdjęcie główne, a gdy produkt go nie ma —
      * grafika sklepu.
      */

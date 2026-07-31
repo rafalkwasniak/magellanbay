@@ -4,7 +4,22 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ ($title ?? '') . (isset($title) ? ' · ' : '') . config('app.name') }}</title>
+    @php($metaTitle = ($title ?? '') . (isset($title) ? ' · ' : '') . config('app.name'))
+
+    <title>{{ $metaTitle }}</title>
+
+    {{-- Open Graph dla stron platformy (regulamin, polityka, logowanie).
+         Grafika wspólna dla całej centrali — config/seo.php. --}}
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="{{ config('app.name') }}">
+    <meta property="og:title" content="{{ $metaTitle }}">
+    <meta property="og:url" content="{{ url()->current() }}">
+    <meta property="og:locale" content="pl_PL">
+    <meta property="og:image" content="{{ \App\Support\Seo::platformImage() }}">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta name="twitter:card" content="summary_large_image">
+
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="h-full bg-stone-100 text-stone-800 antialiased">

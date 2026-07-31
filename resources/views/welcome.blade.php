@@ -4,8 +4,29 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ config('app.name') }} — Twój sklep internetowy w 15 minut</title>
-    <meta name="description" content="{{ config('app.name') }} to platforma, na której uruchomisz własny sklep internetowy w kilka minut — bez wiedzy technicznej. Własny adres, gotowa strona, płatności i dostawy.">
+
+    @php($metaTitle = config('app.name').' — Twój sklep internetowy w 15 minut')
+    @php($metaDescription = config('app.name').' to platforma, na której uruchomisz własny sklep internetowy w kilkanaście minut — bez wiedzy technicznej. Własny adres, gotowa strona, płatności i dostawy.')
+
+    <title>{{ $metaTitle }}</title>
+    <meta name="description" content="{{ $metaDescription }}">
+    <link rel="canonical" href="{{ url('/') }}">
+
+    {{-- Open Graph: tak wygląda link do kramio.pl wklejony na Facebooka czy
+         Messengera. Bez tego widać goły adres — a to najczęstszy sposób, w jaki
+         ktoś pierwszy raz zobaczy platformę. Grafika: config/seo.php. --}}
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="{{ config('app.name') }}">
+    <meta property="og:title" content="{{ $metaTitle }}">
+    <meta property="og:description" content="{{ $metaDescription }}">
+    <meta property="og:url" content="{{ url('/') }}">
+    <meta property="og:locale" content="pl_PL">
+    <meta property="og:image" content="{{ \App\Support\Seo::platformImage() }}">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="{{ config('app.name') }} — twój sklep online">
+    <meta name="twitter:card" content="summary_large_image">
+
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="h-full bg-stone-100 text-stone-800 antialiased">
