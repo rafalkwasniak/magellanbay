@@ -212,8 +212,12 @@
             </div>
         </div>
 
-        {{-- DESKTOP: winieta wyśrodkowana --}}
-        <div class="relative mx-auto hidden max-w-6xl flex-col items-center gap-3 px-6 py-5 md:flex">
+        {{-- DESKTOP: winieta wyśrodkowana. Odstęp brand → nawigacja to `gap-8`
+             (32 px), nie `gap-3`: logo jest obrazem ciasno przyciętym do treści,
+             więc przy 12 px menu wchodziło mu pod nogi, a winieta ma się czytać
+             jako szyld z powietrzem wokół. Wersja tekstowa brandu zyskuje na tym
+             samym oddechu, dlatego odstęp jest jeden dla obu. --}}
+        <div class="relative mx-auto hidden max-w-6xl flex-col items-center gap-8 px-6 py-5 md:flex">
             {{-- Koszyk w prawym rogu --}}
             <div class="absolute right-6 top-5">
                 <livewire:cart-counter :shop-id="$shop->id" />

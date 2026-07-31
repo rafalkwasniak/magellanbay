@@ -18,7 +18,12 @@
         $deliveries[] = [
             'label' => \App\Enums\DeliveryMethod::Pickup->label(),
             'value' => 'Gratis',
-            'note' => null,
+            // Adres odbioru jako podpis — ta sama rola co „gratis od…" przy
+            // wysyłce (dopowiedzenie warunku metody) i ta sama informacja, którą
+            // kasa pokazuje przy płatności przy odbiorze. Bez tego jedyny wiersz
+            // bez podpisu wybijał się z rytmu tabelki. Adres jest zawsze pełny:
+            // pickupAvailable() wymaga kompletnego adresu sklepu.
+            'note' => $shop->addressLine(),
         ];
     }
 
