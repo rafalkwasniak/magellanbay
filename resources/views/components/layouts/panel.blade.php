@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ ($title ?? 'Panel') . ' · ' . config('app.name') }}</title>
+
+    {{-- Google Analytics ŚWIADOMIE tu nie ma — to nie przeoczenie.
+         Panel jest narzędziem pracy za logowaniem, nie stroną, która ma
+         przyciągać ruch: mierzenie go niczego nie podpowiada (kto się loguje,
+         wiemy z własnej bazy), a adresy podstron niosą numery zamówień i
+         klientów sprzedawcy, których nie ma po co wysyłać do Google.
+         Pomiar obejmuje strony publiczne centrali: landing, rejestrację,
+         logowanie i dokumenty prawne. --}}
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     {{-- Elementy Alpine ukryte do czasu startu skryptu (np. „Piszę…" w boksie SEO).
          Reguła inline, bo klasy `x-cloak` nie ma w zbudowanym arkuszu. --}}

@@ -17,7 +17,6 @@
     // i skonfigurowane (Integracje). ID jest zwalidowane do [A-Z0-9-] (Form
     // Request), więc bezpieczne w <script>. GTM- → Tag Manager, G- → GA4.
     $gaId = $shop->tracksWithGoogleAnalytics() ? $shop->googleAnalyticsId() : null;
-    $isGtm = $gaId !== null && str_starts_with($gaId, 'GTM-');
 
     // Nawigacja: jedno źródło pozycji „Informacje" (wirtualna „O sklepie" + strony)
     // dla nagłówka i stopki. Logo (jeśli jest) i adres NASZEJ Polityki prywatności
@@ -133,21 +132,7 @@
 
     @livewireStyles
 
-    @if($gaId)
-        @if($isGtm)
-            {{-- Google Tag Manager --}}
-            <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','{{ $gaId }}');</script>
-        @else
-            {{-- Google Analytics 4 --}}
-            <script async src="https://www.googletagmanager.com/gtag/js?id={{ $gaId }}"></script>
-            <script>
-                window.dataLayer = window.dataLayer || [];
-                function gtag(){dataLayer.push(arguments);}
-                gtag('js', new Date());
-                gtag('config', '{{ $gaId }}');
-            </script>
-        @endif
-    @endif
+    <x-google-analytics :id="$gaId" />
 
     {{-- Zasoby dokładane przez konkretną podstronę (np. geowidget InPostu w kasie).
          Ładują się tylko tam, gdzie są potrzebne — nie obciążają całego sklepu. --}}
@@ -159,10 +144,7 @@
          menu na każdej podstronie, zanim dotrze do oferty. --}}
     <a href="#tresc" class="st-skip">Przejdź do treści</a>
 
-    @if($gaId && $isGtm)
-        {{-- Google Tag Manager (noscript) --}}
-        <noscript><iframe src="https://www.googletagmanager.com/ns.html?id={{ $gaId }}" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
-    @endif
+    <x-google-analytics-noscript :id="$gaId" />
 
     @unless ($bare)
     {{-- Nagłówek globalny — WINIETA. Mobile: kompaktowy pasek (hamburger · brand ·

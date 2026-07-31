@@ -20,6 +20,8 @@
     <meta property="og:image:height" content="630">
     <meta name="twitter:card" content="summary_large_image">
 
+    <x-google-analytics :id="config('services.google.analytics_id')" />
+
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="h-full bg-stone-100 text-stone-800 antialiased">

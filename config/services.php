@@ -94,4 +94,24 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Google Analytics — statystyki CENTRALI
+    |--------------------------------------------------------------------------
+    |
+    | Dotyczy wyłącznie stron platformy (landing, rejestracja, logowanie,
+    | dokumenty prawne). Sklepy sprzedawców mają WŁASNE identyfikatory, wpisywane
+    | w Integracjach i trzymane per sklep — te dwa pomiary nigdy się nie mieszają.
+    |
+    | Identyfikator siedzi w `.env`, choć nie jest sekretem (i tak widać go w
+    | źródle strony). Chodzi o to, żeby kopia serwisu postawiona lokalnie albo
+    | na testowej domenie NIE dosypywała ruchu do statystyk produkcji — brak
+    | wpisu po prostu wyłącza pomiar.
+    |
+    */
+
+    'google' => [
+        'analytics_id' => env('GOOGLE_ANALYTICS_ID'),
+    ],
+
 ];
