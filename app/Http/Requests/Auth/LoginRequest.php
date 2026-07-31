@@ -2,15 +2,16 @@
 
 namespace App\Http\Requests\Auth;
 
-use Illuminate\Auth\Events\Lockout;
+use App\Http\Requests\ThrottlesLogins;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class LoginRequest extends FormRequest
 {
+    use ThrottlesLogins;
+
     public function authorize(): bool
     {
         return true;
@@ -47,36 +48,14 @@ class LoginRequest extends FormRequest
         $this->ensureIsNotRateLimited();
 
         if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
-            RateLimiter::hit($this->throttleKey(), (int) config('security.login.decay_seconds'));
+            $this->hitRateLimiter();
 
             throw ValidationException::withMessages([
                 'email' => 'Nieprawidłowy adres e-mail lub hasło.',
             ]);
         }
 
-        RateLimiter::clear($this->throttleKey());
-    }
-
-    /**
-     * Blokuje logowanie po zbyt wielu nieudanych próbach.
-     */
-    public function ensureIsNotRateLimited(): void
-    {
-        if (! RateLimiter::tooManyAttempts($this->throttleKey(), (int) config('security.login.max_attempts'))) {
-            return;
-        }
-
-        event(new Lockout($this));
-
-        $seconds = RateLimiter::availableIn($this->throttleKey());
-
-        $message = $seconds >= 60
-            ? 'Zbyt wiele prób logowania. Spróbuj ponownie za '.ceil($seconds / 60).' min.'
-            : "Zbyt wiele prób logowania. Spróbuj ponownie za {$seconds} s.";
-
-        throw ValidationException::withMessages([
-            'email' => $message,
-        ]);
+        $this->clearRateLimiter();
     }
 
     /**

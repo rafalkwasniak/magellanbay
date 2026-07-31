@@ -48,6 +48,11 @@ class RegisterRequest extends FormRequest
             // Hasło ustawiane jest później, w formularzu aktywacji (ActivationController).
             'terms' => ['accepted'],
             'privacy' => ['accepted'],
+
+            // Pułapka na boty (honeypot): pole ukryte w formularzu, którego
+            // człowiek nie widzi i nie wypełni. Cokolwiek w nim przyszło, przyszło
+            // od automatu. `prohibited` przepuszcza brak pola i pustą wartość.
+            'website' => ['prohibited'],
         ];
     }
 
@@ -80,6 +85,11 @@ class RegisterRequest extends FormRequest
             'slug.not_in' => 'Ten adres sklepu jest zarezerwowany — wybierz inną nazwę.',
             'terms.accepted' => 'Musisz zaakceptować Regulamin.',
             'privacy.accepted' => 'Musisz zaakceptować Politykę Prywatności.',
+
+            // Komunikat celowo nie mówi, CO odrzuciło formularz — bot nie dostaje
+            // wskazówki, a człowiek, który jakimś cudem tu trafił (dziwny
+            // autouzupełniacz), dostaje radę, która realnie pomoże.
+            'website.prohibited' => 'Nie udało się wysłać formularza. Odśwież stronę i spróbuj ponownie.',
         ];
     }
 }

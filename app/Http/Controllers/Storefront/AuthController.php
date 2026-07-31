@@ -33,6 +33,8 @@ class AuthController extends Controller
         /** @var Shop $shop */
         $shop = $request->attributes->get('shop');
 
+        $request->ensureIsNotRateLimited();
+
         $credentials = [
             'email' => $request->string('email')->toString(),
             'password' => $request->string('password')->toString(),
@@ -40,6 +42,8 @@ class AuthController extends Controller
         ];
 
         if (! Auth::guard('customer')->attempt($credentials, $request->boolean('remember'))) {
+            $request->hitRateLimiter();
+
             // Konto istnieje, ale nieaktywowane (brak hasła) → inny komunikat niż złe dane.
             $pending = $shop->customers()
                 ->where('email', $request->string('email')->toString())
@@ -52,6 +56,8 @@ class AuthController extends Controller
                     : 'Nieprawidłowy e-mail lub hasło.',
             ]);
         }
+
+        $request->clearRateLimiter();
 
         $request->session()->regenerate();
 

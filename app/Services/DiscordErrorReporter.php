@@ -7,7 +7,8 @@ use Illuminate\Support\Str;
 use Throwable;
 
 /**
- * Wysyła reportowalne wyjątki na kanał Discorda przez webhook, jako natywny embed.
+ * Wysyła na kanał Discorda przez webhook, jako natywny embed: reportowalne
+ * wyjątki (`report()`) oraz zdarzenia bezpieczeństwa warte uwagi (`alert()`).
  * Nic nie robi, gdy webhook nie jest skonfigurowany, i nigdy nie wypuszcza na
  * zewnątrz błędu dostarczenia — ten wróciłby do handlera wyjątków i zapętliłby go.
  */
@@ -15,7 +16,39 @@ class DiscordErrorReporter
 {
     private const COLOR_ERROR = 0xED4245;
 
+    /** Zdarzenie warte uwagi, ale nie awaria — bursztyn zamiast czerwieni. */
+    private const COLOR_ALERT = 0xE67E22;
+
     public function report(Throwable $e): void
+    {
+        $this->send($this->embed($e));
+    }
+
+    /**
+     * Zdarzenie bezpieczeństwa: nic się nie zepsuło, ale ktoś powinien wiedzieć.
+     * Osobne wejście od `report()`, bo tu nie ma wyjątku ani stosu wywołań.
+     *
+     * @param  array<string, string>  $fields  etykieta => wartość
+     */
+    public function alert(string $title, string $description, array $fields = []): void
+    {
+        $this->send([
+            'title' => Str::limit('['.config('app.name').'] '.$title, 250),
+            'description' => Str::limit($description, 4000),
+            'color' => self::COLOR_ALERT,
+            'fields' => array_map(
+                fn (string $name, string $value) => ['name' => $name, 'value' => Str::limit($value, 1024)],
+                array_keys($fields),
+                array_values($fields),
+            ),
+            'timestamp' => now()->toIso8601String(),
+        ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $embed
+     */
+    private function send(array $embed): void
     {
         $webhook = config('services.discord.webhook');
 
@@ -24,7 +57,7 @@ class DiscordErrorReporter
         }
 
         try {
-            Http::timeout(5)->post($webhook, ['embeds' => [$this->embed($e)]]);
+            Http::timeout(5)->post($webhook, ['embeds' => [$embed]]);
         } catch (Throwable) {
             // Raportowanie nie może wywrócić requestu ani się zapętlić.
         }

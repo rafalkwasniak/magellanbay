@@ -7,6 +7,27 @@
         <form method="POST" action="{{ route('register.store') }}" class="mt-8 space-y-5" novalidate data-validate>
             @csrf
 
+            {{-- Pułapka na boty: pole niewidoczne dla człowieka, więc wypełni je
+                 tylko automat lecący po wszystkich polach formularza. Tańsze niż
+                 captcha i nic nie kosztuje tego, kto zakłada sklep.
+                 `tabindex=-1` i `aria-hidden` trzymają je poza zasięgiem
+                 klawiatury i czytnika ekranu, `autocomplete=off` chroni przed
+                 podpowiedzią przeglądarki. Chowamy przez wyniesienie poza ekran,
+                 nie `display:none` — część botów pomija to, co niewyświetlane.
+
+                 Styl jest WPISANY W ZNACZNIK, nie w klasach Tailwinda: ukrycie
+                 to tutaj wymóg poprawności, a klasa, której zabraknie w
+                 zbudowanym CSS, po cichu nic nie robi — i pole wyskoczyłoby
+                 ludziom w środku formularza. --}}
+            <div aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden">
+                <label for="website">Nie wypełniaj tego pola</label>
+                <input id="website" name="website" type="text" tabindex="-1" autocomplete="off" value="">
+            </div>
+
+            @error('website')
+                <p class="rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{{ $message }}</p>
+            @enderror
+
             {{-- Nazwa sklepu + jego adres (subdomena). Adres tworzymy z nazwy; pole
                  adresu jest tylko podglądem, a o jego dostępności decyduje walidacja. --}}
             <div>

@@ -75,7 +75,12 @@ Route::post('/wyloguj', [AuthController::class, 'destroy'])->middleware('auth')-
 // Rejestracja sprzedawcy (nowe konta otrzymują rolę 'seller'). Konto powstaje
 // bez hasła — sprzedawca dostaje mailem link do jego ustawienia.
 Route::get('/rejestracja', [RegisterController::class, 'create'])->name('register');
-Route::post('/rejestracja', [RegisterController::class, 'store'])->name('register.store');
+// Limit per IP: ten formularz wysyła maila aktywacyjnego na DOWOLNY podany
+// adres, więc bez dławika jest gotowym narzędziem do zalewania cudzej skrzynki
+// naszym kosztem — reputacyjnym. Progi: config/security.php.
+Route::post('/rejestracja', [RegisterController::class, 'store'])
+    ->middleware('throttle:register')
+    ->name('register.store');
 Route::view('/rejestracja/potwierdzenie', 'auth.registered')->name('register.confirmation');
 Route::post('/rejestracja/wyslij-ponownie', [ResendActivationController::class, 'store'])
     ->middleware('throttle:5,1')
@@ -83,7 +88,9 @@ Route::post('/rejestracja/wyslij-ponownie', [ResendActivationController::class, 
 
 // Aktywacja konta (ustawienie pierwszego hasła + danych) — token brokera 'activation', 24 h.
 Route::get('/aktywacja/{token}', [ActivationController::class, 'create'])->name('activation.show');
-Route::post('/aktywacja', [ActivationController::class, 'store'])->name('activation.store');
+Route::post('/aktywacja', [ActivationController::class, 'store'])
+    ->middleware('throttle:activation')
+    ->name('activation.store');
 
 // Webhook Paynow: powiadomienie o zmianie statusu płatności (źródło prawdy o
 // zapłacie). Publiczny — Paynow nie ma sesji ani CSRF; broni go podpis (patrz

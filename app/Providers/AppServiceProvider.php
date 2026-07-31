@@ -2,9 +2,15 @@
 
 namespace App\Providers;
 
+use App\Listeners\ReportLockout;
 use App\Services\SlowQueryLogger;
+use Illuminate\Auth\Events\Lockout;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Events\QueryExecuted;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -28,6 +34,31 @@ class AppServiceProvider extends ServiceProvider
 
         if ((int) config('monitoring.slow_query_ms') > 0) {
             DB::listen(fn (QueryExecuted $query) => app(SlowQueryLogger::class)->handle($query));
+        }
+
+        $this->registerRateLimiters();
+
+        // Wyczerpany limit prób logowania leci na kanał alertów — inaczej nie
+        // wiemy, czy cisza oznacza spokój, czy tylko brak obserwacji.
+        Event::listen(Lockout::class, ReportLockout::class);
+    }
+
+    /**
+     * Limity formularzy publicznych. Progi trzymamy w `config/security.php`, a
+     * nie w łańcuchu `throttle:5,1` przy trasie — inaczej strojenie ochrony
+     * oznacza szukanie liczb rozsypanych po pliku tras.
+     */
+    private function registerRateLimiters(): void
+    {
+        foreach (array_keys((array) config('security.public_forms')) as $name) {
+            RateLimiter::for($name, function (Request $request) use ($name) {
+                $limit = config('security.public_forms.'.$name);
+
+                return Limit::perMinutes(
+                    (int) $limit['decay_minutes'],
+                    (int) $limit['max_attempts'],
+                )->by($request->ip());
+            });
         }
     }
 }

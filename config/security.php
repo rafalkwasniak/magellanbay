@@ -20,6 +20,36 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Limity formularzy publicznych (per IP)
+    |--------------------------------------------------------------------------
+    |
+    | Trasy dostępne bez logowania, które COŚ URUCHAMIAJĄ: zakładają konto,
+    | wysyłają maila, sprawdzają token. Blokada logowania liczona per e-mail
+    | ich nie broni, bo atakujący za każdym razem podaje inny adres.
+    |
+    | Najgroźniejsza jest rejestracja: wysyła wiadomość aktywacyjną na DOWOLNY
+    | podany adres, więc bez limitu Kramio jest darmową maszynką do zalewania
+    | cudzej skrzynki. Płacimy za to reputacją domeny — a gdy ta siądzie, do
+    | spamu zaczną wpadać maile transakcyjne WSZYSTKICH sprzedawców.
+    |
+    | Progi są celowo luźne wobec człowieka: konto sklepu zakłada się raz, a nie
+    | pięć razy na minutę. Limit ma ściąć skrypt, nie zawadzać biuru za jednym
+    | adresem IP.
+    |
+    */
+
+    'public_forms' => [
+        // Rejestracja sprzedawcy: konto + subdomena + mail aktywacyjny.
+        'register' => ['max_attempts' => 5, 'decay_minutes' => 1],
+
+        // Ustawienie hasła z tokenu aktywacyjnego. Token brokera jest długi i
+        // losowy, więc to nie obrona przed zgadywaniem, tylko odcięcie skryptu,
+        // który waliłby w ten adres bez końca.
+        'activation' => ['max_attempts' => 10, 'decay_minutes' => 1],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Nagłówki bezpieczeństwa odpowiedzi
     |--------------------------------------------------------------------------
     |
