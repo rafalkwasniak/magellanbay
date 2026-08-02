@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\IntegrationType;
 use App\Models\Shop;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -107,6 +108,20 @@ class CookieConsentTest extends TestCase
                 ->assertOk()
                 ->assertSee('value="reset"', escape: false);
         }
+    }
+
+    public function test_panel_lets_you_change_the_decision_without_leaving_it(): void
+    {
+        $seller = User::factory()->consented()->create();
+        Shop::factory()->create(['owner_id' => $seller->id]);
+
+        $response = $this->actingAs($seller)->get(route('seller.dashboard'));
+
+        // Panel NIE ładuje pomiaru, więc banera tu nie ma — i słusznie.
+        $response->assertDontSee('Tylko niezbędne');
+        // Ale zgoda dotyczy całej domeny, nie pojedynczej strony, więc musi być
+        // jak ją cofnąć bez wychodzenia z panelu.
+        $response->assertSee('value="reset"', escape: false);
     }
 
     public function test_decision_can_be_withdrawn(): void

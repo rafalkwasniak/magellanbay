@@ -151,6 +151,16 @@
                     @endif
 
                     {{ $slot }}
+
+                    {{-- Zmiana decyzji o ciasteczkach. BANERA tu nie ma i to jest
+                         celowe: panel nie ładuje pomiaru Google, więc nie ma o co
+                         pytać. Ale zgoda dotyczy całej domeny kramio.pl, a nie
+                         pojedynczej strony — sprzedawca, który zaakceptował na
+                         landingu, musi mieć jak to cofnąć również stąd, bez
+                         wychodzenia z panelu. --}}
+                    <p class="mt-10 text-center text-xs text-stone-400">
+                        <x-cookie-settings-link class="inline" />
+                    </p>
                 </main>
             </div>
         </div>
