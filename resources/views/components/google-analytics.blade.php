@@ -13,7 +13,11 @@
      Identyfikator jest walidowany do [A-Z0-9-] przy zapisie (Form Request), a
      tutaj i tak przechodzi przez `e()`, więc nie da się nim wstrzyknąć skryptu. --}}
 
-@if ($id)
+{{-- BRAMKA ZGODY. Bez zgody skrypt NIE POJAWIA SIĘ w wysłanym HTML-u — nie jest
+     ukrywany ani wyłączany po stronie przeglądarki, bo wtedy plik zostałby już
+     pobrany, a Google zobaczyłoby żądanie. Zgoda musi być UPRZEDNIA, więc
+     jedyne poprawne miejsce na tę decyzję jest tutaj, przed renderem. --}}
+@if ($id && \App\Support\CookieConsent::granted())
     @php($isGtm = str_starts_with($id, 'GTM-'))
 
     @if ($isGtm)

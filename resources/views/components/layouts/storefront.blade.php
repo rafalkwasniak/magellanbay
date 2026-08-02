@@ -146,6 +146,14 @@
 
     <x-google-analytics-noscript :id="$gaId" />
 
+    {{-- Zgodę zbieramy W IMIENIU SPRZEDAWCY — to on jest administratorem danych
+         na swojej subdomenie, nie Kramio. Pytamy tylko wtedy, gdy sklep ma
+         włączony pomiar; bez niego zostają same ciasteczka niezbędne. --}}
+    <x-cookie-consent
+        :owner="'Sklep '.$shop->name"
+        :needed="(bool) $gaId"
+        privacy-url="/informacje/{{ config('pages.privacy.slug') }}">koszyk i logowanie działały poprawnie</x-cookie-consent>
+
     @unless ($bare)
     {{-- Nagłówek globalny — WINIETA. Mobile: kompaktowy pasek (hamburger · brand ·
          koszyk). Desktop: brand wyśrodkowany i duży (logo/serif), cienka linia,
@@ -292,6 +300,16 @@
                         <li><a href="{{ $item['url'] }}" wire:navigate class="transition hover:opacity-100">{{ $item['label'] }}</a></li>
                     @endforeach
                     <li><a href="{{ $footerPrivacy['url'] }}" wire:navigate class="transition hover:opacity-100">{{ $footerPrivacy['label'] }}</a></li>
+                    {{-- Wycofanie zgody musi być równie łatwe jak jej udzielenie.
+                         Pokazujemy tylko tam, gdzie było o co pytać. --}}
+                    @if ($gaId)
+                        <li>
+                            <form method="POST" action="{{ route('cookies.store') }}">
+                                @csrf
+                                <button type="submit" name="decision" value="reset" class="transition hover:opacity-100">Ciasteczka</button>
+                            </form>
+                        </li>
+                    @endif
                 </ul>
             </div>
 

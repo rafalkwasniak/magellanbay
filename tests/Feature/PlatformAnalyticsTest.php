@@ -29,11 +29,24 @@ class PlatformAnalyticsTest extends TestCase
         config()->set('services.google.analytics_id', self::ID);
     }
 
+    /**
+     * Żądanie z wyrażoną zgodą na ciasteczka.
+     *
+     * Od 02.08.2026 sam skonfigurowany identyfikator NIE WYSTARCZA — skrypt
+     * pomiaru pojawia się w stronie dopiero po zgodzie użytkownika, a blokada
+     * jest serwerowa. Testy sprawdzające obecność pomiaru muszą więc tę zgodę
+     * wyrazić; brak zgody ma własne testy w CookieConsentTest.
+     */
+    private function consenting(): static
+    {
+        return $this->withUnencryptedCookie((string) config('cookies.consent.name'), 'granted');
+    }
+
     public function test_landing_page_loads_analytics(): void
     {
         $this->withAnalytics();
 
-        $this->get('/')
+        $this->consenting()->get('/')
             ->assertOk()
             ->assertSee('googletagmanager.com/gtag/js?id='.self::ID, escape: false);
     }
@@ -42,7 +55,7 @@ class PlatformAnalyticsTest extends TestCase
     {
         $this->withAnalytics();
 
-        $this->get(route('login'))
+        $this->consenting()->get(route('login'))
             ->assertOk()
             ->assertSee(self::ID, escape: false);
     }
@@ -51,7 +64,7 @@ class PlatformAnalyticsTest extends TestCase
     {
         $this->withAnalytics();
 
-        $this->get('/polityka-prywatnosci')
+        $this->consenting()->get('/polityka-prywatnosci')
             ->assertOk()
             ->assertSee(self::ID, escape: false);
     }
@@ -88,7 +101,7 @@ class PlatformAnalyticsTest extends TestCase
         // centralę, więc pilnujemy jej tutaj.
         config()->set('services.google.analytics_id', 'GTM-TESTOWE');
 
-        $this->get('/')
+        $this->consenting()->get('/')
             ->assertOk()
             ->assertSee('googletagmanager.com/gtm.js', escape: false);
     }

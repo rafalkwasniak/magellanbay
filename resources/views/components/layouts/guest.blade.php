@@ -33,5 +33,6 @@
             </div>
         </div>
     </div>
+    <x-cookie-consent owner="Kramio" privacy-url="/polityka-prywatnosci">logowanie i Twój panel działały poprawnie</x-cookie-consent>
 </body>
 </html>

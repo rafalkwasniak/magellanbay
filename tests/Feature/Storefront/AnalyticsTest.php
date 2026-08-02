@@ -37,7 +37,7 @@ class AnalyticsTest extends TestCase
     {
         $shop = $this->activeShopWithGa('G-ABC123XYZ');
 
-        $this->get($this->url($shop))
+        $this->withUnencryptedCookie((string) config('cookies.consent.name'), 'granted')->get($this->url($shop))
             ->assertOk()
             ->assertSee('googletagmanager.com/gtag/js?id=G-ABC123XYZ', false)
             ->assertSee("gtag('config', 'G-ABC123XYZ')", false);
@@ -47,7 +47,7 @@ class AnalyticsTest extends TestCase
     {
         $shop = $this->activeShopWithGa('GTM-ABCD12');
 
-        $this->get($this->url($shop))
+        $this->withUnencryptedCookie((string) config('cookies.consent.name'), 'granted')->get($this->url($shop))
             ->assertOk()
             ->assertSee('googletagmanager.com/gtm.js', false)
             ->assertSee('googletagmanager.com/ns.html?id=GTM-ABCD12', false)   // noscript

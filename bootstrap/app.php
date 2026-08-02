@@ -31,6 +31,17 @@ return Application::configure(basePath: dirname(__DIR__))
         // wszystkie storefronty naraz (config/security.php).
         $middleware->web(append: [SecurityHeaders::class]);
 
+        // Zgoda na ciasteczka BEZ szyfrowania. Nie jest sekretem — niesie samo
+        // „granted" albo „declined" — a musi pozostać czytelna poza cyklem
+        // żądania: dla skryptu w przeglądarce (gdyby doszedł tryb zgody Google)
+        // i przy diagnozowaniu, dlaczego komuś pokazuje się baner. Zaszyfrowana
+        // wartość jest dla nich nieczytelna i cicho traktowana jak brak decyzji.
+        // Nazwa WPISANA WPROST, nie przez config(): ten plik wykonuje się, zanim
+        // konfiguracja zostanie wczytana, więc wywołanie config() wywraca całą
+        // aplikację (biały ekran, nie ostrzeżenie). Wartość musi pozostać zgodna
+        // z `config/cookies.php` — pilnuje tego test.
+        $middleware->encryptCookies(except: ['cookie_consent']);
+
         // Niezalogowani trafiają na ekran logowania.
         $middleware->redirectGuestsTo(fn () => route('login'));
 

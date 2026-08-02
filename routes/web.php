@@ -11,6 +11,7 @@ use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\ResendActivationController;
 use App\Http\Controllers\Consent\ConsentController;
+use App\Http\Controllers\CookieConsentController;
 use App\Http\Controllers\LegalController;
 use App\Http\Controllers\PackagePaymentWebhookController;
 use App\Http\Controllers\PaynowWebhookController;
@@ -63,6 +64,13 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('welcome');
 });
+
+// Zapis decyzji o ciasteczkach. Zwykły formularz, nie żądanie w tle: storefront
+// celowo nie ładuje JavaScriptu, a po zgodzie i tak trzeba przeładować stronę,
+// bo skrypt pomiaru dokłada SERWER. Trasa jest poza grupą domeny sklepu, więc
+// odpowiada i na centrali, i na subdomenach — ciasteczko przypina się do hosta,
+// z którego przyszło żądanie.
+Route::post('/zgoda-cookies', [CookieConsentController::class, 'store'])->name('cookies.store');
 
 /*
 |--------------------------------------------------------------------------
