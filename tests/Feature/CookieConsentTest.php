@@ -123,11 +123,24 @@ class CookieConsentTest extends TestCase
             ->assertSee('Tylko niezbędne')
             ->assertSee('value="reset"', escape: false);
 
-        // Po decyzji baner ustępuje — zostaje sam link do jej zmiany.
+        // Po decyzji baner ustępuje — zostaje sam wpis w menu.
         $this->withUnencryptedCookie(self::COOKIE, 'granted')
             ->actingAs($seller)->get(route('seller.dashboard'))
             ->assertDontSee('Tylko niezbędne')
             ->assertSee('value="reset"', escape: false);
+    }
+
+    public function test_cookies_entry_sits_in_both_panel_menus(): void
+    {
+        $seller = User::factory()->consented()->create();
+        Shop::factory()->create(['owner_id' => $seller->id]);
+
+        $html = $this->withUnencryptedCookie(self::COOKIE, 'granted')
+            ->actingAs($seller)->get(route('seller.dashboard'))->getContent();
+
+        // Panel ma DWA menu — boczne i wysuwane mobilne — renderowane tym samym
+        // komponentem. Wpis musi być w obu, inaczej na telefonie znika.
+        $this->assertSame(2, substr_count($html, 'value="reset"'));
     }
 
     public function test_every_decision_is_confirmed_on_screen(): void

@@ -32,3 +32,16 @@
         </span>
     @endif
 @endforeach
+
+{{-- Ciasteczka — ZAWSZE ostatnia pozycja, poza tablicą `$nav`. Nie jest linkiem
+     do podstrony, tylko formularzem czyszczącym decyzję (przywraca baner), więc
+     nie mieści się w strukturze pozostałych wpisów. Stoi tutaj, a nie w obu
+     menu osobno, żeby sidebar i wysuwane menu mobilne nie mogły się rozjechać. --}}
+<form method="POST" action="{{ route('cookies.store') }}">
+    @csrf
+    <button type="submit" name="decision" value="reset"
+        class="flex w-full items-center gap-3 rounded-2xl px-4 py-2.5 text-left text-stone-500 transition hover:bg-white/60">
+        <span class="text-base leading-none">🍪</span>
+        <span class="flex-1">Ciasteczka</span>
+    </button>
+</form>
