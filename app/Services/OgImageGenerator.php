@@ -411,27 +411,21 @@ class OgImageGenerator
      * Skrót ze składników grafiki — zmiana daje nową nazwę pliku, a więc i nowy
      * adres, którego cache social mediów nie zna.
      *
-     * Liczba produktów wchodzi tu jako PRÓG UKŁADU (brak / jeden / rząd / siatka),
-     * nie jako dokładna wartość. Dodanie piątego czy dwudziestego towaru nie zmienia
-     * tego, co widać, więc nie ma powodu przerysowywać karty i unieważniać adresu,
-     * który ktoś już wkleił na Facebooka.
+     * Z katalogu bierzemy ZDJĘCIA, KTÓRE FAKTYCZNIE TRAFIĄ NA EKRAN — ich ścieżki,
+     * w kolejności wyświetlania. To jedyna miara, która nie kłamie w żadną stronę:
+     *
+     *  - podmiana zdjęcia na ładniejsze zmienia ścieżkę, więc karta się przerysuje
+     *    (bez tego sprzedawca zostałby ze starym zdjęciem i nie miałby jak tego
+     *    naprawić, bo ręcznego odświeżania świadomie nie ma);
+     *  - dodanie towaru do sklepu, który ma już komplet kafli, nie zmienia niczego,
+     *    bo wybór jest stabilny (wyróżnione, potem najstarsze) — adres wklejony
+     *    wcześniej na Facebooka zostaje ważny.
      */
     private function fingerprint(Shop $shop): string
     {
         $tokens = $shop->themeTokens();
 
-        $withPhotos = $shop->products()
-            ->where('is_active', true)
-            ->get()
-            ->filter(fn ($product) => $product->mainImage() !== null)
-            ->count();
-
-        $layout = match (true) {
-            $withPhotos === 0 => 'brak',
-            $withPhotos === 1 => 'jeden',
-            $withPhotos <= 3 => 'rzad',
-            default => 'siatka',
-        };
+        $photos = $this->screen->photoPaths($shop);
 
         return substr(md5(implode('|', [
             $shop->name,
@@ -441,7 +435,7 @@ class OgImageGenerator
             $tokens['brand_ink'] ?? '',
             $tokens['surface'] ?? '',
             $tokens['ink'] ?? '',
-            $layout,
+            implode(',', $photos),
             (string) md5_file(public_path(config('seo.shop_card.scene'))),
         ])), 0, 12);
     }

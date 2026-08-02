@@ -62,6 +62,22 @@ class ScreenContent
     }
 
     /**
+     * Ścieżki zdjęć, które trafią na ekran, w kolejności wyświetlania.
+     *
+     * Wystawione osobno, bo z tej samej listy korzysta skrót w nazwie pliku
+     * karty. Gdyby generator liczył swój wybór niezależnie, oba mogłyby się
+     * rozjechać i karta pokazywałaby co innego, niż zapowiada jej adres.
+     *
+     * @return array<int, string>
+     */
+    public function photoPaths(Shop $shop): array
+    {
+        return $this->pickProducts($shop)
+            ->map(fn (Product $product) => (string) $product->mainImage()?->path)
+            ->all();
+    }
+
+    /**
      * Produkty na ekran — WYBÓR STABILNY, i to jest tu najważniejsze.
      *
      * Bierzemy najpierw te, które sprzedawca sam wskazał do pokazania na stronie

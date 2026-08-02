@@ -63,24 +63,26 @@ class ShopCardTest extends TestCase
         $this->assertSame(IMAGETYPE_JPEG, $type);
     }
 
-    public function test_adding_a_product_within_the_same_layout_keeps_the_address(): void
+    public function test_adding_a_product_beyond_the_screen_keeps_the_address(): void
     {
         Storage::fake('public');
         $shop = Shop::factory()->create();
 
-        // Cztery produkty to już „siatka" — piąty niczego nie zmienia.
-        foreach (range(1, 4) as $i) {
+        // Ekran mieści sześć kafli i tyle już jest — siódmy towar nie wchodzi
+        // do kadru, więc adres karty musi zostać ten sam. Inaczej każda edycja
+        // katalogu psułaby link udostępniony wcześniej na Facebooku.
+        foreach (range(1, (int) config('seo.shop_card.max_products')) as $i) {
             $this->productWithPhoto($shop, 'Produkt '.$i);
         }
 
         $before = app(OgImageGenerator::class)->generate($shop->fresh());
 
-        $this->productWithPhoto($shop, 'Produkt 5');
+        $this->productWithPhoto($shop, 'Produkt spoza kadru');
 
         $this->assertSame($before, app(OgImageGenerator::class)->generate($shop->fresh()));
     }
 
-    public function test_crossing_a_layout_threshold_gives_a_new_address(): void
+    public function test_adding_a_visible_product_gives_a_new_address(): void
     {
         Storage::fake('public');
         $shop = Shop::factory()->create();
@@ -88,11 +90,31 @@ class ShopCardTest extends TestCase
 
         $single = app(OgImageGenerator::class)->generate($shop->fresh());
 
-        // Drugi produkt zmienia układ z jednego dużego zdjęcia na rząd, więc
-        // karta wygląda inaczej i MUSI dostać nowy adres.
+        // Drugi produkt wchodzi na ekran, więc karta wygląda inaczej i MUSI
+        // dostać nowy adres.
         $this->productWithPhoto($shop, 'Drugi');
 
         $this->assertNotSame($single, app(OgImageGenerator::class)->generate($shop->fresh()));
+    }
+
+    public function test_swapping_a_photo_gives_a_new_address(): void
+    {
+        Storage::fake('public');
+        $shop = Shop::factory()->create();
+        $product = $this->productWithPhoto($shop);
+
+        $before = app(OgImageGenerator::class)->generate($shop->fresh());
+
+        // Sprzedawca podmienia zdjęcie na ładniejsze. Liczba produktów się nie
+        // zmienia, więc gdyby skrót patrzył tylko na nią, karta zostałaby stara
+        // NA ZAWSZE — ręcznego odświeżania świadomie nie ma.
+        $product->images()->delete();
+        $product->images()->create([
+            'path' => UploadedFile::fake()->image('lepsze.jpg', 900, 900)->store('products/'.$product->id, 'public'),
+            'position' => 0,
+        ]);
+
+        $this->assertNotSame($before, app(OgImageGenerator::class)->generate($shop->fresh()));
     }
 
     public function test_repeated_generation_does_not_rebuild_the_file(): void
