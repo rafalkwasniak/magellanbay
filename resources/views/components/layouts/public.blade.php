@@ -39,6 +39,13 @@
             </a>
 
             {{ $slot }}
+
+            {{-- Zmiana decyzji o ciasteczkach — te layouty nie mają stopki,
+                 więc link stoi dyskretnie pod treścią. --}}
+            <p class="mt-10 text-center text-xs text-stone-400">
+                <x-cookie-settings-link class="inline" />
+            </p>
+
         </div>
     </div>
     <x-cookie-consent owner="Kramio" privacy-url="/polityka-prywatnosci">logowanie i Twój panel działały poprawnie</x-cookie-consent>

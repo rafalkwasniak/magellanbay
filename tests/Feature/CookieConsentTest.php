@@ -96,6 +96,19 @@ class CookieConsentTest extends TestCase
             ->assertCookie(self::COOKIE, 'declined', false);
     }
 
+    public function test_every_public_page_offers_a_way_to_change_the_decision(): void
+    {
+        // Wycofanie zgody musi być równie łatwe jak jej udzielenie. Link powstał
+        // najpierw TYLKO na storefroncie — centrala wypadła z zakresu, dokładnie
+        // tak jak przy grafice OG i statystykach. Ten test pilnuje, żeby nie
+        // wróciło: sprawdza landing, dokument prawny ORAZ ekran logowania.
+        foreach (['/', '/polityka-prywatnosci', route('login')] as $url) {
+            $this->get($url)
+                ->assertOk()
+                ->assertSee('value="reset"', escape: false);
+        }
+    }
+
     public function test_decision_can_be_withdrawn(): void
     {
         // Wycofanie zgody musi być możliwe — kasujemy ciasteczko, więc baner

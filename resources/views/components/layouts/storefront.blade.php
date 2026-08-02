@@ -300,15 +300,10 @@
                         <li><a href="{{ $item['url'] }}" wire:navigate class="transition hover:opacity-100">{{ $item['label'] }}</a></li>
                     @endforeach
                     <li><a href="{{ $footerPrivacy['url'] }}" wire:navigate class="transition hover:opacity-100">{{ $footerPrivacy['label'] }}</a></li>
-                    {{-- Wycofanie zgody musi być równie łatwe jak jej udzielenie.
+                    {{-- Wycofanie zgody — ten sam komponent co w centrali.
                          Pokazujemy tylko tam, gdzie było o co pytać. --}}
                     @if ($gaId)
-                        <li>
-                            <form method="POST" action="{{ route('cookies.store') }}">
-                                @csrf
-                                <button type="submit" name="decision" value="reset" class="transition hover:opacity-100">Ciasteczka</button>
-                            </form>
-                        </li>
+                        <li><x-cookie-settings-link /></li>
                     @endif
                 </ul>
             </div>
