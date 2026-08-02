@@ -4,13 +4,9 @@
     'owner' => null,
     // Adres polityki prywatności właściwej dla tego miejsca.
     'privacyUrl' => null,
-    // Czy w tym miejscu jest w ogóle co blokować. Sklep bez włączonej analityki
-    // ustawia wyłącznie ciasteczka niezbędne — pytanie o zgodę byłoby wtedy
-    // tarciem bez powodu, a przy zakupach każde tarcie kosztuje.
-    'needed' => true,
 ])
 
-@if ($needed && ! \App\Support\CookieConsent::decided())
+@if (! \App\Support\CookieConsent::decided())
     {{-- Kolory bierzemy ze zmiennych CSS otoczenia (--surface, --ink, --brand,
          --brand-ink). Storefront wstrzykuje je z palety motywu sklepu, więc ten
          sam komponent wygląda „po sklepowemu" na każdej z dwudziestu palet.

@@ -147,11 +147,13 @@
     <x-google-analytics-noscript :id="$gaId" />
 
     {{-- Zgodę zbieramy W IMIENIU SPRZEDAWCY — to on jest administratorem danych
-         na swojej subdomenie, nie Kramio. Pytamy tylko wtedy, gdy sklep ma
-         włączony pomiar; bez niego zostają same ciasteczka niezbędne. --}}
+         na swojej subdomenie, nie Kramio.
+
+         Pytamy ZAWSZE, nie tylko gdy sklep ma włączony pomiar (decyzja Rafała):
+         zgoda zebrana z zapasem nic nie kosztuje, a jej brak w dniu, w którym
+         dojdzie piksel czy mapa, oznacza przerabianie wszystkiego od nowa. --}}
     <x-cookie-consent
         :owner="'Sklep '.$shop->name"
-        :needed="(bool) $gaId"
         privacy-url="/informacje/{{ config('pages.privacy.slug') }}">koszyk i logowanie działały poprawnie</x-cookie-consent>
 
     @unless ($bare)
@@ -301,10 +303,8 @@
                     @endforeach
                     <li><a href="{{ $footerPrivacy['url'] }}" wire:navigate class="transition hover:opacity-100">{{ $footerPrivacy['label'] }}</a></li>
                     {{-- Wycofanie zgody — ten sam komponent co w centrali.
-                         Pokazujemy tylko tam, gdzie było o co pytać. --}}
-                    @if ($gaId)
-                        <li><x-cookie-settings-link /></li>
-                    @endif
+                         Widoczne po podjęciu decyzji; wcześniej pyta o nią baner. --}}
+                    <li><x-cookie-settings-link /></li>
                 </ul>
             </div>
 

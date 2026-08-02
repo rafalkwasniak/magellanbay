@@ -152,12 +152,7 @@
 
                     {{ $slot }}
 
-                    {{-- Zmiana decyzji o ciasteczkach. BANERA tu nie ma i to jest
-                         celowe: panel nie ładuje pomiaru Google, więc nie ma o co
-                         pytać. Ale zgoda dotyczy całej domeny kramio.pl, a nie
-                         pojedynczej strony — sprzedawca, który zaakceptował na
-                         landingu, musi mieć jak to cofnąć również stąd, bez
-                         wychodzenia z panelu. --}}
+                    {{-- Zmiana decyzji o ciasteczkach — zawsze dostępna. --}}
                     <p class="mt-10 text-center text-xs text-stone-400">
                         <x-cookie-settings-link class="inline" />
                     </p>
@@ -212,5 +207,10 @@
     </div>
 
     @livewireScripts
+    {{-- Zgoda dotyczy CAŁEJ domeny kramio.pl, a nie pojedynczej strony. Panel
+         sam pomiaru nie ładuje, ale ta sama decyzja rządzi landingiem i
+         dokumentami — więc pytamy też tutaj. Bez tego sprzedawca, który
+         wyczyścił decyzję, zostawał bez możliwości podjęcia jej na nowo. --}}
+    <x-cookie-consent owner="Kramio" privacy-url="/polityka-prywatnosci">logowanie i Twój panel działały poprawnie</x-cookie-consent>
 </body>
 </html>

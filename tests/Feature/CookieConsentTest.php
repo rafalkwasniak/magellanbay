@@ -115,13 +115,19 @@ class CookieConsentTest extends TestCase
         $seller = User::factory()->consented()->create();
         Shop::factory()->create(['owner_id' => $seller->id]);
 
-        $response = $this->actingAs($seller)->get(route('seller.dashboard'));
+        // Bez decyzji panel PYTA — zgoda dotyczy całej domeny, nie pojedynczej
+        // strony, więc ta sama decyzja rządzi landingiem i dokumentami. To był
+        // sedno usterki: sprzedawca cofał zgodę i zostawał bez sposobu, żeby
+        // podjąć ją na nowo, bo baner pojawiał się tylko poza panelem.
+        $this->actingAs($seller)->get(route('seller.dashboard'))
+            ->assertSee('Tylko niezbędne')
+            ->assertSee('value="reset"', escape: false);
 
-        // Panel NIE ładuje pomiaru, więc banera tu nie ma — i słusznie.
-        $response->assertDontSee('Tylko niezbędne');
-        // Ale zgoda dotyczy całej domeny, nie pojedynczej strony, więc musi być
-        // jak ją cofnąć bez wychodzenia z panelu.
-        $response->assertSee('value="reset"', escape: false);
+        // Po decyzji baner ustępuje — zostaje sam link do jej zmiany.
+        $this->withUnencryptedCookie(self::COOKIE, 'granted')
+            ->actingAs($seller)->get(route('seller.dashboard'))
+            ->assertDontSee('Tylko niezbędne')
+            ->assertSee('value="reset"', escape: false);
     }
 
     public function test_every_decision_is_confirmed_on_screen(): void
@@ -168,13 +174,14 @@ class CookieConsentTest extends TestCase
 
     // -------------------------------------------------------------- storefront
 
-    public function test_shop_without_analytics_does_not_ask_at_all(): void
+    public function test_shop_asks_even_without_analytics_configured(): void
     {
-        $shop = Shop::factory()->create();
+        $shop = Shop::factory()->active()->create();
 
-        // Sam koszyk i logowanie to ciasteczka niezbędne — nie ma o co pytać,
-        // a przy zakupach każde tarcie kosztuje.
-        $this->get($this->host($shop).'/')->assertDontSee('Tylko niezbędne');
+        // Pytamy ZAWSZE, nie tylko gdy pomiar jest włączony. Zgoda zebrana z
+        // zapasem nic nie kosztuje, a jej brak w dniu, w którym dojdzie piksel
+        // czy mapa, oznaczałby przerabianie mechanizmu od nowa u wszystkich.
+        $this->get($this->host($shop).'/')->assertSee('Tylko niezbędne');
     }
 
     public function test_shop_with_analytics_asks_in_its_own_colours(): void
