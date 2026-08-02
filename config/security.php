@@ -46,6 +46,12 @@ return [
         // losowy, więc to nie obrona przed zgadywaniem, tylko odcięcie skryptu,
         // który waliłby w ten adres bez końca.
         'activation' => ['max_attempts' => 10, 'decay_minutes' => 1],
+
+        // Prośba o link do zmiany hasła. Ten formularz też wysyła maila na
+        // podany adres, więc bez limitu byłby drugą maszynką do zalewania cudzej
+        // skrzynki — obok rejestracji. Ciaśniej niż tam, bo o własne hasło
+        // prosi się raz, a nie pięć razy pod rząd.
+        'password_reset' => ['max_attempts' => 3, 'decay_minutes' => 1],
     ],
 
     /*

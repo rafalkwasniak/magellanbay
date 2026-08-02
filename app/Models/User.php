@@ -118,6 +118,23 @@ class User extends Authenticatable
     }
 
     /**
+     * Czy konto przeszło aktywację, czyli czy sprzedawca ustawił własne hasło.
+     *
+     * UWAGA na pułapkę: rejestracja NIE zostawia pustego hasła — wstawia losowy
+     * ciąg zastępczy (`Str::password(32)`), bo kolumna jest NOT NULL. Sprawdzanie
+     * `password === null` dawałoby więc zawsze fałszywy wynik. Jedynym wiarygodnym
+     * znacznikiem jest potwierdzenie adresu, ustawiane dopiero przy aktywacji.
+     *
+     * Rozróżnienie jest potrzebne przy odzyskiwaniu hasła: komuś, kto nigdy go
+     * nie ustawił, wysyłamy link AKTYWACYJNY, a nie „ustaw nowe".
+     * Odpowiednik `Customer::isActivated()` po stronie klientów sklepu.
+     */
+    public function isActivated(): bool
+    {
+        return $this->email_verified_at !== null;
+    }
+
+    /**
      * Czy użytkownik zaakceptował AKTUALNĄ wersję danego dokumentu.
      */
     public function hasConsentedToCurrent(LegalDocumentType $type): bool

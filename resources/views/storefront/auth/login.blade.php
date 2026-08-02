@@ -34,10 +34,16 @@
                             @enderror
                         </div>
 
-                        <label class="flex items-center gap-3 text-sm opacity-80">
-                            <input type="checkbox" name="remember" value="1" class="st-border h-5 w-5 rounded border" style="accent-color: var(--brand);">
-                            Zapamiętaj mnie
-                        </label>
+                        <div class="flex flex-wrap items-center justify-between gap-3">
+                            <label class="flex items-center gap-3 text-sm opacity-80">
+                                <input type="checkbox" name="remember" value="1" class="st-border h-5 w-5 rounded border" style="accent-color: var(--brand);">
+                                Zapamiętaj mnie
+                            </label>
+
+                            <a href="/nie-pamietam-hasla" wire:navigate class="st-brand text-sm font-medium underline underline-offset-2">
+                                Nie pamiętam hasła
+                            </a>
+                        </div>
 
                         <button type="submit"
                             class="st-btn w-full rounded-xl px-4 py-3 text-sm font-semibold transition hover:brightness-95">

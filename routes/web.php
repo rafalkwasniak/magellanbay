@@ -4,25 +4,27 @@ use App\Enums\LegalDocumentType;
 use App\Http\Controllers\Administrator\DashboardController as AdministratorDashboard;
 use App\Http\Controllers\Administrator\MailPreviewController;
 use App\Http\Controllers\Administrator\ShopController as AdministratorShopController;
-use App\Http\Controllers\Auth\ActivationController;
-use App\Http\Controllers\PaynowWebhookController;
-use App\Http\Controllers\Auth\AuthController;
-use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\AiController;
+use App\Http\Controllers\Auth\ActivationController;
+use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Auth\PasswordResetController;
+use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\ResendActivationController;
 use App\Http\Controllers\Consent\ConsentController;
 use App\Http\Controllers\LegalController;
+use App\Http\Controllers\PackagePaymentWebhookController;
+use App\Http\Controllers\PaynowWebhookController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Seller\AnalyticsController;
 use App\Http\Controllers\Seller\AppearanceController;
-use App\Http\Controllers\Seller\CompanyLookupController;
-use App\Http\Controllers\Seller\DashboardController as SellerDashboard;
 use App\Http\Controllers\Seller\BulkMailingController;
+use App\Http\Controllers\Seller\CompanyLookupController;
 use App\Http\Controllers\Seller\CustomerController;
-use App\Http\Controllers\Seller\PackageController;
+use App\Http\Controllers\Seller\DashboardController as SellerDashboard;
 use App\Http\Controllers\Seller\DiscountCodeController;
 use App\Http\Controllers\Seller\IntegrationController;
 use App\Http\Controllers\Seller\OrderController;
+use App\Http\Controllers\Seller\PackageController;
 use App\Http\Controllers\Seller\PageController;
 use App\Http\Controllers\Seller\ProductController;
 use App\Http\Controllers\Seller\ProductImageController;
@@ -34,12 +36,13 @@ use App\Http\Controllers\Storefront\AuthController as StorefrontAuth;
 use App\Http\Controllers\Storefront\CartController as StorefrontCart;
 use App\Http\Controllers\Storefront\CheckoutController as StorefrontCheckout;
 use App\Http\Controllers\Storefront\HomeController as StorefrontHome;
-use App\Http\Controllers\Storefront\RegisterController as StorefrontRegister;
-use App\Http\Controllers\Storefront\PageController as StorefrontPage;
 use App\Http\Controllers\Storefront\OrderReturnController as StorefrontOrderReturn;
+use App\Http\Controllers\Storefront\PageController as StorefrontPage;
+use App\Http\Controllers\Storefront\PasswordResetController as StorefrontPasswordReset;
 use App\Http\Controllers\Storefront\PaymentController as StorefrontPayment;
-use App\Http\Controllers\Storefront\UnsubscribeController as StorefrontUnsubscribe;
 use App\Http\Controllers\Storefront\ProductController as StorefrontProduct;
+use App\Http\Controllers\Storefront\RegisterController as StorefrontRegister;
+use App\Http\Controllers\Storefront\UnsubscribeController as StorefrontUnsubscribe;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -72,6 +75,18 @@ Route::get('/logowanie', [AuthController::class, 'create'])->name('login');
 Route::post('/logowanie', [AuthController::class, 'store'])->name('login.attempt');
 Route::post('/wyloguj', [AuthController::class, 'destroy'])->middleware('auth')->name('logout');
 
+// Odzyskiwanie hasła. Prośba o link jest dławiona per IP: ten formularz wysyła
+// maila na podany adres, więc bez limitu byłby drugą — obok rejestracji —
+// maszynką do zalewania cudzej skrzynki.
+Route::get('/odzyskiwanie-hasla', [PasswordResetController::class, 'create'])->name('password.request');
+Route::post('/odzyskiwanie-hasla', [PasswordResetController::class, 'store'])
+    ->middleware('throttle:password_reset')
+    ->name('password.email');
+Route::get('/nowe-haslo/{token}', [PasswordResetController::class, 'edit'])->name('password.reset');
+Route::post('/nowe-haslo', [PasswordResetController::class, 'update'])
+    ->middleware('throttle:password_reset')
+    ->name('password.update');
+
 // Rejestracja sprzedawcy (nowe konta otrzymują rolę 'seller'). Konto powstaje
 // bez hasła — sprzedawca dostaje mailem link do jego ustawienia.
 Route::get('/rejestracja', [RegisterController::class, 'create'])->name('register');
@@ -99,7 +114,7 @@ Route::post('/platnosci/paynow/webhook', PaynowWebhookController::class)->name('
 
 // Webhooki opłat za PAKIETY Kramio (konto platformy) — osobna trasa, bo podpis
 // weryfikuje klucz platformy z `.env`, nie klucz sklepu.
-Route::post('/platnosci/paynow/pakiety/webhook', \App\Http\Controllers\PackagePaymentWebhookController::class)
+Route::post('/platnosci/paynow/pakiety/webhook', PackagePaymentWebhookController::class)
     ->name('payments.paynow.packages.webhook');
 
 /*
@@ -335,6 +350,18 @@ Route::domain('{shop}.'.config('tenancy.central_domain'))
             ->middleware('signed')->name('storefront.activation');
         Route::post('/aktywacja/{customer}', [StorefrontActivation::class, 'store'])
             ->middleware('signed')->name('storefront.activation.store');
+
+        // Odzyskiwanie hasła klienta. Link jest PODPISANY i niesie identyfikator
+        // konta, bo konta są per sklep — ten sam e-mail bywa kontem u wielu
+        // sprzedawców i token szukany po samym adresie trafiłby w cudze.
+        Route::get('/nie-pamietam-hasla', [StorefrontPasswordReset::class, 'create'])
+            ->name('storefront.password.request');
+        Route::post('/nie-pamietam-hasla', [StorefrontPasswordReset::class, 'store'])
+            ->middleware('throttle:password_reset')->name('storefront.password.email');
+        Route::get('/nowe-haslo/{customer}', [StorefrontPasswordReset::class, 'edit'])
+            ->middleware('signed')->name('storefront.password.reset');
+        Route::post('/nowe-haslo/{customer}', [StorefrontPasswordReset::class, 'update'])
+            ->middleware('signed')->name('storefront.password.update');
 
         Route::get('/logowanie', [StorefrontAuth::class, 'create'])->name('storefront.login');
         Route::post('/logowanie', [StorefrontAuth::class, 'store'])

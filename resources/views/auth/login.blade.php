@@ -37,6 +37,10 @@
                         class="rounded-md border-stone-300 text-amber-600 focus:ring-amber-500">
                     Zapamiętaj mnie
                 </label>
+
+                <a href="{{ route('password.request') }}" class="font-medium text-amber-700 transition hover:text-amber-800">
+                    Nie pamiętam hasła
+                </a>
             </div>
 
             <button type="submit"
