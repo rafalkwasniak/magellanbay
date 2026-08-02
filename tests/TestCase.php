@@ -2,7 +2,9 @@
 
 namespace Tests;
 
+use App\Jobs\GenerateShopOgImage;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 
@@ -42,5 +44,27 @@ abstract class TestCase extends BaseTestCase
         }
 
         Http::preventStrayRequests();
+
+        $this->skipShopCardRendering();
+    }
+
+    /**
+     * Grafika sklepu do social mediów NIE powstaje w testach, chyba że test
+     * jawnie o nią prosi.
+     *
+     * `ShopObserver` zleca ją przy każdym utworzeniu sklepu, a kolejka w testach
+     * jest synchroniczna — więc każdy `Shop::factory()` składałby kartę 1200×630
+     * w Imagicku. Pojedynczo to ułamek sekundy i na produkcji nikogo nie boli
+     * (raz na sklep), ale suita tworzy sklepy setki razy i czas rośnie z minut
+     * do godzin.
+     *
+     * To NIE jest zamiatanie generatora pod dywan: `OgImageTest` wywołuje go
+     * wprost i sprawdza wymiary, nazwę pliku oraz sprzątanie po starej wersji,
+     * a zlecenie zadania ma własne testy na `Bus::assertDispatched`. Blokujemy
+     * wyłącznie WYKONANIE zadania w tle, nie samo zlecenie.
+     */
+    private function skipShopCardRendering(): void
+    {
+        Bus::fake([GenerateShopOgImage::class]);
     }
 }

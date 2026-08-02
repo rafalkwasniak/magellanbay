@@ -21,7 +21,12 @@ class ShopObserver
      *
      * @var list<string>
      */
-    private const OG_SOURCES = ['name', 'logo_path', 'theme', 'template'];
+    private const OG_SOURCES = [
+        'name', 'logo_path', 'theme', 'template',
+        // Z tych pól powstaje zdanie o sklepie widoczne na karcie
+        // (Seo::shopTagline: opis SEO → opis „O sklepie" → miasto).
+        'meta_description', 'description', 'city',
+    ];
 
     public function created(Shop $shop): void
     {

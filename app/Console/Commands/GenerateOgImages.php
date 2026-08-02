@@ -30,7 +30,7 @@ class GenerateOgImages extends Command
         }
 
         foreach ($shops as $shop) {
-            GenerateShopOgImage::dispatchSync($shop);
+            GenerateShopOgImage::dispatchSync($shop, (bool) $this->option('force'));
             $this->line('  '.$shop->slug.' → '.$shop->fresh()->og_image_path);
         }
 

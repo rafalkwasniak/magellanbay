@@ -21,11 +21,11 @@ class GenerateShopOgImage implements ShouldQueue
 
     public int $tries = 1;
 
-    public function __construct(public Shop $shop) {}
+    public function __construct(public Shop $shop, public bool $force = false) {}
 
     public function handle(OgImageGenerator $generator): void
     {
-        $path = $generator->generate($this->shop);
+        $path = $generator->generate($this->shop, $this->force);
 
         // `og_image_path` NIE jest mass-assignable — to pole systemowe, nie dana
         // z formularza sprzedawcy.

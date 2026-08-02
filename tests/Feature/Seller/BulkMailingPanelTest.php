@@ -133,7 +133,10 @@ class BulkMailingPanelTest extends TestCase
         $this->actingAs($seller)->get(route('seller.mailings.index'))
             ->assertOk()
             ->assertSee('Wysłano 12 wiadomości')
-            ->assertDontSee('Wysłano 0');
+            // Pełna fraza, nie sam prefiks: obok stoi data wysyłki („Wysłano
+            // 02.08.2026"), więc szukanie „Wysłano 0" trafiało w dzień miesiąca
+            // i test przewracał się przez pierwsze dziewięć dni każdego miesiąca.
+            ->assertDontSee('Wysłano 0 wiadomości');
     }
 
     public function test_undelivered_messages_are_reported(): void

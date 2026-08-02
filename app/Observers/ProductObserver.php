@@ -3,6 +3,7 @@
 namespace App\Observers;
 
 use App\Jobs\GenerateSeoDescription;
+use App\Jobs\GenerateShopOgImage;
 use App\Models\Product;
 
 /**
@@ -55,6 +56,24 @@ class ProductObserver
     private function sync(Product $product): void
     {
         $product->shop?->refreshVisibility();
+        $this->refreshShopCard($product);
+    }
+
+    /**
+     * Odświeża grafikę sklepu do social mediów, bo katalog decyduje o tym, co
+     * widać w monitorze na karcie.
+     *
+     * Zlecamy przy KAŻDEJ zmianie katalogu i jest to bezpieczne: generator sam
+     * sprawdza, czy karta o wyliczonej nazwie już istnieje, a nazwa niesie
+     * PRÓG układu (brak / jeden / rząd / siatka), nie dokładną liczbę towarów.
+     * Dodanie piątego czy dwudziestego produktu nie zmienia więc niczego i
+     * kończy się na sprawdzeniu istnienia pliku — bez składania obrazka.
+     */
+    private function refreshShopCard(Product $product): void
+    {
+        if ($product->shop !== null) {
+            GenerateShopOgImage::dispatch($product->shop);
+        }
     }
 
     /**

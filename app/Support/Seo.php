@@ -115,6 +115,52 @@ class Seo
     }
 
     /**
+     * Jedno krótkie zdanie o sklepie na grafikę do social mediów.
+     *
+     * Ta sama kolejność źródeł co w `shopDescription()`, ale ostrzej ucięta —
+     * na karcie mieści się około 70 znaków, nie 155. Różnica jest też w
+     * ostatnim kroku: gdy nie mamy ani opisu SEO, ani opisu sklepu, ani miasta,
+     * zwracamy `null` zamiast zdania z samej nazwy. Nazwa stoi na grafice
+     * tuż obok, więc powtórzona wyglądałaby jak usterka, a pusty wiersz
+     * wygląda po prostu jak oszczędny układ.
+     */
+    public static function shopTagline(Shop $shop, int $limit = 70): ?string
+    {
+        foreach ([$shop->meta_description, $shop->aboutPlainText()] as $candidate) {
+            $text = trim(preg_replace('/\s+/u', ' ', (string) $candidate) ?? '');
+
+            if ($text !== '') {
+                return self::clipToSentence($text, $limit);
+            }
+        }
+
+        return filled($shop->city) ? 'Sklep internetowy · '.$shop->city : null;
+    }
+
+    /**
+     * Skrót pod grafikę: najpierw próbujemy urwać na KOŃCU ZDANIA mieszczącego
+     * się w limicie, bo całe zdanie czyta się lepiej niż fragment z wielokropkiem.
+     * Dopiero gdy pierwsze zdanie jest za długie, tniemy po słowie — usuwając
+     * końcową interpunkcję, żeby nie zostawało „na zimno,…".
+     */
+    private static function clipToSentence(string $text, int $limit): string
+    {
+        if (mb_strlen($text) <= $limit) {
+            return $text;
+        }
+
+        $head = mb_substr($text, 0, $limit);
+
+        if (preg_match('/^(.*[.!?])\s/u', $head, $matches) === 1) {
+            return trim($matches[1]);
+        }
+
+        $cut = Str::limit($text, $limit, '', preserveWords: true);
+
+        return rtrim($cut, " \t\n\r\0\x0B,;:.–-").'…';
+    }
+
+    /**
      * Obrazek stron PLATFORMY (landing, logowanie, regulamin) — jeden stały
      * plik z `config/seo.php`, nie generowana karta sklepu. Adres absolutny,
      * bo Facebook nie rozwiąże ścieżki względnej.

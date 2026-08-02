@@ -20,4 +20,28 @@ return [
 
     'og_image' => 'images/4163f74a55c4ae5f3580ef0212884c21.jpg',
 
+    /*
+    |--------------------------------------------------------------------------
+    | Grafika promująca SKLEP sprzedawcy
+    |--------------------------------------------------------------------------
+    |
+    | Karta 1200×630 składana per sklep: scena (biurko z monitorem) na gradiencie
+    | z palety sklepu, w monitorze zdjęcia jego produktów, po lewej logo albo
+    | nazwa, zdanie o sklepie, zachęta i adres.
+    |
+    | `scene` to render z PRZEZROCZYSTYM tłem i ekranem wypełnionym zielenią —
+    | zieleń jest wycinana automatycznie (App\Services\Og\SceneCutout), a w jej
+    | miejsce wchodzi zawartość ekranu. Podmiana pliku wystarczy: wycięcie i
+    | narożniki ekranu przeliczą się same przy pierwszym użyciu.
+    |
+    | `max_products` to sufit kafli w monitorze. Więcej niż sześć robi się w tej
+    | skali nieczytelną mozaiką.
+    |
+    */
+
+    'shop_card' => [
+        'scene' => 'images/og-example.png',
+        'max_products' => 6,
+    ],
+
 ];
