@@ -19,14 +19,17 @@ class CookieConsentController extends Controller
 {
     public function store(Request $request): RedirectResponse
     {
-        $cookie = match ($request->input('decision')) {
-            'accept' => CookieConsent::accept(),
-            'decline' => CookieConsent::decline(),
-            // „Zmień decyzję" z linku w stopce: kasujemy ciasteczko, więc baner
+        [$cookie, $message] = match ($request->input('decision')) {
+            'accept' => [CookieConsent::accept(), 'Dzięki — zgoda na ciasteczka analityczne zapisana.'],
+            'decline' => [CookieConsent::decline(), 'Zapisane. Używamy tylko ciasteczek niezbędnych do działania.'],
+            // „Ciasteczka" z linku w stopce: kasujemy ciasteczko, więc baner
             // pojawia się ponownie i użytkownik wybiera od nowa.
-            default => CookieConsent::forget(),
+            default => [CookieConsent::forget(), 'Decyzja o ciasteczkach wyczyszczona — zapytamy o nią ponownie.'],
         };
 
-        return back()->withCookie($cookie);
+        // Potwierdzenie jest tu KONIECZNE, nie kosmetyczne. Kliknięcie w link
+        // wraca na tę samą stronę, a w panelu nie ma banera, który pokazałby
+        // efekt — bez komunikatu wyglądałoby to, jakby przycisk nie działał.
+        return back()->with('success', $message)->withCookie($cookie);
     }
 }

@@ -124,6 +124,17 @@ class CookieConsentTest extends TestCase
         $response->assertSee('value="reset"', escape: false);
     }
 
+    public function test_every_decision_is_confirmed_on_screen(): void
+    {
+        // Bez potwierdzenia klik w link ze stopki wygląda jak zepsuty przycisk:
+        // strona wraca ta sama, a w panelu nie ma banera, który pokazałby efekt.
+        foreach (['accept', 'decline', 'reset'] as $decision) {
+            $this->from('/')
+                ->post(route('cookies.store'), ['decision' => $decision])
+                ->assertSessionHas('success');
+        }
+    }
+
     public function test_decision_can_be_withdrawn(): void
     {
         // Wycofanie zgody musi być możliwe — kasujemy ciasteczko, więc baner
