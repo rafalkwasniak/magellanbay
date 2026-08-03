@@ -628,6 +628,20 @@ class Shop extends Model
     }
 
     /**
+     * Kod weryfikacyjny Google Search Console (zawartość `content` z meta tagu).
+     *
+     * BEZ bramki pakietu — świadomie, inaczej niż GA. To nie analityka, tylko
+     * jedyna droga, jaką sprzedawca może potwierdzić Google własność swojej
+     * subdomeny: pliku na serwer nie wgra, rekordu DNS w `*.kramio.pl` nie doda,
+     * a weryfikacja przez GA jest płatna od Straganu. Bez tego pola mapa strony
+     * (którą dostają WSZYSTKIE sklepy) byłaby dla darmowego Kramu nie do zgłoszenia.
+     */
+    public function googleSiteVerification(): ?string
+    {
+        return $this->integration(IntegrationType::SearchConsole)?->config['verification_code'] ?? null;
+    }
+
+    /**
      * Czy storefront ma faktycznie wstrzyknąć GA: uprawnienie pakietu
      * `ga_analytics` (Stragan+; GA/GTM to funkcja płatna — NASZA analityka zostaje
      * dla wszystkich osobno) ORAZ fiszka włączona (Ustawienia) ORAZ identyfikator

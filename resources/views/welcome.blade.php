@@ -28,6 +28,7 @@
     <meta property="og:image:alt" content="{{ config('app.name') }} — twój sklep online">
     <meta name="twitter:card" content="summary_large_image">
 
+    <x-google-verification :code="config('services.google.site_verification')" />
     <x-google-analytics :id="config('services.google.analytics_id')" />
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])

@@ -235,14 +235,75 @@
                 </div>
                 @endif
 
-                @if ($hasAnyIntegration)
+                {{-- Google Search Console — CELOWO bez bramki pakietu, jako jedyna
+                     karta dostępna w każdym pakiecie. Mapa strony powstaje sama dla
+                     wszystkich sklepów, a to jest jedyna droga, żeby sprzedawca mógł
+                     potwierdzić Google własność subdomeny: pliku na serwer nie wgra,
+                     rekordu DNS w *.kramio.pl nie doda, a weryfikacja przez GA jest
+                     płatna od Straganu. --}}
+                <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                    <div class="flex items-start gap-4">
+                        <span class="mt-0.5 shrink-0 text-2xl">🔎</span>
+                        <div class="flex-1">
+                            <h2 class="font-semibold text-stone-900">Google Search Console</h2>
+                            <p class="mt-1 text-sm text-stone-500">
+                                Mapa Twojego sklepu powstaje automatycznie i Google znajduje ją sam — <span class="font-medium text-stone-600">nie musisz nic robić</span>.
+                                Zgłoś ją tutaj tylko, jeśli chcesz widzieć, co dokładnie zostało zaindeksowane.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="mt-6">
+                        <span class="block text-sm font-medium text-stone-700">Adres Twojej mapy strony</span>
+                        @if ($shop->isVisible())
+                            <input type="text" value="{{ $sitemapUrl }}" readonly onclick="this.select()"
+                                class="mt-1.5 block w-full rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 font-mono text-sm text-stone-600 shadow-sm">
+                        @else
+                            <p class="mt-1.5 rounded-2xl border border-dashed border-stone-300 bg-white/40 px-4 py-3 text-sm text-stone-500">
+                                Mapa pojawi się, gdy opublikujesz pierwszy produkt — dopóki sklep jest szkicem, nie ma czego zgłaszać.
+                            </p>
+                        @endif
+                    </div>
+
+                    <div class="mt-6">
+                        <label for="google_site_verification" class="block text-sm font-medium text-stone-700">Kod weryfikacyjny</label>
+                        <input type="text" id="google_site_verification" name="google_site_verification"
+                            value="{{ old('google_site_verification', $siteVerification) }}"
+                            placeholder="np. 9xT2k_pQ…"
+                            autocomplete="off" spellcheck="false"
+                            class="mt-1.5 block w-full rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 font-mono text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
+                        @error('google_site_verification')
+                            <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
+                        @enderror
+                        <p class="mt-1.5 text-xs text-stone-400">
+                            Możesz wkleić cały znacznik <span class="font-mono">&lt;meta name="google-site-verification" …&gt;</span> — sami wyciągniemy z niego kod. Zostaw puste, aby odłączyć.
+                        </p>
+
+                        @if (filled($siteVerification))
+                            <div class="mt-4 flex items-start gap-3 rounded-2xl border border-stone-200 bg-white/60 p-4 text-sm">
+                                <span class="mt-0.5 shrink-0 font-semibold text-emerald-600">✓</span>
+                                <p class="text-stone-600">
+                                    Kod jest wpisany na stronach Twojego sklepu — wróć do Google i kliknij <span class="font-medium text-stone-800">Zweryfikuj</span>.
+                                </p>
+                            </div>
+                        @endif
+                    </div>
+
+                    <ol class="mt-6 space-y-2 border-t border-stone-200/70 pt-5 text-sm text-stone-500">
+                        <li><span class="font-medium text-stone-700">1.</span> Wejdź na <span class="font-medium text-stone-600">search.google.com/search-console</span> i dodaj zasób typu „Prefiks adresu URL", wpisując adres swojego sklepu.</li>
+                        <li><span class="font-medium text-stone-700">2.</span> Wybierz weryfikację przez <span class="font-medium text-stone-600">znacznik HTML</span>, skopiuj kod i wklej go w polu powyżej, a potem zapisz.</li>
+                        <li><span class="font-medium text-stone-700">3.</span> Wróć do Google, kliknij „Zweryfikuj", a następnie w sekcji „Mapy witryny" wklej adres mapy z góry tej karty.</li>
+                    </ol>
+                </div>
+
+                {{-- Przycisk bez warunku: karta Search Console jest w każdym pakiecie,
+                     więc zawsze jest co zapisać. --}}
                 <div class="flex justify-end">
                     <button type="submit"
                         class="rounded-2xl bg-gradient-to-br from-amber-500 to-rose-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-rose-500/20 transition hover:brightness-105 focus:outline-none focus:ring-4 focus:ring-amber-500/25">
                         Zapisz integracje
                     </button>
                 </div>
-                @endif
             </form>
         </div>
 

@@ -7,6 +7,7 @@
     <title>{{ ($title ?? 'Logowanie') . ' · ' . config('app.name') }}</title>
     <link rel="icon" type="image/png" sizes="512x512" href="{{ asset('images/kramio-icon.png') }}">
 
+    <x-google-verification :code="config('services.google.site_verification')" />
     <x-google-analytics :id="config('services.google.analytics_id')" />
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])

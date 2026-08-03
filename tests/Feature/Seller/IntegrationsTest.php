@@ -506,7 +506,8 @@ class IntegrationsTest extends TestCase
 
     public function test_integrations_page_shows_empty_state_for_free_package(): void
     {
-        // Kram (bez płatnych integracji) — zamiast kart widzi upsell, bez przycisku zapisu.
+        // Kram — płatne karty zastąpione zachętą, ale Search Console zostaje:
+        // jest w KAŻDYM pakiecie, więc jest też co zapisać.
         [$seller] = $this->sellerWithShop(); // domyślny Kram
 
         $this->actingAs($seller)
@@ -521,6 +522,58 @@ class IntegrationsTest extends TestCase
             ->assertDontSee('Klucz obliczania podpisu')   // pole karty Paynow
             ->assertDontSee('Identyfikator śledzenia')     // pole karty GA
             ->assertDontSee('Token API')                   // pole karty Fakturowni
-            ->assertDontSee('Zapisz integracje');
+            ->assertSee('Google Search Console')
+            ->assertSee('Zapisz integracje');
+    }
+
+    public function test_search_console_verification_works_without_a_paid_package(): void
+    {
+        // Sedno decyzji: to nie analityka, tylko JEDYNA droga, żeby sprzedawca
+        // potwierdził Google własność subdomeny (pliku nie wgra, DNS-u nie ruszy,
+        // weryfikacja przez GA jest płatna). Bez tego mapa strony, którą dostają
+        // wszystkie sklepy, byłaby dla darmowego Kramu nie do zgłoszenia.
+        [$seller, $shop] = $this->sellerWithShop(); // domyślny Kram
+
+        $this->actingAs($seller)
+            ->post(route('seller.integrations.update'), [
+                'google_site_verification' => 'AbC123_xyz-9876543210QwErTy',
+                'paynow_sandbox' => '1',
+            ])
+            ->assertRedirect(route('seller.integrations.edit'));
+
+        $this->assertSame('AbC123_xyz-9876543210QwErTy', $shop->fresh()->googleSiteVerification());
+    }
+
+    public function test_pasted_meta_tag_is_reduced_to_the_code_itself(): void
+    {
+        // Sprzedawca kopiuje z Google CAŁY znacznik, nie sam kod — odbijanie się
+        // od walidacji byłoby karaniem za poprawną odpowiedź na złe pytanie.
+        [$seller, $shop] = $this->sellerWithShop();
+
+        $this->actingAs($seller)
+            ->post(route('seller.integrations.update'), [
+                'google_site_verification' => '<meta name="google-site-verification" content="AbC123_xyz-9876543210QwErTy" />',
+                'paynow_sandbox' => '1',
+            ])
+            ->assertRedirect(route('seller.integrations.edit'));
+
+        $this->assertSame('AbC123_xyz-9876543210QwErTy', $shop->fresh()->googleSiteVerification());
+    }
+
+    public function test_verification_code_reaches_the_storefront_head(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+
+        $this->actingAs($seller)->post(route('seller.integrations.update'), [
+            'google_site_verification' => 'AbC123_xyz-9876543210QwErTy',
+            'paynow_sandbox' => '1',
+        ]);
+
+        \App\Models\Product::factory()->for($shop)->create(['is_active' => true]);
+        $shop->refreshVisibility();
+
+        $this->get('https://'.$shop->fresh()->host().'/')
+            ->assertOk()
+            ->assertSee('<meta name="google-site-verification" content="AbC123_xyz-9876543210QwErTy">', false);
     }
 }

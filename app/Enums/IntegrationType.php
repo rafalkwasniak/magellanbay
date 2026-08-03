@@ -12,6 +12,7 @@ enum IntegrationType: string
     case GoogleAnalytics = 'google_analytics';
     case Invoicing = 'invoicing';
     case Payments = 'payments';
+    case SearchConsole = 'search_console';
 
     /**
      * Czytelna nazwa (do UI).
@@ -22,6 +23,7 @@ enum IntegrationType: string
             self::GoogleAnalytics => 'Google Analytics',
             self::Invoicing => 'Fakturownia',
             self::Payments => 'Płatności online (Paynow)',
+            self::SearchConsole => 'Google Search Console',
         };
     }
 }

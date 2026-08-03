@@ -18,6 +18,13 @@ class IntegrationRequest extends FormRequest
     /** GA4: „G-" + znaki; GTM: „GTM-" + znaki. Wielkość liter ujednolicona niżej. */
     public const GA_PATTERN = '/^(G-[A-Z0-9]{4,15}|GTM-[A-Z0-9]{4,12})$/';
 
+    /**
+     * Kod weryfikacyjny Search Console — Google wystawia ciąg base64url (litery,
+     * cyfry, `-` i `_`). Wzorzec pełni tę samą podwójną rolę co przy GA: kształt
+     * plus bezpieczeństwo, bo wartość ląduje w atrybucie `content` meta tagu.
+     */
+    public const SITE_VERIFICATION_PATTERN = '/^[A-Za-z0-9_-]{20,100}$/';
+
     public function authorize(): bool
     {
         return $this->user()?->shop !== null;
@@ -36,6 +43,14 @@ class IntegrationRequest extends FormRequest
         $token = trim((string) $this->input('fakturownia_token'));
         $paynowApiKey = trim((string) $this->input('paynow_api_key'));
         $paynowSignatureKey = trim((string) $this->input('paynow_signature_key'));
+        // Sprzedawca zwykle kopiuje CAŁY meta tag z Google, nie sam kod —
+        // wyłuskujemy `content`, zamiast odbijać się błędem walidacji od czegoś,
+        // co jest poprawną odpowiedzią na źle postawione pytanie.
+        $verification = trim((string) $this->input('google_site_verification'));
+
+        if (preg_match('/content=["\']([^"\']+)["\']/i', $verification, $matches) === 1) {
+            $verification = trim($matches[1]);
+        }
 
         if ($url !== '' && ! preg_match('#^https?://#i', $url)) {
             $url = 'https://'.$url;
@@ -47,6 +62,7 @@ class IntegrationRequest extends FormRequest
             'fakturownia_token' => $token === '' ? null : $token,
             'paynow_api_key' => $paynowApiKey === '' ? null : $paynowApiKey,
             'paynow_signature_key' => $paynowSignatureKey === '' ? null : $paynowSignatureKey,
+            'google_site_verification' => $verification === '' ? null : $verification,
             // Środowisko wybieramy checkboxem „testowe (sandbox)": zaznaczony =
             // sandbox, odznaczony = produkcja. Odznaczony domyślnie znaczy produkcję,
             // więc UI musi renderować stan bieżący, żeby zapis go nie zresetował.
@@ -66,6 +82,7 @@ class IntegrationRequest extends FormRequest
             'paynow_api_key' => ['nullable', 'string', 'max:255'],
             'paynow_signature_key' => ['nullable', 'string', 'max:255'],
             'paynow_environment' => ['required', 'in:sandbox,production'],
+            'google_site_verification' => ['nullable', 'string', 'regex:'.self::SITE_VERIFICATION_PATTERN],
         ];
     }
 
@@ -107,6 +124,7 @@ class IntegrationRequest extends FormRequest
         return [
             'google_analytics_id.regex' => 'Podaj poprawny identyfikator w formacie G-XXXXXXXXXX (GA4) lub GTM-XXXXXXX (Tag Manager).',
             'fakturownia_url.url' => 'Podaj poprawny adres konta Fakturowni, np. https://twojadomena.fakturownia.pl.',
+            'google_site_verification.regex' => 'Wklej kod weryfikacyjny z Google Search Console (możesz wkleić cały meta tag — wyciągniemy z niego kod).',
         ];
     }
 

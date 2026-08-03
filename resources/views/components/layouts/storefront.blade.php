@@ -18,6 +18,11 @@
     // Request), więc bezpieczne w <script>. GTM- → Tag Manager, G- → GA4.
     $gaId = $shop->tracksWithGoogleAnalytics() ? $shop->googleAnalyticsId() : null;
 
+    // Weryfikacja własności w Google Search Console. Bez bramki pakietu i bez
+    // włącznika: to jedyna droga, żeby sprzedawca potwierdził Google własność
+    // swojej subdomeny i zgłosił mapę strony.
+    $siteVerification = $shop->googleSiteVerification();
+
     // Nawigacja: jedno źródło pozycji „Informacje" (wirtualna „O sklepie" + strony)
     // dla nagłówka i stopki. Logo (jeśli jest) i adres NASZEJ Polityki prywatności
     // (na centrali, nie na subdomenie sklepu).
@@ -49,6 +54,8 @@
          a torba pasuje do każdego sklepu. Gdyby kiedyś sklep miał własną ikonkę,
          to tutaj jest miejsce na podmiankę per sklep. --}}
     <link rel="icon" type="image/png" sizes="512x512" href="{{ asset('images/kramio-icon.png') }}">
+
+    <x-google-verification :code="$siteVerification" />
     @if ($noindex)
         <meta name="robots" content="noindex, follow">
     @endif

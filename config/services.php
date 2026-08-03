@@ -112,6 +112,10 @@ return [
 
     'google' => [
         'analytics_id' => env('GOOGLE_ANALYTICS_ID'),
+        // Kod weryfikacyjny Search Console dla CENTRALI (kramio.pl). Sklepy mają
+        // własny, per sklep, w Integracjach — ten dotyczy wyłącznie stron
+        // platformy i bez niego nie da się zgłosić mapy centrali.
+        'site_verification' => env('GOOGLE_SITE_VERIFICATION'),
     ],
 
 ];

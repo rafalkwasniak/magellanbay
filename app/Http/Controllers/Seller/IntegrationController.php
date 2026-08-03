@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Seller;
 
 use App\Enums\IntegrationType;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\SitemapController;
 use App\Http\Requests\Seller\IntegrationRequest;
 use App\Models\Shop;
 use Illuminate\Contracts\Support\Renderable;
@@ -37,6 +38,8 @@ class IntegrationController extends Controller
             'paynowEnabled' => $shop->onlinePaymentsEnabled(),
             'paynowEnvironment' => $shop->paynowEnvironment(),
             'paynowWebhookUrl' => $shop->paynowWebhookUrl(),
+            'siteVerification' => $shop->googleSiteVerification(),
+            'sitemapUrl' => SitemapController::urlFor($shop),
         ]);
     }
 
@@ -68,6 +71,10 @@ class IntegrationController extends Controller
             );
         }
 
+        // Weryfikacja Search Console CELOWO bez bramki pakietu — to nie analityka,
+        // tylko jedyna droga zgłoszenia mapy strony, którą dostają wszystkie sklepy.
+        $this->saveSearchConsole($shop, $data['google_site_verification'] ?? null);
+
         return redirect()
             ->route('seller.integrations.edit')
             ->with('success', 'Zapisano ustawienia integracji.');
@@ -91,6 +98,29 @@ class IntegrationController extends Controller
                 'type' => IntegrationType::GoogleAnalytics,
                 'enabled' => true,
                 'config' => ['tracking_id' => $id],
+            ]);
+        }
+    }
+
+    /**
+     * Zapis kodu weryfikacyjnego Search Console. Puste = usunięcie. Integracja
+     * nie ma włącznika w Ustawieniach (inaczej niż GA): meta tag niczego nie
+     * śledzi i nie stawia ciasteczek, więc „wyłączona weryfikacja" znaczyłaby
+     * tylko tyle, co brak kodu.
+     */
+    private function saveSearchConsole(Shop $shop, ?string $code): void
+    {
+        $integration = $shop->integration(IntegrationType::SearchConsole);
+
+        if (blank($code)) {
+            $integration?->delete();
+        } elseif ($integration !== null) {
+            $integration->update(['config' => ['verification_code' => $code]]);
+        } else {
+            $shop->integrations()->create([
+                'type' => IntegrationType::SearchConsole,
+                'enabled' => true,
+                'config' => ['verification_code' => $code],
             ]);
         }
     }
