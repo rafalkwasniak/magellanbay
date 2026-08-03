@@ -102,6 +102,34 @@ class LandingPackagesTest extends TestCase
             ->assertSee('Wybierz Pawilon');
     }
 
+    public function test_price_shows_twelve_months_struck_through_next_to_the_yearly_one(): void
+    {
+        // Zysk ma być widoczny bez liczenia: obok ceny rocznej stoi przekreślona
+        // cena 12 miesięcy (stawka miesięczna × 12). Obie kwoty liczą się z
+        // `shop.billing`, więc zmiana reguły przelicza cennik, a nie rozjeżdża go.
+        $paid = (int) config('shop.billing.months_paid');
+        $total = (int) config('shop.billing.months_total');
+
+        $html = $this->get('/')->assertOk()->getContent();
+
+        foreach (config('shop.packages') as $package) {
+            $yearly = (int) $package['price_yearly'];
+
+            if ($yearly === 0) {
+                continue;   // Kram jest darmowy — nie ma czego przekreślać
+            }
+
+            $monthly = intdiv($yearly, $paid);
+
+            $this->assertStringContainsString('<s class="text-xl text-stone-400">'.($monthly * $total).' zł</s>', $html);
+            $this->assertStringContainsString($yearly.' zł', $html);
+        }
+
+        $this->assertStringContainsString(($total - $paid).' miesiące za darmo', $html);
+        // Stary opis („płacisz za 10 miesięcy, 2 gratis") zastąpiony przekreśleniem.
+        $this->assertStringNotContainsString('2 gratis', $html);
+    }
+
     public function test_features_do_not_promise_what_we_do_not_have(): void
     {
         $html = $this->get('/')->assertOk()->getContent();

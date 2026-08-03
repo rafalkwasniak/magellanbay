@@ -131,7 +131,13 @@
                          pakietów, więc wie, co w każdym DOCHODZI względem tańszego. --}}
                     @foreach (\App\Support\PackageFeatures::landing() as $pkg)
                         @php($yearly = $pkg['price_yearly'])
-                        @php($monthly = intdiv($yearly, 10))
+                        {{-- Rytm abonamentu z configu: rok = 10 miesięcy, 2 gratis.
+                             `$listYearly` to cena 12 miesięcy — kwota przekreślona. --}}
+                        @php($monthsPaid = (int) config('shop.billing.months_paid'))
+                        @php($monthsTotal = (int) config('shop.billing.months_total'))
+                        @php($monthly = intdiv($yearly, $monthsPaid))
+                        @php($listYearly = $monthly * $monthsTotal)
+                        @php($freeMonths = $monthsTotal - $monthsPaid)
                         @php($featured = $pkg['name'] === 'Stragan')
                         @php($features = $pkg['features'])
                         {{-- `flex h-full flex-col` + `mt-auto` na przycisku: karty
@@ -148,11 +154,23 @@
                                 </p>
                                 <p class="mt-1 text-xs text-stone-500">Za darmo, bez limitu czasu · bez karty</p>
                             @else
-                                <p class="mt-3">
+                                {{-- Cena 12 miesięcy przekreślona obok rocznej — zysk widać
+                                     bez liczenia. `<s>` zamiast klasy `line-through`, bo tej
+                                     w zbudowanym arkuszu nie ma, a klasa spoza buildu po cichu
+                                     nic nie robi (przekreślenie z UA przeglądarki, preflight
+                                     Tailwinda nie rusza `<s>`). --}}
+                                <p class="mt-3 flex items-baseline gap-2">
+                                    {{-- `text-xl`, nie `text-sm`: przekreślenie zjada drobny
+                                         tekst i kwoty nie da się odczytać. Kolor trzyma
+                                         hierarchię — cena roczna zostaje najmocniejsza. --}}
+                                    <s class="text-xl text-stone-400">{{ $listYearly }} zł</s>
                                     <span class="text-3xl font-semibold tracking-tight text-stone-900">{{ $yearly }} zł</span>
                                     <span class="text-sm text-stone-500">/ rok</span>
                                 </p>
-                                <p class="mt-1 text-xs text-stone-500">To {{ $monthly }} zł/mies. — płacisz za 10 miesięcy, 2 gratis</p>
+                                <p class="mt-1 text-xs">
+                                    <span class="font-medium text-emerald-700">{{ $freeMonths }} {{ trans_choice('miesiąc|miesiące|miesięcy', $freeMonths) }} za darmo</span>
+                                    <span class="text-stone-500">— {{ $monthly }} zł/mies., płacisz za {{ $monthsPaid }}</span>
+                                </p>
                             @endif
                             {{-- Pogrubione = to, czego nie ma pakiet niżej. Karta ma
                                  odpowiadać na pytanie „co dostanę, jeśli dopłacę",

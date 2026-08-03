@@ -119,6 +119,33 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Rytm abonamentu
+    |--------------------------------------------------------------------------
+    |
+    | Rok kosztuje tyle, co 10 miesięcy — dwa miesiące są gratis. Cennik na
+    | landingu pokazuje OBIE kwoty: przekreśloną cenę 12 miesięcy (stawka
+    | miesięczna × 12) i realną roczną, żeby zysk był widać od razu.
+    |
+    | Liczby siedzą tutaj, a nie w widoku, bo inaczej ta sama reguła mieszkałaby
+    | w trzech miejscach (dzielnik 10 przy stawce miesięcznej, mnożnik 12 przy
+    | cenie przekreślonej, różnica przy „2 miesiące gratis") i przy pierwszej
+    | zmianie rozjechałaby się po cichu.
+    |
+    | UWAGA: cena przekreślona jest uczciwa dopiero wtedy, gdy abonament
+    | MIESIĘCZNY faktycznie da się kupić. Dziś billing jest rocznny (patrz niżej
+    | „cena na wystawie"), więc `months_total` × stawka to kwota, której nikt nie
+    | zapłaci. Uruchamiając płatności, albo wystawcie plan miesięczny, albo
+    | zdejmijcie przekreślenie z cennika.
+    |
+    */
+
+    'billing' => [
+        'months_paid' => 10,
+        'months_total' => 12,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Pakiety (abonament roczny)
     |--------------------------------------------------------------------------
     |
