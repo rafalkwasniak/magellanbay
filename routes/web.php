@@ -16,6 +16,7 @@ use App\Http\Controllers\LegalController;
 use App\Http\Controllers\PackagePaymentWebhookController;
 use App\Http\Controllers\PaynowWebhookController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\RobotsController;
 use App\Http\Controllers\Seller\AnalyticsController;
 use App\Http\Controllers\Seller\AppearanceController;
 use App\Http\Controllers\Seller\BulkMailingController;
@@ -31,6 +32,7 @@ use App\Http\Controllers\Seller\ProductController;
 use App\Http\Controllers\Seller\ProductImageController;
 use App\Http\Controllers\Seller\ShopProfileController;
 use App\Http\Controllers\Seller\ShopSettingsController;
+use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\Storefront\AccountController as StorefrontAccount;
 use App\Http\Controllers\Storefront\ActivationController as StorefrontActivation;
 use App\Http\Controllers\Storefront\AuthController as StorefrontAuth;
@@ -298,6 +300,15 @@ Route::middleware('auth')->group(function () {
 Route::domain('{shop}.'.config('tenancy.central_domain'))
     ->middleware(['tenant', 'record.traffic'])
     ->group(function () {
+        // Mapa strony i robots.txt sklepu. MUSZĄ być tutaj, a nie wśród tras
+        // centrali: trasa bez ograniczenia domeny pasuje do KAŻDEGO hosta, więc
+        // zdefiniowana wyżej w pliku przechwyciłaby też subdomeny i każdy sklep
+        // serwowałby mapę centrali. Odpowiedniki centrali stoją na SAMYM KOŃCU
+        // pliku, już za tą grupą — kolejność rejestracji jest tu jedynym
+        // rozstrzygnięciem i dlatego pilnuje jej test.
+        Route::get('/sitemap.xml', [SitemapController::class, 'storefront'])->name('storefront.sitemap');
+        Route::get('/robots.txt', [RobotsController::class, 'storefront'])->name('storefront.robots');
+
         Route::get('/', [StorefrontHome::class, 'show'])->name('storefront.home');
         Route::get('/produkty', [StorefrontProduct::class, 'index'])->name('storefront.products');
         Route::get('/produkt/{product}', [StorefrontProduct::class, 'show'])->name('storefront.product');
@@ -389,3 +400,19 @@ Route::domain('{shop}.'.config('tenancy.central_domain'))
             Route::post('/usun', [StorefrontAccount::class, 'destroy'])->name('destroy');
         });
     });
+
+/*
+|--------------------------------------------------------------------------
+| Mapa strony i robots.txt centrali
+|--------------------------------------------------------------------------
+| CELOWO na samym końcu pliku, ZA grupą subdomen sklepów. Te trasy nie są
+| przypięte do hosta (centrala odpowiada też na `www` i pod gołym adresem),
+| więc pasują do wszystkiego — gdyby stały wyżej, przechwyciłyby subdomeny
+| i każdy sklep dostałby mapę centrali zamiast własnej. Usterka byłaby cicha:
+| strona wyglądałaby normalnie, a Google indeksowałby nie to, co trzeba.
+|
+| `robots.txt` działa tylko dopóki NIE MA pliku `public/robots.txt` — .htaccess
+| oddaje istniejące pliki z pominięciem Laravela.
+*/
+Route::get('/sitemap.xml', [SitemapController::class, 'central'])->name('sitemap');
+Route::get('/robots.txt', [RobotsController::class, 'central'])->name('robots');
