@@ -15,11 +15,14 @@
 <body class="h-full bg-stone-100 text-stone-800 antialiased">
     <x-toasts />
 
-    <div class="relative min-h-full overflow-hidden">
-        {{-- miękkie kształty marki --}}
-        <div class="pointer-events-none absolute -left-32 -top-20 h-96 w-96 rounded-full bg-amber-300 opacity-40 blur-3xl"></div>
-        <div class="pointer-events-none absolute -bottom-24 -right-20 h-[28rem] w-[28rem] rounded-full bg-rose-300 opacity-40 blur-3xl"></div>
-        <div class="pointer-events-none absolute right-1/4 top-1/4 h-72 w-72 rounded-full bg-orange-200 opacity-30 blur-3xl"></div>
+    <div class="relative min-h-full">
+        {{-- Miękkie kształty marki — kadrowanie na osobnej warstwie, żeby rodzic
+             nie stał się przewijalnym kontenerem (patrz welcome.blade.php). --}}
+        <div class="pointer-events-none absolute inset-0 overflow-hidden">
+            <div class="pointer-events-none absolute -left-32 -top-20 h-96 w-96 rounded-full bg-amber-300 opacity-40 blur-3xl"></div>
+            <div class="pointer-events-none absolute -bottom-24 -right-20 h-[28rem] w-[28rem] rounded-full bg-rose-300 opacity-40 blur-3xl"></div>
+            <div class="pointer-events-none absolute right-1/4 top-1/4 h-72 w-72 rounded-full bg-orange-200 opacity-30 blur-3xl"></div>
+        </div>
 
         <div class="relative flex min-h-full items-center justify-center px-6 py-12">
             <div class="w-full max-w-md">

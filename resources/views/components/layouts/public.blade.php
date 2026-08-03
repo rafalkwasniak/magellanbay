@@ -29,10 +29,13 @@
 <body class="h-full bg-stone-100 text-stone-800 antialiased">
     <x-toasts />
 
-    <div class="relative min-h-full overflow-hidden">
-        {{-- miękkie kształty marki --}}
-        <div class="pointer-events-none absolute -left-32 -top-20 h-96 w-96 rounded-full bg-amber-300 opacity-30 blur-3xl"></div>
-        <div class="pointer-events-none absolute -bottom-24 -right-20 h-[28rem] w-[28rem] rounded-full bg-rose-300 opacity-30 blur-3xl"></div>
+    <div class="relative min-h-full">
+        {{-- Miękkie kształty marki — kadrowanie na osobnej warstwie, żeby rodzic
+             nie stał się przewijalnym kontenerem (patrz welcome.blade.php). --}}
+        <div class="pointer-events-none absolute inset-0 overflow-hidden">
+            <div class="pointer-events-none absolute -left-32 -top-20 h-96 w-96 rounded-full bg-amber-300 opacity-30 blur-3xl"></div>
+            <div class="pointer-events-none absolute -bottom-24 -right-20 h-[28rem] w-[28rem] rounded-full bg-rose-300 opacity-30 blur-3xl"></div>
+        </div>
 
         <div class="relative mx-auto w-full max-w-6xl px-6 py-12">
             <a href="{{ url('/') }}" class="mb-8 inline-flex items-center">

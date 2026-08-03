@@ -36,11 +36,18 @@
 <body class="h-full bg-stone-100 text-stone-800 antialiased">
     @php($domain = config('tenancy.central_domain'))
 
-    <div class="relative min-h-full overflow-hidden">
-        {{-- miękkie kształty marki --}}
-        <div class="pointer-events-none absolute -left-40 -top-24 h-[30rem] w-[30rem] rounded-full bg-amber-300 opacity-30 blur-3xl"></div>
-        <div class="pointer-events-none absolute right-0 top-1/3 h-[28rem] w-[28rem] rounded-full bg-rose-300 opacity-25 blur-3xl"></div>
-        <div class="pointer-events-none absolute -bottom-32 left-1/4 h-[26rem] w-[26rem] rounded-full bg-orange-200 opacity-30 blur-3xl"></div>
+    <div class="relative min-h-full">
+        {{-- Miękkie kształty marki. Kadrowanie (overflow-hidden) siedzi na tej
+             warstwie, nie na rodzicu: kształty wystają poza stronę i gdyby ciął
+             je rodzic, stawałby się przewijalnym kontenerem. Safari przy skoku
+             do kotwicy (#jak-to-dziala) przewijał wtedy TEN kontener, nagłówek
+             z logo wyjeżdżał poza kadr i nie wracał — bo użytkownik przewija
+             okno, nie kontener. --}}
+        <div class="pointer-events-none absolute inset-0 overflow-hidden">
+            <div class="pointer-events-none absolute -left-40 -top-24 h-[30rem] w-[30rem] rounded-full bg-amber-300 opacity-30 blur-3xl"></div>
+            <div class="pointer-events-none absolute right-0 top-1/3 h-[28rem] w-[28rem] rounded-full bg-rose-300 opacity-25 blur-3xl"></div>
+            <div class="pointer-events-none absolute -bottom-32 left-1/4 h-[26rem] w-[26rem] rounded-full bg-orange-200 opacity-30 blur-3xl"></div>
+        </div>
 
         <div class="relative mx-auto w-full max-w-6xl px-6">
             {{-- Nawigacja --}}

@@ -53,9 +53,13 @@
         $avatar = $user?->avatar_path ? \Illuminate\Support\Facades\Storage::disk('public')->url($user->avatar_path) : null;
     @endphp
 
-    <div class="relative min-h-full overflow-hidden">
-        <div class="pointer-events-none absolute -left-40 top-0 h-96 w-96 rounded-full bg-amber-300 opacity-25 blur-3xl"></div>
-        <div class="pointer-events-none absolute right-0 top-1/2 h-96 w-96 rounded-full bg-rose-300 opacity-20 blur-3xl"></div>
+    <div class="relative min-h-full">
+        {{-- Miękkie kształty marki — kadrowanie na osobnej warstwie, żeby rodzic
+             nie stał się przewijalnym kontenerem (patrz welcome.blade.php). --}}
+        <div class="pointer-events-none absolute inset-0 overflow-hidden">
+            <div class="pointer-events-none absolute -left-40 top-0 h-96 w-96 rounded-full bg-amber-300 opacity-25 blur-3xl"></div>
+            <div class="pointer-events-none absolute right-0 top-1/2 h-96 w-96 rounded-full bg-rose-300 opacity-20 blur-3xl"></div>
+        </div>
 
         <div class="relative flex min-h-full">
             {{-- Sidebar --}}
