@@ -7,6 +7,7 @@
     @php($metaTitle = ($title ?? '') . (isset($title) ? ' · ' : '') . config('app.name'))
 
     <title>{{ $metaTitle }}</title>
+    <link rel="icon" type="image/png" sizes="512x512" href="{{ asset('images/kramio-icon.png') }}">
 
     {{-- Open Graph dla stron platformy (regulamin, polityka, logowanie).
          Grafika wspólna dla całej centrali — config/seo.php. --}}
@@ -33,9 +34,8 @@
         <div class="pointer-events-none absolute -bottom-24 -right-20 h-[28rem] w-[28rem] rounded-full bg-rose-300 opacity-30 blur-3xl"></div>
 
         <div class="relative mx-auto w-full max-w-6xl px-6 py-12">
-            <a href="{{ url('/') }}" class="mb-8 inline-flex items-center gap-2">
-                <span class="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-rose-500 text-white">◐</span>
-                <span class="text-xl font-semibold tracking-tight text-stone-900">{{ config('app.name') }}</span>
+            <a href="{{ url('/') }}" class="mb-8 inline-flex items-center">
+                <img src="{{ asset('images/kramio-logo.png') }}" alt="{{ config('app.name') }} — twój sklep w 15 minut" class="h-12 w-auto">
             </a>
 
             {{ $slot }}

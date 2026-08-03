@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ ($title ?? 'Logowanie') . ' · ' . config('app.name') }}</title>
+    <link rel="icon" type="image/png" sizes="512x512" href="{{ asset('images/kramio-icon.png') }}">
 
     <x-google-analytics :id="config('services.google.analytics_id')" />
 
@@ -24,9 +25,8 @@
                 {{-- Logo klikalne — jak w layoucie stron publicznych. Z logowania,
                      rejestracji, aktywacji i resetu hasła nie było jak wrócić na
                      stronę główną; nazwa platformy to naturalne wyjście. --}}
-                <a href="{{ url('/') }}" class="mb-6 flex items-center justify-center gap-2 transition hover:opacity-80" title="Strona główna {{ config('app.name') }}">
-                    <span class="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-rose-500 text-white">◐</span>
-                    <span class="text-xl font-semibold tracking-tight text-stone-900">{{ config('app.name') }}</span>
+                <a href="{{ url('/') }}" class="mb-6 flex items-center justify-center transition hover:opacity-80" title="Strona główna {{ config('app.name') }}">
+                    <img src="{{ asset('images/kramio-logo.png') }}" alt="{{ config('app.name') }} — twój sklep w 15 minut" class="h-12 w-auto">
                 </a>
 
                 {{ $slot }}

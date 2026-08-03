@@ -47,7 +47,7 @@ class MailBranding
     }
 
     /**
-     * Paleta systemowa (Kramio): amber na płasko, znak ◐ w miejscu logo. Dane
+     * Paleta systemowa (Kramio): amber na płasko, logo z `public/images`. Dane
      * firmowe do stopki bierzemy z `config/company.php` — maile platformy nie mają
      * sklepu, więc nie ma ich skąd wziąć z bazy.
      *
@@ -57,8 +57,8 @@ class MailBranding
     {
         return [
             'name' => config('app.name'),
-            'glyph' => '◐',             // znak marki Kramio, gdy brak pliku logo
-            'logo_url' => null,
+            'glyph' => '◐',             // fallback marki Kramio, gdyby logo_url opróżniono
+            'logo_url' => asset('images/kramio-logo.png'),
             'brand' => '#f59e0b',       // amber-500 — przycisk/akcent (płaski, dawniej gradient amber→rose)
             'brand_ink' => '#ffffff',   // tekst na kolorze brand (np. na przycisku)
             'accent' => '#b45309',      // amber-700 — linki

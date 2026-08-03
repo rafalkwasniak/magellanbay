@@ -43,6 +43,12 @@
          strony — audyt ursalogic wskazał to jako problem numer jeden SEO. --}}
     <meta name="description" content="{{ $metaDescription }}">
     <link rel="canonical" href="{{ $canonical }}">
+
+    {{-- Uniwersalna ikonka platformy (torba Kramio). Sklepy nie wgrywają własnych
+         favicon — logo sklepu ma dowolne proporcje i w 16px robi się nieczytelne,
+         a torba pasuje do każdego sklepu. Gdyby kiedyś sklep miał własną ikonkę,
+         to tutaj jest miejsce na podmiankę per sklep. --}}
+    <link rel="icon" type="image/png" sizes="512x512" href="{{ asset('images/kramio-icon.png') }}">
     @if ($noindex)
         <meta name="robots" content="noindex, follow">
     @endif
