@@ -29,6 +29,21 @@ class DashboardTest extends TestCase
             ->assertDontSee('Nie ma jeszcze żadnych sklepów');
     }
 
+    public function test_recent_shops_link_to_their_storefronts_in_a_new_tab(): void
+    {
+        // Ten sam podgląd co na pełnej liście sklepów — adres z `host()`, więc
+        // sklep z własną domeną prowadzi tam, a nie na subdomenę centrali.
+        $admin = User::factory()->admin()->create();
+        $shop = Shop::factory()->create(['slug' => 'lemoniady']);
+
+        $this->actingAs($admin)
+            ->get(route('administrator.dashboard'))
+            ->assertOk()
+            ->assertSee('Zobacz')
+            ->assertSee('href="https://'.$shop->host().'"', false)
+            ->assertSee('target="_blank"', false);
+    }
+
     public function test_dashboard_shows_empty_state_without_shops(): void
     {
         $admin = User::factory()->admin()->create();

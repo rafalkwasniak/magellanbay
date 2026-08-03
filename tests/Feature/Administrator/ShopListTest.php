@@ -30,6 +30,21 @@ class ShopListTest extends TestCase
             ->assertSee('750 zł');     // cena roczna brutto
     }
 
+    public function test_list_links_to_each_storefront_in_a_new_tab(): void
+    {
+        // Podgląd sklepu prosto z listy — adres bierzemy z `host()`, więc sklep
+        // z własną domeną prowadzi tam, a nie na subdomenę centrali.
+        $admin = User::factory()->admin()->create();
+        $shop = Shop::factory()->create(['slug' => 'lemoniady']);
+
+        $this->actingAs($admin)
+            ->get(route('administrator.shops.index'))
+            ->assertOk()
+            ->assertSee('Zobacz')
+            ->assertSee('href="https://'.$shop->host().'"', false)
+            ->assertSee('target="_blank"', false);
+    }
+
     public function test_seller_cannot_view_shops_list(): void
     {
         $seller = User::factory()->create();

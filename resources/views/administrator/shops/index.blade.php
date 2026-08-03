@@ -22,7 +22,7 @@
     @else
         <div class="overflow-hidden rounded-3xl border border-white/60 bg-white/70 backdrop-blur">
             <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm" style="min-width: 52rem">
+                <table class="w-full text-left text-sm" style="min-width: 58rem">
                     <thead class="border-b border-stone-200/70 text-xs uppercase tracking-wide text-stone-400">
                         <tr>
                             <th class="px-5 py-3 font-medium">Sklep</th>
@@ -81,10 +81,22 @@
                                     ])>{{ $shop->status->label() }}</span>
                                 </td>
                                 <td class="px-5 py-3 text-right">
-                                    <a href="{{ route('administrator.shops.edit', $shop) }}"
-                                        class="inline-flex items-center rounded-xl border border-stone-300 bg-white px-3 py-1.5 text-xs font-medium text-stone-700 shadow-sm transition hover:bg-stone-100">
-                                        Zarządzaj
-                                    </a>
+                                    <div class="flex items-center justify-end gap-2">
+                                        {{-- Podgląd storefrontu w nowej karcie — admin nie traci listy,
+                                             do której zwykle wraca po obejrzeniu kilku sklepów. --}}
+                                        <a href="https://{{ $shop->host() }}" target="_blank" rel="noopener"
+                                            title="Otwórz {{ $shop->host() }} w nowej karcie"
+                                            class="inline-flex items-center gap-1 rounded-xl border border-stone-300 bg-white px-3 py-1.5 text-xs font-medium text-stone-700 shadow-sm transition hover:bg-stone-100">
+                                            Zobacz
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3 w-3 text-stone-400" aria-hidden="true">
+                                                <path d="M14 4h6v6M20 4l-8 8M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />
+                                            </svg>
+                                        </a>
+                                        <a href="{{ route('administrator.shops.edit', $shop) }}"
+                                            class="inline-flex items-center rounded-xl border border-stone-300 bg-white px-3 py-1.5 text-xs font-medium text-stone-700 shadow-sm transition hover:bg-stone-100">
+                                            Zarządzaj
+                                        </a>
+                                    </div>
                                 </td>
                             </tr>
                         @endforeach

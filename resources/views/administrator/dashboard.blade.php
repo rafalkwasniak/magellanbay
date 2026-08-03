@@ -44,6 +44,16 @@
                                 'bg-emerald-100 text-emerald-700' => $shop->status === \App\Enums\ShopStatus::Active,
                                 'bg-stone-100 text-stone-500' => $shop->status !== \App\Enums\ShopStatus::Active,
                             ])>{{ $shop->status->label() }}</span>
+                            {{-- Podgląd storefrontu w nowej karcie — tak samo jak na pełnej
+                                 liście sklepów, żeby ten sam wiersz działał wszędzie tak samo. --}}
+                            <a href="https://{{ $shop->host() }}" target="_blank" rel="noopener"
+                                title="Otwórz {{ $shop->host() }} w nowej karcie"
+                                class="inline-flex shrink-0 items-center gap-1 rounded-xl border border-stone-300 bg-white px-3 py-1.5 text-xs font-medium text-stone-700 shadow-sm transition hover:bg-stone-100">
+                                Zobacz
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3 w-3 text-stone-400" aria-hidden="true">
+                                    <path d="M14 4h6v6M20 4l-8 8M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />
+                                </svg>
+                            </a>
                             <a href="{{ route('administrator.shops.edit', $shop) }}"
                                 class="shrink-0 rounded-xl border border-stone-300 bg-white px-3 py-1.5 text-xs font-medium text-stone-700 shadow-sm transition hover:bg-stone-100">Zarządzaj</a>
                         </li>
