@@ -52,8 +52,14 @@
     {{-- Uniwersalna ikonka platformy (torba Kramio). Sklepy nie wgrywają własnych
          favicon — logo sklepu ma dowolne proporcje i w 16px robi się nieczytelne,
          a torba pasuje do każdego sklepu. Gdyby kiedyś sklep miał własną ikonkę,
-         to tutaj jest miejsce na podmiankę per sklep. --}}
+         to tutaj jest miejsce na podmiankę per sklep.
+
+         `apple-touch-icon` jest OSOBNYM plikiem, a nie tym samym co favicon:
+         iOS ignoruje przezroczystość i podkłada CZARNE tło, więc zaokrąglone
+         rogi ikonki wyszłyby czarnymi narożnikami. Plik 180×180 jest już
+         spłaszczony na kremowej płytce — iOS sam nadaje mu swoje rogi. --}}
     <link rel="icon" type="image/png" sizes="512x512" href="{{ asset('images/kramio-icon.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
 
     <x-google-verification :code="$siteVerification" />
     @if ($noindex)

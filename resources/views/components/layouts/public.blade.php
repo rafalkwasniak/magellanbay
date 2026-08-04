@@ -8,6 +8,7 @@
 
     <title>{{ $metaTitle }}</title>
     <link rel="icon" type="image/png" sizes="512x512" href="{{ asset('images/kramio-icon.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
 
     {{-- Open Graph dla stron platformy (regulamin, polityka, logowanie).
          Grafika wspólna dla całej centrali — config/seo.php. --}}

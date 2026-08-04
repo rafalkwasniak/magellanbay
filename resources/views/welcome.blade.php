@@ -12,6 +12,7 @@
     <meta name="description" content="{{ $metaDescription }}">
     <link rel="canonical" href="{{ url('/') }}">
     <link rel="icon" type="image/png" sizes="512x512" href="{{ asset('images/kramio-icon.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
 
     {{-- Open Graph: tak wygląda link do kramio.pl wklejony na Facebooka czy
          Messengera. Bez tego widać goły adres — a to najczęstszy sposób, w jaki
