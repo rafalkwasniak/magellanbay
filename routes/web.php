@@ -30,6 +30,7 @@ use App\Http\Controllers\Seller\PackageController;
 use App\Http\Controllers\Seller\PageController;
 use App\Http\Controllers\Seller\ProductController;
 use App\Http\Controllers\Seller\ProductImageController;
+use App\Http\Controllers\Seller\ShopDeletionController;
 use App\Http\Controllers\Seller\ShopProfileController;
 use App\Http\Controllers\Seller\ShopSettingsController;
 use App\Http\Controllers\SitemapController;
@@ -156,6 +157,12 @@ Route::middleware(['auth', 'role:admin'])
         Route::get('/sklepy', [AdministratorShopController::class, 'index'])->name('shops.index');
         Route::get('/sklepy/{shop}', [AdministratorShopController::class, 'edit'])->name('shops.edit');
 
+        // Usunięcie sklepu razem z kontem właściciela — natychmiast, bez karencji
+        // (ta chroni sprzedawcę przed własnym kliknięciem, nie platformę).
+        // `przywroc` zatrzymuje usunięcie zlecone przez sprzedawcę.
+        Route::post('/sklepy/{shop}/usun', [AdministratorShopController::class, 'destroy'])->name('shops.destroy');
+        Route::post('/sklepy/{shop}/przywroc', [AdministratorShopController::class, 'restore'])->name('shops.restore');
+
         // Podgląd szablonów maili (na froncie, dla nas) — np. /administrator/podglad-maila/aktywacja
         Route::get('/podglad-maila/{template}', [MailPreviewController::class, 'show'])->name('mail.preview');
     });
@@ -177,6 +184,12 @@ Route::middleware(['auth', 'role:seller', 'ensure.consents'])
         // Profil sklepu (nazwa, opis, adres). Edycja przez POST (FOUNDATION sek. 5).
         Route::get('/sklep', [ShopProfileController::class, 'edit'])->name('shop.edit');
         Route::post('/sklep', [ShopProfileController::class, 'update'])->name('shop.update');
+
+        // Usunięcie własnego sklepu (RODO). Osobny ekran z rachunkiem strat;
+        // zlecenie ustawia karencję i gasi storefront, kasuje `shops:purge`.
+        Route::get('/usun-sklep', [ShopDeletionController::class, 'show'])->name('deletion.show');
+        Route::post('/usun-sklep', [ShopDeletionController::class, 'store'])->name('deletion.store');
+        Route::post('/usun-sklep/cofnij', [ShopDeletionController::class, 'cancel'])->name('deletion.cancel');
 
         // Wygląd sklepu (logo, kolor przewodni, szablon motywu). Edycja przez POST.
         Route::get('/wyglad', [AppearanceController::class, 'edit'])->name('appearance.edit');

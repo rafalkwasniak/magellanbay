@@ -66,6 +66,7 @@ class Shop extends Model
             'price_yearly' => 'decimal:2',
             'subscription_ends_at' => 'datetime',
             'comped' => 'boolean',
+            'deletion_scheduled_at' => 'datetime',
             'unseen_orders_count' => 'integer',
         ];
     }

@@ -270,6 +270,22 @@
                     </button>
                 </div>
             </form>
+
+            {{-- Koniec życia sklepu — cicho, na samym dole, POZA formularzem
+                 (zagnieżdżony formularz jest nieprawidłowym HTML-em i psuje
+                 zapis danych sklepu). Sam link, bez pola i przycisku: właściwe
+                 potwierdzenie z rachunkiem strat czeka na osobnym ekranie. --}}
+            <div class="mt-6 rounded-3xl border border-rose-200 bg-white/70 p-6 backdrop-blur">
+                <h2 class="font-semibold text-rose-900">Usunięcie sklepu</h2>
+                <p class="mt-2 max-w-xl text-sm text-stone-600">
+                    Jeśli nie chcesz już prowadzić sklepu, możesz go usunąć razem ze swoim kontem.
+                    Damy Ci {{ config('shop.deletion.grace_days') }} dni na zmianę zdania.
+                </p>
+                <a href="{{ route('seller.deletion.show') }}"
+                    class="mt-4 inline-flex items-center rounded-2xl border border-rose-400 bg-white px-5 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-50">
+                    Chcę usunąć sklep
+                </a>
+            </div>
         </div>
 
         {{-- Kolumna pomocnicza: treści opisowe --}}

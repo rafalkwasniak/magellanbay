@@ -74,11 +74,20 @@
                                     @endif
                                 </td>
                                 <td class="px-5 py-3">
-                                    <span @class([
-                                        'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium',
-                                        'bg-emerald-100 text-emerald-700' => $shop->status === \App\Enums\ShopStatus::Active,
-                                        'bg-stone-100 text-stone-500' => $shop->status !== \App\Enums\ShopStatus::Active,
-                                    ])>{{ $shop->status->label() }}</span>
+                                    @if ($shop->deletion_scheduled_at)
+                                        {{-- Sklep w karencji jest już niewidoczny dla klientów — status
+                                             „Aktywny" mówiłby tu nieprawdę, więc plakietka go zastępuje. --}}
+                                        <span class="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-1 text-xs font-medium text-rose-700"
+                                            title="Sprzedawca zlecił usunięcie — sklep jest już niewidoczny">
+                                            usunięcie {{ $shop->deletion_scheduled_at->format('d.m') }}
+                                        </span>
+                                    @else
+                                        <span @class([
+                                            'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium',
+                                            'bg-emerald-100 text-emerald-700' => $shop->status === \App\Enums\ShopStatus::Active,
+                                            'bg-stone-100 text-stone-500' => $shop->status !== \App\Enums\ShopStatus::Active,
+                                        ])>{{ $shop->status->label() }}</span>
+                                    @endif
                                 </td>
                                 <td class="px-5 py-3 text-right">
                                     <div class="flex items-center justify-end gap-2">

@@ -269,4 +269,26 @@ return [
         'urgent_days' => 7,
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Usuwanie sklepu
+    |--------------------------------------------------------------------------
+    |
+    | `grace_days` — ile dni od zlecenia usunięcia sprzedawca ma na cofnięcie.
+    | Storefront gaśnie NATYCHMIAST (żeby w karencji nie wpłynęło zamówienie do
+    | sklepu, który za chwilę zniknie), a właściwe kasowanie robi `shops:purge`
+    | po tym terminie. Admin kasuje z pominięciem karencji — chroni ona przed
+    | własnym kliknięciem sprzedawcy, a nie przed świadomą decyzją platformy.
+    |
+    | `slug_quarantine_days` — jak długo po usunięciu adres subdomeny jest
+    | zajęty. Bez kwarantanny stare linki, maile do klientów i wyniki w Google
+    | prowadziłyby pod znanym adresem do CUDZEGO sklepu.
+    |
+    */
+
+    'deletion' => [
+        'grace_days' => 7,
+        'slug_quarantine_days' => 90,
+    ],
+
 ];

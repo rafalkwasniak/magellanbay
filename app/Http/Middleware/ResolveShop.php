@@ -22,6 +22,11 @@ class ResolveShop
 
         abort_if($shop === null, 404);
 
+        // Sklep w karencji przed usunięciem gaśnie NATYCHMIAST — także dla
+        // właściciela. Dzięki temu w karencji nie wpłynie zamówienie do sklepu,
+        // który za kilka dni zniknie razem z historią sprzedaży.
+        abort_if($shop->deletion_scheduled_at !== null, 404);
+
         $request->attributes->set('shop', $shop);
         view()->share('shop', $shop);
 

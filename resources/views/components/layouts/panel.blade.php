@@ -124,7 +124,23 @@
                          wygaśnięciu — dowiedzieć się, dlaczego funkcje zniknęły.
                          Cicha karencja byłaby nieodróżnialna od „wszystko OK". --}}
                     @php($panelShop = $user->shop)
-                    @if ($panelShop !== null && ! request()->routeIs('seller.package.show'))
+
+                    {{-- Zlecone usunięcie bije wszystko inne: sklep jest już
+                         niewidoczny dla klientów, a za kilka dni zniknie razem
+                         z kontem. Baner wisi nad KAŻDYM ekranem (także nad
+                         „Mój pakiet"), bo termin biegnie niezależnie od tego,
+                         po co sprzedawca tu przyszedł. --}}
+                    @if ($panelShop?->deletion_scheduled_at !== null && ! request()->routeIs('seller.deletion.show'))
+                        <div class="mb-6 rounded-2xl border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+                            <p class="font-medium">Usuniemy Twój sklep {{ $panelShop->deletion_scheduled_at->format('d.m.Y') }}</p>
+                            <p class="mt-1 text-xs text-rose-800">
+                                Sklep jest już niewidoczny dla klientów. Do tego dnia wszystko wraca jednym kliknięciem —
+                                <a href="{{ route('seller.deletion.show') }}" class="font-medium underline">zatrzymaj usunięcie</a>.
+                            </p>
+                        </div>
+                    @endif
+
+                    @if ($panelShop !== null && $panelShop->deletion_scheduled_at === null && ! request()->routeIs('seller.package.show'))
                         @if ($panelShop->inSubscriptionGrace())
                             {{-- Karencja NIEBIESKO, nie żółto: amber znaczy „zbliża
                                  się termin", róż „wygasło", a to trzeci stan z inną

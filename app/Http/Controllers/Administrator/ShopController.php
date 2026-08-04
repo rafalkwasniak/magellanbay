@@ -4,8 +4,11 @@ namespace App\Http\Controllers\Administrator;
 
 use App\Enums\ShopStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Administrator\ShopDeletionRequest;
 use App\Models\Shop;
+use App\Services\ShopEraser;
 use Illuminate\Contracts\Support\Renderable;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 /**
@@ -53,6 +56,35 @@ class ShopController extends Controller
 
     public function edit(Shop $shop): Renderable
     {
-        return view('administrator.shops.edit', ['shop' => $shop->load('owner')]);
+        return view('administrator.shops.edit', [
+            'shop' => $shop->load('owner')->loadCount(['products', 'orders', 'customers', 'pages']),
+        ]);
+    }
+
+    /**
+     * Usunięcie sklepu z konsoli — NATYCHMIAST, bez karencji. Karencja chroni
+     * sprzedawcę przed własnym kliknięciem; decyzja platformy jest świadoma,
+     * a sklep-śmieć ma zniknąć od razu.
+     */
+    public function destroy(ShopDeletionRequest $request, Shop $shop, ShopEraser $eraser): RedirectResponse
+    {
+        $name = $shop->name;
+
+        $eraser->erase($shop);
+
+        return redirect()
+            ->route('administrator.shops.index')
+            ->with('success', 'Sklep '.$name.' został usunięty razem z kontem właściciela.');
+    }
+
+    /**
+     * Zatrzymanie usunięcia zleconego przez sprzedawcę — awaryjne wyjście, gdy
+     * ktoś zadzwoni w karencji.
+     */
+    public function restore(Shop $shop, ShopEraser $eraser): RedirectResponse
+    {
+        $eraser->cancel($shop);
+
+        return back()->with('success', 'Usunięcie sklepu '.$shop->name.' zostało zatrzymane.');
     }
 }

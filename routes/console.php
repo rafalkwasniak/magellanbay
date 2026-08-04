@@ -24,3 +24,7 @@ Schedule::command('queue:work database --stop-when-empty --max-time=50 --tries=1
 // świcie — maile idą przez outbox, więc godzina jest tylko chwilą, w której
 // wpadają do kolejki. Komenda jest idempotentna, więc powtórka nic nie psuje.
 Schedule::command('subscriptions:check')->dailyAt('06:10')->withoutOverlapping();
+
+// Usuwanie sklepów: kasuje te po karencji i zwalnia adresy po kwarantannie.
+// Tuż po abonamentach, bo obie komendy są dobowe i nie mają na siebie wpływu.
+Schedule::command('shops:purge')->dailyAt('06:20')->withoutOverlapping();

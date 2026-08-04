@@ -41,6 +41,12 @@ class RegisterRequest extends FormRequest
                 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
                 Rule::notIn(config('tenancy.reserved_subdomains')),
                 Rule::unique('shops', 'slug'),
+                // Kwarantanna po usuniętym sklepie: adres nie wraca do puli od
+                // razu, bo stare linki i maile do klientów prowadziłyby wtedy do
+                // CUDZEGO sklepu. Wygasłe rezerwacje przepuszczamy datą, nie
+                // czekając na sprzątanie przez `shops:purge`.
+                Rule::unique('reserved_slugs', 'slug')
+                    ->where(fn ($query) => $query->where('released_at', '>', now())),
             ],
             'name' => ['required', 'string', 'max:255'],
             'surname' => ['required', 'string', 'max:255'],
