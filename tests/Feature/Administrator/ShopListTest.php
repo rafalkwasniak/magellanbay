@@ -69,7 +69,28 @@ class ShopListTest extends TestCase
             ->get(route('administrator.shops.index'))
             ->assertOk()
             ->assertSee('Darmowy Kram')
-            ->assertSee('za darmo');
+            ->assertSee('gratis');
+    }
+
+    public function test_comped_shop_shows_free_price_and_no_subscription_date(): void
+    {
+        // Dostęp gratisowy: cennikowa kwota pakietu nie obowiązuje, a termin
+        // nie istnieje — wiersz ma wyglądać jak Kram, bez osobnej plakietki.
+        $admin = User::factory()->admin()->create();
+        Shop::factory()->package('pavilion')->create([
+            'name' => 'Sklep Fundacji',
+            'comped' => true,
+            'subscription_ends_at' => now()->addYear(),
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('administrator.shops.index'))
+            ->assertOk()
+            ->assertSee('Pawilon')
+            ->assertSee('gratis')
+            ->assertDontSee('1 500 zł')
+            ->assertDontSee('bezterminowo')
+            ->assertDontSee(now()->addYear()->format('d.m.Y'));
     }
 
     public function test_shops_can_be_filtered_by_search_and_package(): void

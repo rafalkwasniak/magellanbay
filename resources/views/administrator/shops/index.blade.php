@@ -50,24 +50,22 @@
                                     <span class="inline-flex items-center gap-1.5 rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-700">
                                         {{ $shop->packageName() }}
                                     </span>
-                                    @if ($shop->comped)
-                                        <span class="ml-1 inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700" title="Dostęp gratisowy — nie wygasa">gratis</span>
-                                    @endif
                                 </td>
                                 <td class="px-5 py-3 text-right tabular-nums text-stone-700">
-                                    @if ($shop->priceYearly() > 0)
-                                        {{ number_format($shop->priceYearly(), 0, ',', ' ') }} zł
+                                    {{-- Dostęp gratisowy kosztuje tyle samo co Kram — zero. Cennikowa
+                                         kwota pakietu byłaby tu nieprawdą, więc mówimy „gratis". --}}
+                                    @if ($shop->comped || $shop->priceYearly() <= 0)
+                                        <span class="text-stone-400">gratis</span>
                                     @else
-                                        <span class="text-stone-400">za darmo</span>
+                                        {{ number_format($shop->priceYearly(), 0, ',', ' ') }} zł
                                     @endif
                                 </td>
                                 <td class="px-5 py-3 text-right tabular-nums text-stone-600">
                                     {{ $shop->products_count }} / {{ (int) $shop->entitlement('max_products') }}
                                 </td>
                                 <td class="px-5 py-3 text-stone-600">
-                                    @if ($shop->comped)
-                                        <span class="text-emerald-600">bezterminowo</span>
-                                    @elseif ($shop->subscription_ends_at)
+                                    {{-- Comped nie ma terminu tak samo jak Kram, więc i tu jest myślnik. --}}
+                                    @if ($shop->subscription_ends_at && ! $shop->comped)
                                         do {{ $shop->subscription_ends_at->format('d.m.Y') }}
                                     @else
                                         <span class="text-stone-400">—</span>
@@ -173,7 +171,7 @@
                     </li>
                     <li class="flex gap-3">
                         <span class="mt-0.5 shrink-0 text-emerald-600">🎁</span>
-                        <span>Plakietka <span class="text-stone-700">gratis</span> = dostęp <span class="text-stone-700">comped</span> (nie wygasa).</span>
+                        <span>Cena <span class="text-stone-700">gratis</span> bez daty abonamentu = dostęp <span class="text-stone-700">comped</span> (nie wygasa) albo pakiet Kram.</span>
                     </li>
                 </ul>
             </div>
