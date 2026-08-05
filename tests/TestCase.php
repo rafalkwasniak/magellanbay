@@ -7,11 +7,23 @@ use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 
 abstract class TestCase extends BaseTestCase
 {
     /**
-     * Dwa gardy chroniące świat zewnętrzny przed suitą testów.
+     * Dyski, które w produkcji trzymają pliki użytkowników, wraz z katalogiem,
+     * którego suicie NIE WOLNO zobaczyć. Patrz `isolateDisks()`.
+     *
+     * @var array<string, string>
+     */
+    private const PRODUCTION_DISKS = [
+        'public' => 'app/public',    // awatary, zdjęcia produktów, loga, karty OG
+        'local' => 'app/private',    // dysk domyślny (FILESYSTEM_DISK=local)
+    ];
+
+    /**
+     * Trzy gardy chroniące świat zewnętrzny przed suitą testów.
      *
      * 1. SQLITE-ONLY: gdyby phpunit.xml się zepsuł albo środowisko podłożyło
      *    produkcyjne połączenie, suita pada zamiast tknąć produkcję.
@@ -28,6 +40,8 @@ abstract class TestCase extends BaseTestCase
      *    żądanie rzuca wyjątek zamiast lecieć do internetu. Dotyczy WSZYSTKICH
      *    integracji — Fakturownia, Paynow, DeepSeek (płatne tokeny!), GUS,
      *    Discord. Test, który czegoś nie zafake'ował, teraz o tym krzyczy.
+     *
+     * 3. ŻADNYCH PRAWDZIWYCH PLIKÓW. Lekcja z 2026-08-04, patrz `isolateDisks()`.
      */
     protected function setUp(): void
     {
@@ -45,7 +59,61 @@ abstract class TestCase extends BaseTestCase
 
         Http::preventStrayRequests();
 
+        $this->isolateDisks();
         $this->skipShopCardRendering();
+    }
+
+    /**
+     * Dyski w testach wskazują na katalog tymczasowy, NIGDY na pliki produkcji.
+     *
+     * Kosztowna lekcja z 2026-08-04: `ShopEraser` kasuje katalogi po ID
+     * (`users/{id}`, `products/{id}`), a testy usuwania sklepu nie miały
+     * `Storage::fake('public')`. Baza testowa to sqlite `:memory:`, więc ID
+     * startują od 1 — pierwszy sprzedawca w teście dostał `id = 1` i suita
+     * skasowała REALNY katalog `storage/app/public/users/1`, czyli awatar
+     * administratora platformy. Zdjęcia produktów ocalały tylko dlatego, że
+     * produkcyjne ID doszły już do 27 i testowe „jedynki" nie miały w co trafić.
+     * Przy pierwszym kliencie z ID w zakresie testowym zniknęłyby jego zdjęcia,
+     * których nikt by nie odtworzył.
+     *
+     * Guard odwraca odpowiedzialność: nie „autor testu pamiętał o fake'u", tylko
+     * „dysk produkcyjny jest poza zasięgiem suity, kropka". `Storage::fake()`
+     * przestawia korzeń dysku na `storage/framework/testing/disks/*` i czyści go
+     * przed każdym testem — a asercja niżej pilnuje, że naprawdę się przestawił
+     * (gdyby Laravel zmienił zachowanie albo ktoś podmienił konfigurację dysków,
+     * suita ma paść, a nie kasować pliki).
+     *
+     * Test może nadal wołać `Storage::fake('public')` u siebie — to no-op na
+     * już-udawanym dysku i nie ma potrzeby tego usuwać.
+     *
+     * Konfigurację dysku przekazujemy jawnie, bo samo `Storage::fake()` bierze
+     * z oryginału WYŁĄCZNIE `throw` (patrz `Storage::buildDiskConfiguration()`)
+     * — gubi m.in. `url`, przez co `Storage::url()` zwraca ścieżkę względną
+     * zamiast absolutnego adresu z `APP_URL`. Podmieniamy KORZEŃ, nie
+     * zachowanie: test ma sprawdzać produkcyjną semantykę dysku, tylko na innych
+     * plikach. (Bez tego padał `MailBrandingTest` — logo w mailu przestawało być
+     * absolutnym URL-em, a taki link nie działa w kliencie pocztowym.)
+     */
+    private function isolateDisks(): void
+    {
+        $sandbox = storage_path('framework/testing/disks');
+
+        foreach (self::PRODUCTION_DISKS as $disk => $productionPath) {
+            $config = config("filesystems.disks.{$disk}", []);
+            unset($config['root']);
+
+            Storage::fake($disk, $config);
+
+            $root = Storage::disk($disk)->path('');
+
+            if (! str_starts_with($root, $sandbox)) {
+                $this->fail(
+                    "ABORT: disk [{$disk}] resolved to [{$root}] instead of the testing sandbox "
+                    ."[{$sandbox}]. Refusing to run — the suite must never touch "
+                    ."production files in storage/{$productionPath}."
+                );
+            }
+        }
     }
 
     /**
