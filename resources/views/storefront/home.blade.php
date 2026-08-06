@@ -57,7 +57,7 @@
 
                         {{-- Info pod zdjęciem --}}
                         <div class="solo-info p-6">
-                            <h2 class="st-brand font-serif text-2xl font-normal tracking-tight sm:text-3xl">
+                            <h2 class="st-brand font-serif text-2xl font-normal sm:text-3xl">
                                 <a href="{{ $p->storefrontPath() }}" wire:navigate class="transition hover:opacity-70">{{ $p->name }}</a>
                             </h2>
                             @if ($excerpt)
@@ -107,7 +107,7 @@
                                  z nich. Dwie linie, nie jedna — nazwa rozróżnia produkty,
                                  a ucięcie po ~22 znakach zjadałoby końcówki wariantów
                                  („Shima OpenAir Brown" vs „…Black"). --}}
-                            <h2 class="st-brand font-serif text-2xl font-normal tracking-tight line-clamp-2 sm:text-3xl">
+                            <h2 class="st-brand font-serif text-2xl font-normal line-clamp-2 sm:text-3xl">
                                 <a href="{{ $p->storefrontPath() }}" wire:navigate class="transition hover:opacity-70">{{ $p->name }}</a>
                             </h2>
                             @if ($ex)
@@ -142,7 +142,7 @@
             ])>
                 @foreach ($contentTiles as $tile)
                     <div class="st-card st-border flex flex-col rounded-3xl border p-8 text-left">
-                        <h2 class="st-brand font-serif text-2xl font-normal tracking-tight sm:text-3xl">{{ $tile['title'] }}</h2>
+                        <h2 class="st-brand font-serif text-2xl font-normal sm:text-3xl">{{ $tile['title'] }}</h2>
 
                         @if ($tile['hasMore'])
                             {{-- Treść UCIĘTA: czysty wycinek (skracanie HTML-a
@@ -170,7 +170,7 @@
                      z nagłówkiem „Zobacz produkty". Chmura bez własnej etykiety
                      (label=""), bo nagłówek już jest opisem. --}}
                 <div class="st-card st-border rounded-3xl border p-8 text-left">
-                    <h2 class="st-brand font-serif text-2xl font-normal tracking-tight sm:text-3xl">Zobacz produkty</h2>
+                    <h2 class="st-brand font-serif text-2xl font-normal sm:text-3xl">Zobacz produkty</h2>
                     <x-storefront.tag-cloud :tags="$tagCloud" label="" />
                 </div>
             </section>

@@ -88,7 +88,7 @@
              mu z widoku), a układ tytuł–linia–proza sam mówi, że to opis. --}}
         @if (filled($product->description))
             <div class="mt-12">
-                <h2 class="st-brand font-serif text-2xl font-normal tracking-tight sm:text-3xl">{{ $product->name }}</h2>
+                <h2 class="st-brand font-serif text-2xl font-normal sm:text-3xl">{{ $product->name }}</h2>
                 <div class="st-prose st-border mt-6 border-t pt-6 opacity-90">{!! \App\Support\Prose::render($product->description ?? '') !!}</div>
             </div>
         @endif

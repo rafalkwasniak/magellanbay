@@ -39,7 +39,7 @@
                  ~15 na 4) ucięcie zjadałoby końcówki — „Shima OpenAir Brown" i „…Black"
                  stałyby się nieodróżnialne. Dwie linie mieszczą ~44/~30 znaków, czyli
                  realne nazwy w całości, a mimo to nic nie ucieka w trzecią linię. --}}
-            <h2 class="st-brand font-serif text-2xl font-normal tracking-tight line-clamp-2 sm:text-3xl">{{ $product->name }}</h2>
+            <h2 class="st-brand font-serif text-2xl font-normal line-clamp-2 sm:text-3xl">{{ $product->name }}</h2>
             {{-- Cena w kolorze tekstu, NIE w kolorze marki — jak na karcie produktu
                  (tam też `font-bold` bez `st-brand`). Odkąd tytuł niesie kolor marki,
                  cena w tym samym kolorze robiła z kafla dwa akcenty jeden pod drugim.
