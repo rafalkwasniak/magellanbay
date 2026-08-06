@@ -88,16 +88,47 @@
                                 $previewTokens = $activePalette === 'custom'
                                     ? $shop->themeTokens()
                                     : $template['palettes'][$activePalette]['tokens'];
+
+                                // Pasek i stopka mini-witryny — te same reguły co w layoucie
+                                // storefrontu (patrz „CHROME" w config/themes.php). Bez tego
+                                // wszystkie karty wyglądały tak samo, bo różnił je tylko guzik.
+                                $chrome = $template['chrome'] ?? 'neutral';
+                                $chromeMix = (int) config('themes.chrome_brand_mix');
+                                $chromeBg = match ($chrome) {
+                                    'brand' => "color-mix(in srgb, {$previewTokens['brand']} {$chromeMix}%, {$previewTokens['surface']})",
+                                    'brand_tint' => "color-mix(in srgb, {$previewTokens['brand']} 12%, {$previewTokens['surface']})",
+                                    default => "color-mix(in srgb, {$previewTokens['ink']} 8%, {$previewTokens['surface']})",
+                                };
+                                $chromeInk = $previewTokens['ink'];
+
+                                // Faktura chrome — te same wzory co w layoucie storefrontu
+                                // (i co funkcja chromeTexture() w JS niżej).
+                                $texture = $template['chrome_texture'] ?? 'none';
+                                $patternColor = "color-mix(in srgb, {$previewTokens['surface']} 55%, transparent)";
+                                $chromePattern = match ($texture) {
+                                    'awning' => "background-image: repeating-linear-gradient(135deg, {$patternColor} 0 5px, transparent 5px 16px);",
+                                    'dots' => "background-image: radial-gradient(circle, {$patternColor} 1.6px, transparent 1.7px), radial-gradient(circle, {$patternColor} 1.6px, transparent 1.7px); background-size: 18px 18px; background-position: 0 0, 9px 9px;",
+                                    'pinpoint' => "background-image: radial-gradient(circle, {$patternColor} 1.1px, transparent 1.2px), radial-gradient(circle, {$patternColor} 1.1px, transparent 1.2px); background-size: 10px 10px; background-position: 0 0, 5px 5px;",
+                                    'stripes' => "background-image: repeating-linear-gradient(45deg, {$patternColor} 0 3px, transparent 3px 13px);",
+                                    default => '',
+                                };
                             @endphp
-                            <div data-template-card="{{ $slug }}"
+                            <div data-template-card="{{ $slug }}" data-chrome="{{ $chrome }}" data-texture="{{ $texture }}"
                                 class="tpl-card flex flex-col overflow-hidden rounded-2xl border bg-white transition {{ $isActive ? 'border-amber-400 ring-2 ring-amber-400/60' : 'border-stone-200' }}">
                                 <input type="radio" name="template" id="template-{{ $slug }}" value="{{ $slug }}" class="sr-only" data-template-input @checked($isActive)>
 
                                 {{-- Klik w podgląd/nazwę = wybór szablonu --}}
                                 <label for="template-{{ $slug }}" class="cursor-pointer">
                                     {{-- Mini-witryna produktu (żywy podgląd palety) --}}
-                                    <div data-preview="{{ $slug }}" class="p-4"
+                                    <div data-preview="{{ $slug }}"
                                         style="background: {{ $previewTokens['surface'] }}; color: {{ $previewTokens['ink'] }};">
+                                        {{-- Miniatura paska sklepu (chrome) — nazwa + kreska „menu" --}}
+                                        <div data-preview-bar class="flex items-center justify-between px-4 py-2 text-[10px] font-semibold"
+                                            style="background: {{ $chromeBg }}; color: {{ $chromeInk }}; {{ $chromePattern }}">
+                                            <span class="truncate">{{ $shop->name }}</span>
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-3 w-3 shrink-0 opacity-80" aria-hidden="true"><path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16"/></svg>
+                                        </div>
+                                        <div class="p-4 pt-3">
                                         @if (! empty($previewImageUrl))
                                             {{-- Realne zdjęcie produktu sklepu — „to Twój sklep". --}}
                                             <img src="{{ $previewImageUrl }}" alt="Podgląd produktu"
@@ -113,10 +144,12 @@
                                                 </svg>
                                             </div>
                                         @endif
-                                        <p class="mt-2.5 truncate text-xs opacity-70">Nazwa produktu</p>
-                                        <p class="mt-0.5 text-sm font-semibold">49,00 zł</p>
+                                        {{-- Realny produkt, gdy sklep ma zdjęcie; inaczej przykład. --}}
+                                        <p class="mt-2.5 truncate text-xs opacity-70">{{ $previewProduct?->name ?? 'Nazwa produktu' }}</p>
+                                        <p class="mt-0.5 text-sm font-semibold">{{ $previewProduct ? \App\Support\Money::pln($previewProduct->price_gross) : '49,00 zł' }}</p>
                                         <span data-preview-btn class="mt-2 block rounded-lg py-1 text-center text-[11px] font-semibold"
                                             style="background: {{ $previewTokens['brand'] }}; color: {{ $previewTokens['brand_ink'] }};">Zobacz produkt</span>
+                                        </div>
                                     </div>
 
                                     <div class="border-t border-stone-100 px-4 pt-4">
@@ -255,9 +288,39 @@
                     const preview = card.querySelector('[data-preview]');
                     const img = card.querySelector('[data-preview-img]');
                     const btn = card.querySelector('[data-preview-btn]');
+                    const bar = card.querySelector('[data-preview-bar]');
                     if (preview) {
                         preview.style.background = inp.dataset.surface;
                         preview.style.color = inp.dataset.ink;
+                    }
+                    // Pasek chrome — te same reguły co PHP wyżej (i layout storefrontu).
+                    if (bar) {
+                        const chrome = card.getAttribute('data-chrome');
+                        if (chrome === 'brand') {
+                            bar.style.background = 'color-mix(in srgb, ' + inp.dataset.brand + ' {{ (int) config('themes.chrome_brand_mix') }}%, ' + inp.dataset.surface + ')';
+                            bar.style.color = inp.dataset.ink;
+                        } else if (chrome === 'brand_tint') {
+                            bar.style.background = 'color-mix(in srgb, ' + inp.dataset.brand + ' 12%, ' + inp.dataset.surface + ')';
+                            bar.style.color = inp.dataset.ink;
+                        } else {
+                            bar.style.background = 'color-mix(in srgb, ' + inp.dataset.ink + ' 8%, ' + inp.dataset.surface + ')';
+                            bar.style.color = inp.dataset.ink;
+                        }
+                        // Skrót `background` zdjął wzór — nałóż fakturę na nowo
+                        // (te same wzory co PHP wyżej i layout storefrontu).
+                        const p = 'color-mix(in srgb, ' + inp.dataset.surface + ' 55%, transparent)';
+                        const texture = card.getAttribute('data-texture');
+                        if (texture === 'awning') {
+                            bar.style.backgroundImage = 'repeating-linear-gradient(135deg, ' + p + ' 0 5px, transparent 5px 16px)';
+                        } else if (texture === 'dots' || texture === 'pinpoint') {
+                            const r = texture === 'dots' ? [1.6, 1.7, 18, 9] : [1.1, 1.2, 10, 5];
+                            const dot = 'radial-gradient(circle, ' + p + ' ' + r[0] + 'px, transparent ' + r[1] + 'px)';
+                            bar.style.backgroundImage = dot + ', ' + dot;
+                            bar.style.backgroundSize = r[2] + 'px ' + r[2] + 'px';
+                            bar.style.backgroundPosition = '0 0, ' + r[3] + 'px ' + r[3] + 'px';
+                        } else if (texture === 'stripes') {
+                            bar.style.backgroundImage = 'repeating-linear-gradient(45deg, ' + p + ' 0 3px, transparent 3px 13px)';
+                        }
                     }
                     if (img) {
                         img.style.background = inp.dataset.brand;

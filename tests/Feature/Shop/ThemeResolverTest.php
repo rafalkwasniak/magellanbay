@@ -52,6 +52,50 @@ class ThemeResolverTest extends TestCase
         $this->assertSame('#6B8E4E', $shop->themeTokens()['brand']);
     }
 
+    public function test_template_chrome_resolves_with_neutral_fallback(): void
+    {
+        // Stara rodzina: szary chrome (dotychczasowy wygląd).
+        $this->assertSame('neutral', Shop::factory()->create()->templateChrome());
+
+        // Nowa rodzina biało-kolorowa: pasek i stopka w kolorze marki.
+        $shop = Shop::factory()->create(['template' => 'white_red']);
+        $this->assertSame('brand', $shop->templateChrome());
+
+        // Szablon bez klucza `chrome` (albo z nieznaną wartością) spada na neutral.
+        config(['themes.templates.white_red.chrome' => 'zigzag']);
+        $this->assertSame('neutral', $shop->templateChrome());
+    }
+
+    public function test_template_chrome_texture_resolves_with_none_fallback(): void
+    {
+        // Stara rodzina: gładki chrome, bez wzoru.
+        $this->assertSame('none', Shop::factory()->create()->templateChromeTexture());
+
+        // Nowa rodzina deklaruje fakturę per szablon.
+        $shop = Shop::factory()->create(['template' => 'white_red']);
+        $this->assertSame('dots', $shop->templateChromeTexture());
+
+        // Nieznana wartość spada na brak wzoru.
+        config(['themes.templates.white_red.chrome_texture' => 'zebra']);
+        $this->assertSame('none', $shop->templateChromeTexture());
+    }
+
+    public function test_template_card_mix_resolves_with_global_default(): void
+    {
+        // Stara rodzina nie deklaruje `card_mix` → globalny domyślny (subtelny).
+        $this->assertSame(config('themes.card_mix'), Shop::factory()->create()->templateCardMix());
+
+        // Biała rodzina nadpisuje domyślny własną (mocniejszą) wartością.
+        // Liczbę bierzemy z configu, nie na sztywno — jest dostrajana na oko.
+        $shop = Shop::factory()->create(['template' => 'white_blue']);
+        $this->assertSame(config('themes.templates.white_blue.card_mix'), $shop->templateCardMix());
+        $this->assertNotSame(config('themes.card_mix'), $shop->templateCardMix());
+
+        // Wartość spoza zakresu procentów jest przycinana.
+        config(['themes.templates.white_blue.card_mix' => 250]);
+        $this->assertSame(100, $shop->templateCardMix());
+    }
+
     public function test_listing_density_scales_with_active_product_count(): void
     {
         $shop = Shop::factory()->create();

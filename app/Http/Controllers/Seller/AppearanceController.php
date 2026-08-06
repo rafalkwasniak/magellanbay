@@ -25,17 +25,20 @@ class AppearanceController extends Controller
             return redirect()->route('seller.dashboard');
         }
 
-        // Losowe zdjęcie produktu sklepu do mini-podglądu szablonu — „to Twój
-        // sklep". Gdy sprzedawca nie ma jeszcze żadnego zdjęcia, widok pokazuje
-        // neutralny placeholder w kolorze palety.
-        $previewImageUrl = ProductImage::query()
+        // Losowy PRODUKT sklepu (ze zdjęciem) do mini-podglądu szablonu — „to
+        // Twój sklep": realne zdjęcie, realna nazwa i cena, na pasku nazwa
+        // sklepu. Gdy sprzedawca nie ma jeszcze żadnego zdjęcia, widok pokazuje
+        // neutralny placeholder w kolorze palety i przykładowe dane.
+        $previewImage = ProductImage::query()
             ->whereHas('product', fn ($query) => $query->where('shop_id', $shop->id))
+            ->with('product')
             ->inRandomOrder()
-            ->first()?->url();
+            ->first();
 
         return view('seller.appearance.edit', [
             'shop' => $shop,
-            'previewImageUrl' => $previewImageUrl,
+            'previewImageUrl' => $previewImage?->url(),
+            'previewProduct' => $previewImage?->product,
         ]);
     }
 

@@ -31,6 +31,28 @@ return [
     | Kolory poniżej to rozsądny start — dopieszczymy je wizualnie, gdy storefront
     | zacznie je renderować. `order` daje jawną kolejność w siatce.
     |
+    | CHROME — druga oś szablonu, obok kolorów. Sama paleta zmieniała tylko
+    | przyciski, cenę i linki; pasek górny, stopka i karty liczyły się z `ink`
+    | (prawie czerni), więc KAŻDY szablon miał identycznie szare obramowanie
+    | strony i wszystkie wyglądały tak samo. `chrome` mówi, czym malujemy pasek
+    | i stopkę:
+    |   neutral    — szary tint z `ink` (dotychczasowe zachowanie)
+    |   brand_tint — delikatny tint z `brand` (12%); jasny pasek w tonie marki
+    |   brand      — pastel marki o sile `chrome_brand_mix` (niżej); tekst na
+    |                `ink`, nie `brand_ink` (biały na pastelu jest nieczytelny)
+    | Wartość nieznana (albo brak) = `neutral`, więc szablon bez tego klucza po
+    | prostu zostaje przy starym wyglądzie.
+    |
+    | CHROME_TEXTURE — faktura na pasku i stopce, żeby kolorowy chrome nie był
+    | „aplą" (prośba Rafała: „bardziej jak sztuka"). Wzór rysowany czystym CSS
+    | (gradienty) w kolorze tła strony, więc sam idzie za paletą — zero grafik,
+    | zero kompilacji per-sklep. Część osobowości szablonu:
+    |   awning   — skośne paski jak daszek kramu/markiza
+    |   dots     — naprzemienne rzędy kropek (wisienki)
+    |   pinpoint — drobniutkie kropeczki (fajans/porcelana)
+    |   stripes  — delikatne skośne paski, w przeciwną stronę niż awning
+    | Brak klucza / wartość nieznana = gładko (bez wzoru).
+    |
     */
 
     'templates' => [
@@ -39,6 +61,7 @@ return [
             'name' => 'Aksamitna chmurka',
             'description' => 'Jasny i powietrzny — biel z nutą błękitu. Lekki, czysty, wygodny do czytania.',
             'order' => 1,
+            'chrome' => 'neutral',
             'default_palette' => 'sky',
             'palettes' => [
                 'sky' => [
@@ -93,6 +116,7 @@ return [
             'name' => 'Zielony zakątek',
             'description' => 'Kolory natury — zieleń, brąz i len. Ciepły, ekologiczny klimat.',
             'order' => 2,
+            'chrome' => 'neutral',
             'default_palette' => 'forest',
             'palettes' => [
                 'forest' => [
@@ -147,6 +171,7 @@ return [
             'name' => 'Grafitowy wieczór',
             'description' => 'Ciemny i elegancki — grafit z ciepłym akcentem. Produkty wychodzą na pierwszy plan.',
             'order' => 3,
+            'chrome' => 'neutral',
             'default_palette' => 'ember',
             'palettes' => [
                 'ember' => [
@@ -201,6 +226,7 @@ return [
             'name' => 'Welurowa mgła',
             'description' => 'Miękkie, przygaszone barwy — brudny róż i welurowe, zamglone odcienie. Ciepły, nastrojowy klimat.',
             'order' => 4,
+            'chrome' => 'neutral',
             'default_palette' => 'dusty_rose',
             'palettes' => [
                 'dusty_rose' => [
@@ -251,11 +277,264 @@ return [
             ],
         ],
 
+        /*
+        | Cztery poniższe szablony to świadomie INNA rodzina niż cztery powyższe:
+        | tam kremowe, przygaszone tło i przybrudzone akcenty; tu czysta biel (lub
+        | jasna szarość) i jeden nasycony kolor. Jasno, kontrastowo, „sklepowo".
+        |
+        | Wszystkie kolory `brand` mają kontrast ≥ 4.5:1 z bielą — bo `brand`
+        | robi u nas nie tylko tło przycisku, ale też cenę i linki NA tle strony.
+        | Dlatego np. bursztyn jest w odcieniu 700, nie 500 jak w panelu Kramio:
+        | amber-500 na bieli jest nieczytelny.
+        */
+
+        'kramio_light' => [
+            'name' => 'Bursztynowy kram',
+            'description' => 'Jasne, lekko szare tło i bursztynowy akcent — ten sam klimat co panel Kramio.',
+            'order' => 5,
+            'card_mix' => 6,
+            'chrome' => 'brand_tint',
+            'chrome_texture' => 'awning',
+            'default_palette' => 'amber',
+            'palettes' => [
+                'amber' => [
+                    'name' => 'Bursztyn',
+                    'tokens' => [
+                        'brand' => '#B45309',
+                        'brand_ink' => '#FFFFFF',
+                        'surface' => '#FAFAF9',
+                        'ink' => '#1C1917',
+                    ],
+                ],
+                'graphite' => [
+                    'name' => 'Grafit',
+                    'tokens' => [
+                        'brand' => '#3F3F46',
+                        'brand_ink' => '#FFFFFF',
+                        'surface' => '#FAFAF9',
+                        'ink' => '#1C1917',
+                    ],
+                ],
+                'copper' => [
+                    'name' => 'Miedź',
+                    'tokens' => [
+                        'brand' => '#A94B22',
+                        'brand_ink' => '#FFFFFF',
+                        'surface' => '#FAFAF9',
+                        'ink' => '#1C1917',
+                    ],
+                ],
+                'sage' => [
+                    'name' => 'Szałwia',
+                    'tokens' => [
+                        'brand' => '#467053',
+                        'brand_ink' => '#FFFFFF',
+                        'surface' => '#FAFAF9',
+                        'ink' => '#1C1917',
+                    ],
+                ],
+                'slate' => [
+                    'name' => 'Stalowy granat',
+                    'tokens' => [
+                        'brand' => '#334155',
+                        'brand_ink' => '#FFFFFF',
+                        'surface' => '#FAFAF9',
+                        'ink' => '#1C1917',
+                    ],
+                ],
+            ],
+        ],
+
+        'white_red' => [
+            'name' => 'Wiśniowy sad',
+            'description' => 'Czysta biel z mocnym czerwonym akcentem. Wyrazisty, energiczny, dobrze robi promocjom.',
+            'order' => 6,
+            'card_mix' => 6,
+            'chrome' => 'brand',
+            'chrome_texture' => 'dots',
+            'default_palette' => 'red',
+            'palettes' => [
+                'red' => [
+                    'name' => 'Czerwień',
+                    'tokens' => [
+                        'brand' => '#DC2626',
+                        'brand_ink' => '#FFFFFF',
+                        'surface' => '#FFFFFF',
+                        'ink' => '#1C1717',
+                    ],
+                ],
+                'ruby' => [
+                    'name' => 'Rubin',
+                    'tokens' => [
+                        'brand' => '#BE123C',
+                        'brand_ink' => '#FFFFFF',
+                        'surface' => '#FFFFFF',
+                        'ink' => '#1C1717',
+                    ],
+                ],
+                'burgundy' => [
+                    'name' => 'Burgund',
+                    'tokens' => [
+                        'brand' => '#9F1239',
+                        'brand_ink' => '#FFFFFF',
+                        'surface' => '#FFFFFF',
+                        'ink' => '#1C1717',
+                    ],
+                ],
+                'brick' => [
+                    'name' => 'Cegła',
+                    'tokens' => [
+                        'brand' => '#B03A20',
+                        'brand_ink' => '#FFFFFF',
+                        'surface' => '#FFFFFF',
+                        'ink' => '#1C1717',
+                    ],
+                ],
+                'raspberry' => [
+                    'name' => 'Malina',
+                    'tokens' => [
+                        'brand' => '#C2185B',
+                        'brand_ink' => '#FFFFFF',
+                        'surface' => '#FFFFFF',
+                        'ink' => '#1C1717',
+                    ],
+                ],
+            ],
+        ],
+
+        'white_blue' => [
+            'name' => 'Błękitna porcelana',
+            'description' => 'Czysta biel z niebieskim akcentem. Spokojny, uporządkowany, budzi zaufanie.',
+            'order' => 7,
+            'card_mix' => 6,
+            'chrome' => 'brand',
+            'chrome_texture' => 'pinpoint',
+            'default_palette' => 'cobalt',
+            'palettes' => [
+                'cobalt' => [
+                    'name' => 'Kobalt',
+                    'tokens' => [
+                        'brand' => '#2563EB',
+                        'brand_ink' => '#FFFFFF',
+                        'surface' => '#FFFFFF',
+                        'ink' => '#171A26',
+                    ],
+                ],
+                'azure' => [
+                    'name' => 'Lazur',
+                    'tokens' => [
+                        'brand' => '#0369A1',
+                        'brand_ink' => '#FFFFFF',
+                        'surface' => '#FFFFFF',
+                        'ink' => '#171A26',
+                    ],
+                ],
+                'navy' => [
+                    'name' => 'Granat',
+                    'tokens' => [
+                        'brand' => '#1E3A8A',
+                        'brand_ink' => '#FFFFFF',
+                        'surface' => '#FFFFFF',
+                        'ink' => '#171A26',
+                    ],
+                ],
+                'indigo' => [
+                    'name' => 'Indygo',
+                    'tokens' => [
+                        'brand' => '#4F46E5',
+                        'brand_ink' => '#FFFFFF',
+                        'surface' => '#FFFFFF',
+                        'ink' => '#171A26',
+                    ],
+                ],
+                'steel' => [
+                    'name' => 'Stal',
+                    'tokens' => [
+                        'brand' => '#475569',
+                        'brand_ink' => '#FFFFFF',
+                        'surface' => '#FFFFFF',
+                        'ink' => '#171A26',
+                    ],
+                ],
+            ],
+        ],
+
+        'white_green' => [
+            'name' => 'Zimowy ogród',
+            'description' => 'Czysta biel z zielonym akcentem. Świeży i naturalny, ale bez ekologicznej patyny.',
+            'order' => 8,
+            'card_mix' => 6,
+            'chrome' => 'brand',
+            'chrome_texture' => 'stripes',
+            'default_palette' => 'emerald',
+            'palettes' => [
+                'emerald' => [
+                    'name' => 'Szmaragd',
+                    'tokens' => [
+                        'brand' => '#047857',
+                        'brand_ink' => '#FFFFFF',
+                        'surface' => '#FFFFFF',
+                        'ink' => '#16211A',
+                    ],
+                ],
+                'pine' => [
+                    'name' => 'Sosna',
+                    'tokens' => [
+                        'brand' => '#15803D',
+                        'brand_ink' => '#FFFFFF',
+                        'surface' => '#FFFFFF',
+                        'ink' => '#16211A',
+                    ],
+                ],
+                'deep_forest' => [
+                    'name' => 'Bór',
+                    'tokens' => [
+                        'brand' => '#166534',
+                        'brand_ink' => '#FFFFFF',
+                        'surface' => '#FFFFFF',
+                        'ink' => '#16211A',
+                    ],
+                ],
+                'marine' => [
+                    'name' => 'Morska',
+                    'tokens' => [
+                        'brand' => '#0F766E',
+                        'brand_ink' => '#FFFFFF',
+                        'surface' => '#FFFFFF',
+                        'ink' => '#16211A',
+                    ],
+                ],
+                'olive' => [
+                    'name' => 'Oliwka',
+                    'tokens' => [
+                        'brand' => '#3F6212',
+                        'brand_ink' => '#FFFFFF',
+                        'surface' => '#FFFFFF',
+                        'ink' => '#16211A',
+                    ],
+                ],
+            ],
+        ],
+
     ],
 
     // Slug szablonu domyślnego — przypisywany nowym sklepom (spójne z kolumną
     // `shops.template` default). Musi istnieć w `templates` powyżej.
     'default_template' => 'velvet_cloud',
+
+    // Siła pastelu dla chrome `brand`: ile PROCENT koloru marki idzie do tła
+    // paska i stopki (reszta to tło strony). Dostrajane na oko z Rafałem:
+    // 100 było za ciężkie, 50 wciąż za mocne → 30. Jedna liczba, trzy miejsca
+    // ją czytają (layout storefrontu + podgląd kafli w panelu, PHP i JS).
+    'chrome_brand_mix' => 30,
+
+    // Boxy (st-card): o ile procent box jest CIEMNIEJSZY od tła strony
+    // (technicznie: tyle % `ink` domieszane do `surface`, więc odcień idzie
+    // za paletą — na niebieskim tle box jest niebieskawy, nie szary).
+    // To globalny domyślny; szablon może nadpisać własnym `card_mix`
+    // (nowa biała rodzina chce wyraźniejszych boxów niż stare kremowe
+    // szablony, gdzie 4% siedzi w projekcie od początku).
+    'card_mix' => 4,
 
     /*
     |--------------------------------------------------------------------------

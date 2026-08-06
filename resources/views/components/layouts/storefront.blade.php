@@ -13,6 +13,13 @@
 
 @php
     $tokens = $shop->themeTokens();
+    // Czym malujemy pasek górny i stopkę — druga oś szablonu obok palety
+    // (patrz komentarz „CHROME" w config/themes.php). $chromeMix = siła pastelu
+    // dla chrome `brand`, dostrajana w configu.
+    $chrome = $shop->templateChrome();
+    $chromeMix = (int) config('themes.chrome_brand_mix');
+    $chromeTexture = $shop->templateChromeTexture();
+    $cardMix = $shop->templateCardMix();
     // Google Analytics/Tag Manager: wstrzykujemy tylko gdy włączone (Ustawienia)
     // i skonfigurowane (Integracje). ID jest zwalidowane do [A-Z0-9-] (Form
     // Request), więc bezpieczne w <script>. GTM- → Tag Manager, G- → GA4.
@@ -90,20 +97,82 @@
             --brand-ink: {{ $tokens['brand_ink'] }};
             --surface: {{ $tokens['surface'] }};
             --ink: {{ $tokens['ink'] }};
+
+            {{-- Chrome (pasek górny + stopka). Nagłówek jest półprzezroczysty
+                 z backdrop-blur, stopka pełna — stąd dwie zmienne, nie jedna. --}}
+            @if ($chrome === 'brand')
+                {{-- Pastel marki o sile z configu (dostrajanej na oko — patrz
+                     `chrome_brand_mix`). Tekst na --ink, nie --brand-ink:
+                     biały na pastelu jest nieczytelny. --}}
+                --chrome-top: color-mix(in srgb, var(--brand) {{ $chromeMix }}%, color-mix(in srgb, var(--surface) 85%, transparent));
+                --chrome-bottom: color-mix(in srgb, var(--brand) {{ $chromeMix }}%, var(--surface));
+                --chrome-ink: var(--ink);
+            @elseif ($chrome === 'brand_tint')
+                --chrome-top: color-mix(in srgb, var(--brand) 12%, color-mix(in srgb, var(--surface) 92%, transparent));
+                --chrome-bottom: color-mix(in srgb, var(--brand) 8%, var(--surface));
+                --chrome-ink: var(--ink);
+            @else
+                --chrome-top: color-mix(in srgb, var(--ink) 8%, color-mix(in srgb, var(--surface) 92%, transparent));
+                --chrome-bottom: color-mix(in srgb, var(--ink) 5%, var(--surface));
+                --chrome-ink: var(--ink);
+            @endif
         }
 
         body { background: var(--surface); color: var(--ink); }
+        .st-chrome { color: var(--chrome-ink); }
+        .st-chrome-top { background: var(--chrome-top); }
+        .st-chrome-bottom { background: var(--chrome-bottom); }
+        @if ($chromeTexture !== 'none')
+            {{-- Faktura chrome (patrz „CHROME_TEXTURE" w config/themes.php):
+                 wzór w półprzezroczystym kolorze tła strony, więc idzie za paletą.
+                 Te reguły są PO .st-chrome-top/-bottom, żeby background-image
+                 wygrało z ich skrótem `background`. --}}
+            .st-chrome-top, .st-chrome-bottom {
+                --chrome-pattern: color-mix(in srgb, var(--surface) 55%, transparent);
+                @if ($chromeTexture === 'awning')
+                    background-image: repeating-linear-gradient(135deg, var(--chrome-pattern) 0 5px, transparent 5px 16px);
+                @elseif ($chromeTexture === 'dots')
+                    background-image:
+                        radial-gradient(circle, var(--chrome-pattern) 1.6px, transparent 1.7px),
+                        radial-gradient(circle, var(--chrome-pattern) 1.6px, transparent 1.7px);
+                    background-size: 18px 18px;
+                    background-position: 0 0, 9px 9px;
+                @elseif ($chromeTexture === 'pinpoint')
+                    background-image:
+                        radial-gradient(circle, var(--chrome-pattern) 1.1px, transparent 1.2px),
+                        radial-gradient(circle, var(--chrome-pattern) 1.1px, transparent 1.2px);
+                    background-size: 10px 10px;
+                    background-position: 0 0, 5px 5px;
+                @elseif ($chromeTexture === 'stripes')
+                    {{-- Skos w przeciwną stronę niż awning (45° vs 135°). --}}
+                    background-image: repeating-linear-gradient(45deg, var(--chrome-pattern) 0 3px, transparent 3px 13px);
+                @endif
+            }
+        @endif
+        @if ($chrome === 'brand')
+            /* Linki i nazwa sklepu na --ink zamiast --brand: kolor marki na
+               własnym pastelu ma za słaby kontrast. Przycisk koszyka (st-btn)
+               zostaje brandowy — na pastelu dobrze się odcina. */
+            .st-chrome .st-brand { color: var(--chrome-ink); }
+            /* Rozwijane menu mobilne ma tło z --surface — w środku wracają
+               kolory strony (linki brandowe). */
+            .st-chrome .st-menu .st-brand { color: var(--brand); }
+        @endif
         .st-brand { color: var(--brand); }
         /* Nagłówek boxu/karty na storefroncie — jedno źródło kroju i ROZMIARU
            tytułów kart, żeby wszystkie były spójne i regulowane z jednego miejsca.
            Serif (Instrument Serif) czyta się optycznie mniej niż sans, więc
            trzymamy go odrobinę większym niż text-xl. Kolor NIE tu — zostaje na
            .st-brand (lub np. rose dla strefy „danger”). */
-        .st-box-title { font-family: var(--font-serif); font-size: 1.375rem; font-weight: 400; letter-spacing: -0.025em; line-height: 1.3; }
+        {{-- Letter-spacing LEKKO dodatni, nie ujemny jak przy dużych h1: ozdobny
+             serif w małym stopniu potrzebuje powietrza między literami (Rafał:
+             „mało je widać"). Duże nagłówki zostają ciasne (tracking-tight). --}}
+        .st-box-title { font-family: var(--font-serif); font-size: 1.375rem; font-weight: 400; letter-spacing: 0.01em; line-height: 1.3; }
         .st-btn { background: var(--brand); color: var(--brand-ink); }
         .st-border { border-color: color-mix(in srgb, var(--ink) 12%, transparent); }
-        /* Panel karty — wyliczany z tokenów, czytelny na jasnym i ciemnym tle. */
-        .st-card { background: color-mix(in srgb, var(--ink) 4%, var(--surface)); }
+        /* Panel karty — o `card_mix`% ciemniejszy od tła (szablon decyduje, jak
+           mocno; domieszka z --ink, więc odcień idzie za paletą, nie w szarość). */
+        .st-card { background: color-mix(in srgb, var(--ink) {{ $cardMix }}%, var(--surface)); }
         /* Menu (rozwijane „Informacje" + mobilne): tło z tokenu, hover z --ink. */
         .st-menu { background: var(--surface); }
         .st-menu-item:hover { background: color-mix(in srgb, var(--ink) 7%, transparent); }
@@ -180,7 +249,7 @@
          koszyk). Desktop: brand wyśrodkowany i duży (logo/serif), cienka linia,
          nav pod spodem. Rozwijane menu i menu mobilne na natywnym <details> —
          storefront jest JS-light (bez app.js), więc zero zależności. --}}
-    <header class="st-border sticky top-0 z-30 border-b backdrop-blur" style="background: color-mix(in srgb, var(--ink) 8%, color-mix(in srgb, var(--surface) 92%, transparent));">
+    <header class="st-chrome st-chrome-top st-border sticky top-0 z-30 border-b backdrop-blur">
         {{-- MOBILE: kompaktowy pasek --}}
         <div class="relative md:hidden">
             <div class="flex items-center justify-between px-4 py-3">
@@ -254,7 +323,9 @@
 
                 {{-- Konto — za „Informacje", oddzielone smukłą pionową linią z nieco
                      większym odstępem (margines na separatorze ponad gap nawigacji). --}}
-                <span aria-hidden="true" style="width:1px; height:1.35rem; margin:0 0.5rem; background: color-mix(in srgb, var(--ink) 20%, transparent);"></span>
+                {{-- Kolor z `currentColor`, nie z --ink: na pasku w kolorze marki
+                     linia liczona z czerni byłaby ciemną kreską na kolorze. --}}
+                <span aria-hidden="true" style="width:1px; height:1.35rem; margin:0 0.5rem; background: color-mix(in srgb, currentColor 30%, transparent);"></span>
                 @auth('customer')
                     <a href="/moje-konto" wire:navigate class="st-brand transition hover:brightness-95">Moje konto</a>
                 @else
@@ -274,8 +345,8 @@
     @unless ($bare)
     {{-- Stopka globalna: brand · Informacje (te same pozycje co w menu + NASZA
          Polityka prywatności) · Kontakt. Pasek „Sklep na Kramio" na dole.
-         Lekki tint z --ink, żeby stopka nie zlewała się ze stroną (jak nagłówek). --}}
-    <footer class="st-border mt-16 border-t" style="background: color-mix(in srgb, var(--ink) 5%, var(--surface));">
+         Tło z chrome szablonu — jak nagłówek, żeby stopka nie zlewała się ze stroną. --}}
+    <footer class="st-chrome st-chrome-bottom st-border mt-16 border-t">
         <div class="mx-auto grid max-w-6xl gap-8 px-6 py-12 sm:grid-cols-2 md:grid-cols-3">
             {{-- Brand + dane firmowe (jeśli sprzedawca uzupełnił) --}}
             <div>

@@ -897,6 +897,42 @@ class Shop extends Model
     }
 
     /**
+     * Styl „chrome" szablonu — czym storefront maluje pasek górny i stopkę:
+     * `neutral` (szary tint z `ink`), `brand_tint` (delikatny tint z `brand`)
+     * albo `brand` (pełny kolor marki). Nieznana wartość spada na `neutral`,
+     * więc szablon bez tego klucza zostaje przy dotychczasowym wyglądzie.
+     */
+    public function templateChrome(): string
+    {
+        $chrome = config("themes.templates.{$this->templateSlug()}.chrome");
+
+        return in_array($chrome, ['neutral', 'brand_tint', 'brand'], true) ? $chrome : 'neutral';
+    }
+
+    /**
+     * Faktura na pasku i stopce (chrome) — rysowana czystym CSS w kolorze tła,
+     * żeby kolorowy chrome nie był gładką aplą. Nieznana wartość = bez wzoru.
+     */
+    public function templateChromeTexture(): string
+    {
+        $texture = config("themes.templates.{$this->templateSlug()}.chrome_texture");
+
+        return in_array($texture, ['awning', 'dots', 'pinpoint', 'stripes'], true) ? $texture : 'none';
+    }
+
+    /**
+     * O ile procent boxy (st-card) są ciemniejsze od tła strony — per szablon
+     * (`card_mix` w definicji), z globalnym domyślnym `themes.card_mix`.
+     * Skalowanie w procentach: sprzedawca „ustawia tło", boxy idą za nim.
+     */
+    public function templateCardMix(): int
+    {
+        $mix = config("themes.templates.{$this->templateSlug()}.card_mix", config('themes.card_mix', 4));
+
+        return max(0, min(100, (int) $mix));
+    }
+
+    /**
      * Kolor własny sklepu („kolor przewodni") w postaci kanonicznej „#RRGGBB",
      * lub null gdy nieustawiony/niepoprawny. Nadpisuje TYLKO token `brand`
      * (akcent); reszta kolorów dziedziczy z bazowej palety szablonu. Trzymany
