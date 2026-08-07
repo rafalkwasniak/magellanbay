@@ -104,6 +104,18 @@ return [
             'replace_placeholders' => true,
         ],
 
+        // Audyt nadawania przesyłek (InPost ShipX): utworzenie przesyłki, wynik
+        // zakupu i pobranie etykiety. Dotyczy pieniędzy sprzedawcy (każde nadanie
+        // zdejmuje opłatę z jego salda InPost), więc ślad trzymamy długo jak przy
+        // FV i płatnościach. Token ShipX NIGDY tu nie trafia.
+        'shipx' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/shipx.log'),
+            'level' => 'debug',
+            'days' => 365,
+            'replace_placeholders' => true,
+        ],
+
         'slack' => [
             'driver' => 'slack',
             'url' => env('LOG_SLACK_WEBHOOK_URL'),

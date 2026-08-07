@@ -797,6 +797,72 @@ class Shop extends Model
     }
 
     /**
+     * Token ShipX sprzedawcy — klucz do NADAWANIA przesyłek na jego koncie
+     * InPost. Sekret: żyje zaszyfrowany w `shop_integrations` i wolno go używać
+     * WYŁĄCZNIE po stronie serwera (patrz komentarz w config/services.php).
+     */
+    public function shipxToken(): ?string
+    {
+        return $this->integration(IntegrationType::Shipping)?->config['token'] ?? null;
+    }
+
+    /**
+     * Organization ID sprzedawcy w ShipX — część adresu przy tworzeniu przesyłki.
+     */
+    public function shipxOrganizationId(): ?string
+    {
+        $id = $this->integration(IntegrationType::Shipping)?->config['organization_id'] ?? null;
+
+        return filled($id) ? (string) $id : null;
+    }
+
+    /**
+     * Środowisko ShipX sklepu: `sandbox` albo `production`. Steruje wyborem
+     * adresu API z config('services.inpost.shipx.base_url'). Domyślnie sandbox —
+     * pomyłka w tę stronę nic nie kosztuje, w drugą nadaje prawdziwe paczki.
+     */
+    public function shipxEnvironment(): string
+    {
+        return $this->integration(IntegrationType::Shipping)?->config['environment'] ?? 'sandbox';
+    }
+
+    /**
+     * Czy sklep ma komplet danych do nadawania (token + Organization ID).
+     * „Skonfigurowane" ≠ „włączone" — włącznik jest w Ustawieniach.
+     */
+    public function shipxConfigured(): bool
+    {
+        return filled($this->shipxToken()) && filled($this->shipxOrganizationId());
+    }
+
+    /**
+     * Czy sklep może nadawać przesyłki: komplet danych + włącznik integracji
+     * + uprawnienie pakietu. Bramkujemy ISTNIEJĄCYM `courier_shipping` („Wysyłka
+     * kurierem i przez InPost”), a nie nowym kluczem: etykiety to część wysyłki,
+     * którą ten pakiet już sprzedaje, a nowy klucz musiałby jeszcze dojechać do
+     * LEPKICH snapshotów istniejących sklepów.
+     */
+    public function shipxEnabled(): bool
+    {
+        return $this->entitlement('courier_shipping')
+            && $this->integration(IntegrationType::Shipping)?->enabled === true
+            && $this->shipxConfigured();
+    }
+
+    /**
+     * Adres API ShipX dla środowiska sklepu. null, gdy sklep nie jest
+     * skonfigurowany — wtedy nie ma czego wołać.
+     */
+    public function shipxBaseUrl(): ?string
+    {
+        if (! $this->shipxConfigured()) {
+            return null;
+        }
+
+        return config('services.inpost.shipx.base_url.'.$this->shipxEnvironment());
+    }
+
+    /**
      * Telefon kontaktowy w czytelnej postaci („+48 668 196 229"). Przechowujemy
      * kanonicznie (48 + 9 cyfr); formatujemy dopiero do wyświetlenia — stopka,
      * maile, storefront. Null, gdy sklep nie ma jeszcze numeru.

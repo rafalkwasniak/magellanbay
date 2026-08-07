@@ -38,6 +38,10 @@ class IntegrationController extends Controller
             'paynowEnabled' => $shop->onlinePaymentsEnabled(),
             'paynowEnvironment' => $shop->paynowEnvironment(),
             'paynowWebhookUrl' => $shop->paynowWebhookUrl(),
+            'shipxOrganizationId' => $shop->shipxOrganizationId(),
+            'shipxConfigured' => $shop->shipxConfigured(),
+            'shipxEnabled' => $shop->shipxEnabled(),
+            'shipxEnvironment' => $shop->shipxEnvironment(),
             'siteVerification' => $shop->googleSiteVerification(),
             'sitemapUrl' => SitemapController::urlFor($shop),
         ]);
@@ -68,6 +72,17 @@ class IntegrationController extends Controller
                 $data['paynow_api_key'] ?? null,
                 $data['paynow_signature_key'] ?? null,
                 $data['paynow_environment'] ?? 'sandbox',
+            );
+        }
+
+        // Nadawanie przesyłek bramkowane tym samym uprawnieniem co płatna wysyłka
+        // (`courier_shipping`) — etykiety to jej część, nie osobny produkt.
+        if ($shop->entitlement('courier_shipping')) {
+            $this->saveShipx(
+                $shop,
+                $data['shipx_token'] ?? null,
+                $data['shipx_organization_id'] ?? null,
+                $data['shipx_environment'] ?? 'sandbox',
             );
         }
 
@@ -188,6 +203,40 @@ class IntegrationController extends Controller
         } else {
             $shop->integrations()->create([
                 'type' => IntegrationType::Payments,
+                'enabled' => true,
+                'config' => $config,
+            ]);
+        }
+    }
+
+    /**
+     * Zapis danych ShipX. Kasowanie sterowane Organization ID, a NIE tokenem:
+     * token jest sekretem (pole zawsze puste przy wejściu, puste = „zostaw"),
+     * więc gdyby on decydował, każdy zapis formularza kasowałby integrację.
+     * Organization ID jest jawne i wraca w polu, więc jego wyczyszczenie to
+     * świadome „rozłącz konto".
+     */
+    private function saveShipx(Shop $shop, ?string $token, ?string $organizationId, string $environment): void
+    {
+        $integration = $shop->integration(IntegrationType::Shipping);
+
+        if (blank($organizationId)) {
+            $integration?->delete();
+
+            return;
+        }
+
+        $config = [
+            'token' => filled($token) ? $token : ($integration?->config['token'] ?? null),
+            'organization_id' => $organizationId,
+            'environment' => $environment,
+        ];
+
+        if ($integration !== null) {
+            $integration->update(['config' => $config]);
+        } else {
+            $shop->integrations()->create([
+                'type' => IntegrationType::Shipping,
                 'enabled' => true,
                 'config' => $config,
             ]);

@@ -297,6 +297,26 @@
                             </div>
                         @endif
 
+                        {{-- Nadawanie przesyłek InPost — bliźniak włącznika Paynow.
+                             Bramka `courier_shipping` (to samo uprawnienie co płatna wysyłka). --}}
+                        @if ($shop->entitlement('courier_shipping'))
+                            <div class="flex items-start gap-4 rounded-2xl border border-stone-200 bg-white/60 p-5 sm:p-6 {{ $shipxConfigured ? '' : 'opacity-60' }}">
+                                {{-- hidden = wartość bazowa; bez konfiguracji checkbox jest disabled i nic nie wysyła --}}
+                                <input type="hidden" name="shipx_enabled" value="{{ $shipxConfigured ? '0' : ($shipxEnabled ? '1' : '0') }}">
+                                <input type="checkbox" id="shipx_enabled" name="shipx_enabled" value="1"
+                                    @checked(old('shipx_enabled', $shipxEnabled)) @disabled(! $shipxConfigured)
+                                    class="mt-0.5 h-5 w-5 shrink-0 rounded-md border-stone-300 text-amber-600 focus:ring-4 focus:ring-amber-500/20 disabled:cursor-not-allowed">
+                                <label for="shipx_enabled" class="flex-1 {{ $shipxConfigured ? 'cursor-pointer' : 'cursor-not-allowed' }}">
+                                    <span class="block text-sm font-medium text-stone-800">Nadawanie przesyłek InPost</span>
+                                    <span class="mt-0.5 block text-sm text-stone-500">Włącza przycisk „Nadaj przesyłkę" na karcie zamówienia — paczkę nadajesz i etykietę drukujesz bez wchodzenia do panelu InPostu.</span>
+                                    <span class="mt-1.5 block text-xs text-stone-400">Za każdą przesyłkę płacisz InPostowi ze swojego salda — Kramio nie pobiera żadnej opłaty.</span>
+                                    @unless($shipxConfigured)
+                                        <span class="mt-1.5 block text-xs text-amber-700">Aby móc włączyć, najpierw podaj token ShipX i Organization ID w <a href="{{ route('seller.integrations.edit') }}" class="font-medium underline decoration-amber-300 underline-offset-2">Integracjach</a>.</span>
+                                    @endunless
+                                </label>
+                            </div>
+                        @endif
+
                         @if ($shop->entitlement('ga_analytics'))
                         @php($gaConfigured = filled($googleAnalyticsId))
                         <div class="flex items-start gap-4 rounded-2xl border border-stone-200 bg-white/60 p-5 sm:p-6 {{ $gaConfigured ? '' : 'opacity-60' }}">

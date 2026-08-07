@@ -43,6 +43,8 @@ class IntegrationRequest extends FormRequest
         $token = trim((string) $this->input('fakturownia_token'));
         $paynowApiKey = trim((string) $this->input('paynow_api_key'));
         $paynowSignatureKey = trim((string) $this->input('paynow_signature_key'));
+        $shipxToken = trim((string) $this->input('shipx_token'));
+        $shipxOrganizationId = trim((string) $this->input('shipx_organization_id'));
         // Sprzedawca zwykle kopiuje CAŁY meta tag z Google, nie sam kod —
         // wyłuskujemy `content`, zamiast odbijać się błędem walidacji od czegoś,
         // co jest poprawną odpowiedzią na źle postawione pytanie.
@@ -67,6 +69,12 @@ class IntegrationRequest extends FormRequest
             // sandbox, odznaczony = produkcja. Odznaczony domyślnie znaczy produkcję,
             // więc UI musi renderować stan bieżący, żeby zapis go nie zresetował.
             'paynow_environment' => $this->boolean('paynow_sandbox') ? 'sandbox' : 'production',
+            'shipx_token' => $shipxToken === '' ? null : $shipxToken,
+            'shipx_organization_id' => $shipxOrganizationId === '' ? null : $shipxOrganizationId,
+            // Jak przy Paynow: checkbox „testowe (sandbox)". Przy ShipX pomyłka
+            // w stronę produkcji nadaje PRAWDZIWE paczki za prawdziwe pieniądze,
+            // więc UI musi renderować stan bieżący, a nie zakładać domyślny.
+            'shipx_environment' => $this->boolean('shipx_sandbox') ? 'sandbox' : 'production',
         ]);
     }
 
@@ -82,6 +90,11 @@ class IntegrationRequest extends FormRequest
             'paynow_api_key' => ['nullable', 'string', 'max:255'],
             'paynow_signature_key' => ['nullable', 'string', 'max:255'],
             'paynow_environment' => ['required', 'in:sandbox,production'],
+            // Token ShipX to JWT — bywa długi (nasz ma ~950 znaków), więc żadnego
+            // `max:255` jak przy kluczach Paynow; kolumna jest szyfrowanym JSON-em.
+            'shipx_token' => ['nullable', 'string', 'max:4000'],
+            'shipx_organization_id' => ['nullable', 'string', 'regex:/^[0-9]{1,12}$/'],
+            'shipx_environment' => ['required', 'in:sandbox,production'],
             'google_site_verification' => ['nullable', 'string', 'regex:'.self::SITE_VERIFICATION_PATTERN],
         ];
     }
@@ -113,6 +126,23 @@ class IntegrationRequest extends FormRequest
             if (filled($paynowApiKey) && blank($paynowSignatureKey) && blank($storedSignature)) {
                 $validator->errors()->add('paynow_signature_key', 'Podaj klucz obliczania podpisu Paynow, aby połączyć konto.');
             }
+
+            // ShipX: obie wartości pochodzą z tego samego ekranu w panelu InPostu
+            // i bez kompletu nie da się nadać przesyłki. Reguła działa w OBIE
+            // strony (inaczej niż para Fakturowni/Paynow, gdzie tylko token bywa
+            // „zostaw bez zmian"), bo Organization ID nie jest sekretem — pole
+            // pokazuje go wprost, więc puste znaczy naprawdę puste.
+            $shipxToken = $this->input('shipx_token');
+            $shipxOrganizationId = $this->input('shipx_organization_id');
+            $storedShipxToken = $this->user()?->shop?->integration(IntegrationType::Shipping)?->config['token'] ?? null;
+
+            if (filled($shipxToken) && blank($shipxOrganizationId)) {
+                $validator->errors()->add('shipx_organization_id', 'Podaj Organization ID z panelu InPost.');
+            }
+
+            if (filled($shipxOrganizationId) && blank($shipxToken) && blank($storedShipxToken)) {
+                $validator->errors()->add('shipx_token', 'Podaj token ShipX z panelu InPost.');
+            }
         });
     }
 
@@ -125,6 +155,7 @@ class IntegrationRequest extends FormRequest
             'google_analytics_id.regex' => 'Podaj poprawny identyfikator w formacie G-XXXXXXXXXX (GA4) lub GTM-XXXXXXX (Tag Manager).',
             'fakturownia_url.url' => 'Podaj poprawny adres konta Fakturowni, np. https://twojadomena.fakturownia.pl.',
             'google_site_verification.regex' => 'Wklej kod weryfikacyjny z Google Search Console (możesz wkleić cały meta tag — wyciągniemy z niego kod).',
+            'shipx_organization_id.regex' => 'Organization ID to sam numer z panelu InPost, np. 203242.',
         ];
     }
 
@@ -140,6 +171,9 @@ class IntegrationRequest extends FormRequest
             'paynow_api_key' => 'klucz dostępu do API Paynow',
             'paynow_signature_key' => 'klucz obliczania podpisu Paynow',
             'paynow_environment' => 'środowisko Paynow',
+            'shipx_token' => 'token ShipX',
+            'shipx_organization_id' => 'Organization ID InPost',
+            'shipx_environment' => 'środowisko InPost',
         ];
     }
 }

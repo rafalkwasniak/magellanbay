@@ -45,6 +45,7 @@ class ShopSettingsRequest extends FormRequest
             // więc mieszka tu, wcięta pod włącznikiem Paynow. Flaga siedzi w configu
             // integracji płatności; zapis merge'uje ją w kontrolerze.
             'paynow_auto_invoice' => $this->boolean('paynow_auto_invoice'),
+            'shipx_enabled' => $this->boolean('shipx_enabled'),
             // Nowe pole — gdy formularz go nie przyśle (starszy submit), zostawiamy
             // bieżącą jednostkę sklepu, żeby częściowy zapis jej nie wyzerował.
             'default_sale_unit' => $this->input('default_sale_unit', $this->user()?->shop?->default_sale_unit?->value ?? 'piece'),
@@ -86,6 +87,7 @@ class ShopSettingsRequest extends FormRequest
             'fakturownia_enabled' => ['boolean'],
             'paynow_enabled' => ['boolean'],
             'paynow_auto_invoice' => ['boolean'],
+            'shipx_enabled' => ['boolean'],
         ];
     }
 
@@ -110,6 +112,7 @@ class ShopSettingsRequest extends FormRequest
             'fakturownia_enabled' => 'Fakturownia',
             'paynow_enabled' => 'płatności online (Paynow)',
             'paynow_auto_invoice' => 'automatyczna faktura po opłaceniu',
+            'shipx_enabled' => 'nadawanie przesyłek InPost',
         ];
     }
 

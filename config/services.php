@@ -62,6 +62,23 @@ return [
         // Sprzedawca z własnym kontem wkleja swój do shop_integrations i ten ma
         // pierwszeństwo; ten wpis jest zapasowy. Patrz pamięć „plan-shipping”.
         'geowidget_token' => env('INPOST_GEOWIDGET_TOKEN'),
+
+        // ShipX — nadawanie przesyłek (etykiety). Model PER-SKLEP jak Paynow:
+        // token i Organization ID sprzedawcy żyją w shop_integrations
+        // (zaszyfrowane) — TU NIE MA sekretów. Trzymamy wyłącznie stałe adresy
+        // API; wyboru sandbox/produkcja dokonuje sprzedawca przy integracji.
+        //
+        // UWAGA BEZPIECZEŃSTWA: token ShipX ma zakres `api:shipx`, czyli UMIE
+        // NADAWAĆ PACZKI na koszt sprzedawcy. Nigdy nie wolno go wypuścić do
+        // przeglądarki — mapa paczkomatów używa OSOBNEGO tokenu platformy
+        // (`geowidget_token` wyżej, zakres `api:apipoints`, tylko odczyt punktów).
+        'shipx' => [
+            'base_url' => [
+                'sandbox' => 'https://sandbox-api-shipx-pl.easypack24.net',
+                'production' => 'https://api-shipx-pl.easypack24.net',
+            ],
+            'timeout' => (int) env('INPOST_SHIPX_TIMEOUT', 30),
+        ],
     ],
 
     'fakturownia' => [

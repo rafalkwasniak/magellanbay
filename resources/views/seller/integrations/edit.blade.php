@@ -120,6 +120,108 @@
                 </div>
                 @endif
 
+                {{-- Nadawanie przesyłek InPost (ShipX) — etykieta prosto z zamówienia.
+                     Bramkowane tym samym uprawnieniem co płatna wysyłka.
+
+                     UWAGA: token ShipX UMIE NADAWAĆ PACZKI na koszt sprzedawcy, więc
+                     jest sekretem — pole `password`, nigdy nie wraca do przeglądarki
+                     i nigdy nie trafia do HTML storefrontu. Mapa paczkomatów w kasie
+                     działa na OSOBNYM tokenie platformy (tylko odczyt punktów). --}}
+                @if ($shop->entitlement('courier_shipping'))
+                <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                    <div class="flex items-start gap-4">
+                        <span class="mt-0.5 shrink-0 text-2xl">📦</span>
+                        <div class="flex-1">
+                            <h2 class="font-semibold text-stone-900">Nadawanie przesyłek InPost</h2>
+                            <p class="mt-1 text-sm text-stone-500">
+                                Nadawaj paczki jednym kliknięciem z karty zamówienia i pobieraj gotową etykietę do druku. Potrzebujesz konta firmowego w
+                                <a href="https://inpost.pl" target="_blank" rel="noopener" class="font-medium text-stone-600 underline decoration-amber-300 underline-offset-2">InPost</a>
+                                oraz dwóch wartości z jego panelu. Za przesyłki płacisz InPostowi ze swojego konta — Kramio niczego nie pośredniczy.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 space-y-5">
+                        <div class="grid gap-5 sm:grid-cols-2">
+                            <div>
+                                <label for="shipx_token" class="block text-sm font-medium text-stone-700">Token ShipX</label>
+                                <input type="password" id="shipx_token" name="shipx_token"
+                                    value=""
+                                    placeholder="{{ $shipxConfigured ? '•••••••• (zapisany)' : 'Wklej token ShipX z panelu InPost' }}"
+                                    autocomplete="off" spellcheck="false"
+                                    class="mt-1.5 block w-full rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 font-mono text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
+                                @error('shipx_token')
+                                    <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
+                                @enderror
+                                <p class="mt-1.5 text-xs text-stone-400">
+                                    @if ($shipxConfigured)
+                                        Token jest zapisany. Zostaw pole puste, aby go nie zmieniać.
+                                    @else
+                                        Panel InPost → Moje konto → API.
+                                    @endif
+                                </p>
+                            </div>
+
+                            <div>
+                                <label for="shipx_organization_id" class="block text-sm font-medium text-stone-700">Organization ID</label>
+                                <input type="text" id="shipx_organization_id" name="shipx_organization_id"
+                                    value="{{ old('shipx_organization_id', $shipxOrganizationId) }}"
+                                    placeholder="np. 203242" inputmode="numeric"
+                                    autocomplete="off" spellcheck="false"
+                                    class="mt-1.5 block w-full rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 font-mono text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
+                                @error('shipx_organization_id')
+                                    <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
+                                @enderror
+                                <p class="mt-1.5 text-xs text-stone-400">Numer obok tokenu, w tym samym miejscu panelu. Wyczyszczenie tego pola rozłącza konto.</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start gap-3 rounded-2xl border border-stone-200 bg-white/60 p-4">
+                            <input type="hidden" name="shipx_sandbox" value="0">
+                            <input type="checkbox" id="shipx_sandbox" name="shipx_sandbox" value="1"
+                                @checked(old('shipx_sandbox', $shipxEnvironment === 'sandbox'))
+                                class="mt-0.5 h-4 w-4 shrink-0 rounded border-stone-300 text-amber-500 focus:ring-amber-400/30">
+                            <label for="shipx_sandbox" class="flex-1 cursor-pointer">
+                                <span class="block text-sm font-medium text-stone-800">Konto testowe (sandbox)</span>
+                                <span class="mt-0.5 block text-xs text-stone-500">
+                                    Zaznaczone — nadania są próbne i nic nie kosztują (wymaga osobnego konta na sandbox-manager.paczkomaty.pl).
+                                    Odznaczone — <span class="font-medium text-stone-700">nadajesz prawdziwe paczki i płacisz za nie</span>.
+                                </span>
+                            </label>
+                        </div>
+
+                        @if ($shipxConfigured)
+                            <div class="flex items-start gap-2 rounded-2xl border border-stone-200 bg-white/60 p-4 text-sm">
+                                <span class="mt-0.5 shrink-0 font-semibold {{ $shipxEnabled ? 'text-emerald-600' : 'text-rose-600' }}">
+                                    {{ $shipxEnabled ? '✓' : '✕' }}
+                                </span>
+                                <p class="text-stone-500">
+                                    @if ($shipxEnabled)
+                                        Nadawanie przesyłek jest połączone i <span class="font-medium text-stone-800">aktywne</span> ({{ $shipxEnvironment === 'production' ? 'produkcja' : 'sandbox' }}) — na karcie zamówienia z wysyłką pojawi się przycisk nadania.
+                                    @else
+                                        Dane są zapisane, ale nadawanie jest <span class="font-medium text-stone-800">wyłączone</span>. Włącz je w Ustawieniach sklepu.
+                                    @endif
+                                </p>
+                            </div>
+                        @endif
+
+                        {{-- Instrukcja jest tu równie ważna co pola: sprzedawca odbija się
+                             od panelu InPostu, nie od naszego formularza (patrz pamięć
+                             „plan-shipping" — instrukcja krok po kroku WYMAGANA). --}}
+                        <details class="rounded-2xl border border-amber-200 bg-amber-50/70 p-4">
+                            <summary class="cursor-pointer text-sm font-medium text-stone-800">Skąd wziąć token i Organization ID?</summary>
+                            <ol class="mt-3 space-y-2 text-xs leading-relaxed text-stone-600">
+                                <li><span class="font-semibold">1.</span> Załóż konto firmowe w InPost i podpisz umowę (dla kont testowych: <span class="font-mono">sandbox-manager.paczkomaty.pl</span> — to osobna rejestracja).</li>
+                                <li><span class="font-semibold">2.</span> W panelu InPost wejdź w <span class="text-stone-800">Moje konto → Dane</span> i uzupełnij dane firmy <em>oraz</em> dane do faktury. Bez kompletu panel nie pozwoli wygenerować tokenu.</li>
+                                <li><span class="font-semibold">3.</span> Przejdź na zakładkę <span class="text-stone-800">Moje konto → API</span> i wygeneruj token. Obok znajdziesz Organization ID.</li>
+                                <li><span class="font-semibold">4.</span> Zasil konto InPost — nadanie pobiera opłatę z Twojego salda. Bez środków paczka nie zostanie nadana.</li>
+                                <li><span class="font-semibold">5.</span> Wklej obie wartości powyżej i zapisz.</li>
+                            </ol>
+                        </details>
+                    </div>
+                </div>
+                @endif
+
                 {{-- Fakturownia (faktury VAT) — tylko gdy pakiet daje to uprawnienie.
                      Ważniejsze integracje idą na górę; Google Analytics zostaje na dole. --}}
                 @if ($shop->entitlement('invoices'))

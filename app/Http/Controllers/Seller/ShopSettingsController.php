@@ -37,6 +37,8 @@ class ShopSettingsController extends Controller
             'paynowConfigured' => $shop->onlinePaymentsConfigured(),
             'paynowEnabled' => (bool) $shop->integration(IntegrationType::Payments)?->enabled,
             'paynowAutoInvoice' => $shop->autoInvoiceAfterPayment(),
+            'shipxConfigured' => $shop->shipxConfigured(),
+            'shipxEnabled' => (bool) $shop->integration(IntegrationType::Shipping)?->enabled,
         ]);
     }
 
@@ -51,6 +53,7 @@ class ShopSettingsController extends Controller
             'fakturownia_enabled',
             'paynow_enabled',
             'paynow_auto_invoice',
+            'shipx_enabled',
         ]));
         $shop->save();
 
@@ -73,6 +76,9 @@ class ShopSettingsController extends Controller
                 'config' => $config,
             ]);
         }
+
+        $shop->integration(IntegrationType::Shipping)
+            ?->update(['enabled' => $request->boolean('shipx_enabled')]);
 
         return redirect()
             ->route('seller.settings.edit')

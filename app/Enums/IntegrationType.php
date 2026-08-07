@@ -13,6 +13,7 @@ enum IntegrationType: string
     case Invoicing = 'invoicing';
     case Payments = 'payments';
     case SearchConsole = 'search_console';
+    case Shipping = 'shipping';
 
     /**
      * Czytelna nazwa (do UI).
@@ -24,6 +25,7 @@ enum IntegrationType: string
             self::Invoicing => 'Fakturownia',
             self::Payments => 'Płatności online (Paynow)',
             self::SearchConsole => 'Google Search Console',
+            self::Shipping => 'Nadawanie przesyłek InPost',
         };
     }
 }
