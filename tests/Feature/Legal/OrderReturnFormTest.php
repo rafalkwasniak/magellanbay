@@ -54,6 +54,15 @@ class OrderReturnFormTest extends TestCase
 
         app(\App\Services\OrderTotals::class)->recalculate($order->load('items'));
 
+        // Zwrot zgłasza się DOPIERO po wydaniu towaru (od 07.08.2026), więc
+        // zamówienie w testach formularza jest domyślnie zrealizowane. Scenariusz
+        // „jeszcze nieodebrane" ma własny, jawny test.
+        $order->statusEvents()->create([
+            'from_status' => \App\Enums\OrderStatus::Processing,
+            'to_status' => \App\Enums\OrderStatus::Completed,
+        ]);
+        $order->refresh();
+
         return $item;
     }
 
@@ -144,6 +153,16 @@ class OrderReturnFormTest extends TestCase
         $days = (int) config('legal.withdrawal.days') + (int) config('legal.withdrawal.delivery_buffer_days');
         $item = $this->orderWithItem(['created_at' => now()->subDays($days + 1)]);
         $shop = $item->order->shop;
+        // Termin biegnie od REALIZACJI zamówienia, nie od jego złożenia — bez
+        // tego zdarzenia w ogóle by nie wystartował i formularz zostałby otwarty
+        // (świadoma zmiana z 07.08.2026, patrz WithdrawalNoticeTest).
+        $item->order->statusEvents()->create([
+            'from_status' => \App\Enums\OrderStatus::Processing,
+            'to_status' => \App\Enums\OrderStatus::Completed,
+        ]);
+        $item->order->statusEvents()->first()
+            ->forceFill(['created_at' => now()->subDays($days + 1)])->save();
+        $item->order->refresh();
         // Token nie jest deterministyczny (szyfrowanie z losowym IV), więc do
         // porównania adresu przekierowania trzeba użyć tego samego ciągu.
         $token = $item->order->paymentToken();

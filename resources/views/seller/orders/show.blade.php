@@ -18,6 +18,9 @@
             @endif
 
             <div class="grid gap-6 md:grid-cols-2 md:items-start">
+                {{-- Lewa kolumna: kupujący, a pod nim termin na odstąpienie —
+                     tu jest więcej miejsca niż przy dostawie. --}}
+                <div class="space-y-6">
                 <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
                     <h2 class="font-semibold text-stone-900">Kupujący</h2>
                     <div class="mt-3 space-y-1.5 text-sm text-stone-600">
@@ -45,6 +48,65 @@
                     {{-- Cały cykl faktury VAT (przycisk → w przygotowaniu → Pobierz PDF)
                          przy danych do faktury — tam, gdzie sprzedawca na nie patrzy. --}}
                     <livewire:seller.order-invoice :order="$order" />
+                </div>
+
+                {{-- Termin na odstąpienie od umowy — ZAWSZE, gdy w zamówieniu jest
+                     choć jeden towar objęty prawem zwrotu. Świadomie osobna karta,
+                     a nie dopisek przy przesyłce: to fakt prawny dotyczący całego
+                     zamówienia, niezależny od tego, czy sklep nadaje przez InPost.
+                     Integracja zmienia tylko DOKŁADNOŚĆ daty, nie samą zasadę. --}}
+                @if ($order->hasWithdrawableItems())
+                    @php($deadline = $order->withdrawalDeadline())
+                    @php($open = $order->withinWithdrawalWindow())
+                    {{-- Dni liczymy OD DZIŚ DO terminu (w tej kolejności) — odwrotna
+                         daje wynik ujemny. Doba zaczyna się od północy, więc oba
+                         końce ścinamy do początku dnia. --}}
+                    @php($daysLeft = $deadline ? (int) floor(now()->startOfDay()->diffInDays($deadline)) : null)
+                    <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                        <h2 class="font-semibold text-stone-900">Odstąpienie od umowy</h2>
+
+                        {{-- `gap-2` (nie `gap-x-2`/`gap-y-1` — tych NIE MA w buildzie
+                             Tailwinda, więc odstęp cicho by nie zadziałał). --}}
+                        <div class="mt-3 flex flex-wrap items-baseline gap-2">
+                            <span class="text-sm text-stone-500">Termin dla klienta:</span>
+                            @if ($deadline === null)
+                                {{-- Zamówienie w realizacji: termin jeszcze nie wystartował. --}}
+                                <span class="font-semibold text-stone-800">jeszcze nie biegnie</span>
+                                <span class="rounded-full bg-stone-100 px-2 py-0.5 text-xs font-medium text-stone-500">przed dostawą</span>
+                            @else
+                                <span class="font-semibold {{ $open ? 'text-stone-800' : 'text-stone-400' }}">do {{ $deadline->format('d.m.Y') }}</span>
+                                @if ($open)
+                                    <span class="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                                        {{ $daysLeft === 0 ? 'ostatni dzień' : 'zostało '.$daysLeft.' '.trans_choice('dzień|dni|dni', $daysLeft) }}
+                                    </span>
+                                @else
+                                    <span class="rounded-full bg-stone-100 px-2 py-0.5 text-xs font-medium text-stone-500">termin minął</span>
+                                @endif
+                            @endif
+                        </div>
+
+                        {{-- Skąd wzięła się data — sprzedawca musi wiedzieć, czy patrzy
+                             na fakt, czy na szacunek (przy sporze to różnica). --}}
+                        <p class="mt-2 text-xs leading-relaxed text-stone-500">
+                            @if ($order->delivered_at)
+                                Liczony dokładnie: {{ config('legal.withdrawal.days') }} dni od potwierdzonego odbioru paczki
+                                ({{ $order->delivered_at->format('d.m.Y') }}).
+                            @elseif ($deadline === null)
+                                {{ config('legal.withdrawal.days') }} dni liczy się od chwili, gdy klient odbierze towar — a ten
+                                jeszcze do niego nie dotarł. Termin pojawi się tu po oznaczeniu zamówienia jako zrealizowane,
+                                a przy wysyłce przez InPost stanie się dokładny (data odbioru zapisuje się sama).
+                            @else
+                                Szacowany — nie znamy daty doręczenia, więc liczymy od realizacji zamówienia
+                                i dokładamy {{ config('legal.withdrawal.delivery_buffer_days') }} dni zapasu na dostawę.
+                                Przy wysyłce przez InPost data odbioru zapisuje się sama i termin staje się dokładny.
+                            @endif
+                        </p>
+
+                        @unless ($order->items->every(fn ($item) => $item->isWithdrawable()))
+                            <p class="mt-2 text-xs text-stone-400">Część towarów z tego zamówienia jest wyłączona ze zwrotu.</p>
+                        @endunless
+                    </div>
+                @endif
                 </div>
 
                 {{-- Prawa kolumna siatki: dostawa i płatność, a pod nią kod dla
@@ -81,6 +143,10 @@
                                 @endif
                             </div>
                         @endif
+
+                        {{-- Nadanie przesyłki i etykieta — tuż pod kodem paczkomatu,
+                             czyli tam, gdzie sprzedawca i tak patrzy, pakując paczkę. --}}
+                        <livewire:seller.order-shipment :order="$order" />
                     </div>
                 </div>
 

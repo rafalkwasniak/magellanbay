@@ -58,6 +58,10 @@ class Order extends Model
             'total_gross' => 'decimal:2',
             'invoiced_at' => 'datetime',
             'invoice_status' => \App\Enums\InvoiceStatus::class,
+            'shipment_size' => \App\Enums\ParcelSize::class,
+            'shipped_at' => 'datetime',
+            'delivered_at' => 'datetime',
+            'shipment_queued_at' => 'datetime',
         ];
     }
 
@@ -200,6 +204,57 @@ class Order extends Model
     }
 
     /**
+     * Nasz własny status „zlecone, czeka na kolejkę" — InPost takiego nie ma.
+     * Wypełnia lukę między kliknięciem sprzedawcy a wykonaniem zadania w tle.
+     */
+    public const SHIPMENT_QUEUED = 'queued';
+
+    /**
+     * Czy przesyłka została już nadana w InPoście. `shipment_id` jest jednym
+     * źródłem prawdy i gardem: nadajemy RAZ, bo każde nadanie kosztuje.
+     */
+    public function hasShipment(): bool
+    {
+        return filled($this->shipment_id);
+    }
+
+    /**
+     * Czy przesyłka jest opłacona i etykieta jest gotowa do pobrania.
+     * Lista statusów żyje w kliencie ShipX — tu tylko z niej korzystamy.
+     */
+    public function isShipmentReady(): bool
+    {
+        return $this->hasShipment()
+            && \App\Services\Shipping\ShipxClient::isReady(['status' => $this->shipment_status]);
+    }
+
+    /**
+     * Czy nadanie trwa. Obejmuje CAŁĄ drogę: nasze `queued` (zadanie czeka w
+     * kolejce), a potem `created`/`offer_selected` po stronie InPostu, zanim
+     * opłaci przesyłkę. UI pokazuje wtedy „Nadajemy przesyłkę…” i sam się
+     * odświeża. Świadomie NIE opieramy tego na `shipment_id` — ten pojawia się
+     * dopiero po nadaniu, więc pierwsza (najdłuższa) chwila zostałaby bez
+     * sygnału dla sprzedawcy.
+     */
+    public function isShipmentPending(): bool
+    {
+        return filled($this->shipment_status)
+            && ! $this->isShipmentReady()
+            && blank($this->shipment_error);
+    }
+
+    /**
+     * Adres śledzenia przesyłki dla klienta — publiczna strona InPostu.
+     * null, gdy numeru jeszcze nie ma (przed opłaceniem przesyłki).
+     */
+    public function trackingUrl(): ?string
+    {
+        return filled($this->shipment_tracking_number)
+            ? 'https://inpost.pl/sledzenie-przesylek?number='.$this->shipment_tracking_number
+            : null;
+    }
+
+    /**
      * Czy zamówienie wciąż czeka na płatność online — jedyny stan, w którym ma sens
      * pokazać przycisk „Zapłać" (kasa, mail, „Moje konto", strona płatności).
      */
@@ -252,8 +307,25 @@ class Order extends Model
     public function acceptsReturns(): bool
     {
         return ! $this->status->isTerminal()
+            && $this->hasBeenHandedOver()
             && $this->withinWithdrawalWindow()
             && $this->items->contains(fn (OrderItem $item) => $item->returnableQuantity() > 0);
+    }
+
+    /**
+     * Czy towar trafił już do klienta — potwierdzonym odbiorem paczki albo
+     * oznaczeniem zamówienia jako zrealizowane.
+     *
+     * Bramkuje FORMULARZ zwrotu, nie samo prawo. Prawo do odstąpienia istnieje
+     * od zawarcia umowy, ale zwrot rzeczy, której klient jeszcze nie dostał,
+     * nie ma sensu jako procedura: formularz pomniejsza zamówienie i pyta o
+     * odesłanie towaru. Rezygnacja przed wysyłką to rozmowa ze sprzedawcą
+     * (anulowanie), a nie oświadczenie o odstąpieniu.
+     */
+    public function hasBeenHandedOver(): bool
+    {
+        return $this->delivered_at !== null
+            || $this->statusEvents->contains(fn (OrderStatusEvent $event) => $event->to_status === OrderStatus::Completed);
     }
 
     /**
@@ -277,28 +349,55 @@ class Order extends Model
     }
 
     /**
-     * Ostatni dzień na odstąpienie od umowy. Ustawa liczy 14 dni od DORĘCZENIA,
-     * którego nie znamy — więc liczymy od przejścia w „Zrealizowane" (a bez
-     * takiego zdarzenia od złożenia zamówienia) i dokładamy zapas na dostawę.
-     * Zapas daje konsumentowi więcej czasu, nie mniej — w tę stronę wolno.
+     * Ostatni dzień na odstąpienie od umowy. Ustawa liczy 14 dni od DORĘCZENIA.
+     *
+     * Gdy ZNAMY datę odbioru (InPost potwierdził, że klient wyjął paczkę ze
+     * skrytki), liczymy dokładnie od niej — bez zapasu, bo nie ma czego
+     * kompensować. To jedyny wariant zgodny z ustawą co do dnia.
+     *
+     * Bez tej daty (kurier, odbiór osobisty, sklep bez integracji) zostaje
+     * dotychczasowy szacunek: od przejścia w „Zrealizowane" (a bez takiego
+     * zdarzenia od złożenia zamówienia) plus zapas na dostawę. Zapas daje
+     * konsumentowi więcej czasu, nie mniej — w tę stronę wolno.
      */
-    public function withdrawalDeadline(): CarbonInterface
+    public function withdrawalDeadline(): ?CarbonInterface
     {
+        $days = (int) config('legal.withdrawal.days');
+
+        if ($this->delivered_at !== null) {
+            return $this->delivered_at->copy()->addDays($days)->endOfDay();
+        }
+
         $completedAt = $this->statusEvents
             ->firstWhere('to_status', OrderStatus::Completed)?->created_at;
 
-        return ($completedAt ?? $this->created_at)
+        // Zamówienie jeszcze niezrealizowane = towar nie dotarł do klienta, więc
+        // termin NIE ZACZĄŁ BIEC i nie ma czego liczyć.
+        //
+        // Wcześniej liczyliśmy w tym miejscu od DATY ZŁOŻENIA zamówienia i było
+        // to groźnie błędne: przy rzeczy robionej ręcznie przez trzy tygodnie
+        // termin „mijał", zanim klient dostał paczkę — a ta sama metoda bramkuje
+        // formularz zwrotu, więc zamykała prawo, które dopiero się zaczynało.
+        if ($completedAt === null) {
+            return null;
+        }
+
+        return $completedAt
             ->copy()
-            ->addDays((int) config('legal.withdrawal.days') + (int) config('legal.withdrawal.delivery_buffer_days'))
+            ->addDays($days + (int) config('legal.withdrawal.delivery_buffer_days'))
             ->endOfDay();
     }
 
     /**
-     * Czy termin na odstąpienie jeszcze biegnie.
+     * Czy termin na odstąpienie jeszcze biegnie. Brak terminu (zamówienie w
+     * realizacji) znaczy „jeszcze się nie zaczął", czyli TAK — klient ma prawo
+     * do odstąpienia tym bardziej.
      */
     public function withinWithdrawalWindow(): bool
     {
-        return $this->withdrawalDeadline()->isFuture();
+        $deadline = $this->withdrawalDeadline();
+
+        return $deadline === null || $deadline->isFuture();
     }
 
     /**
@@ -376,6 +475,63 @@ class Order extends Model
         $this->refresh();
 
         return true;
+    }
+
+    /**
+     * Zleca nadanie przesyłki w InPoście (pierwsza próba lub ponowienie po
+     * błędzie). Bliźniak `requestInvoice()`. Zwraca false, gdy nie wolno —
+     * widok i tak nie pokaże wtedy przycisku, ale nie ufamy widokowi.
+     */
+    public function requestShipment(\App\Enums\ParcelSize $size): bool
+    {
+        if (! $this->canBeShipped()) {
+            return false;
+        }
+
+        // Ponowienie po błędzie zaczyna od CZYSTEJ KARTY: kasujemy ślad
+        // nieudanej przesyłki, bo job ma guard `hasShipment()` i bez tego nie
+        // zrobiłby nic. To bezpieczne — do błędu dochodzi wtedy, gdy przesyłka
+        // NIE została opłacona (np. brak środków), więc nic nie przepada, a
+        // oferta InPostu i tak wygasa po kilku minutach i trzeba nowej.
+        $this->forceFill([
+            'shipment_error' => null,
+            'shipment_id' => null,
+            // Własny status PRZED zleceniem zadania — inaczej między kliknięciem
+            // a wykonaniem zadania (kolejkę drenuje cron, więc do minuty) panel
+            // nie miałby po czym poznać, że coś się dzieje, i pokazywałby z
+            // powrotem przycisk „Nadaj przesyłkę". Ten sam chwyt co przy FV
+            // (`markInvoicePending`).
+            'shipment_status' => self::SHIPMENT_QUEUED,
+            'shipment_tracking_number' => null,
+            // Własny znacznik, nie `updated_at`: ten podbija każda inna zmiana
+            // zamówienia i przesuwałby wykrywanie zadań, które utknęły.
+            'shipment_queued_at' => now(),
+        ])->save();
+
+        \App\Jobs\CreateInpostShipment::dispatch($this, $size);
+        $this->refresh();
+
+        return true;
+    }
+
+    /**
+     * Czy z tego zamówienia można teraz nadać przesyłkę InPost. Wymaga dostawy
+     * do paczkomatu z kodem punktu (bez niego nie ma dokąd nadać), włączonej
+     * integracji i braku wcześniejszego nadania — poza sytuacją, gdy poprzednia
+     * próba zapisała błąd, bo wtedy ponowienie jest właśnie tym, czego trzeba.
+     */
+    public function canBeShipped(): bool
+    {
+        if ($this->delivery_method !== DeliveryMethod::ParcelLocker || blank($this->parcel_locker_code)) {
+            return false;
+        }
+
+        // Nadana albo właśnie nadawana — nie ma czego zlecać drugi raz.
+        if (($this->hasShipment() || $this->isShipmentPending()) && blank($this->shipment_error)) {
+            return false;
+        }
+
+        return $this->shop?->shipxEnabled() === true;
     }
 
     /**

@@ -107,6 +107,23 @@
                         <p class="mt-0.5 text-sm opacity-70">{{ $order->parcel_locker_address }}</p>
                     @endif
                 @endif
+
+                {{-- Numer przesyłki dla klienta: pojawia się sam, gdy sprzedawca ją
+                     nada. To pierwsze, czego klient tu szuka po zakupie („gdzie moja
+                     paczka?"), więc daje też link wprost do śledzenia InPostu. --}}
+                @if (filled($order->shipment_tracking_number))
+                    <div class="st-border mt-4 border-t pt-4">
+                        <p class="text-sm opacity-70">Numer przesyłki:</p>
+                        <p class="mt-1 break-all font-mono text-sm font-medium">{{ $order->shipment_tracking_number }}</p>
+                        @if ($order->trackingUrl())
+                            <a href="{{ $order->trackingUrl() }}" target="_blank" rel="noopener"
+                                class="st-brand mt-2 inline-block text-sm underline underline-offset-2">Śledź przesyłkę</a>
+                        @endif
+                        @if ($order->delivered_at)
+                            <p class="mt-2 text-sm opacity-70">Odebrano: <span class="font-medium opacity-100">{{ $order->delivered_at->format('d.m.Y, H:i') }}</span></p>
+                        @endif
+                    </div>
+                @endif
             </div>
 
             @if (filled($order->note))
@@ -119,8 +136,13 @@
 
         {{-- Zwroty: przycisk do formularza, dopóki biegnie termin, oraz historia
              złożonych oświadczeń. Prowadzi pod TEN SAM adres co link z maila —
-             klient ma jedno miejsce niezależnie od tego, którędy wszedł. --}}
-        @if ($order->acceptsReturns() || $order->returns->isNotEmpty())
+             klient ma jedno miejsce niezależnie od tego, którędy wszedł.
+
+             Karta pokazuje się TAKŻE przed wydaniem towaru (gdy w zamówieniu jest
+             cokolwiek objętego prawem odstąpienia): klient ma wiedzieć, że taka
+             droga istnieje i kiedy się otworzy, zamiast szukać jej na próżno. --}}
+        @php($returnsAhead = $order->hasWithdrawableItems() && ! $order->status->isTerminal())
+        @if ($order->acceptsReturns() || $order->returns->isNotEmpty() || $returnsAhead)
             <div class="st-card st-border rounded-3xl border p-6">
                 <h2 class="st-brand st-box-title">Zwrot</h2>
 
@@ -145,12 +167,39 @@
 
                 @if ($order->acceptsReturns())
                     <p class="mt-4 text-sm opacity-70">
-                        Możesz odstąpić od umowy bez podania przyczyny do {{ $order->withdrawalDeadline()->format('d.m.Y') }}.
+                        {{-- Termin zna datę dopiero po realizacji zamówienia; wcześniej
+                             mówimy zasadą, a nie datą (inaczej obiecalibyśmy klientowi
+                             dzień wyliczony z niczego). --}}
+                        @if ($order->withdrawalDeadline())
+                            Możesz odstąpić od umowy bez podania przyczyny do {{ $order->withdrawalDeadline()->format('d.m.Y') }}.
+                        @else
+                            Możesz odstąpić od umowy bez podania przyczyny w ciągu {{ config('legal.withdrawal.days') }} dni od otrzymania zamówienia.
+                        @endif
                     </p>
                     <a href="/zwrot/{{ $order->paymentToken() }}"
                         class="st-btn mt-4 inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold shadow-sm transition hover:brightness-105">
                         {{ $order->hasReturns() ? 'Zgłoś kolejny zwrot' : 'Zgłoś zwrot' }}
                     </a>
+                @elseif (! $order->hasBeenHandedOver() && ! $order->status->isTerminal())
+                    {{-- Zamówienie w drodze: zamiast przycisku, który i tak by odprawił,
+                         mówimy co klientowi przysługuje i KIEDY droga się otworzy. --}}
+                    <p class="mt-4 text-sm opacity-70">
+                        Masz prawo odstąpić od umowy bez podania przyczyny w ciągu {{ config('legal.withdrawal.days') }} dni od otrzymania zamówienia.
+                    </p>
+                    <p class="mt-2 text-sm opacity-70">
+                        Formularz zwrotu pojawi się tutaj, gdy sklep oznaczy zamówienie jako zrealizowane
+                        @if ($order->delivery_method?->requiresParcelLocker())
+                            albo gdy odbierzesz paczkę z paczkomatu.
+                        @else
+                            — czyli po wydaniu towaru.
+                        @endif
+                        Wcześniej nie ma czego odsyłać.
+                    </p>
+                    @if (filled($order->shop?->contact_email))
+                        <p class="mt-2 text-sm opacity-70">
+                            Chcesz zrezygnować już teraz? Napisz do sklepu: <span class="font-medium">{{ $order->shop->contact_email }}</span>.
+                        </p>
+                    @endif
                 @endif
             </div>
         @endif

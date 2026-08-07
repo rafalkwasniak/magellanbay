@@ -168,6 +168,24 @@
                 @if ($order->status === \App\Enums\OrderStatus::Cancelled)
                     <p class="font-semibold">Zamówienie zostało anulowane</p>
                     <p class="mt-1 text-sm opacity-70">Nie ma od czego odstąpić — jeśli zapłacono, skontaktuj się ze sklepem.</p>
+                @elseif (! $order->hasBeenHandedOver())
+                    {{-- Zamówienie jeszcze w drodze. Prawo do odstąpienia klientowi
+                         przysługuje (istnieje od zawarcia umowy), ale formularz
+                         zwrotu nie jest tu właściwą drogą: pomniejsza zamówienie
+                         i mówi o odesłaniu rzeczy, której klient nie ma. Kierujemy
+                         do sprzedawcy, bo to po prostu rezygnacja z zamówienia. --}}
+                    <p class="font-semibold">Zwrot zgłosisz po otrzymaniu zamówienia</p>
+                    <p class="mt-1 text-sm opacity-70">
+                        To zamówienie jeszcze do Ciebie nie dotarło, więc nie ma czego odsyłać.
+                        Formularz otworzy się, gdy sklep oznaczy je jako zrealizowane —
+                        a {{ config('legal.withdrawal.days') }} dni na odstąpienie liczy się dopiero od chwili, gdy odbierzesz towar.
+                    </p>
+                    <p class="mt-3 text-sm opacity-70">
+                        Chcesz zrezygnować już teraz? Napisz do sklepu — zamówienie da się jeszcze anulować.
+                        @if (filled($shop->contact_email))
+                            Adres kontaktowy: <span class="font-medium">{{ $shop->contact_email }}</span>.
+                        @endif
+                    </p>
                 @elseif (! $order->withinWithdrawalWindow())
                     {{-- Świadomie NIE piszemy „prawo wygasło". Daty doręczenia nie
                          znamy — szacujemy ją z zamówienia, więc możemy zamknąć

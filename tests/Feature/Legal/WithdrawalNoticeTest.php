@@ -114,21 +114,37 @@ class WithdrawalNoticeTest extends TestCase
         $this->assertSame('2026-08-28 23:59:59', $deadline->format('Y-m-d H:i:s'));
     }
 
-    public function test_deadline_falls_back_to_order_date_without_completion(): void
+    public function test_deadline_does_not_start_before_the_order_is_completed(): void
     {
-        config(['legal.withdrawal.days' => 14, 'legal.withdrawal.delivery_buffer_days' => 4]);
-
+        // ZMIANA ZACHOWANIA (07.08.2026): wcześniej liczyliśmy tu od daty
+        // ZŁOŻENIA zamówienia. Przy rzeczy robionej ręcznie tygodniami termin
+        // „mijał", zanim klient dostał paczkę — a ta sama metoda bramkuje
+        // formularz zwrotu, więc zamykała prawo, które dopiero zaczynało biec.
+        // Teraz: brak realizacji = termin jeszcze nie wystartował.
         $order = Order::factory()->create(['created_at' => Carbon::parse('2026-08-01 10:00')]);
 
-        $this->assertSame('2026-08-19 23:59:59', $order->withdrawalDeadline()->format('Y-m-d H:i:s'));
+        $this->assertNull($order->withdrawalDeadline());
         $this->assertTrue($order->withinWithdrawalWindow());
     }
 
     public function test_window_closes_after_the_deadline(): void
     {
         $order = Order::factory()->create(['created_at' => now()->subMonths(2)]);
+        $order->statusEvents()->create([
+            'from_status' => OrderStatus::Processing,
+            'to_status' => OrderStatus::Completed,
+        ]);
+        $order->statusEvents()->first()->forceFill(['created_at' => now()->subMonths(2)])->save();
 
         $this->assertFalse($order->fresh()->withinWithdrawalWindow());
+    }
+
+    public function test_window_stays_open_for_a_long_running_handmade_order(): void
+    {
+        // Rękodzieło robione trzy tygodnie: zamówienie stare, ale niezrealizowane.
+        $order = Order::factory()->create(['created_at' => now()->subDays(40)]);
+
+        $this->assertTrue($order->fresh()->withinWithdrawalWindow());
     }
 
     public function test_confirmation_email_carries_the_withdrawal_notice(): void

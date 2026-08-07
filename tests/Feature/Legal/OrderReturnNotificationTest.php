@@ -64,6 +64,14 @@ class OrderReturnNotificationTest extends TestCase
 
         app(\App\Services\OrderTotals::class)->recalculate($order->load('items'));
 
+        // Zwrot zgłasza się DOPIERO po wydaniu towaru (od 07.08.2026) — patrz
+        // bliźniaczy pomocnik w OrderReturnFormTest.
+        $order->statusEvents()->create([
+            'from_status' => \App\Enums\OrderStatus::Processing,
+            'to_status' => \App\Enums\OrderStatus::Completed,
+        ]);
+        $order->refresh();
+
         return $item;
     }
 
