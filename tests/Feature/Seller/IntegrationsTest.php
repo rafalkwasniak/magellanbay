@@ -21,7 +21,7 @@ class IntegrationsTest extends TestCase
     /**
      * @return array{0: User, 1: Shop}
      */
-    private function sellerWithShop(array $shopAttributes = [], bool $invoicing = false, bool $onlinePayments = false, bool $gaAnalytics = false): array
+    private function sellerWithShop(array $shopAttributes = [], bool $invoicing = false, bool $onlinePayments = false, bool $gaAnalytics = false, bool $shipping = false): array
     {
         $seller = User::factory()->consented()->create();
         $factory = Shop::factory();
@@ -33,6 +33,9 @@ class IntegrationsTest extends TestCase
         }
         if ($gaAnalytics) {
             $factory = $factory->withGaAnalytics();
+        }
+        if ($shipping) {
+            $factory = $factory->withCourierShipping();
         }
         $shop = $factory->create(array_merge(['owner_id' => $seller->id], $shopAttributes));
 
@@ -575,5 +578,137 @@ class IntegrationsTest extends TestCase
         $this->get('https://'.$shop->fresh()->host().'/')
             ->assertOk()
             ->assertSee('<meta name="google-site-verification" content="AbC123_xyz-9876543210QwErTy">', false);
+    }
+
+    // --- InPost ShipX (nadawanie przesyłek) — bramkowany `courier_shipping` ---
+
+    public function test_shipx_card_is_gated_by_entitlement(): void
+    {
+        [$sellerFree] = $this->sellerWithShop();
+        $this->actingAs($sellerFree)
+            ->get(route('seller.integrations.edit'))
+            ->assertOk()
+            ->assertDontSee('Nadawanie przesyłek InPost');
+
+        [$sellerPaid] = $this->sellerWithShop(shipping: true);
+        $this->actingAs($sellerPaid)
+            ->get(route('seller.integrations.edit'))
+            ->assertOk()
+            ->assertSee('Nadawanie przesyłek InPost')
+            ->assertSee('Organization ID')
+            ->assertSee('Skąd wziąć token i Organization ID?');
+    }
+
+    public function test_seller_can_configure_shipx_and_it_is_enabled_by_default(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop(shipping: true);
+
+        $this->actingAs($seller)
+            ->post(route('seller.integrations.update'), [
+                'shipx_token' => 'eyJhbGciOiJSUzI1NiJ9.TESTOWY.TOKEN',
+                'shipx_organization_id' => '6700',
+                'shipx_sandbox' => '1',
+            ])
+            ->assertRedirect(route('seller.integrations.edit'))
+            ->assertSessionHas('success');
+
+        $integration = $shop->integrations()->where('type', IntegrationType::Shipping)->first();
+        $this->assertNotNull($integration);
+        $this->assertTrue($integration->enabled);
+        $this->assertSame('eyJhbGciOiJSUzI1NiJ9.TESTOWY.TOKEN', $integration->config['token']);
+        $this->assertSame('6700', $integration->config['organization_id']);
+        $this->assertSame('sandbox', $integration->config['environment']);
+
+        // Domyślne środowisko chroni przed nadaniem prawdziwej paczki „przez pomyłkę".
+        $this->assertSame('https://sandbox-api-shipx-pl.easypack24.net', $shop->fresh()->shipxBaseUrl());
+    }
+
+    public function test_shipx_production_environment_is_saved_when_sandbox_unchecked(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop(shipping: true);
+
+        $this->actingAs($seller)
+            ->post(route('seller.integrations.update'), [
+                'shipx_token' => 'PRODUKCYJNY',
+                'shipx_organization_id' => '203242',
+                'shipx_sandbox' => '0',
+            ])
+            ->assertRedirect(route('seller.integrations.edit'));
+
+        $this->assertSame('production', $shop->fresh()->shipxEnvironment());
+        $this->assertSame('https://api-shipx-pl.easypack24.net', $shop->fresh()->shipxBaseUrl());
+    }
+
+    public function test_saving_shipx_without_token_keeps_the_stored_one(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop(shipping: true);
+        $shop->integrations()->create([
+            'type' => IntegrationType::Shipping,
+            'enabled' => true,
+            'config' => ['token' => 'ZAPISANY', 'organization_id' => '6700', 'environment' => 'sandbox'],
+        ]);
+
+        // Puste pole tokenu = „zostaw bez zmian" (pole jest sekretem i nie wraca do formularza).
+        $this->actingAs($seller)
+            ->post(route('seller.integrations.update'), [
+                'shipx_token' => '',
+                'shipx_organization_id' => '6700',
+                'shipx_sandbox' => '1',
+            ])
+            ->assertRedirect(route('seller.integrations.edit'));
+
+        $this->assertSame('ZAPISANY', $shop->fresh()->shipxToken());
+    }
+
+    public function test_clearing_organization_id_disconnects_shipx(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop(shipping: true);
+        $shop->integrations()->create([
+            'type' => IntegrationType::Shipping,
+            'enabled' => true,
+            'config' => ['token' => 'ZAPISANY', 'organization_id' => '6700', 'environment' => 'sandbox'],
+        ]);
+
+        $this->actingAs($seller)
+            ->post(route('seller.integrations.update'), ['shipx_organization_id' => ''])
+            ->assertRedirect(route('seller.integrations.edit'));
+
+        $this->assertNull($shop->fresh()->integration(IntegrationType::Shipping));
+        $this->assertFalse($shop->fresh()->shipxConfigured());
+    }
+
+    public function test_shipx_token_without_organization_id_is_rejected(): void
+    {
+        [$seller] = $this->sellerWithShop(shipping: true);
+
+        $this->actingAs($seller)
+            ->post(route('seller.integrations.update'), ['shipx_token' => 'TOKEN'])
+            ->assertSessionHasErrors('shipx_organization_id');
+    }
+
+    public function test_shipx_organization_id_must_be_numeric(): void
+    {
+        [$seller] = $this->sellerWithShop(shipping: true);
+
+        $this->actingAs($seller)
+            ->post(route('seller.integrations.update'), [
+                'shipx_token' => 'TOKEN',
+                'shipx_organization_id' => 'org-6700',
+            ])
+            ->assertSessionHasErrors('shipx_organization_id');
+    }
+
+    public function test_shipx_is_not_saved_without_entitlement(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+
+        $this->actingAs($seller)
+            ->post(route('seller.integrations.update'), [
+                'shipx_token' => 'TOKEN',
+                'shipx_organization_id' => '6700',
+            ])
+            ->assertRedirect(route('seller.integrations.edit'));
+
+        $this->assertNull($shop->fresh()->integration(IntegrationType::Shipping));
     }
 }

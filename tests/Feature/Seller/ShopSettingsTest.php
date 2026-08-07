@@ -476,4 +476,35 @@ class ShopSettingsTest extends TestCase
             ->assertDontSee('Dostawa kurierem')
             ->assertDontSee('Paczkomat InPost');
     }
+
+    public function test_shipx_toggle_requires_configuration_and_saves(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+
+        // Bez danych z Integracji włącznik jest widoczny, ale zablokowany.
+        $this->actingAs($seller)
+            ->get(route('seller.settings.edit'))
+            ->assertOk()
+            ->assertSee('Nadawanie przesyłek InPost')
+            ->assertSee('najpierw podaj token ShipX i Organization ID');
+
+        $integration = $shop->integrations()->create([
+            'type' => \App\Enums\IntegrationType::Shipping,
+            'enabled' => false,
+            'config' => ['token' => 'TOKEN', 'organization_id' => '6700', 'environment' => 'sandbox'],
+        ]);
+
+        // `$seller->fresh()` NIE jest ozdobnikiem: actingAs trzyma TEN SAM obiekt
+        // użytkownika między żądaniami testu, więc relacja `integrations`
+        // załadowana przy powyższym GET (jeszcze pusta) zostałaby użyta ponownie
+        // i włącznik nie miałby czego przełączyć. W produkcji każde żądanie
+        // ładuje model od nowa, więc problem dotyczy wyłącznie testów.
+        $this->actingAs($seller->fresh())
+            ->post(route('seller.settings.update'), ['default_vat_rate' => '23', 'shipx_enabled' => '1'])
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('success');
+
+        $this->assertTrue($integration->fresh()->enabled);
+        $this->assertTrue($shop->fresh()->shipxEnabled());
+    }
 }
