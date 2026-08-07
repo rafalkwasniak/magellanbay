@@ -32,4 +32,39 @@ class MailMarkupTest extends TestCase
             MailMarkup::inline('Numer konta: 43 1140 2004 0000 3502 7515 5558'),
         );
     }
+
+    public function test_turns_marked_link_into_anchor(): void
+    {
+        $this->assertSame(
+            'Kliknij <a href="https://sklep.kramio.pl/zwrot/abc" style="color:inherit; text-decoration:underline;">tutaj</a> proszę',
+            MailMarkup::inline('Kliknij [tutaj](https://sklep.kramio.pl/zwrot/abc) proszę'),
+        );
+    }
+
+    public function test_link_text_can_be_bold(): void
+    {
+        $this->assertStringContainsString(
+            '<a href="https://kramio.pl/x" style="color:inherit; text-decoration:underline;"><strong>wypełnij formularz</strong></a>',
+            MailMarkup::inline('[**wypełnij formularz**](https://kramio.pl/x)'),
+        );
+    }
+
+    public function test_ignores_links_with_dangerous_scheme(): void
+    {
+        // Tylko http(s). Inny schemat zostaje dosłownym tekstem, nie linkiem.
+        $result = MailMarkup::inline('[kliknij](javascript:alert(1))');
+
+        $this->assertStringNotContainsString('<a href', $result);
+        $this->assertStringContainsString('[kliknij]', $result);
+    }
+
+    public function test_plain_url_without_marker_stays_text(): void
+    {
+        // Świadomie NIE zamieniamy gołych adresów w linki — o tym, co jest
+        // odnośnikiem, decyduje autor treści maila, nie wykrywacz wzorców.
+        $this->assertSame(
+            'Adres: https://kramio.pl',
+            MailMarkup::inline('Adres: https://kramio.pl'),
+        );
+    }
 }

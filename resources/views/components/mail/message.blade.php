@@ -32,7 +32,11 @@
             // linie jednego bloku ciasno razem.
             $html = implode('<br>', array_map([\App\Support\MailMarkup::class, 'inline'], (array) $block));
         @endphp
-        <p style="margin:0 0 16px 0; font-size:15px; line-height:1.65; color:{{ $brand['muted'] }};">{!! $html !!}</p>
+        {{-- `word-break` to siatka bezpieczeństwa: gdyby w treści trafił się długi
+             ciąg bez spacji (token, numer przesyłki, adres wklejony przez
+             sprzedawcę), skrzynka złamie go zamiast rozpychać całą wiadomość
+             na szerokość i dokładać poziomy przewijak. --}}
+        <p style="margin:0 0 16px 0; font-size:15px; line-height:1.65; color:{{ $brand['muted'] }}; word-break:break-word; overflow-wrap:anywhere;">{!! $html !!}</p>
     @endforeach
 
     @isset($bodyHtml)

@@ -107,6 +107,94 @@ class OrderMailer
     }
 
     /**
+     * „Paczka w drodze" — mail wysyłany, gdy InPost potwierdzi nadanie przesyłki.
+     *
+     * Osobny od maila o zmianie statusu, bo mówi o czym innym: status to etykieta
+     * z panelu sprzedawcy, a to jest zdarzenie, które kupującego naprawdę
+     * obchodzi — z numerem do śledzenia i adresem paczkomatu. Dotyczy wyłącznie
+     * sklepów nadających przez InPost; bez integracji nie znamy tej chwili.
+     */
+    public function shipmentDispatched(Order $order): void
+    {
+        $order->loadMissing(['items', 'shop']);
+        $shop = $order->shop;
+
+        $locker = filled($order->parcel_locker_address)
+            ? $order->parcel_locker_code.' — '.$order->parcel_locker_address
+            : $order->parcel_locker_code;
+
+        EmailMessage::create($this->senderIdentity($shop) + [
+            'priority' => MailPriority::Mid,
+            'shop_id' => $shop->id,
+            'to_email' => $order->buyer_email,
+            'to_name' => trim($order->buyer_name.' '.$order->buyer_surname),
+            'subject' => 'Paczka w drodze — zamówienie #'.$order->number.' ('.$shop->name.')',
+            'preheader' => 'Nadaliśmy Twoją przesyłkę. Numer do śledzenia w środku.',
+            'heading' => 'Paczka w drodze',
+            'greeting' => Vocative::greeting($order->buyer_name),
+            'intro_lines' => $this->blocks([
+                ['Nadaliśmy przesyłkę z **zamówieniem #'.$order->number.'** w sklepie **'.$shop->name.'**.'],
+                array_filter([
+                    filled($order->shipment_tracking_number)
+                        ? 'Numer przesyłki: **'.$order->shipment_tracking_number.'**'
+                        : null,
+                    filled($locker) ? 'Odbiór w paczkomacie: **'.$locker.'**' : null,
+                ]),
+                ['InPost powiadomi Cię SMS-em i mailem, gdy paczka dotrze do paczkomatu — wtedy dostaniesz kod do odbioru.'],
+            ]),
+            // Śledzenie tylko z prawdziwym numerem: przesyłki z konta testowego
+            // nie istnieją w wyszukiwarce InPostu i link prowadziłby donikąd.
+            'action_text' => $order->trackingUrl() && $shop->shipxEnvironment() === 'production' ? 'Śledź przesyłkę' : null,
+            'action_url' => $shop->shipxEnvironment() === 'production' ? $order->trackingUrl() : null,
+            'outro_lines' => [
+                'Masz pytania? Odpowiedz na tego e-maila — trafi wprost do sklepu.',
+            ],
+        ]);
+    }
+
+    /**
+     * „Dziękujemy za zakupy" — mail po ODEBRANIU paczki przez klienta.
+     *
+     * Wysyłany, gdy InPost potwierdzi doręczenie. To najlepszy moment na
+     * pouczenie o odstąpieniu od umowy: właśnie wtedy zaczyna biec ustawowe
+     * 14 dni, a formularz zwrotu dopiero teraz się otwiera. Link podajemy
+     * WYŁĄCZNIE, gdy w zamówieniu jest cokolwiek objętego tym prawem.
+     */
+    public function shipmentDelivered(Order $order): void
+    {
+        $order->loadMissing(['items.product', 'shop']);
+        $shop = $order->shop;
+        $withdrawable = $order->hasWithdrawableItems();
+        $deadline = $order->withdrawalDeadline();
+
+        EmailMessage::create($this->senderIdentity($shop) + [
+            'priority' => MailPriority::Low,
+            'shop_id' => $shop->id,
+            'to_email' => $order->buyer_email,
+            'to_name' => trim($order->buyer_name.' '.$order->buyer_surname),
+            'subject' => 'Dziękujemy za zakupy — zamówienie #'.$order->number.' ('.$shop->name.')',
+            'preheader' => 'Paczka odebrana. Dziękujemy za zakupy w '.$shop->name.'.',
+            'heading' => 'Dziękujemy za zakupy',
+            'greeting' => Vocative::greeting($order->buyer_name),
+            'intro_lines' => $this->blocks([
+                ['Paczka z **zamówieniem #'.$order->number.'** została odebrana. Dziękujemy za zakupy w **'.$shop->name.'** i mamy nadzieję, że wszystko jest w porządku.'],
+                $withdrawable
+                    ? array_filter([
+                        'Gdyby jednak coś nie pasowało — masz **'.config('legal.withdrawal.days').' dni** na odstąpienie od umowy, bez podania przyczyny.',
+                        $deadline !== null ? 'Termin upływa **'.$deadline->format('d.m.Y').'**.' : null,
+                    ])
+                    : [],
+                ['Jeśli towar okazałby się wadliwy, to osobne uprawnienie (reklamacja) i nie zależy od tego terminu.'],
+            ]),
+            'action_text' => $withdrawable ? 'Zgłoś zwrot' : null,
+            'action_url' => $withdrawable ? $order->returnUrl() : null,
+            'outro_lines' => [
+                'Masz pytania? Odpowiedz na tego e-maila — trafi wprost do sklepu.',
+            ],
+        ]);
+    }
+
+    /**
      * Mail do kupującego o KAŻDEJ zmianie statusu — bez wyjątków i bez opcji
      * wyłączenia. Także przy cofnięciu statusu: klient musi wiedzieć, bo inaczej
      * przyjedzie odebrać coś, czego nie ma. Niesie całe zamówienie, nowy status,
@@ -476,7 +564,10 @@ class OrderMailer
             // Formularz najpierw: wypełniony online od razu trafia do sklepu i
             // pomniejsza zamówienie. Droga mailowa zostaje jako równorzędna —
             // ustawa nie pozwala narzucić konsumentowi jednej formy.
-            'Najprościej: **wypełnij formularz zwrotu** — '.$order->returnUrl(),
+            // Odnośnik, nie goły adres: token zwrotu to długi ciąg, który w
+            // wielu skrzynkach nie łamie się na spacji i rozpycha całą wiadomość
+            // na szerokość (poziomy przewijak nawet na telefonie).
+            'Najprościej: [**wypełnij formularz zwrotu**]('.$order->returnUrl().')',
             'Możesz też przesłać oświadczenie'
                 .($contact !== null ? ' na adres '.$contact.' albo w odpowiedzi na tego e-maila.' : ' w odpowiedzi na tego e-maila.'),
             'Wzór oświadczenia: „Niniejszym odstępuję od umowy sprzedaży następujących rzeczy: … '
