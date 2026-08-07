@@ -13,11 +13,12 @@
         ['key' => 'data', 'label' => 'Edycja danych', 'url' => '/moje-konto/dane'],
     ];
     // Offset przyklejenia lewego menu = wysokość nagłówka-winiety (sticky top-0) +
-    // oddech, żeby menu zatrzymywało się TUŻ POD belką, a nie chowało się pod nią.
-    // Jedyna zmienna wysokości winiety to obecność logo (h-28). Zgodne z
-    // components/storefront/information-shell. Inline `top` działa tylko przy
-    // lg:sticky (na mobile bez echa).
-    $stickyTop = filled($shop->logo_path) ? '13rem' : '8.5rem';
+    // ODSTĘP, żeby menu zatrzymywało się z powietrzem pod belką, a nie stykało
+    // się z nią krawędziami. Jedyna zmienna wysokości winiety to obecność logo
+    // (h-28). MUSI być zgodne z components/storefront/information-shell — obie
+    // skorupy stoją obok siebie w nawigacji i różnica byłaby widoczna. Inline
+    // `top` działa tylko przy lg:sticky (na mobile bez echa).
+    $stickyTop = filled($shop->logo_path) ? '14.5rem' : '10rem';
 @endphp
 
 <x-layouts.storefront :shop="$shop" :title="$heading" :noindex="true">

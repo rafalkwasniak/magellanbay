@@ -13,11 +13,12 @@
     $current = '/'.ltrim(request()->path(), '/');
     $hasMenu = count($infoMenu) > 1;
     // Offset przyklejenia lewego menu = wysokość nagłówka-winiety (sticky top-0)
-    // + oddech, żeby menu zatrzymywało się TUŻ POD belką, a nie chowało się pod
-    // nią. Jedyna zmienna wysokości winiety to obecność logo (h-28) kontra sama
+    // + ODSTĘP, żeby menu zatrzymywało się z powietrzem pod belką, a nie stykało
+    // się z nią krawędziami (dotykające bloki czytają się jak sklejony błąd).
+    // Jedyna zmienna wysokości winiety to obecność logo (h-28) kontra sama
     // nazwa serif — stąd dwie wartości. Inline (bez nowej klasy Tailwind → bez
     // przebudowy CSS); `top` działa tylko przy lg:sticky, na mobile jest bez echa.
-    $stickyTop = filled($shop->logo_path) ? '13rem' : '8.5rem';
+    $stickyTop = filled($shop->logo_path) ? '14.5rem' : '10rem';
 @endphp
 
 <x-layouts.storefront :shop="$shop" :title="$heading" :description="$description">
