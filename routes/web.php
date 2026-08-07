@@ -213,6 +213,9 @@ Route::middleware(['auth', 'role:seller', 'ensure.consents'])
         // Zamówienia (podgląd + zmiana statusu). Lista i szczegół; zmiana statusu przez POST.
         Route::get('/zamowienia', [OrderController::class, 'index'])->name('orders.index');
         Route::get('/zamowienia/{order}', [OrderController::class, 'show'])->name('orders.show');
+        // Etykieta przesyłki: pobieramy ją z InPostu przez NASZ serwer, bo token
+        // ShipX nie ma prawa opuścić backendu. GET, bo to czyste pobranie pliku.
+        Route::get('/zamowienia/{order}/etykieta', [OrderController::class, 'label'])->name('orders.label');
 
         // „Mój pakiet" — co sprzedawca ma wykupione i do kiedy. Zakup online
         // dojdzie osobno (wymaga konta płatniczego platformy); na razie ekran

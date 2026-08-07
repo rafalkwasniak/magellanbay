@@ -6,8 +6,10 @@ use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Shop;
+use App\Services\Shipping\ShipxClient;
 use Illuminate\Contracts\Support\Renderable;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -94,6 +96,28 @@ class OrderController extends Controller
             'order' => $order->load('items'),
             // Kontekst listy (filtry + sort + strona) z query stringa — do „Wróć do listy".
             'listQuery' => $this->listQuery($request),
+        ]);
+    }
+
+    /**
+     * Etykieta przesyłki w PDF. Pobieramy ją z InPostu po stronie serwera i
+     * podajemy dalej jako plik — token ShipX nie ma prawa trafić do przeglądarki.
+     * Nie zapisujemy PDF-a u siebie: etykieta jest zawsze dostępna w API, a
+     * kopia oznaczałaby kolejne pliki do backupu i usuwania wraz ze sklepem.
+     */
+    public function label(Request $request, Order $order, ShipxClient $shipx): Response
+    {
+        $this->authorizeOrder($request, $order);
+
+        abort_unless($order->isShipmentReady(), 404);
+
+        $pdf = $shipx->label($order->shop, (int) $order->shipment_id);
+
+        abort_if($pdf === null, 404);
+
+        return response($pdf, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="etykieta-'.$order->number.'.pdf"',
         ]);
     }
 
