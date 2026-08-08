@@ -30,6 +30,9 @@ class AppearanceRequest extends FormRequest
             'template' => ['nullable', 'string', Rule::in(array_keys(config('themes.templates')))],
             // Kolor własny („kolor przewodni"): pusty = brak, inaczej kanoniczny hex.
             'brand_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            // Charakter sklepu — dwie osie niezależne od szablonu (config/themes.php).
+            'font' => ['nullable', 'string', Rule::in(array_keys(config('themes.fonts')))],
+            'radius' => ['nullable', 'string', Rule::in(array_keys(config('themes.radii')))],
         ];
 
         // Paleta jest trzymana per szablon (palettes[<slug>]); każda musi należeć

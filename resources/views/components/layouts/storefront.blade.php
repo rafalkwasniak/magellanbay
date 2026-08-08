@@ -20,6 +20,11 @@
     $chromeMix = (int) config('themes.chrome_brand_mix');
     $chromeTexture = $shop->templateChromeTexture();
     $cardMix = $shop->templateCardMix();
+    // Charakter sklepu: krój nagłówków i stopień zaokrągleń. Dwie osie
+    // NIEZALEŻNE od szablonu — patrz „Charakter sklepu" w config/themes.php.
+    $font = $shop->themeFont();
+    $fontSizes = $shop->themeFontSizes();
+    $radiusVars = $shop->themeRadiusVars();
     // Google Analytics/Tag Manager: wstrzykujemy tylko gdy włączone (Ustawienia)
     // i skonfigurowane (Integracje). ID jest zwalidowane do [A-Z0-9-] (Form
     // Request), więc bezpieczne w <script>. GTM- → Tag Manager, G- → GA4.
@@ -98,6 +103,22 @@
             --surface: {{ $tokens['surface'] }};
             --ink: {{ $tokens['ink'] }};
 
+            {{-- Charakter sklepu. Obie osie działają przez nadpisanie zmiennych,
+                 z których korzysta JUŻ ZBUDOWANY Tailwind: `.font-serif` i
+                 `.st-box-title` czytają --font-serif, a wszystkie `.rounded-*`
+                 czytają --radius-*. Dlatego kilka linii tutaj przestawia ~200
+                 miejsc w widokach — bez ich edycji i bez kompilacji per sklep.
+                 Ten blok jest PO arkuszu Tailwinda, więc przy równej wadze
+                 selektora (:root) wygrywa. --}}
+            @if ($font === 'plain')
+                {{-- Nagłówki tym samym krojem co treść. Efekt uboczny (mile
+                     widziany): plik Instrument Serif nie zostaje pobrany. --}}
+                --font-serif: var(--font-sans);
+            @endif
+            @foreach ($radiusVars as $step => $size)
+                --radius-{{ $step }}: {{ $size }};
+            @endforeach
+
             {{-- Chrome (pasek górny + stopka). Nagłówek jest półprzezroczysty
                  z backdrop-blur, stopka pełna — stąd dwie zmienne, nie jedna. --}}
             @if ($chrome === 'brand')
@@ -168,6 +189,26 @@
              serif w małym stopniu potrzebuje powietrza między literami (Rafał:
              „mało je widać"). Duże nagłówki zostają ciasne (tracking-tight). --}}
         .st-box-title { font-family: var(--font-serif); font-size: 1.375rem; font-weight: 400; letter-spacing: 0.01em; line-height: 1.3; }
+        @if ($fontSizes !== [])
+            /* Korekta stopni nagłówków dla kroju prostego (patrz `sizes` przy
+               foncie w config/themes.php). Zbudowany Tailwind czyta rozmiar
+               ze zmiennej — `.text-4xl{font-size:var(--text-4xl)}` — a zmienna
+               ustawiona NA elemencie bije tę odziedziczoną z :root. Dlatego
+               ta jedna reguła kurczy wszystkie nagłówki i tylko je: zwykły
+               tekst nie ma klasy `.font-serif`, więc bierze rozmiary z :root. */
+            .font-serif {
+                @foreach ($fontSizes as $step => $size)
+                    --text-{{ $step }}: {{ $size }};
+                @endforeach
+            }
+        @endif
+        @if ($font === 'plain')
+            /* Rozmiar i rozstrzelenie wyżej są dobrane pod serif, który czyta
+               się optycznie MNIEJ niż sans. Ten sam stopień w sansie wychodzi
+               za duży i zbyt luźny, więc krój prosty dostaje własne wartości:
+               mniejszy stopień, cięższa waga, ciaśniejszy tracking. */
+            .st-box-title { font-size: 1.125rem; font-weight: 600; letter-spacing: -0.01em; }
+        @endif
         .st-btn { background: var(--brand); color: var(--brand-ink); }
         .st-border { border-color: color-mix(in srgb, var(--ink) 12%, transparent); }
         /* Panel karty — o `card_mix`% ciemniejszy od tła (szablon decyduje, jak

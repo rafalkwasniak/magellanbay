@@ -5,6 +5,18 @@
         // Kolor własny sklepu (kanoniczny #RRGGBB lub null). Napędza box „Kolor
         // przewodni" oraz wirtualną próbkę „custom" przy każdym szablonie.
         $brandColor = $shop->brandColor();
+
+        // Charakter sklepu — krój nagłówków i stopień zaokrągleń (config/themes.php).
+        // Te dwie osie są niezależne od szablonu, więc jeden zestaw zmiennych CSS
+        // idzie na WSZYSTKIE kafle podglądu naraz. Wypisujemy je serwerowo, żeby
+        // podgląd był zgodny z zapisem od pierwszej klatki (JS tylko go zmienia).
+        $currentFont = $shop->themeFont();
+        $currentRadius = $shop->themeRadius();
+        $characterStyle = collect($shop->themeRadiusVars())
+            ->map(fn ($size, $step) => "--radius-{$step}: {$size};")
+            ->push($currentFont === 'plain' ? '--font-serif: var(--font-sans);' : '')
+            ->filter()
+            ->implode(' ');
     @endphp
 
     <div class="grid gap-6 lg:grid-cols-12">
@@ -72,6 +84,62 @@
                     @enderror
                 </div>
 
+                {{-- Charakter: czcionka nagłówków + zaokrąglenia. Świadomie OSOBNY
+                     box między kolorem a szablonami: to nie jest wybór z siatki
+                     gotowców, tylko dwa przełączniki, które działają na każdy
+                     szablon tak samo. --}}
+                <div id="charakter" class="scroll-mt-24 rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                    <h2 class="font-semibold text-stone-900">Charakter</h2>
+                    <p class="mt-1 text-sm text-stone-500">Te dwa ustawienia działają niezależnie od szablonu — zmiana szablonu ich nie kasuje. Pozwalają ściszyć ozdobność, gdy sprzedajesz rzeczy konkretne, a nie artystyczne.</p>
+
+                    <div class="mt-6 grid gap-6 sm:grid-cols-2">
+                        <fieldset>
+                            <legend class="text-sm font-medium text-stone-700">Czcionka nagłówków</legend>
+                            <div class="mt-2 flex flex-wrap gap-2">
+                                @foreach (config('themes.fonts') as $key => $option)
+                                    <label class="cursor-pointer">
+                                        <input type="radio" name="font" value="{{ $key }}" class="peer sr-only"
+                                            data-character-input data-character-axis="font"
+                                            data-description="{{ $option['description'] }}"
+                                            @checked($key === $currentFont)>
+                                        <span class="block rounded-xl border border-stone-200 bg-white px-4 py-2 text-sm text-stone-600 transition peer-checked:ring-2 peer-checked:ring-stone-800 peer-checked:ring-offset-1">{{ $option['name'] }}</span>
+                                    </label>
+                                @endforeach
+                            </div>
+                            {{-- Opis wybranej opcji; JS podmienia go przy zmianie. --}}
+                            <p class="mt-2 text-xs text-stone-400" data-character-hint="font">{{ config("themes.fonts.{$currentFont}.description") }}</p>
+                            @error('font')
+                                <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
+                            @enderror
+                        </fieldset>
+
+                        <fieldset>
+                            <legend class="text-sm font-medium text-stone-700">Zaokrąglenia</legend>
+                            <div class="mt-2 flex flex-wrap gap-2">
+                                @foreach (config('themes.radii') as $key => $option)
+                                    <label class="cursor-pointer">
+                                        <input type="radio" name="radius" value="{{ $key }}" class="peer sr-only"
+                                            data-character-input data-character-axis="radius"
+                                            data-description="{{ $option['description'] }}"
+                                            data-vars="{{ json_encode($option['vars']) }}"
+                                            @checked($key === $currentRadius)>
+                                        {{-- Sam kafelek pokazuje swój stopień: kwadracik
+                                             zaokrąglony dokładnie tak, jak zaokrągli sklep. --}}
+                                        <span class="flex items-center gap-2 rounded-xl border border-stone-200 bg-white px-4 py-2 text-sm text-stone-600 transition peer-checked:ring-2 peer-checked:ring-stone-800 peer-checked:ring-offset-1">
+                                            <span class="block h-6 w-6 shrink-0 bg-stone-300" style="border-radius: {{ $option['vars']['lg'] }};"></span>
+                                            {{ $option['name'] }}
+                                        </span>
+                                    </label>
+                                @endforeach
+                            </div>
+                            <p class="mt-2 text-xs text-stone-400" data-character-hint="radius">{{ config("themes.radii.{$currentRadius}.description") }}</p>
+                            @error('radius')
+                                <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
+                            @enderror
+                        </fieldset>
+                    </div>
+                </div>
+
                 {{-- Kolory i szablon --}}
                 <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
                     <h2 class="font-semibold text-stone-900">Kolory i szablon</h2>
@@ -120,8 +188,14 @@
                                 {{-- Klik w podgląd/nazwę = wybór szablonu --}}
                                 <label for="template-{{ $slug }}" class="cursor-pointer">
                                     {{-- Mini-witryna produktu (żywy podgląd palety) --}}
+                                    {{-- `$characterStyle` niesie --radius-* i (dla kroju
+                                         prostego) --font-serif. Zmienne siedzą NA kontenerze
+                                         podglądu, nie w :root, więc dziedziczą je tylko
+                                         wnętrzności mini-witryny — panel wokół zostaje
+                                         nietknięty. Klasy `rounded-*` w środku czytają
+                                         dokładnie te zmienne, tak samo jak storefront. --}}
                                     <div data-preview="{{ $slug }}"
-                                        style="background: {{ $previewTokens['surface'] }}; color: {{ $previewTokens['ink'] }};">
+                                        style="background: {{ $previewTokens['surface'] }}; color: {{ $previewTokens['ink'] }}; {{ $characterStyle }}">
                                         {{-- Miniatura paska sklepu (chrome) — nazwa + kreska „menu" --}}
                                         <div data-preview-bar class="flex items-center justify-between px-4 py-2 text-[10px] font-semibold"
                                             style="background: {{ $chromeBg }}; color: {{ $chromeInk }}; {{ $chromePattern }}">
@@ -145,7 +219,10 @@
                                             </div>
                                         @endif
                                         {{-- Realny produkt, gdy sklep ma zdjęcie; inaczej przykład. --}}
-                                        <p class="mt-2.5 truncate text-xs opacity-70">{{ $previewProduct?->name ?? 'Nazwa produktu' }}</p>
+                                        {{-- `font-serif` jak na prawdziwej karcie produktu
+                                             (product-card: nazwa serifem, cena sansem) —
+                                             dzięki temu przełącznik kroju widać w podglądzie. --}}
+                                        <p class="mt-2.5 truncate font-serif text-sm opacity-70">{{ $previewProduct?->name ?? 'Nazwa produktu' }}</p>
                                         <p class="mt-0.5 text-sm font-semibold">{{ $previewProduct ? \App\Support\Money::pln($previewProduct->price_gross) : '49,00 zł' }}</p>
                                         <span data-preview-btn class="mt-2 block rounded-lg py-1 text-center text-[11px] font-semibold"
                                             style="background: {{ $previewTokens['brand'] }}; color: {{ $previewTokens['brand_ink'] }};">Zobacz produkt</span>
@@ -336,6 +413,52 @@
                         tpl.checked = true;
                         selectTemplate(slug);
                     }
+                });
+            });
+        })();
+    </script>
+
+    {{-- Charakter: żywy podgląd kroju i zaokrągleń na wszystkich kaflach naraz.
+         Tanie, bo nie dotykamy pojedynczych elementów — przestawiamy zmienne CSS
+         na kontenerze podglądu, a `.font-serif` i `.rounded-*` w środku same się
+         do nich stosują. Te same zmienne co w :root storefrontu, więc podgląd
+         i sklep nie mogą się rozjechać. --}}
+    <script>
+        (function () {
+            const inputs = document.querySelectorAll('[data-character-input]');
+            const previews = document.querySelectorAll('[data-preview]');
+            if (! inputs.length || ! previews.length) return;
+
+            function apply(input) {
+                const axis = input.dataset.characterAxis;
+
+                previews.forEach(function (preview) {
+                    if (axis === 'font') {
+                        // Krój prosty = nagłówki tym samym krojem co treść (jak
+                        // w storefroncie). Dekoracyjny nie nadpisuje nic — wraca
+                        // serif z arkusza, stąd removeProperty zamiast wartości.
+                        if (input.value === 'plain') {
+                            preview.style.setProperty('--font-serif', 'var(--font-sans)');
+                        } else {
+                            preview.style.removeProperty('--font-serif');
+                        }
+                        return;
+                    }
+
+                    const vars = JSON.parse(input.dataset.vars || '{}');
+                    Object.keys(vars).forEach(function (step) {
+                        preview.style.setProperty('--radius-' + step, vars[step]);
+                    });
+                });
+
+                // Podpis pod przełącznikiem opisuje AKTUALNY wybór.
+                const hint = document.querySelector('[data-character-hint="' + axis + '"]');
+                if (hint) hint.textContent = input.dataset.description || '';
+            }
+
+            inputs.forEach(function (input) {
+                input.addEventListener('change', function () {
+                    if (input.checked) apply(input);
                 });
             });
         })();

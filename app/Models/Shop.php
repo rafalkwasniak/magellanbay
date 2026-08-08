@@ -999,6 +999,59 @@ class Shop extends Model
     }
 
     /**
+     * Krój nagłówków i tytułów kart: `decorative` (ozdobny serif) albo `plain`
+     * (ten sam sans co treść). Oś NIEZALEŻNA od szablonu — patrz „Charakter
+     * sklepu" w config/themes.php. Nieznana wartość spada na domyślną, więc
+     * sklep bez wyboru zostaje przy dotychczasowym wyglądzie.
+     */
+    public function themeFont(): string
+    {
+        $font = $this->theme['font'] ?? null;
+
+        return is_string($font) && config("themes.fonts.{$font}") !== null
+            ? $font
+            : config('themes.default_font', 'decorative');
+    }
+
+    /**
+     * Korekta stopni nagłówków dla wybranego kroju — mapa końcówka → rozmiar
+     * (`4xl` → `1.9375rem`), do wypisania jako `--text-4xl` NA elementach
+     * `.font-serif`. Krój dekoracyjny nie koryguje nic (pusta tablica): to pod
+     * niego dobrane są rozmiary w widokach.
+     *
+     * @return array<string, string>
+     */
+    public function themeFontSizes(): array
+    {
+        return config("themes.fonts.{$this->themeFont()}.sizes", []);
+    }
+
+    /**
+     * Stopień zaokrąglenia boxów: `small` / `medium` / `large`. Druga oś
+     * charakteru, też niezależna od szablonu.
+     */
+    public function themeRadius(): string
+    {
+        $radius = $this->theme['radius'] ?? null;
+
+        return is_string($radius) && config("themes.radii.{$radius}") !== null
+            ? $radius
+            : config('themes.default_radius', 'large');
+    }
+
+    /**
+     * Zmienne CSS zaokrągleń dla wybranego stopnia — mapa końcówka → rozmiar
+     * (`lg` → `0.5rem`), gotowa do wypisania jako `--radius-lg` w :root
+     * storefrontu. To one stoją w regułach `.rounded-*` zbudowanego Tailwinda.
+     *
+     * @return array<string, string>
+     */
+    public function themeRadiusVars(): array
+    {
+        return config("themes.radii.{$this->themeRadius()}.vars", []);
+    }
+
+    /**
      * Kolor własny sklepu („kolor przewodni") w postaci kanonicznej „#RRGGBB",
      * lub null gdy nieustawiony/niepoprawny. Nadpisuje TYLKO token `brand`
      * (akcent); reszta kolorów dziedziczy z bazowej palety szablonu. Trzymany

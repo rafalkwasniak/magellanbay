@@ -59,6 +59,12 @@ class AppearanceController extends Controller
             $shop->logo_path = $request->file('logo')->store('shops/'.$shop->id, 'public');
         }
 
+        // Charakter (czcionka + zaokrąglenia) leży OBOK szablonu, nie w nim —
+        // dlatego wychodzimy od dotychczasowego motywu i dokładamy do niego,
+        // zamiast składać go od zera. Przełączenie szablonu nie kasuje
+        // charakteru, a wyczyszczenie koloru dalej usuwa klucz (null → filtr).
+        $theme = $shop->theme ?? [];
+
         // Szablon, paleta i kolor własny zapisują się jednym submitem. Paletę
         // bierzemy spod klucza wybranego szablonu, więc przełączanie szablonów
         // zapamiętuje wybór palety każdego z nich osobno.
@@ -76,14 +82,23 @@ class AppearanceController extends Controller
                 $palette = null;
             }
 
-            $theme = array_filter([
-                'palette' => filled($palette) ? $palette : null,
-                'brand_color' => $brandColor,
-            ], fn ($value) => $value !== null);
+            $theme['palette'] = filled($palette) ? $palette : null;
+            $theme['brand_color'] = $brandColor;
 
             $shop->template = $template;
-            $shop->theme = $theme !== [] ? $theme : null;
         }
+
+        // Czcionka i zaokrąglenia — globalne dla sklepu, niezależne od szablonu.
+        if ($request->filled('font')) {
+            $theme['font'] = $request->string('font')->toString();
+        }
+
+        if ($request->filled('radius')) {
+            $theme['radius'] = $request->string('radius')->toString();
+        }
+
+        $theme = array_filter($theme, fn ($value) => $value !== null);
+        $shop->theme = $theme !== [] ? $theme : null;
 
         $shop->save();
 

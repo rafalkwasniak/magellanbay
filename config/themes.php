@@ -538,6 +538,116 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Charakter sklepu — dwie osie NIEZALEŻNE od szablonu
+    |--------------------------------------------------------------------------
+    |
+    | Szablon z paletą dają „skórę”; te dwie osie pozwalają tę samą skórę
+    | ustawić spokojniej. Ten sam szablon ma obsłużyć i pracownię biżuterii,
+    | i wędliniarza robiącego szynkę na zamówienie — a dekoracyjny serif
+    | z mocno zaokrąglonymi kaflami pasuje wyłącznie do pierwszego.
+    |
+    | Wybór jest GLOBALNY dla sklepu: leży OBOK szablonu, nie w nim. Paleta
+    | jest zapamiętywana per szablon (`palettes.{slug}`), te dwie osie nie —
+    | przeskok na inny szablon ich nie rusza. Trzymane w JSON `shops.theme`
+    | pod kluczami `font` i `radius`.
+    |
+    | Jak to działa: obie osie nadpisują ZMIENNE CSS, z których korzysta już
+    | zbudowany Tailwind (`.font-serif{font-family:var(--font-serif)}`,
+    | `.rounded-xl{border-radius:var(--radius-xl)}`). Jedno miejsce w :root
+    | storefrontu przestawia wszystkie użycia naraz — bez edycji widoków
+    | i bez kompilacji CSS per sklep (wymóg shared-hostingu).
+    |
+    | FONT — czym pisane są nagłówki i tytuły kart:
+    |   decorative — Instrument Serif (dotychczasowe, domyślne)
+    |   plain      — ten sam sans co treść; plik serifu w ogóle się nie pobiera
+    |
+    | RADIUS — jak zaokrąglone są boxy, kafle i pola. Skala geometryczna
+    | ¼ → ½ → 1×, gdzie `large` to wartości Tailwinda używane w projekcie
+    | od początku. Do zera NIE schodzimy świadomie: pigułki (`rounded-full`)
+    | mają w CSS literał zamiast zmiennej, więc przy zerowanych `--radius-*`
+    | zostałyby owalne obok idealnie ostrych kafli.
+    |
+    | Klucze w `vars` to KOŃCÓWKI zmiennych Tailwinda (`lg` → `--radius-lg`);
+    | muszą pokrywać każdy stopień używany w widokach storefrontu.
+    |
+    */
+    'fonts' => [
+        'decorative' => [
+            'name' => 'Dekoracyjna',
+            'description' => 'Ozdobny krój w nagłówkach i tytułach — butikowy, rękodzielniczy klimat.',
+        ],
+        'plain' => [
+            'name' => 'Prosta',
+            'description' => 'Nagłówki tym samym krojem co treść — rzeczowo i bez ozdobników.',
+
+            // Stopnie nagłówków są w widokach dobrane pod SERIF, który czyta się
+            // optycznie mniejszy niż sans. Ten sam `text-4xl` w sansie wychodzi
+            // ciężki i za duży, więc krój prosty dostaje własną drabinkę. Im
+            // większy stopień, tym mocniejsza korekta — różnica optyczna rośnie
+            // z rozmiarem.
+            //
+            // Klucze to KOŃCÓWKI zmiennych Tailwinda (`2xl` → `--text-2xl`).
+            // Nadpisujemy je NA elementach z klasą `.font-serif`, nie w :root —
+            // dzięki temu kurczą się wyłącznie nagłówki, a treść zostaje.
+            // Wysokości wierszy są w Tailwindzie bezjednostkowe, więc schodzą
+            // razem z rozmiarem same z siebie.
+            // Wartości dobrane na oko z Rafałem na żywym storefroncie (druga
+            // runda — pierwsza, łagodniejsza, wciąż czytała się za ciężko).
+            // W komentarzu stopień domyślny (pod serif) i skala korekty.
+            'sizes' => [
+                'xl' => '1.0625rem',    // 1.25   −15%
+                '2xl' => '1.1875rem',   // 1.5    −21%
+                '3xl' => '1.4375rem',   // 1.875  −23%
+                '4xl' => '1.6875rem',   // 2.25   −25%
+                '5xl' => '2.125rem',    // 3      −29%
+                '6xl' => '2.625rem',    // 3.75   −30%
+                '7xl' => '3.125rem',    // 4.5    −31%
+            ],
+        ],
+    ],
+
+    'default_font' => 'decorative',
+
+    'radii' => [
+        'small' => [
+            'name' => 'Małe',
+            'description' => 'Prawie ostre kanty — porządek i konkret.',
+            'vars' => [
+                'md' => '0.125rem',
+                'lg' => '0.125rem',
+                'xl' => '0.1875rem',
+                '2xl' => '0.25rem',
+                '3xl' => '0.375rem',
+            ],
+        ],
+        'medium' => [
+            'name' => 'Średnie',
+            'description' => 'Delikatnie złagodzone rogi — złoty środek.',
+            'vars' => [
+                'md' => '0.1875rem',
+                'lg' => '0.25rem',
+                'xl' => '0.375rem',
+                '2xl' => '0.5rem',
+                '3xl' => '0.75rem',
+            ],
+        ],
+        'large' => [
+            'name' => 'Duże',
+            'description' => 'Miękkie, mocno zaokrąglone kafle — ciepło i przytulnie.',
+            'vars' => [
+                'md' => '0.375rem',
+                'lg' => '0.5rem',
+                'xl' => '0.75rem',
+                '2xl' => '1rem',
+                '3xl' => '1.5rem',
+            ],
+        ],
+    ],
+
+    'default_radius' => 'large',
+
+    /*
+    |--------------------------------------------------------------------------
     | Gęstość wykazu — adaptacja do SKALI katalogu
     |--------------------------------------------------------------------------
     |

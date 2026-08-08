@@ -242,6 +242,131 @@ class AppearanceTest extends TestCase
             ->assertSessionHasErrors('brand_color');
     }
 
+    public function test_character_defaults_to_the_previous_look(): void
+    {
+        [, $shop] = $this->sellerWithShop(['theme' => null]);
+
+        // Sklep, który nigdy nie dotknął tych ustawień, ma wyglądać jak dotąd.
+        $this->assertSame('decorative', $shop->themeFont());
+        $this->assertSame('large', $shop->themeRadius());
+    }
+
+    public function test_seller_can_choose_font_and_roundness(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+
+        $this->actingAs($seller)
+            ->post(route('seller.appearance.update'), [
+                'template' => 'velvet_cloud',
+                'font' => 'plain',
+                'radius' => 'small',
+            ])
+            ->assertRedirect(route('seller.appearance.edit'))
+            ->assertSessionHas('success');
+
+        $shop->refresh();
+        $this->assertSame('plain', $shop->themeFont());
+        $this->assertSame('small', $shop->themeRadius());
+    }
+
+    public function test_character_survives_a_template_change(): void
+    {
+        // Sedno decyzji: czcionka i zaokrąglenia są GLOBALNE dla sklepu, leżą
+        // obok szablonu. Paleta jest pamiętana per szablon — te dwie osie nie.
+        [$seller, $shop] = $this->sellerWithShop([
+            'theme' => ['font' => 'plain', 'radius' => 'medium'],
+        ]);
+
+        $this->actingAs($seller)->post(route('seller.appearance.update'), [
+            'template' => 'graphite_dusk',
+            'palettes' => ['graphite_dusk' => 'gold'],
+        ]);
+
+        $shop->refresh();
+        $this->assertSame('graphite_dusk', $shop->template);
+        $this->assertSame('gold', $shop->themePalette());
+        $this->assertSame('plain', $shop->themeFont());
+        $this->assertSame('medium', $shop->themeRadius());
+    }
+
+    public function test_unknown_font_or_roundness_is_rejected(): void
+    {
+        [$seller] = $this->sellerWithShop();
+
+        $this->actingAs($seller)
+            ->post(route('seller.appearance.update'), [
+                'template' => 'velvet_cloud',
+                'font' => 'comic_sans',
+                'radius' => 'ogromne',
+            ])
+            ->assertSessionHasErrors(['font', 'radius']);
+    }
+
+    public function test_stored_character_outside_the_catalogue_falls_back_to_defaults(): void
+    {
+        // Siatka bezpieczeństwa: gdyby kiedyś zniknął stopień z configu, sklep
+        // ma wrócić do domyślnego wyglądu, a nie wyrenderować pustą zmienną.
+        [, $shop] = $this->sellerWithShop([
+            'theme' => ['font' => 'kaligrafia', 'radius' => 'nie_ma'],
+        ]);
+
+        $this->assertSame('decorative', $shop->themeFont());
+        $this->assertSame('large', $shop->themeRadius());
+        $this->assertSame(config('themes.radii.large.vars'), $shop->themeRadiusVars());
+    }
+
+    public function test_appearance_page_shows_the_character_controls(): void
+    {
+        [$seller] = $this->sellerWithShop();
+
+        $this->actingAs($seller)
+            ->get(route('seller.appearance.edit'))
+            ->assertOk()
+            ->assertSee('Charakter')
+            ->assertSee('Czcionka nagłówków')
+            ->assertSee('Zaokrąglenia')
+            ->assertSee('Dekoracyjna')
+            ->assertSee('Prosta')
+            ->assertSee('Średnie');
+    }
+
+    public function test_character_controls_preselect_the_saved_choice(): void
+    {
+        [$seller] = $this->sellerWithShop([
+            'theme' => ['font' => 'plain', 'radius' => 'small'],
+        ]);
+
+        $html = $this->actingAs($seller)->get(route('seller.appearance.edit'))->assertOk()->getContent();
+
+        $this->assertMatchesRegularExpression('/name="font" value="plain"[^>]*checked/', $html);
+        $this->assertMatchesRegularExpression('/name="radius" value="small"[^>]*checked/', $html);
+    }
+
+    public function test_template_previews_carry_the_saved_character(): void
+    {
+        // Podgląd ma pokazywać zapisany charakter od pierwszej klatki (bez JS),
+        // więc zmienne lecą na kontener kafla serwerowo.
+        [$seller] = $this->sellerWithShop([
+            'theme' => ['font' => 'plain', 'radius' => 'small'],
+        ]);
+
+        $this->actingAs($seller)
+            ->get(route('seller.appearance.edit'))
+            ->assertOk()
+            ->assertSee('--radius-3xl: '.config('themes.radii.small.vars.3xl'), false)
+            ->assertSee('--font-serif: var(--font-sans)', false);
+    }
+
+    public function test_decorative_font_leaves_the_preview_serif_alone(): void
+    {
+        [$seller] = $this->sellerWithShop(['theme' => ['font' => 'decorative']]);
+
+        $this->actingAs($seller)
+            ->get(route('seller.appearance.edit'))
+            ->assertOk()
+            ->assertDontSee('--font-serif: var(--font-sans)', false);
+    }
+
     public function test_custom_swatch_is_offered_when_a_brand_color_is_set(): void
     {
         [$seller] = $this->sellerWithShop(['theme' => ['palette' => 'custom', 'brand_color' => '#123456']]);
