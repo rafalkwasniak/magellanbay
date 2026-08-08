@@ -88,6 +88,125 @@ class PackageFeatures
     }
 
     /**
+     * Siatka „co potrafi Kramio" na stronę główną — JEDNO źródło dla kafelków
+     * możliwości. Wcześniej lista siedziała wpisana na twardo w `welcome.blade.php`
+     * i po każdym wdrożeniu rozjeżdżała się z rzeczywistością: audyt 2026-08-08
+     * wyłapał, że brakowało w niej mapy strony, nadawania paczek InPost i całej
+     * warstwy wyglądu sklepu, a płatny Google Analytics nie był wymieniony nigdzie.
+     *
+     * `requires` to KLUCZ UPRAWNIENIA albo null. Dzięki temu plakietka „od pakietu
+     * Stragan" liczy się z `config('shop.packages')`, a nie z pamięci autora
+     * tekstu — kafelek nie może obiecać w darmowym pakiecie czegoś, co jest
+     * płatne (dokładnie ten błąd miała karta „Wysyłka i odbiór”).
+     *
+     * @return list<array{icon: string, title: string, description: string, requires: string|null}>
+     */
+    public static function highlights(): array
+    {
+        $domain = config('tenancy.central_domain');
+
+        return [
+            // Najpierw to, co dostaje KAŻDY — łącznie z darmowym Kramem. Dopiero
+            // potem rzeczy z plakietką, żeby czytało się „to masz, a to dochodzi".
+            [
+                'icon' => '🏪',
+                'title' => 'Własny adres i wygląd sklepu',
+                'description' => 'Subdomena {nazwa}.'.$domain.' od razu po rejestracji. Osiem szablonów, gotowe palety, własny kolor marki oraz wybór czcionki i zaokrągleń.',
+                'requires' => null,
+            ],
+            [
+                'icon' => '⚡',
+                'title' => 'Gotowy w kilka minut',
+                'description' => 'Rejestracja, dodanie produktu i publikacja — bez wiedzy technicznej. Sklep pokazuje się światu sam, gdy dodasz pierwszy aktywny produkt.',
+                'requires' => null,
+            ],
+            [
+                'icon' => '✨',
+                'title' => 'Korekta opisów przez AI',
+                'description' => 'Napisz szkic — AI poprawi styl, ortografię i interpunkcję jednym kliknięciem. Tygodniowa pula zadań zależy od pakietu.',
+                'requires' => null,
+            ],
+            [
+                // SEO: wyłącznie to, co realnie mamy. Danych strukturalnych
+                // produktu (schema.org Product) NIE ma — są tylko okruszki —
+                // więc nie ma ich też w tym zdaniu.
+                'icon' => '🔎',
+                'title' => 'SEO i social media',
+                'description' => 'Przyjazne adresy, opisy dla wyszukiwarek pisane przez AI, mapa strony i robots.txt Twojego sklepu, weryfikacja w Google Search Console. Wklejony link pokazuje kartę ze zdjęciami produktów.',
+                'requires' => null,
+            ],
+            [
+                'icon' => '📄',
+                'title' => 'Własne strony informacyjne',
+                'description' => 'Dostawa, zwroty, o mnie — dopisujesz podstrony w edytorze i same wchodzą do menu sklepu.',
+                'requires' => null,
+            ],
+            [
+                'icon' => '↩',
+                'title' => 'Zgodność z prawem',
+                'description' => 'Pouczenie o odstąpieniu w mailu, formularz zwrotu dla klienta i rozliczenie w panelu. Do tego najniższa cena z 30 dni przy obniżkach i zgoda na ciasteczka.',
+                'requires' => null,
+            ],
+            [
+                'icon' => '👥',
+                'title' => 'Klienci pod ręką',
+                'description' => 'Konta klientów w Twoim sklepie i kartoteka wszystkich kupujących — razem z tymi, którzy kupili bez zakładania konta.',
+                'requires' => null,
+            ],
+            [
+                'icon' => '📊',
+                'title' => 'Własna analityka',
+                'description' => 'Odwiedziny, sprzedaż i bestsellery liczymy my — nie musisz niczego wklejać ani zakładać kolejnego konta.',
+                'requires' => null,
+            ],
+
+            // Poniżej: funkcje z bramką pakietu. `requires` steruje plakietką.
+            [
+                'icon' => '💳',
+                'title' => 'Integracja płatności online',
+                'description' => 'Podłącz swoje konto Paynow (umowa i weryfikacja po stronie operatora) — klient zapłaci BLIK-iem, kartą lub szybkim przelewem, a pieniądze idą wprost na Twoje konto.',
+                'requires' => 'online_payments',
+            ],
+            [
+                'icon' => '📦',
+                'title' => 'Wysyłka i nadawanie paczek',
+                'description' => 'Paczkomat i kurier w koszyku, a paczkę nadasz i wydrukujesz etykietę wprost z karty zamówienia. Przelew i odbiór osobisty działają w każdym pakiecie.',
+                'requires' => 'courier_shipping',
+            ],
+            [
+                'icon' => '🧾',
+                'title' => 'Faktury i dane z NIP',
+                'description' => 'Faktury przez Fakturownię, a dane firmy pobierzesz po numerze NIP — bez przepisywania z rejestru.',
+                'requires' => 'invoices',
+            ],
+            [
+                'icon' => '📈',
+                'title' => 'Google Analytics i Tag Manager',
+                'description' => 'Wolisz liczyć po swojemu? Wklej własne ID. Baner zgód pilnuje, kiedy skrypt wolno w ogóle uruchomić.',
+                'requires' => 'ga_analytics',
+            ],
+            [
+                'icon' => '🎟️',
+                'title' => 'Kody rabatowe',
+                'description' => 'Procent, kwota albo darmowa dostawa — na cały koszyk lub wybrane produkty, z terminem i limitem użyć.',
+                'requires' => 'discount_codes',
+            ],
+            [
+                'icon' => '📣',
+                'title' => 'Wiadomości do klientów',
+                'description' => 'Napisz o nowościach do klientów, którzy się zgodzili — z kartą produktu w mailu i linkiem wypisu.',
+                'requires' => 'bulk_mail',
+            ],
+            [
+                'icon' => '✏️',
+                'title' => 'Edycja zamówień',
+                'description' => 'Popraw ilość, dołóż pozycję albo skoryguj adres już po złożeniu zamówienia.',
+                'requires' => 'order_editing',
+            ],
+        ];
+    }
+
+    /**
      * Funkcje KONKRETNEGO SKLEPU — czytane z jego uprawnień, nie z presetu
      * pakietu. Różnica jest istotna: sklep może mieć moduł nadany ręcznie poza
      * pakietem, a wtedy lista z configu kłamałaby.
@@ -102,7 +221,7 @@ class PackageFeatures
      */
     public static function forShop(\App\Models\Shop $shop, bool $raw = false): array
     {
-        $keys = ['max_products', 'online_payments', 'courier_shipping', 'invoices', 'order_editing', 'discount_codes', 'bulk_mail'];
+        $keys = ['max_products', 'ai_weekly_limit', 'online_payments', 'courier_shipping', 'invoices', 'ga_analytics', 'order_editing', 'discount_codes', 'bulk_mail'];
 
         $entitlements = array_combine(
             $keys,
@@ -126,8 +245,12 @@ class PackageFeatures
     {
         return array_filter([
             'max_products' => 'Do '.$entitlements['max_products'].' produktów',
-            'storefront' => 'Własny adres i strona sklepu',
-            'ai' => 'Opisy z korektą AI',
+            'storefront' => 'Własny adres, szablony i kolory sklepu',
+            // Tygodniowa pula zadań AI RÓŻNI SIĘ między pakietami (100/400/800),
+            // a wcześniejsza etykieta „Opisy z korektą AI" była dla wszystkich
+            // identyczna — realne ograniczenie i realna różnica znikały z cennika.
+            // Liczba w etykiecie sprawia, że wyższy pakiet podświetla ją sam.
+            'ai' => 'Korekta AI: '.$entitlements['ai_weekly_limit'].' zadań tygodniowo',
             // Zwroty są w KAŻDYM pakiecie — prawo odstąpienia przysługuje
             // konsumentowi niezależnie od tego, ile sprzedawca nam płaci.
             'returns' => 'Zwroty 14 dni zgodne z prawem',
@@ -135,8 +258,12 @@ class PackageFeatures
             // podłączenie, a nie usługę płatniczą: umowę z operatorem sprzedawca
             // zawiera sam i wkleja własne klucze (patrz Integracje).
             'payments' => $entitlements['online_payments'] ? 'Integracja płatności online (własne konto Paynow)' : 'Przelew i odbiór osobisty',
-            'shipping' => $entitlements['courier_shipping'] ? 'Wysyłka kurierem i przez InPost' : null,
+            'shipping' => $entitlements['courier_shipping'] ? 'Paczkomat, kurier i nadawanie paczek InPost' : null,
             'invoices' => $entitlements['invoices'] ? 'Integracja z Fakturownią' : null,
+            // Google Analytics jest płatny i egzekwowany (`Shop::tracksWith…`),
+            // a nie był wymieniony w ŻADNEJ karcie — kupujący nie miał jak się
+            // dowiedzieć, że w ogóle to sprzedajemy.
+            'analytics' => $entitlements['ga_analytics'] ? 'Google Analytics i Tag Manager' : null,
             'order_editing' => $entitlements['order_editing'] ? 'Edycja zamówień' : null,
             'discount_codes' => $entitlements['discount_codes'] ? 'Kody rabatowe w koszyku' : null,
             'bulk_mail' => $entitlements['bulk_mail'] ? 'Wiadomości do klientów' : null,

@@ -126,7 +126,14 @@
             <section id="pakiety" class="py-10">
                 <div class="max-w-2xl">
                     <h2 class="text-3xl font-semibold tracking-tight text-stone-900">Zacznij za darmo, rośnij, gdy zechcesz</h2>
-                    <p class="mt-3 text-stone-600">Pakiet Kram jest bezpłatny bez limitu czasu. Płatne pakiety odblokowują integrację płatności online, wysyłki i faktury — zmienisz je w każdej chwili.</p>
+                    {{-- Reguła zmiany pakietu podana ŚCIŚLE. Poprzednie „zmienisz je
+                         w każdej chwili" było nieprawdą dla zejścia niżej:
+                         `PackageUpgrade::downsize()` wpuszcza tańszy pakiet dopiero
+                         w oknie `shop.subscription.notice_days` przed końcem okresu.
+                         Okno czytamy z configu, żeby tekst nie zaczął kłamać po
+                         zmianie liczby. --}}
+                    @php($noticeDays = (int) config('shop.subscription.notice_days'))
+                    <p class="mt-3 text-stone-600">Pakiet Kram jest bezpłatny bez limitu czasu. Płatne pakiety odblokowują integrację płatności online, wysyłkę z nadawaniem paczek i faktury. Wyżej przejdziesz kiedy zechcesz, dopłacając tylko różnicę.</p>
                     <p class="mt-2 text-stone-600">Obsługa zwrotów konsumenckich jest w <span class="font-medium text-stone-800">każdym</span> pakiecie, także darmowym — razem z pouczeniem w mailu, formularzem odstąpienia dla klienta i rozliczeniem zwrotu w panelu.</p>
                     {{-- Doprecyzowanie postawione WPROST, bo poprzednia wersja („pakiet
                          odblokowuje płatności online") czytała się tak, jakbyśmy
@@ -211,7 +218,7 @@
                         </div>
                     @endforeach
                 </div>
-                <p class="mt-4 text-xs text-stone-500">Ceny brutto, rozliczenie roczne. Pakiet zmienisz w każdej chwili.</p>
+                <p class="mt-4 text-xs text-stone-500">Ceny brutto, rozliczenie roczne. Na wyższy pakiet przejdziesz w dowolnym momencie; na niższy — w ostatnich {{ $noticeDays }} dniach opłaconego okresu albo pozwalając mu wygasnąć.</p>
 
                 {{-- „Jak kupić pakiet" — bo ceny same nie mówią, CO ZROBIĆ. Świadomie
                      nie budujemy tu drugiej ścieżki zakupu: każda i tak przechodzi
@@ -242,7 +249,7 @@
                         {{-- Reguła zmiany pakietu wyłożona wprost: to argument ZA
                              wejściem od razu wyżej, a nie ukryty haczyk. --}}
                         <p class="text-xs text-stone-500">
-                            Zmiana pakietu w trakcie roku? Płacisz tylko różnicę — niewykorzystany okres wraca jako zniżka.
+                            Przejście wyżej w trakcie roku? Płacisz tylko różnicę — niewykorzystany okres wraca jako zniżka.
                         </p>
                     </div>
                 </div>
@@ -254,28 +261,21 @@
                     <h2 class="text-3xl font-semibold tracking-tight text-stone-900">Wszystko, czego potrzebujesz, by sprzedawać</h2>
                     <p class="mt-3 text-stone-600">Skupiamy się na tym, co najważniejsze — żebyś Ty mógł skupić się na swoich produktach.</p>
                 </div>
+                {{-- Kafelki z `App\Support\PackageFeatures::highlights()` — JEDNO
+                     źródło. Wpisana tu wcześniej lista rozjeżdżała się po każdym
+                     wdrożeniu (audyt 08.08: brakowało mapy strony, nadawania paczek
+                     i całej warstwy wyglądu), a plakietka pakietu liczy się teraz
+                     z configu, więc kafelek nie obieca w Kramie czegoś płatnego. --}}
                 <div class="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                    @foreach ([
-                        ['🏪', 'Własny adres sklepu', 'Każdy sklep dostaje subdomenę {nazwa}.'.$domain.' od razu po rejestracji.'],
-                        ['⚡', 'Gotowy w kilka minut', 'Rejestracja, dodanie produktu i publikacja — bez wiedzy technicznej.'],
-                        ['✨', 'Korekta opisów przez AI', 'Napisz szkic — AI poprawi styl, ortografię i interpunkcję jednym kliknięciem.'],
-                        {{-- SEO: WYŁĄCZNIE to, co realnie mamy. Sitemapy i danych
-                             strukturalnych produktu NIE ma (świadomie odłożone przy
-                             audycie), więc nie obiecujemy ich tutaj. --}}
-                        ['🔎', 'SEO od ręki', 'Przyjazne adresy, opisy dla wyszukiwarek pisane przez AI i podglądy linków w mediach społecznościowych.'],
-                        {{-- „Integracja", nie „płatności": usługę płatniczą świadczy
-                             operator na własnej umowie ze sprzedawcą, my dajemy tylko
-                             podłączenie. Patrz komentarz w sekcji Pakiety. --}}
-                        ['💳', 'Integracja płatności online', 'Podłącz swoje konto Paynow (umowa i weryfikacja po stronie operatora) — klient zapłaci BLIK-iem, kartą lub szybkim przelewem, a pieniądze idą wprost na Twoje konto.'],
-                        ['📦', 'Wysyłka i odbiór', 'Paczkomat, kurier, odbiór osobisty i przelew — wybierasz, co oferujesz klientom.'],
-                        ['↩', 'Zwroty zgodne z prawem', 'Pouczenie o odstąpieniu w mailu, formularz zwrotu dla klienta i rozliczenie w panelu.'],
-                        ['📣', 'Wiadomości do klientów', 'Napisz o nowościach do klientów, którzy się zgodzili — z kartą produktu w mailu.'],
-                        ['🧾', 'Faktury i dane z NIP', 'Faktury przez Fakturownię, a dane firmy pobierzesz po numerze NIP.'],
-                    ] as [$icon, $title, $desc])
+                    @foreach (\App\Support\PackageFeatures::highlights() as $feature)
+                        @php($gate = $feature['requires'] ? \App\Support\PackageFeatures::cheapestWith($feature['requires']) : null)
                         <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-amber-900/5">
-                            <span class="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-100 to-rose-100 text-xl">{{ $icon }}</span>
-                            <h3 class="mt-4 font-semibold text-stone-900">{{ $title }}</h3>
-                            <p class="mt-1.5 text-sm text-stone-500">{{ $desc }}</p>
+                            <span class="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-100 to-rose-100 text-xl">{{ $feature['icon'] }}</span>
+                            <h3 class="mt-4 font-semibold text-stone-900">{{ $feature['title'] }}</h3>
+                            <p class="mt-1.5 text-sm text-stone-500">{{ $feature['description'] }}</p>
+                            @if ($gate)
+                                <span class="mt-3 inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-medium text-amber-800">od pakietu {{ $gate['name'] }}</span>
+                            @endif
                         </div>
                     @endforeach
                 </div>
@@ -285,7 +285,10 @@
             <section id="jak-to-dziala" class="py-16 lg:py-20">
                 <div class="max-w-2xl">
                     <h2 class="text-3xl font-semibold tracking-tight text-stone-900">Od pomysłu do sprzedaży w czterech krokach</h2>
-                    <p class="mt-3 text-stone-600">Bez umów, bez instalacji, bez czekania.</p>
+                    {{-- Nie „bez umów": rejestracja to akceptacja Regulaminu, a
+                         płatności online stoją na własnej umowie sprzedawcy
+                         z operatorem — mówimy o tym dwie sekcje wyżej. --}}
+                    <p class="mt-3 text-stone-600">Bez instalacji, bez wdrożenia, bez czekania.</p>
                 </div>
                 <div class="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
                     @foreach ([

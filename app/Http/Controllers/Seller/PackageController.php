@@ -19,9 +19,10 @@ use Illuminate\Http\Request;
  * z limitów zużył. Ekran jest też docelowym miejscem, do którego skieruje zakup
  * pakietu ze strony głównej.
  *
- * Zakup online jeszcze nie działa (osobny etap — wymaga konta płatniczego
- * platformy), więc zmianę pakietu prowadzimy przez kontakt. Mówimy to wprost,
- * zamiast pokazywać przycisk, który nic nie robi.
+ * Zakup online DZIAŁA (patrz `purchase()` niżej): płatność idzie przez konto
+ * platformy w Paynow, a po zaksięgowaniu pakiet włącza się sam i wychodzi
+ * faktura. Wcześniejsza wersja tego opisu mówiła, że zakupu nie ma — zostało
+ * to po etapie, w którym konto platformy dopiero czekało na weryfikację.
  */
 class PackageController extends Controller
 {
