@@ -59,6 +59,8 @@ class Order extends Model
             'invoiced_at' => 'datetime',
             'invoice_status' => \App\Enums\InvoiceStatus::class,
             'shipment_size' => \App\Enums\ParcelSize::class,
+            'shipment_sending_method' => \App\Enums\SendingMethod::class,
+            'shipment_weight_kg' => 'decimal:2',
             'shipped_at' => 'datetime',
             'delivered_at' => 'datetime',
             'shipment_queued_at' => 'datetime',
@@ -482,7 +484,7 @@ class Order extends Model
      * błędzie). Bliźniak `requestInvoice()`. Zwraca false, gdy nie wolno —
      * widok i tak nie pokaże wtedy przycisku, ale nie ufamy widokowi.
      */
-    public function requestShipment(\App\Enums\ParcelSize $size): bool
+    public function requestShipment(\App\Services\Shipping\ParcelSpec $parcel, \App\Enums\SendingMethod $sending): bool
     {
         if (! $this->canBeShipped()) {
             return false;
@@ -508,21 +510,75 @@ class Order extends Model
             'shipment_queued_at' => now(),
         ])->save();
 
-        \App\Jobs\CreateInpostShipment::dispatch($this, $size);
+        \App\Jobs\CreateInpostShipment::dispatch($this, $parcel, $sending);
         $this->refresh();
 
         return true;
     }
 
     /**
-     * Czy z tego zamówienia można teraz nadać przesyłkę InPost. Wymaga dostawy
-     * do paczkomatu z kodem punktu (bez niego nie ma dokąd nadać), włączonej
+     * Zlecenie odbioru, którym kurier ma zabrać tę paczkę. Null, gdy paczkę
+     * sprzedawca zanosi sam albo gdy kuriera jeszcze nie zamówił.
+     *
+     * @return BelongsTo<\App\Models\DispatchOrder, $this>
+     */
+    public function dispatchOrder(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\DispatchOrder::class);
+    }
+
+    /**
+     * Krótki opis nadanej paczki dla panelu i potwierdzeń — „Gabaryt A" albo
+     * „30 × 20 × 10 cm, 2,5 kg". Dwie metody dostawy opisują paczkę innym
+     * językiem (szablon skrytki vs realne wymiary), więc jedno miejsce zamienia
+     * to na zdanie po polsku. null, gdy paczki jeszcze nie opisano.
+     */
+    public function shipmentParcelLabel(): ?string
+    {
+        if ($this->shipment_size !== null) {
+            return 'Gabaryt '.$this->shipment_size->symbol();
+        }
+
+        if (blank($this->shipment_length_cm)) {
+            return null;
+        }
+
+        $weight = rtrim(rtrim(number_format((float) $this->shipment_weight_kg, 2, ',', ''), '0'), ',');
+
+        return $this->shipment_length_cm.' × '.$this->shipment_width_cm.' × '.$this->shipment_height_cm.' cm, '.$weight.' kg';
+    }
+
+    /**
+     * Czy wiadomo, DOKĄD nadać przesyłkę. Paczkomat potrzebuje kodu skrytki,
+     * kurier — adresu klienta. Jedno źródło prawdy dla bramki w panelu i dla
+     * klienta ShipX: gdyby się rozjechały, przycisk obiecywałby nadanie, które
+     * API i tak odrzuci.
+     */
+    public function hasShipmentDestination(): bool
+    {
+        if ($this->delivery_method?->isShipped() !== true) {
+            return false;
+        }
+
+        if ($this->delivery_method->requiresParcelLocker()) {
+            return filled($this->parcel_locker_code);
+        }
+
+        return filled($this->ship_street)
+            && filled($this->ship_building_number)
+            && filled($this->ship_postal_code)
+            && filled($this->ship_city);
+    }
+
+    /**
+     * Czy z tego zamówienia można teraz nadać przesyłkę InPost. Wymaga wysyłki
+     * ze znanym celem (paczkomat z kodem albo kurier z adresem), włączonej
      * integracji i braku wcześniejszego nadania — poza sytuacją, gdy poprzednia
      * próba zapisała błąd, bo wtedy ponowienie jest właśnie tym, czego trzeba.
      */
     public function canBeShipped(): bool
     {
-        if ($this->delivery_method !== DeliveryMethod::ParcelLocker || blank($this->parcel_locker_code)) {
+        if (! $this->hasShipmentDestination()) {
             return false;
         }
 

@@ -5,6 +5,8 @@ namespace Tests\Feature\Shipping;
 use App\Enums\DeliveryMethod;
 use App\Enums\IntegrationType;
 use App\Enums\ParcelSize;
+use App\Enums\SendingMethod;
+use App\Services\Shipping\ParcelSpec;
 use App\Jobs\CreateInpostShipment;
 use App\Livewire\Seller\OrderShipment;
 use App\Models\Order;
@@ -48,6 +50,165 @@ class OrderShipmentTest extends TestCase
         ], $attributes));
     }
 
+    private function courierOrder(Shop $shop, array $attributes = []): Order
+    {
+        return Order::factory()->create(array_merge([
+            'shop_id' => $shop->id,
+            'delivery_method' => DeliveryMethod::Courier,
+            'parcel_locker_code' => null,
+            'ship_street' => 'Kościuszki',
+            'ship_building_number' => '157',
+            'ship_postal_code' => '35-005',
+            'ship_city' => 'Rzeszów',
+            'buyer_phone' => '+48888000111',
+        ], $attributes));
+    }
+
+    public function test_seller_describes_courier_parcel_with_dimensions(): void
+    {
+        [$seller, $shop] = $this->sellerWithShipx();
+        $order = $this->courierOrder($shop);
+
+        $this->actingAs($seller)
+            ->get(route('seller.orders.show', $order))
+            ->assertOk()
+            ->assertSee('Nadaj przesyłkę')
+            ->assertSee('Wymiary i waga paczki')
+            // Gabaryt skrytki przy kurierze nie znaczy nic — nie może się pojawić.
+            ->assertDontSee('Gabaryt paczki');
+    }
+
+    public function test_courier_order_without_address_cannot_be_shipped(): void
+    {
+        [, $shop] = $this->sellerWithShipx();
+        $order = $this->courierOrder($shop, ['ship_street' => null, 'ship_city' => null]);
+
+        $this->assertFalse($order->canBeShipped());
+    }
+
+    public function test_courier_parcel_is_prefilled_from_shop_defaults(): void
+    {
+        [$seller, $shop] = $this->sellerWithShipx();
+        $shop->update([
+            'courier_parcel_length_cm' => 30,
+            'courier_parcel_width_cm' => 20,
+            'courier_parcel_height_cm' => 10,
+            'courier_parcel_weight_kg' => 2.5,
+        ]);
+
+        $order = $this->courierOrder($shop->fresh());
+
+        Livewire::actingAs($seller)
+            ->test(OrderShipment::class, ['order' => $order])
+            ->assertSet('length', '30')
+            ->assertSet('width', '20')
+            ->assertSet('height', '10')
+            // Waga po polsku, z przecinkiem — tak samo jak ceny w Ustawieniach.
+            ->assertSet('weight', '2,5');
+    }
+
+    public function test_courier_dispatch_sends_dimensions_and_sending_method(): void
+    {
+        Queue::fake();
+
+        [$seller, $shop] = $this->sellerWithShipx();
+        $shop->update(['shipment_sending_method' => SendingMethod::DispatchOrder]);
+        $order = $this->courierOrder($shop->fresh());
+
+        Livewire::actingAs($seller)
+            ->test(OrderShipment::class, ['order' => $order])
+            // Sposób nadania podpowiedziany z Ustawień sklepu.
+            ->assertSet('sendingMethod', 'dispatch_order')
+            ->set('length', '40')
+            ->set('width', '30')
+            // Przecinek dziesiętny — tak wpisuje polski sprzedawca.
+            ->set('height', '15')
+            ->set('weight', '3,5')
+            ->call('ask')
+            ->call('create');
+
+        Queue::assertPushed(CreateInpostShipment::class, function ($job) use ($order) {
+            return $job->order->is($order)
+                && $job->parcel->size === null
+                && $job->parcel->lengthCm === 40
+                && $job->parcel->heightCm === 15
+                && $job->parcel->weightKg === 3.5
+                && $job->sending === SendingMethod::DispatchOrder;
+        });
+    }
+
+    public function test_seller_can_override_sending_method_for_a_single_parcel(): void
+    {
+        Queue::fake();
+
+        [$seller, $shop] = $this->sellerWithShipx();
+        // W Ustawieniach domyślnie paczkomat, ale TA paczka ma pojechać kurierem.
+        $order = $this->lockerOrder($shop);
+
+        Livewire::actingAs($seller)
+            ->test(OrderShipment::class, ['order' => $order])
+            ->assertSet('sendingMethod', 'parcel_locker')
+            ->set('sendingMethod', 'dispatch_order')
+            ->call('ask')
+            ->call('create');
+
+        Queue::assertPushed(
+            CreateInpostShipment::class,
+            fn ($job) => $job->sending === SendingMethod::DispatchOrder
+        );
+    }
+
+    public function test_unknown_sending_method_is_rejected_at_dispatch(): void
+    {
+        Queue::fake();
+
+        [$seller, $shop] = $this->sellerWithShipx();
+        $order = $this->lockerOrder($shop);
+
+        // Wartość jedzie wprost do ShipX i jest tam wiążąca — PaczkoPunkt (`pok`)
+        // wymagałby jeszcze wskazania punktu, więc nie ma go w enumie.
+        Livewire::actingAs($seller)
+            ->test(OrderShipment::class, ['order' => $order])
+            ->set('sendingMethod', 'pok')
+            ->call('create')
+            ->assertHasErrors('sendingMethod');
+
+        Queue::assertNothingPushed();
+    }
+
+    public function test_courier_parcel_is_validated_against_inpost_limits(): void
+    {
+        [$seller, $shop] = $this->sellerWithShipx();
+        $order = $this->courierOrder($shop);
+
+        Livewire::actingAs($seller)
+            ->test(OrderShipment::class, ['order' => $order])
+            ->set('length', '150')
+            ->set('width', '20')
+            ->set('height', '10')
+            ->set('weight', '30')
+            ->call('ask')
+            ->assertHasErrors(['length', 'weight'])
+            ->assertSet('confirming', false);
+    }
+
+    public function test_courier_parcel_requires_all_values(): void
+    {
+        [$seller, $shop] = $this->sellerWithShipx();
+        $order = $this->courierOrder($shop);
+
+        Livewire::actingAs($seller)
+            ->test(OrderShipment::class, ['order' => $order])
+            ->set('length', '')
+            ->set('width', '')
+            ->set('height', '')
+            ->set('weight', '')
+            ->call('create')
+            ->assertHasErrors(['length', 'width', 'height', 'weight']);
+
+        $this->assertFalse($order->fresh()->hasShipment());
+    }
+
     public function test_seller_sees_dispatch_button_for_locker_order(): void
     {
         [$seller, $shop] = $this->sellerWithShipx();
@@ -71,10 +232,12 @@ class OrderShipmentTest extends TestCase
             ->assertDontSee('Nadaj przesyłkę');
     }
 
-    public function test_button_is_hidden_for_courier_delivery(): void
+    public function test_button_is_hidden_for_courier_delivery_without_address(): void
     {
-        // Etykiety robimy na razie tylko do paczkomatu — konto InPost Rafała nie
-        // ma zwykłego kuriera biznesowego, a kurier „pod adres" jedzie inną usługą.
+        // Kurier JEST już obsługiwany — ale bez adresu nie ma dokąd nadać, więc
+        // przycisk nie może obiecywać nadania, które InPost i tak odrzuci.
+        // (Wcześniej ten test pilnował czegoś innego: że kuriera nie robimy
+        // w ogóle. To już nieprawda.)
         [$seller, $shop] = $this->sellerWithShipx();
         $order = $this->lockerOrder($shop, [
             'delivery_method' => DeliveryMethod::Courier,
@@ -103,7 +266,7 @@ class OrderShipmentTest extends TestCase
             ->assertSee('KRA01A')
             ->call('create');
 
-        Queue::assertPushed(CreateInpostShipment::class, fn ($job) => $job->order->is($order) && $job->size === ParcelSize::B);
+        Queue::assertPushed(CreateInpostShipment::class, fn ($job) => $job->order->is($order) && $job->parcel->size === ParcelSize::B);
     }
 
     public function test_confirmation_can_be_dismissed_without_dispatching(): void
@@ -130,7 +293,7 @@ class OrderShipmentTest extends TestCase
         [, $shop] = $this->sellerWithShipx();
         $order = $this->lockerOrder($shop);
 
-        $order->requestShipment(ParcelSize::A);
+        $order->requestShipment(ParcelSpec::locker(ParcelSize::A), SendingMethod::ParcelLocker);
 
         $order->refresh();
         $this->assertTrue($order->isShipmentPending());
@@ -168,7 +331,7 @@ class OrderShipmentTest extends TestCase
         [, $shop] = $this->sellerWithShipx();
         $order = $this->lockerOrder($shop);
 
-        (new CreateInpostShipment($order, ParcelSize::A))->handle(app(\App\Services\Shipping\ShipxClient::class));
+        (new CreateInpostShipment($order, ParcelSpec::locker(ParcelSize::A), SendingMethod::ParcelLocker))->handle(app(\App\Services\Shipping\ShipxClient::class));
 
         $order->refresh();
         $this->assertSame(14180408, (int) $order->shipment_id);
@@ -185,7 +348,7 @@ class OrderShipmentTest extends TestCase
         [, $shop] = $this->sellerWithShipx();
         $order = $this->lockerOrder($shop, ['shipment_id' => 999, 'shipment_status' => 'confirmed']);
 
-        (new CreateInpostShipment($order, ParcelSize::A))->handle(app(\App\Services\Shipping\ShipxClient::class));
+        (new CreateInpostShipment($order, ParcelSpec::locker(ParcelSize::A), SendingMethod::ParcelLocker))->handle(app(\App\Services\Shipping\ShipxClient::class));
 
         // Druga paczka NIE powstaje — każde nadanie kosztuje sprzedawcę.
         Http::assertNothingSent();
@@ -204,7 +367,7 @@ class OrderShipmentTest extends TestCase
         [, $shop] = $this->sellerWithShipx();
         $order = $this->lockerOrder($shop);
 
-        (new CreateInpostShipment($order, ParcelSize::A))->handle(app(\App\Services\Shipping\ShipxClient::class));
+        (new CreateInpostShipment($order, ParcelSpec::locker(ParcelSize::A), SendingMethod::ParcelLocker))->handle(app(\App\Services\Shipping\ShipxClient::class));
 
         $order->refresh();
         $this->assertStringContainsString('Brak środków', $order->shipment_error);
@@ -222,7 +385,7 @@ class OrderShipmentTest extends TestCase
             'shipment_error' => 'Brak środków na koncie InPost. Zasil konto i spróbuj ponownie.',
         ]);
 
-        $order->requestShipment(ParcelSize::A);
+        $order->requestShipment(ParcelSpec::locker(ParcelSize::A), SendingMethod::ParcelLocker);
 
         // Ślad nieudanej przesyłki znika, inaczej guard `hasShipment()` w jobie
         // zablokowałby ponowienie i sprzedawca utknąłby na zawsze.
@@ -238,7 +401,7 @@ class OrderShipmentTest extends TestCase
         $order = $this->lockerOrder($shop, ['shipment_id' => 5, 'shipment_status' => 'confirmed']);
 
         $this->assertFalse($order->canBeShipped());
-        $this->assertFalse($order->requestShipment(ParcelSize::A));
+        $this->assertFalse($order->requestShipment(ParcelSpec::locker(ParcelSize::A), SendingMethod::ParcelLocker));
     }
 
     public function test_label_is_streamed_from_inpost(): void
@@ -586,6 +749,58 @@ class OrderShipmentTest extends TestCase
         $before = \App\Models\EmailMessage::count();
         $this->artisan('shipments:refresh')->assertSuccessful();
         $this->assertSame($before, \App\Models\EmailMessage::count());
+    }
+
+    public function test_dispatch_mail_for_courier_speaks_of_address_not_locker(): void
+    {
+        Http::fake(['*' => Http::response([
+            'id' => 14180666,
+            'status' => 'confirmed',
+            'tracking_number' => '642582087600718021276453',
+        ], 200)]);
+
+        [, $shop] = $this->sellerWithShipx();
+        $order = $this->courierOrder($shop, [
+            'shipment_id' => 14180666,
+            'shipment_status' => 'offer_selected',
+            'shipped_at' => now(),
+        ]);
+
+        $this->artisan('shipments:refresh')->assertSuccessful();
+
+        $mail = \App\Models\EmailMessage::where('to_email', $order->buyer_email)->latest('id')->first();
+        $body = json_encode($mail->intro_lines, JSON_UNESCAPED_UNICODE);
+
+        $this->assertStringContainsString('Adres dostawy', $body);
+        $this->assertStringContainsString('Kościuszki 157', $body);
+        // Przy kurierze NIE MA kodu odbioru ani skrytki — obietnica SMS-a
+        // z kodem byłaby po prostu nieprawdą.
+        $this->assertStringNotContainsString('paczkomat', mb_strtolower($body));
+        $this->assertStringNotContainsString('kod do odbioru', mb_strtolower($body));
+    }
+
+    public function test_thank_you_mail_says_delivered_for_courier(): void
+    {
+        Http::fake(['*' => Http::response([
+            'id' => 14180666,
+            'status' => 'delivered',
+            'tracking_number' => '642582087600718021276453',
+        ], 200)]);
+
+        [, $shop] = $this->sellerWithShipx();
+        $order = $this->courierOrder($shop, [
+            'shipment_id' => 14180666,
+            'shipment_status' => 'confirmed',
+            'shipped_at' => now()->subDay(),
+        ]);
+
+        $this->artisan('shipments:refresh', ['--deliveries' => true])->assertSuccessful();
+
+        $mail = \App\Models\EmailMessage::where('to_email', $order->buyer_email)
+            ->where('subject', 'like', 'Dziękujemy%')->latest('id')->first();
+
+        $this->assertNotNull($mail, 'Klient musi dostać maila po doręczeniu paczki.');
+        $this->assertStringContainsString('została dostarczona', json_encode($mail->intro_lines, JSON_UNESCAPED_UNICODE));
     }
 
     public function test_customer_is_thanked_and_told_about_returns_after_pickup(): void

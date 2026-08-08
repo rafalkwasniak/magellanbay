@@ -30,6 +30,7 @@ use App\Http\Controllers\Seller\PackageController;
 use App\Http\Controllers\Seller\PageController;
 use App\Http\Controllers\Seller\ProductController;
 use App\Http\Controllers\Seller\ProductImageController;
+use App\Http\Controllers\Seller\ShipmentPickupController;
 use App\Http\Controllers\Seller\ShopDeletionController;
 use App\Http\Controllers\Seller\ShopProfileController;
 use App\Http\Controllers\Seller\ShopSettingsController;
@@ -216,6 +217,11 @@ Route::middleware(['auth', 'role:seller', 'ensure.consents'])
         // Etykieta przesyłki: pobieramy ją z InPostu przez NASZ serwer, bo token
         // ShipX nie ma prawa opuścić backendu. GET, bo to czyste pobranie pliku.
         Route::get('/zamowienia/{order}/etykieta', [OrderController::class, 'label'])->name('orders.label');
+
+        // Odbiór kuriera: JEDNO zlecenie na wiele paczek (dopłata jest za
+        // przyjazd, nie za paczkę). Osobny ekran, bo to operacja na zbiorze
+        // przesyłek, a nie na pojedynczym zamówieniu.
+        Route::get('/odbior-kuriera', [ShipmentPickupController::class, 'index'])->name('shipments.pickup');
 
         // „Mój pakiet" — co sprzedawca ma wykupione i do kiedy. Zakup online
         // dojdzie osobno (wymaga konta płatniczego platformy); na razie ekran

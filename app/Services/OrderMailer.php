@@ -111,17 +111,16 @@ class OrderMailer
      *
      * Osobny od maila o zmianie statusu, bo mówi o czym innym: status to etykieta
      * z panelu sprzedawcy, a to jest zdarzenie, które kupującego naprawdę
-     * obchodzi — z numerem do śledzenia i adresem paczkomatu. Dotyczy wyłącznie
-     * sklepów nadających przez InPost; bez integracji nie znamy tej chwili.
+     * obchodzi — z numerem do śledzenia i celem dostawy (paczkomat albo adres).
+     * Dotyczy wyłącznie sklepów nadających przez InPost; bez integracji nie
+     * znamy tej chwili.
      */
     public function shipmentDispatched(Order $order): void
     {
         $order->loadMissing(['items', 'shop']);
         $shop = $order->shop;
 
-        $locker = filled($order->parcel_locker_address)
-            ? $order->parcel_locker_code.' — '.$order->parcel_locker_address
-            : $order->parcel_locker_code;
+        $toLocker = $order->delivery_method?->requiresParcelLocker() === true;
 
         EmailMessage::create($this->senderIdentity($shop) + [
             'priority' => MailPriority::Mid,
@@ -138,9 +137,14 @@ class OrderMailer
                     filled($order->shipment_tracking_number)
                         ? 'Numer przesyłki: **'.$order->shipment_tracking_number.'**'
                         : null,
-                    filled($locker) ? 'Odbiór w paczkomacie: **'.$locker.'**' : null,
+                    $this->shipmentDestinationLine($order),
                 ]),
-                ['InPost powiadomi Cię SMS-em i mailem, gdy paczka dotrze do paczkomatu — wtedy dostaniesz kod do odbioru.'],
+                // Paczkomat i kurier kończą się dla klienta INACZEJ: przy skrytce
+                // przychodzi SMS z kodem odbioru, przy kurierze nikt żadnego kodu
+                // nie dostaje. Jedno zdanie dla obu byłoby po prostu nieprawdą.
+                [$toLocker
+                    ? 'InPost powiadomi Cię SMS-em i mailem, gdy paczka dotrze do paczkomatu — wtedy dostaniesz kod do odbioru.'
+                    : 'Kurier InPost dostarczy paczkę pod wskazany adres. Warto mieć telefon pod ręką — kurierzy dzwonią przed doręczeniem.'],
             ]),
             // Śledzenie tylko z prawdziwym numerem: przesyłki z konta testowego
             // nie istnieją w wyszukiwarce InPostu i link prowadziłby donikąd.
@@ -150,6 +154,34 @@ class OrderMailer
                 'Masz pytania? Odpowiedz na tego e-maila — trafi wprost do sklepu.',
             ],
         ]);
+    }
+
+    /**
+     * Dokąd jedzie paczka — jednym wierszem do maili o nadaniu. Paczkomat i
+     * kurier opisują cel innym językiem (skrytka vs adres), więc zamiana na
+     * zdanie po polsku mieszka w jednym miejscu.
+     */
+    private function shipmentDestinationLine(Order $order): ?string
+    {
+        if ($order->delivery_method?->requiresParcelLocker() === true) {
+            if (blank($order->parcel_locker_code)) {
+                return null;
+            }
+
+            $locker = filled($order->parcel_locker_address)
+                ? $order->parcel_locker_code.' — '.$order->parcel_locker_address
+                : $order->parcel_locker_code;
+
+            return 'Odbiór w paczkomacie: **'.$locker.'**';
+        }
+
+        $address = trim(
+            trim($order->ship_street.' '.$order->ship_building_number.($order->ship_apartment_number ? '/'.$order->ship_apartment_number : ''))
+            .', '.trim($order->ship_postal_code.' '.$order->ship_city),
+            ', '
+        );
+
+        return $address === '' ? null : 'Adres dostawy: **'.$address.'**';
     }
 
     /**
@@ -166,6 +198,9 @@ class OrderMailer
         $shop = $order->shop;
         $withdrawable = $order->hasWithdrawableItems();
         $deadline = $order->withdrawalDeadline();
+        // Przy skrytce klient paczkę ODBIERA, przy kurierze zostaje mu ona
+        // DOSTARCZONA — to samo zdarzenie, ale nazwane tak, jak je przeżył.
+        $handedOver = $order->delivery_method?->requiresParcelLocker() === true ? 'odebrana' : 'dostarczona';
 
         EmailMessage::create($this->senderIdentity($shop) + [
             'priority' => MailPriority::Low,
@@ -173,11 +208,11 @@ class OrderMailer
             'to_email' => $order->buyer_email,
             'to_name' => trim($order->buyer_name.' '.$order->buyer_surname),
             'subject' => 'Dziękujemy za zakupy — zamówienie #'.$order->number.' ('.$shop->name.')',
-            'preheader' => 'Paczka odebrana. Dziękujemy za zakupy w '.$shop->name.'.',
+            'preheader' => 'Paczka '.$handedOver.'. Dziękujemy za zakupy w '.$shop->name.'.',
             'heading' => 'Dziękujemy za zakupy',
             'greeting' => Vocative::greeting($order->buyer_name),
             'intro_lines' => $this->blocks([
-                ['Paczka z **zamówieniem #'.$order->number.'** została odebrana. Dziękujemy za zakupy w **'.$shop->name.'** i mamy nadzieję, że wszystko jest w porządku.'],
+                ['Paczka z **zamówieniem #'.$order->number.'** została '.$handedOver.'. Dziękujemy za zakupy w **'.$shop->name.'** i mamy nadzieję, że wszystko jest w porządku.'],
                 $withdrawable
                     ? array_filter([
                         'Gdyby jednak coś nie pasowało — masz **'.config('legal.withdrawal.days').' dni** na odstąpienie od umowy, bez podania przyczyny.',

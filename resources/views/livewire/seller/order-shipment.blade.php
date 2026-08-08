@@ -30,9 +30,20 @@
                             <p class="mt-1 font-mono text-xs text-emerald-900">{{ $order->shipment_tracking_number }}</p>
                         @endif
                         <p class="mt-0.5 text-xs text-emerald-700">
-                            {{ $order->shipment_size?->symbol() ? 'Gabaryt '.$order->shipment_size->symbol().' · ' : '' }}
+                            {{ $order->shipmentParcelLabel() ? $order->shipmentParcelLabel().' · ' : '' }}
                             @if ($order->shipped_at){{ $order->shipped_at->format('d.m.Y, H:i') }}@endif
                         </p>
+
+                        {{-- Paczka czeka na kuriera. Zlecenie odbioru jest operacją
+                             na ZBIORZE przesyłek (jeden przyjazd, jedna dopłata),
+                             więc nie zamawiamy go stąd — kierujemy na ekran, gdzie
+                             widać wszystkie czekające naraz. --}}
+                        @if ($order->shipment_sending_method?->isPaid() && $order->dispatch_order_id === null)
+                            <p class="mt-2 border-t border-emerald-200 pt-2 text-xs text-emerald-800">
+                                Ta paczka czeka na odbiór przez kuriera —
+                                <a href="{{ route('seller.shipments.pickup') }}" class="font-medium underline decoration-emerald-300 underline-offset-2">zamów przyjazd</a>.
+                            </p>
+                        @endif
 
                         {{-- Data odbioru: InPost potwierdził, że klient wyjął paczkę.
                              Sam TERMIN na odstąpienie mieszka w osobnej karcie przy
@@ -88,13 +99,19 @@
             @elseif ($order->canBeShipped() && $confirming)
                 {{-- Potwierdzenie w miejscu — bliźniak tego przy zmianie statusu.
                      Nadanie pobiera realną opłatę i nie da się go cofnąć z panelu,
-                     więc powtarzamy WYBRANY GABARYT i paczkomat docelowy: to dwie
-                     rzeczy, które najłatwiej kliknąć źle. --}}
+                     więc powtarzamy OPIS PACZKI i cel dostawy: to dwie rzeczy,
+                     które najłatwiej kliknąć źle. --}}
                 <div class="mt-2 rounded-2xl border border-amber-200 bg-amber-50 p-4">
                     <p class="font-medium text-amber-900">Nadać przesyłkę do zamówienia #{{ $order->number }}?</p>
                     <ul class="mt-2 space-y-1 text-xs text-amber-800">
-                        <li>• Gabaryt: <strong>{{ $this->selectedSize()->label() }}</strong></li>
-                        <li>• Paczkomat: <strong>{{ $order->parcel_locker_code }}</strong>@if (filled($order->parcel_locker_address)) — {{ $order->parcel_locker_address }}@endif</li>
+                        @if ($this->needsDimensions())
+                            <li>• Paczka: <strong>{{ $length }} × {{ $width }} × {{ $height }} cm, {{ $weight }} kg</strong></li>
+                            <li>• Kurier dostarczy pod adres: <strong>{{ $order->ship_street }} {{ $order->ship_building_number }}@if (filled($order->ship_apartment_number))/{{ $order->ship_apartment_number }}@endif, {{ $order->ship_postal_code }} {{ $order->ship_city }}</strong></li>
+                        @else
+                            <li>• Gabaryt: <strong>{{ $this->selectedSize()->label() }}</strong></li>
+                            <li>• Paczkomat: <strong>{{ $order->parcel_locker_code }}</strong>@if (filled($order->parcel_locker_address)) — {{ $order->parcel_locker_address }}@endif</li>
+                        @endif
+                        <li>• Paczkę oddajesz InPostowi: <strong>{{ $this->selectedSendingMethod()->label() }}</strong>@if ($this->selectedSendingMethod()->isPaid()) <span class="text-amber-700">(usługa dodatkowo płatna)</span>@endif</li>
                         <li>• Opłatę pobierze <strong>InPost z Twojego salda</strong>.</li>
                         <li>• Po nadaniu pobierzesz stąd etykietę do druku.</li>
                     </ul>
@@ -111,16 +128,68 @@
                     </div>
                 </div>
             @elseif ($order->canBeShipped())
-                {{-- Wybór gabarytu, a potem potwierdzenie (wyżej). --}}
+                {{-- Opis paczki, a potem potwierdzenie (wyżej). Paczkomat opisuje
+                     się gabarytem SKRYTKI, kurier — wymiarami realnej paczki;
+                     to dwa różne języki i nie da się ich połączyć w jedno pole. --}}
                 <div class="mt-2 space-y-3">
+                    @if ($this->needsDimensions())
+                        <div>
+                            <p class="block text-xs font-medium text-stone-600">Wymiary i waga paczki</p>
+                            <div class="mt-1.5 grid grid-cols-2 gap-2">
+                                @foreach ([['length', 'Długość', 'cm'], ['width', 'Szerokość', 'cm'], ['height', 'Wysokość', 'cm'], ['weight', 'Waga', 'kg']] as [$field, $labelText, $unit])
+                                    <div>
+                                        <label for="shipment-{{ $field }}-{{ $order->id }}" class="block text-xs text-stone-500">{{ $labelText }}</label>
+                                        <div class="relative mt-1">
+                                            <input id="shipment-{{ $field }}-{{ $order->id }}" type="text" inputmode="decimal" wire:model="{{ $field }}"
+                                                class="block w-full rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 pr-10 text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
+                                            <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-xs text-stone-400">{{ $unit }}</span>
+                                        </div>
+                                        @error($field)
+                                            <p class="mt-1 text-xs text-rose-600">{{ $message }}</p>
+                                        @enderror
+                                    </div>
+                                @endforeach
+                            </div>
+                            <p class="mt-1.5 text-xs text-stone-400">Podpowiedź pochodzi z Twoich <a href="{{ route('seller.settings.edit') }}" class="font-medium text-stone-500 underline decoration-amber-300 underline-offset-2">Ustawień</a> — zmień, jeśli ta paczka jest inna.</p>
+                        </div>
+                    @else
+                        <div>
+                            <label for="shipment-size-{{ $order->id }}" class="block text-xs font-medium text-stone-600">Gabaryt paczki</label>
+                            <select id="shipment-size-{{ $order->id }}" wire:model="size"
+                                class="mt-1.5 block w-full rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
+                                @foreach ($sizes as $case)
+                                    <option value="{{ $case->value }}">{{ $case->label() }} — {{ $case->hint() }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    @endif
+
+                    {{-- Jak oddajesz TĘ paczkę. Domyślnie z Ustawień, ale zmienialne
+                         tutaj, bo deklaracja jest po stronie InPostu nieodwracalna,
+                         a jedna paczka na dziesięć bywa inna (za ciężka, żeby ją
+                         zanieść). Dotyczy obu metod dostawy: paczkę do paczkomatu
+                         też może zabrać kurier spod drzwi. --}}
                     <div>
-                        <label for="shipment-size-{{ $order->id }}" class="block text-xs font-medium text-stone-600">Gabaryt paczki</label>
-                        <select id="shipment-size-{{ $order->id }}" wire:model="size"
-                            class="mt-1.5 block w-full rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
-                            @foreach ($sizes as $case)
-                                <option value="{{ $case->value }}">{{ $case->label() }} — {{ $case->hint() }}</option>
+                        <p class="block text-xs font-medium text-stone-600">Jak oddasz tę paczkę?</p>
+                        <div class="mt-1.5 space-y-2">
+                            @foreach ($sendingMethods as $case)
+                                <div class="flex items-start gap-3">
+                                    <input type="radio" id="sending-{{ $case->value }}-{{ $order->id }}" wire:model="sendingMethod" value="{{ $case->value }}"
+                                        class="mt-0.5 h-5 w-5 shrink-0 border-stone-300 text-amber-600 focus:ring-4 focus:ring-amber-500/20">
+                                    <label for="sending-{{ $case->value }}-{{ $order->id }}" class="flex-1 cursor-pointer">
+                                        <span class="block text-sm text-stone-800">
+                                            {{ $case->label() }}
+                                            @if ($case->isPaid())
+                                                <span class="font-medium text-amber-700">— dodatkowo płatne</span>
+                                            @endif
+                                        </span>
+                                    </label>
+                                </div>
                             @endforeach
-                        </select>
+                        </div>
+                        @error('sendingMethod')
+                            <p class="mt-1 text-xs text-rose-600">{{ $message }}</p>
+                        @enderror
                     </div>
 
                     <button type="button" wire:click="ask"
@@ -129,7 +198,11 @@
                     </button>
 
                     <p class="text-xs text-stone-400">
-                        Paczka pojedzie do paczkomatu <span class="font-medium text-stone-500">{{ $order->parcel_locker_code }}</span>.
+                        @if ($this->needsDimensions())
+                            Kurier dostarczy paczkę pod adres <span class="font-medium text-stone-500">{{ $order->ship_street }} {{ $order->ship_building_number }}@if (filled($order->ship_apartment_number))/{{ $order->ship_apartment_number }}@endif, {{ $order->ship_city }}</span>.
+                        @else
+                            Paczka pojedzie do paczkomatu <span class="font-medium text-stone-500">{{ $order->parcel_locker_code }}</span>.
+                        @endif
                         Opłatę pobierze InPost z Twojego salda.
                     </p>
                 </div>

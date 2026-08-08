@@ -78,6 +78,20 @@ return [
                 'production' => 'https://api-shipx-pl.easypack24.net',
             ],
             'timeout' => (int) env('INPOST_SHIPX_TIMEOUT', 30),
+
+            // Nazwy usług ShipX, którymi nadajemy. `inpost_courier_c2c` to
+            // usługa „InPost Kurier" z Managera Paczek — jedyna kurierska
+            // dostępna na koncie firmowym bez rozszerzania umowy (zweryfikowane
+            // na sandboxie 2026-08-08: `inpost_courier_standard` nie pojawia się
+            // w ofertach). Konta z bogatszą umową mogą mieć więcej; docelowo
+            // wybór powinien iść z OFERT dla konkretnej przesyłki, bo lista
+            // usług systemowych (`GET /v1/services`) mówi, co istnieje, a nie
+            // co wolno kupić temu konkretnemu sprzedawcy.
+            // Bez `env()` — to stałe biznesowe, nie ustawienia środowiska.
+            'service' => [
+                'locker' => 'inpost_locker_standard',
+                'courier' => 'inpost_courier_c2c',
+            ],
         ],
     ],
 

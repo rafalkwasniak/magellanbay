@@ -6,6 +6,7 @@ use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Shop;
+use App\Services\Shipping\CourierPickup;
 use App\Services\Shipping\ShipxClient;
 use Illuminate\Contracts\Support\Renderable;
 use Illuminate\Http\Request;
@@ -85,6 +86,13 @@ class OrderController extends Controller
             'stats' => $stats,
             'hasFilters' => $this->hasActiveFilters($filters),
             'listQuery' => $this->listQuery($request),
+            // Paczki zadeklarowane do odbioru przez kuriera, na które nikt
+            // jeszcze nie zamówił przyjazdu. Liczymy tylko przy włączonym
+            // nadawaniu — bez integracji nie ma czego odbierać. Zapytanie idzie
+            // po indeksowanym `shipment_id`, więc jest tanie.
+            'awaitingPickup' => $shop->shipxEnabled()
+                ? app(CourierPickup::class)->awaiting($shop)->count()
+                : 0,
         ]);
     }
 

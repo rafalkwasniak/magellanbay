@@ -5,6 +5,8 @@ namespace Tests\Feature\Shipping;
 use App\Enums\DeliveryMethod;
 use App\Enums\IntegrationType;
 use App\Enums\ParcelSize;
+use App\Enums\SendingMethod;
+use App\Services\Shipping\ParcelSpec;
 use App\Models\Order;
 use App\Models\Shop;
 use App\Services\Shipping\ShipxClient;
@@ -51,6 +53,93 @@ class ShipxClientTest extends TestCase
         ], $attributes));
     }
 
+    private function courierOrder(Shop $shop, array $attributes = []): Order
+    {
+        return Order::factory()->create(array_merge([
+            'shop_id' => $shop->id,
+            'delivery_method' => DeliveryMethod::Courier,
+            'parcel_locker_code' => null,
+            'ship_street' => 'Kościuszki',
+            'ship_building_number' => '157',
+            'ship_apartment_number' => null,
+            'ship_postal_code' => '35-005',
+            'ship_city' => 'Rzeszów',
+            'buyer_name' => 'Jan',
+            'buyer_surname' => 'Testowy',
+            'buyer_email' => 'jan@example.com',
+            'buyer_phone' => '+48888000111',
+        ], $attributes));
+    }
+
+    public function test_creates_shipment_with_courier_payload(): void
+    {
+        Http::fake(['sandbox-api-shipx-pl.easypack24.net/*' => Http::response([
+            'id' => 14180666,
+            'status' => 'created',
+        ], 201)]);
+
+        $shop = $this->shopWithShipx();
+        $order = $this->courierOrder($shop);
+
+        app(ShipxClient::class)->createShipment(
+            $order,
+            ParcelSpec::courier(30, 20, 10, 2.5),
+            SendingMethod::DispatchOrder
+        );
+
+        Http::assertSent(function (Request $request) {
+            $body = $request->data();
+
+            return $body['service'] === 'inpost_courier_c2c'
+                // Kurier jedzie pod adres — punktu docelowego tu NIE MA.
+                && ! isset($body['custom_attributes']['target_point'])
+                && $body['custom_attributes']['sending_method'] === 'dispatch_order'
+                && $body['receiver']['address']['street'] === 'Kościuszki'
+                && $body['receiver']['address']['building_number'] === '157'
+                && $body['receiver']['address']['post_code'] === '35-005'
+                && $body['receiver']['address']['city'] === 'Rzeszów'
+                && $body['receiver']['address']['country_code'] === 'PL'
+                // ShipX przyjmuje WYŁĄCZNIE milimetry i kilogramy — centymetry
+                // z formularza muszą zostać przeliczone dokładnie tutaj.
+                && $body['parcels'][0]['dimensions'] === ['length' => 300, 'width' => 200, 'height' => 100, 'unit' => 'mm']
+                && $body['parcels'][0]['weight'] === ['amount' => 2.5, 'unit' => 'kg']
+                && ! isset($body['parcels'][0]['template']);
+        });
+    }
+
+    public function test_apartment_number_is_glued_to_building_number(): void
+    {
+        // ShipX nie ma pola na numer mieszkania — bez sklejenia kurier dojechałby
+        // pod samą klatkę.
+        Http::fake(['sandbox-api-shipx-pl.easypack24.net/*' => Http::response(['id' => 1, 'status' => 'created'], 201)]);
+
+        $order = $this->courierOrder($this->shopWithShipx(), ['ship_apartment_number' => '4']);
+
+        app(ShipxClient::class)->createShipment($order, ParcelSpec::courier(30, 20, 10, 1), SendingMethod::ParcelLocker);
+
+        Http::assertSent(fn (Request $request) => $request->data()['receiver']['address']['building_number'] === '157/4');
+    }
+
+    public function test_does_not_call_api_for_courier_order_without_address(): void
+    {
+        Http::fake();
+
+        $order = $this->courierOrder($this->shopWithShipx(), [
+            'ship_street' => null,
+            'ship_building_number' => null,
+            'ship_postal_code' => null,
+            'ship_city' => null,
+        ]);
+
+        $this->assertNull(app(ShipxClient::class)->createShipment(
+            $order,
+            ParcelSpec::courier(30, 20, 10, 1),
+            SendingMethod::ParcelLocker
+        ));
+
+        Http::assertNothingSent();
+    }
+
     public function test_creates_shipment_with_locker_payload(): void
     {
         Http::fake(['sandbox-api-shipx-pl.easypack24.net/*' => Http::response([
@@ -62,7 +151,7 @@ class ShipxClientTest extends TestCase
         $shop = $this->shopWithShipx();
         $order = $this->lockerOrder($shop);
 
-        $result = app(ShipxClient::class)->createShipment($order, ParcelSize::A);
+        $result = app(ShipxClient::class)->createShipment($order, ParcelSpec::locker(ParcelSize::A), SendingMethod::ParcelLocker);
 
         $this->assertSame(14180408, $result['id']);
 
@@ -88,7 +177,7 @@ class ShipxClientTest extends TestCase
 
         $order = $this->lockerOrder($this->shopWithShipx('production'));
 
-        app(ShipxClient::class)->createShipment($order, ParcelSize::B);
+        app(ShipxClient::class)->createShipment($order, ParcelSpec::locker(ParcelSize::B), SendingMethod::ParcelLocker);
 
         Http::assertSent(fn (Request $request) => str_starts_with($request->url(), 'https://api-shipx-pl.easypack24.net/'));
     }
@@ -100,7 +189,7 @@ class ShipxClientTest extends TestCase
         $shop = Shop::factory()->withCourierShipping()->create();
         $order = $this->lockerOrder($shop);
 
-        $this->assertNull(app(ShipxClient::class)->createShipment($order, ParcelSize::A));
+        $this->assertNull(app(ShipxClient::class)->createShipment($order, ParcelSpec::locker(ParcelSize::A), SendingMethod::ParcelLocker));
 
         Http::assertNothingSent();
     }
@@ -112,7 +201,7 @@ class ShipxClientTest extends TestCase
         $shop = $this->shopWithShipx();
         $order = $this->lockerOrder($shop, ['parcel_locker_code' => null]);
 
-        $this->assertNull(app(ShipxClient::class)->createShipment($order, ParcelSize::A));
+        $this->assertNull(app(ShipxClient::class)->createShipment($order, ParcelSpec::locker(ParcelSize::A), SendingMethod::ParcelLocker));
 
         Http::assertNothingSent();
     }
@@ -123,7 +212,7 @@ class ShipxClientTest extends TestCase
 
         $order = $this->lockerOrder($this->shopWithShipx());
 
-        $this->assertNull(app(ShipxClient::class)->createShipment($order, ParcelSize::A));
+        $this->assertNull(app(ShipxClient::class)->createShipment($order, ParcelSpec::locker(ParcelSize::A), SendingMethod::ParcelLocker));
     }
 
     public function test_failure_reason_reads_hidden_transaction_error(): void
@@ -212,6 +301,6 @@ class ShipxClientTest extends TestCase
 
         $order = $this->lockerOrder($this->shopWithShipx());
 
-        $this->assertNull(app(ShipxClient::class)->createShipment($order, ParcelSize::A));
+        $this->assertNull(app(ShipxClient::class)->createShipment($order, ParcelSpec::locker(ParcelSize::A), SendingMethod::ParcelLocker));
     }
 }

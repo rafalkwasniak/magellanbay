@@ -300,20 +300,100 @@
                         {{-- Nadawanie przesyłek InPost — bliźniak włącznika Paynow.
                              Bramka `courier_shipping` (to samo uprawnienie co płatna wysyłka). --}}
                         @if ($shop->entitlement('courier_shipping'))
-                            <div class="flex items-start gap-4 rounded-2xl border border-stone-200 bg-white/60 p-5 sm:p-6 {{ $shipxConfigured ? '' : 'opacity-60' }}">
-                                {{-- hidden = wartość bazowa; bez konfiguracji checkbox jest disabled i nic nie wysyła --}}
-                                <input type="hidden" name="shipx_enabled" value="{{ $shipxConfigured ? '0' : ($shipxEnabled ? '1' : '0') }}">
-                                <input type="checkbox" id="shipx_enabled" name="shipx_enabled" value="1"
-                                    @checked(old('shipx_enabled', $shipxEnabled)) @disabled(! $shipxConfigured)
-                                    class="mt-0.5 h-5 w-5 shrink-0 rounded-md border-stone-300 text-amber-600 focus:ring-4 focus:ring-amber-500/20 disabled:cursor-not-allowed">
-                                <label for="shipx_enabled" class="flex-1 {{ $shipxConfigured ? 'cursor-pointer' : 'cursor-not-allowed' }}">
-                                    <span class="block text-sm font-medium text-stone-800">Nadawanie przesyłek InPost</span>
-                                    <span class="mt-0.5 block text-sm text-stone-500">Włącza przycisk „Nadaj przesyłkę" na karcie zamówienia — paczkę nadajesz i etykietę drukujesz bez wchodzenia do panelu InPostu.</span>
-                                    <span class="mt-1.5 block text-xs text-stone-400">Za każdą przesyłkę płacisz InPostowi ze swojego salda — Kramio nie pobiera żadnej opłaty.</span>
-                                    @unless($shipxConfigured)
-                                        <span class="mt-1.5 block text-xs text-amber-700">Aby móc włączyć, najpierw podaj token ShipX i Organization ID w <a href="{{ route('seller.integrations.edit') }}" class="font-medium underline decoration-amber-300 underline-offset-2">Integracjach</a>.</span>
-                                    @endunless
-                                </label>
+                            <div class="rounded-2xl border border-stone-200 bg-white/60 p-5 sm:p-6 {{ $shipxConfigured ? '' : 'opacity-60' }}">
+                                <div class="flex items-start gap-4">
+                                    {{-- hidden = wartość bazowa; bez konfiguracji checkbox jest disabled i nic nie wysyła --}}
+                                    <input type="hidden" name="shipx_enabled" value="{{ $shipxConfigured ? '0' : ($shipxEnabled ? '1' : '0') }}">
+                                    <input type="checkbox" id="shipx_enabled" name="shipx_enabled" value="1"
+                                        @checked(old('shipx_enabled', $shipxEnabled)) @disabled(! $shipxConfigured)
+                                        class="mt-0.5 h-5 w-5 shrink-0 rounded-md border-stone-300 text-amber-600 focus:ring-4 focus:ring-amber-500/20 disabled:cursor-not-allowed">
+                                    <label for="shipx_enabled" class="flex-1 {{ $shipxConfigured ? 'cursor-pointer' : 'cursor-not-allowed' }}">
+                                        <span class="block text-sm font-medium text-stone-800">Nadawanie przesyłek InPost</span>
+                                        <span class="mt-0.5 block text-sm text-stone-500">Włącza przycisk „Nadaj przesyłkę" na karcie zamówienia — paczkę nadajesz i etykietę drukujesz bez wchodzenia do panelu InPostu.</span>
+                                        <span class="mt-1.5 block text-xs text-stone-400">Za każdą przesyłkę płacisz InPostowi ze swojego salda — Kramio nie pobiera żadnej opłaty.</span>
+                                        @unless($shipxConfigured)
+                                            <span class="mt-1.5 block text-xs text-amber-700">Aby móc włączyć, najpierw podaj token ShipX i Organization ID w <a href="{{ route('seller.integrations.edit') }}" class="font-medium underline decoration-amber-300 underline-offset-2">Integracjach</a>.</span>
+                                        @endunless
+                                    </label>
+                                </div>
+
+                                {{-- Jak sprzedawca ODDAJE paczki InPostowi — wcięte pod nadawaniem,
+                                     bo dotyczy każdej nadanej przesyłki i nie ma sensu bez niego.
+                                     To NIE jest metoda dostawy: klient wybiera, jak ma DOSTAĆ
+                                     paczkę, a to mówi, jak sprzedawca się jej POZBĘDZIE.
+
+                                     Deklaracja jest WIĄŻĄCA po stronie InPostu (zapisuje się przy
+                                     nadaniu i nie da się jej potem zmienić), więc pytamy raz tutaj,
+                                     a nie przy każdej paczce — i domyślnie wskazujemy DARMOWĄ.
+
+                                     Pola świadomie NIE są disabled mimo braku konfiguracji: to same
+                                     domyślne wartości, nic nie uruchamiają i nie kosztują, a
+                                     wypełnienie ich przed podłączeniem InPostu jest naturalne. --}}
+                                <div class="mt-4 border-t border-stone-100 pt-4">
+                                    <div class="ml-4">
+                                        <p class="text-sm font-medium text-stone-800">Jak oddajesz paczki InPostowi?</p>
+                                        <div class="mt-2 space-y-2">
+                                            @foreach ($sendingMethods as $case)
+                                                <div class="flex items-start gap-3">
+                                                    <input type="radio" id="sending_method_{{ $case->value }}" name="shipment_sending_method" value="{{ $case->value }}"
+                                                        @checked(old('shipment_sending_method', $shop->sendingMethod()->value) === $case->value)
+                                                        class="mt-0.5 h-5 w-5 shrink-0 border-stone-300 text-amber-600 focus:ring-4 focus:ring-amber-500/20">
+                                                    <label for="sending_method_{{ $case->value }}" class="flex-1 cursor-pointer">
+                                                        <span class="block text-sm text-stone-800">
+                                                            {{ $case->label() }}
+                                                            @if ($case->isPaid())
+                                                                <span class="font-medium text-amber-700">— usługa dodatkowo płatna</span>
+                                                            @endif
+                                                        </span>
+                                                        <span class="mt-0.5 block text-xs text-stone-400">{{ $case->hint() }}</span>
+                                                    </label>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                        @error('shipment_sending_method')
+                                            <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
+                                        @enderror
+
+                                        {{-- Domyślna paczka kurierska: paczkomat opisuje się gabarytem
+                                             skrytki, kurier WYMIARAMI I WAGĄ. U rękodzielnika paczka
+                                             bywa powtarzalna, więc podpowiadamy — inaczej sprzedawca
+                                             wpisuje to samo przy każdym zamówieniu. Tak samo robi
+                                             panel InPostu („Domyślny rozmiar przesyłki”). --}}
+                                        <div class="mt-5">
+                                            <p class="text-sm font-medium text-stone-800">Domyślna paczka kurierska <span class="font-normal text-stone-400">(opcjonalnie)</span></p>
+                                            <p class="mt-0.5 text-xs text-stone-400">Podpowiadamy te wartości przy nadawaniu — przy każdej paczce możesz je zmienić.</p>
+
+                                            {{-- Cztery pola w JEDNEJ linii. Świadomie flex, nie grid:
+                                                 `grid-cols-4` nie istnieje w buildzie, a klasa spoza
+                                                 buildu cicho nic nie robi. Jednostka siedzi w etykiecie,
+                                                 nie jako sufiks w polu — przy czterech polach obok
+                                                 siebie sufiks zjadałby miejsce na cyfry na telefonie. --}}
+                                            <div class="mt-2 flex gap-2">
+                                                @foreach ([['courier_parcel_length_cm', 'Długość (cm)'], ['courier_parcel_width_cm', 'Szerokość (cm)'], ['courier_parcel_height_cm', 'Wysokość (cm)'], ['courier_parcel_weight_kg', 'Waga (kg)']] as [$parcelField, $parcelLabel])
+                                                    <div class="min-w-0 flex-1">
+                                                        <label for="{{ $parcelField }}" class="block text-xs text-stone-500">{{ $parcelLabel }}</label>
+                                                        <input id="{{ $parcelField }}" name="{{ $parcelField }}" type="text" inputmode="decimal"
+                                                            value="{{ old($parcelField, $shop->$parcelField) }}"
+                                                            class="mt-1 block w-full rounded-2xl border border-stone-200 bg-white/80 px-3 py-3 text-center text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
+                                                    </div>
+                                                @endforeach
+                                            </div>
+
+                                            {{-- Błędy pod całą czwórką, nie pod pojedynczym polem:
+                                                 przy tak wąskich kolumnach komunikat i tak by się nie
+                                                 zmieścił, a rozpychałby jedną z nich. --}}
+                                            @foreach (['courier_parcel_length_cm', 'courier_parcel_width_cm', 'courier_parcel_height_cm', 'courier_parcel_weight_kg'] as $parcelField)
+                                                @error($parcelField)
+                                                    <p class="mt-1.5 text-xs text-rose-600">{{ $message }}</p>
+                                                @enderror
+                                            @endforeach
+
+                                            @unless($shop->courier_enabled)
+                                                <p class="mt-1.5 text-xs text-amber-700">Przyda się, gdy włączysz <a href="#courier_enabled" onclick="document.getElementById('courier_enabled').scrollIntoView({behavior:'smooth',block:'center'});return false;" class="font-medium underline decoration-amber-300 underline-offset-2">dostawę kurierem</a> — do paczkomatu wybierasz gabaryt, nie wymiary.</p>
+                                            @endunless
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         @endif
 

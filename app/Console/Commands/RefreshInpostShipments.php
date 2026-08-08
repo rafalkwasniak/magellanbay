@@ -36,6 +36,7 @@ class RefreshInpostShipments extends Command
         // pilnuje świeżych nadań.
         if (! $deliveries) {
             $this->releaseStuckQueued();
+            $this->refreshDispatchOrders($shipx);
         }
 
         $orders = $deliveries ? $this->parcelsInTransit() : $this->awaitingPurchase();
@@ -92,6 +93,55 @@ class RefreshInpostShipments extends Command
         $this->info('Sprawdzono przesyłek: '.$orders->count());
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Dopytuje o zlecenia odbioru kuriera, które jeszcze nie zostały
+     * rozstrzygnięte. To NIE jest ozdobnik: `POST /dispatch_orders` zwraca 201
+     * nawet wtedy, gdy InPost chwilę później odrzuci zlecenie (np. bo któraś
+     * paczka była zadeklarowana do wrzucenia w paczkomacie). Bez tego przebiegu
+     * sprzedawca czekałby w domu na kuriera, który nigdy nie przyjedzie.
+     *
+     * Okno 7 dni: zlecenie rozstrzyga się w sekundy, a starsze i tak nic nie
+     * wnosi — jeśli po tygodniu nadal wisi na `new`, to i tak przepadło.
+     */
+    private function refreshDispatchOrders(ShipxClient $shipx): void
+    {
+        $pending = \App\Models\DispatchOrder::query()
+            ->whereNotNull('shipx_id')
+            ->whereNotIn('status', ['sent', 'confirmed', 'accepted', 'rejected', 'canceled'])
+            ->where('created_at', '>=', now()->subDays(7))
+            ->with('shop')
+            ->get();
+
+        foreach ($pending as $dispatchOrder) {
+            if ($dispatchOrder->shop === null || ! $dispatchOrder->shop->shipxConfigured()) {
+                continue;
+            }
+
+            $data = $shipx->dispatchOrder($dispatchOrder->shop, (int) $dispatchOrder->shipx_id);
+
+            // null = „nie wiem" — spróbujemy w kolejnym przebiegu.
+            if ($data === null) {
+                continue;
+            }
+
+            $dispatchOrder->update([
+                'status' => $data['status'] ?? $dispatchOrder->status,
+                'error' => ShipxClient::dispatchFailureReason($data),
+            ]);
+
+            // Odrzucone zlecenie odpinamy od paczek, żeby wróciły na listę
+            // oczekujących i dało się zamówić kuriera jeszcze raz. Sam wiersz
+            // ZOSTAJE — niesie powód odrzucenia, który sprzedawca musi zobaczyć.
+            if ($dispatchOrder->fresh()->isRejected()) {
+                $dispatchOrder->orders()->update(['dispatch_order_id' => null]);
+            }
+        }
+
+        if ($pending->isNotEmpty()) {
+            $this->info('Sprawdzono zleceń odbioru: '.$pending->count());
+        }
     }
 
     /**

@@ -3,6 +3,7 @@
 namespace Tests\Feature\Seller;
 
 use App\Enums\SaleUnit;
+use App\Enums\SendingMethod;
 use App\Enums\VatRate;
 use App\Models\Shop;
 use App\Models\User;
@@ -506,5 +507,74 @@ class ShopSettingsTest extends TestCase
 
         $this->assertTrue($integration->fresh()->enabled);
         $this->assertTrue($shop->fresh()->shipxEnabled());
+    }
+
+    public function test_seller_sees_sending_method_and_default_parcel_under_shipx(): void
+    {
+        [$seller] = $this->sellerWithShop();
+
+        $this->actingAs($seller)
+            ->get(route('seller.settings.edit'))
+            ->assertOk()
+            ->assertSee('Jak oddajesz paczki InPostowi?')
+            ->assertSee('Wrzucam paczki do Paczkomatu')
+            // Płatność musi być widoczna przy opcji, nie schowana w regulaminie.
+            ->assertSee('usługa dodatkowo płatna')
+            ->assertSee('Domyślna paczka kurierska');
+    }
+
+    public function test_seller_saves_sending_method_and_default_parcel(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+
+        $this->actingAs($seller)
+            ->post(route('seller.settings.update'), [
+                'default_vat_rate' => '23',
+                'shipment_sending_method' => 'dispatch_order',
+                'courier_parcel_length_cm' => '30',
+                'courier_parcel_width_cm' => '20',
+                'courier_parcel_height_cm' => '10',
+                // Przecinek dziesiętny — tak wpisuje polski sprzedawca.
+                'courier_parcel_weight_kg' => '2,5',
+            ])
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('success');
+
+        $shop = $shop->fresh();
+
+        $this->assertSame(SendingMethod::DispatchOrder, $shop->sendingMethod());
+        $this->assertSame(
+            ['length' => 30, 'width' => 20, 'height' => 10, 'weight' => 2.5],
+            $shop->courierParcelDefaults()
+        );
+    }
+
+    public function test_default_parcel_respects_inpost_limits(): void
+    {
+        [$seller] = $this->sellerWithShop();
+
+        $this->actingAs($seller)
+            ->post(route('seller.settings.update'), [
+                'default_vat_rate' => '23',
+                'courier_parcel_length_cm' => '150',
+                'courier_parcel_width_cm' => '20',
+                'courier_parcel_height_cm' => '10',
+                'courier_parcel_weight_kg' => '30',
+            ])
+            ->assertSessionHasErrors(['courier_parcel_length_cm', 'courier_parcel_weight_kg']);
+    }
+
+    public function test_unknown_sending_method_is_rejected(): void
+    {
+        [$seller] = $this->sellerWithShop();
+
+        // Wartość jedzie wprost do ShipX i jest tam WIĄŻĄCA — nie wolno
+        // przepuścić niczego spoza enumu.
+        $this->actingAs($seller)
+            ->post(route('seller.settings.update'), [
+                'default_vat_rate' => '23',
+                'shipment_sending_method' => 'pok',
+            ])
+            ->assertSessionHasErrors('shipment_sending_method');
     }
 }

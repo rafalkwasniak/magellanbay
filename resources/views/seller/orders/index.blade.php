@@ -154,6 +154,29 @@
                     </button>
                 </form>
 
+                {{-- Paczki czekające na kuriera. Pokazujemy WYŁĄCZNIE, gdy jakaś
+                     czeka — to wezwanie do działania, a nie stały element panelu:
+                     dopóki nie ma czego odbierać, pusty box byłby szumem.
+                     Świadomie nie zamawiamy kuriera stąd — zlecenie dotyczy
+                     ZBIORU paczek (jeden przyjazd, jedna dopłata), więc decyzja
+                     zapada na ekranie, gdzie widać wszystkie naraz. --}}
+                @if ($awaitingPickup > 0)
+                    <div class="rounded-3xl border border-amber-200 bg-amber-50 p-6">
+                        <h2 class="flex items-center gap-2 font-semibold text-amber-900">
+                            <span aria-hidden="true">🚚</span>
+                            {{ $awaitingPickup }} {{ $awaitingPickup === 1 ? 'paczka czeka' : ($awaitingPickup < 5 ? 'paczki czekają' : 'paczek czeka') }} na kuriera
+                        </h2>
+                        <p class="mt-1 text-sm text-amber-800">
+                            {{ $awaitingPickup === 1 ? 'Nadałeś ją' : 'Nadałeś je' }} z odbiorem przez kuriera InPostu, ale przyjazd trzeba jeszcze zamówić.
+                            Jedno zlecenie obejmuje wszystkie naraz — dopłata jest za przyjazd, nie za paczkę.
+                        </p>
+                        <a href="{{ route('seller.shipments.pickup') }}"
+                            class="mt-4 inline-flex items-center gap-2 rounded-2xl bg-gradient-to-br from-amber-500 to-rose-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:brightness-105">
+                            <span aria-hidden="true">🚚</span> Zamów kuriera
+                        </a>
+                    </div>
+                @endif
+
                 {{-- Twoja sprzedaż — dynamicznie z wyświetlonego (po filtrach) zbioru,
                      liczone ze wszystkich stron, nie tylko z bieżącej. --}}
                 <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">

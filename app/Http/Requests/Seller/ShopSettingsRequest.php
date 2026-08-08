@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Seller;
 
 use App\Enums\SaleUnit;
+use App\Enums\SendingMethod;
 use App\Enums\VatRate;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -46,6 +47,12 @@ class ShopSettingsRequest extends FormRequest
             // integracji płatności; zapis merge'uje ją w kontrolerze.
             'paynow_auto_invoice' => $this->boolean('paynow_auto_invoice'),
             'shipx_enabled' => $this->boolean('shipx_enabled'),
+            // Domyślna paczka kurierska: wymiary w cm, waga w kg. Ta sama
+            // normalizacja co przy kwotach — „2,5" i „2.5" mają znaczyć to samo.
+            'courier_parcel_length_cm' => $this->normalizeAmount($this->input('courier_parcel_length_cm')),
+            'courier_parcel_width_cm' => $this->normalizeAmount($this->input('courier_parcel_width_cm')),
+            'courier_parcel_height_cm' => $this->normalizeAmount($this->input('courier_parcel_height_cm')),
+            'courier_parcel_weight_kg' => $this->normalizeAmount($this->input('courier_parcel_weight_kg')),
             // Nowe pole — gdy formularz go nie przyśle (starszy submit), zostawiamy
             // bieżącą jednostkę sklepu, żeby częściowy zapis jej nie wyzerował.
             'default_sale_unit' => $this->input('default_sale_unit', $this->user()?->shop?->default_sale_unit?->value ?? 'piece'),
@@ -88,6 +95,17 @@ class ShopSettingsRequest extends FormRequest
             'paynow_enabled' => ['boolean'],
             'paynow_auto_invoice' => ['boolean'],
             'shipx_enabled' => ['boolean'],
+            // Sposób nadania: wybór jest WIĄŻĄCY przy każdej nadanej przesyłce
+            // (InPost nie pozwala go potem zmienić), więc nie przyjmujemy tu
+            // niczego spoza enumu. Brak pola = zostaje dotychczasowy.
+            'shipment_sending_method' => ['nullable', Rule::enum(SendingMethod::class)],
+            // Limity są InPostu, nie nasze — te same, co przy nadawaniu, żeby
+            // sprzedawca nie zapisał domyślnej paczki, której potem nie da się
+            // wysłać. Bok powyżej 120 cm = przesyłka niestandardowa.
+            'courier_parcel_length_cm' => ['nullable', 'integer', 'min:1', 'max:120'],
+            'courier_parcel_width_cm' => ['nullable', 'integer', 'min:1', 'max:120'],
+            'courier_parcel_height_cm' => ['nullable', 'integer', 'min:1', 'max:120'],
+            'courier_parcel_weight_kg' => ['nullable', 'numeric', 'min:0.1', 'max:25'],
         ];
     }
 
@@ -113,6 +131,11 @@ class ShopSettingsRequest extends FormRequest
             'paynow_enabled' => 'płatności online (Paynow)',
             'paynow_auto_invoice' => 'automatyczna faktura po opłaceniu',
             'shipx_enabled' => 'nadawanie przesyłek InPost',
+            'shipment_sending_method' => 'sposób oddawania paczek',
+            'courier_parcel_length_cm' => 'długość paczki',
+            'courier_parcel_width_cm' => 'szerokość paczki',
+            'courier_parcel_height_cm' => 'wysokość paczki',
+            'courier_parcel_weight_kg' => 'waga paczki',
         ];
     }
 
@@ -128,6 +151,14 @@ class ShopSettingsRequest extends FormRequest
             'parcel_locker_cost.required' => 'Podaj koszt dostawy do paczkomatu (może być 0).',
             'parcel_locker_cost.numeric' => 'Podaj koszt liczbą, np. 12,99.',
             'parcel_locker_free_from.numeric' => 'Podaj kwotę progu liczbą, np. 150.',
+            'courier_parcel_length_cm.max' => 'Bok powyżej 120 cm to przesyłka niestandardowa — takiej nie nadasz z panelu.',
+            'courier_parcel_width_cm.max' => 'Bok powyżej 120 cm to przesyłka niestandardowa — takiej nie nadasz z panelu.',
+            'courier_parcel_height_cm.max' => 'Bok powyżej 120 cm to przesyłka niestandardowa — takiej nie nadasz z panelu.',
+            'courier_parcel_weight_kg.max' => 'InPost przyjmuje paczki do 25 kg.',
+            'courier_parcel_length_cm.integer' => 'Podaj długość w pełnych centymetrach, np. 30.',
+            'courier_parcel_width_cm.integer' => 'Podaj szerokość w pełnych centymetrach, np. 20.',
+            'courier_parcel_height_cm.integer' => 'Podaj wysokość w pełnych centymetrach, np. 10.',
+            'courier_parcel_weight_kg.numeric' => 'Podaj wagę liczbą, np. 2,5.',
         ];
     }
 }

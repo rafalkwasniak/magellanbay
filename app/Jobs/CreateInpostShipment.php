@@ -2,8 +2,9 @@
 
 namespace App\Jobs;
 
-use App\Enums\ParcelSize;
+use App\Enums\SendingMethod;
 use App\Models\Order;
+use App\Services\Shipping\ParcelSpec;
 use App\Services\Shipping\ShipxClient;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -35,7 +36,8 @@ class CreateInpostShipment implements ShouldQueue
 
     public function __construct(
         public readonly Order $order,
-        public readonly ParcelSize $size,
+        public readonly ParcelSpec $parcel,
+        public readonly SendingMethod $sending,
     ) {}
 
     public function handle(ShipxClient $shipx): void
@@ -46,7 +48,11 @@ class CreateInpostShipment implements ShouldQueue
             return;
         }
 
-        $shipment = $shipx->createShipment($order, $this->size);
+        // Sposób nadania przychodzi z panelu (domyślnie z Ustawień sklepu) i tą
+        // samą wartością lecimy do InPostu ORAZ do migawki zamówienia. Rozjazd
+        // między nimi znaczyłby, że panel pokazuje co innego, niż sprzedawca
+        // zadeklarował — a deklaracji nie da się później zmienić.
+        $shipment = $shipx->createShipment($order, $this->parcel, $this->sending);
 
         if ($shipment === null || blank($shipment['id'] ?? null)) {
             $order->forceFill([
@@ -58,11 +64,11 @@ class CreateInpostShipment implements ShouldQueue
 
         // Zapis śladu NAJPIERW — od tej chwili `hasShipment()` = true, więc nawet
         // ponowny przebieg nie nada (i nie opłaci) drugiej paczki.
-        $order->forceFill([
+        $order->forceFill($this->parcel->toOrderColumns() + [
             'shipment_id' => $shipment['id'],
             'shipment_status' => $shipment['status'] ?? null,
             'shipment_tracking_number' => $shipment['tracking_number'] ?? null,
-            'shipment_size' => $this->size,
+            'shipment_sending_method' => $this->sending,
             'shipment_error' => ShipxClient::failureReason($shipment),
             'shipped_at' => now(),
         ])->save();

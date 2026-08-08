@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Seller;
 
 use App\Enums\IntegrationType;
 use App\Enums\SaleUnit;
+use App\Enums\SendingMethod;
 use App\Enums\VatRate;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Seller\ShopSettingsRequest;
@@ -39,6 +40,7 @@ class ShopSettingsController extends Controller
             'paynowAutoInvoice' => $shop->autoInvoiceAfterPayment(),
             'shipxConfigured' => $shop->shipxConfigured(),
             'shipxEnabled' => (bool) $shop->integration(IntegrationType::Shipping)?->enabled,
+            'sendingMethods' => SendingMethod::cases(),
         ]);
     }
 

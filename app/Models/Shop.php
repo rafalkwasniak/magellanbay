@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\DeliveryMethod;
 use App\Enums\IntegrationType;
 use App\Enums\SaleUnit;
+use App\Enums\SendingMethod;
 use App\Enums\ShopStatus;
 use App\Enums\VatRate;
 use App\Observers\ShopObserver;
@@ -35,6 +36,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'pickup_enabled', 'pay_on_pickup_enabled',
     'courier_enabled', 'courier_cost', 'courier_free_from',
     'parcel_locker_enabled', 'parcel_locker_cost', 'parcel_locker_free_from',
+    'shipment_sending_method',
+    'courier_parcel_length_cm', 'courier_parcel_width_cm', 'courier_parcel_height_cm', 'courier_parcel_weight_kg',
     'package', 'entitlements', 'price_yearly', 'subscription_ends_at', 'comped',
 ])]
 class Shop extends Model
@@ -62,6 +65,8 @@ class Shop extends Model
             'parcel_locker_enabled' => 'boolean',
             'parcel_locker_cost' => 'decimal:2',
             'parcel_locker_free_from' => 'decimal:2',
+            'shipment_sending_method' => SendingMethod::class,
+            'courier_parcel_weight_kg' => 'decimal:2',
             'entitlements' => 'array',
             'price_yearly' => 'decimal:2',
             'subscription_ends_at' => 'datetime',
@@ -131,6 +136,16 @@ class Shop extends Model
     public function orders(): HasMany
     {
         return $this->hasMany(Order::class);
+    }
+
+    /**
+     * Zlecenia odbioru paczek przez kuriera InPostu.
+     *
+     * @return HasMany<DispatchOrder, $this>
+     */
+    public function dispatchOrders(): HasMany
+    {
+        return $this->hasMany(DispatchOrder::class);
     }
 
     /**
@@ -860,6 +875,77 @@ class Shop extends Model
         }
 
         return config('services.inpost.shipx.base_url.'.$this->shipxEnvironment());
+    }
+
+    /**
+     * Jak sprzedawca oddaje paczki InPostowi. Fallback na darmowy paczkomat
+     * dotyczy sklepów sprzed tej funkcji — nigdy nie domyślamy się opcji
+     * PŁATNEJ, bo wybór jest wiążący dla każdej nadanej przesyłki.
+     */
+    public function sendingMethod(): SendingMethod
+    {
+        return $this->shipment_sending_method ?? SendingMethod::default();
+    }
+
+    /**
+     * Adres, spod którego kurier InPostu odbiera paczki — w kształcie ShipX.
+     * To adres sklepu (pracowni), bo stamtąd wyjeżdżają przesyłki. null, gdy
+     * sprzedawca nie uzupełnił adresu: bez niego zlecenie odbioru nie ma sensu.
+     *
+     * @return array<string, string>|null
+     */
+    public function pickupAddress(): ?array
+    {
+        if (blank($this->street) || blank($this->building_number) || blank($this->postal_code) || blank($this->city)) {
+            return null;
+        }
+
+        $building = (string) $this->building_number;
+
+        // ShipX nie ma pola na numer lokalu — doklejamy do numeru budynku,
+        // tak samo jak przy adresie odbiorcy.
+        if (filled($this->apartment_number)) {
+            $building .= '/'.$this->apartment_number;
+        }
+
+        return [
+            'street' => (string) $this->street,
+            'building_number' => $building,
+            'city' => (string) $this->city,
+            'post_code' => (string) $this->postal_code,
+            'country_code' => 'PL',
+        ];
+    }
+
+    /**
+     * Domyślna paczka kurierska (centymetry i kilogramy) albo null, gdy
+     * sprzedawca nie uzupełnił KOMPLETU. Połowa wymiarów jest bezużyteczna —
+     * ShipX potrzebuje wszystkich trzech i wagi, więc lepiej nie podpowiadać
+     * nic, niż podpowiedzieć wpół.
+     *
+     * @return array{length: int, width: int, height: int, weight: float}|null
+     */
+    public function courierParcelDefaults(): ?array
+    {
+        $values = [
+            'length' => $this->courier_parcel_length_cm,
+            'width' => $this->courier_parcel_width_cm,
+            'height' => $this->courier_parcel_height_cm,
+            'weight' => $this->courier_parcel_weight_kg,
+        ];
+
+        foreach ($values as $value) {
+            if (blank($value) || (float) $value <= 0) {
+                return null;
+            }
+        }
+
+        return [
+            'length' => (int) $values['length'],
+            'width' => (int) $values['width'],
+            'height' => (int) $values['height'],
+            'weight' => (float) $values['weight'],
+        ];
     }
 
     /**
