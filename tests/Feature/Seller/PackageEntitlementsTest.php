@@ -19,7 +19,7 @@ class PackageEntitlementsTest extends TestCase
 
         $fresh = $shop->fresh();
         $this->assertSame('pavilion', $fresh->package);
-        $this->assertSame(96, $fresh->entitlement('max_products'));
+        $this->assertSame(240, $fresh->entitlement('max_products'));
         $this->assertTrue($fresh->entitlement('order_editing'));
         // Snapshot obejmuje też cenę roczną (BRUTTO) pakietu.
         $this->assertSame(1500.0, $fresh->priceYearly());
@@ -50,7 +50,7 @@ class PackageEntitlementsTest extends TestCase
         // Sklep bez snapshotu (legacy) — resolver sięga do configu aktualnego pakietu.
         $shop = Shop::factory()->create(['package' => 'booth', 'entitlements' => null]);
 
-        $this->assertSame(48, $shop->entitlement('max_products'));
+        $this->assertSame(72, $shop->entitlement('max_products'));
         $this->assertTrue($shop->entitlement('online_payments'));
     }
 
@@ -124,7 +124,7 @@ class PackageEntitlementsTest extends TestCase
                 'bulk_mail' => false,
             ]],
             'Stragan (booth)' => ['booth', [
-                'max_products' => 48,
+                'max_products' => 72,
                 'online_payments' => true,
                 'courier_shipping' => true,
                 'invoices' => true,
@@ -134,7 +134,7 @@ class PackageEntitlementsTest extends TestCase
                 'bulk_mail' => false,
             ]],
             'Pawilon (pavilion)' => ['pavilion', [
-                'max_products' => 96,
+                'max_products' => 240,
                 'online_payments' => true,
                 'courier_shipping' => true,
                 'invoices' => true,

@@ -105,7 +105,7 @@ class PackagePaymentTest extends TestCase
 
         $shop->refresh();
         $this->assertSame('booth', $shop->package);
-        $this->assertSame(48, $shop->entitlement('max_products'));
+        $this->assertSame(72, $shop->entitlement('max_products'));
         $this->assertTrue($shop->entitlement('online_payments'));
         $this->assertSame('2027-07-30', $shop->subscription_ends_at->format('Y-m-d'));
         $this->assertTrue($shop->packagePayments()->first()->isApplied());
@@ -284,12 +284,13 @@ class PackagePaymentTest extends TestCase
     public function test_downsize_drops_the_higher_package_features_and_hides_excess_products(): void
     {
         $this->fakePaynow();
-        // Pawilon 4 dni przed końcem, z ręcznie nadanym dodatkiem i 60 produktami.
+        // Pawilon 4 dni przed końcem, z ręcznie nadanym dodatkiem i 84 produktami
+        // (o 12 więcej, niż mieści Stragan — inaczej zejście nie miałoby co ukryć).
         [$seller, $shop] = $this->sellerOn('pavilion', [
             'entitlements' => array_merge(config('shop.packages.pavilion.entitlements'), ['bulk_mail' => true]),
             'subscription_ends_at' => Carbon::parse('2026-08-03'),
         ]);
-        \App\Models\Product::factory()->count(60)->create(['shop_id' => $shop->id, 'is_active' => true]);
+        \App\Models\Product::factory()->count(84)->create(['shop_id' => $shop->id, 'is_active' => true]);
 
         $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']))
             ->assertRedirect('https://sandbox.paynow.pl/pay/PAY-123');
@@ -305,18 +306,18 @@ class PackagePaymentTest extends TestCase
         // Lepkość MUSI ustąpić, inaczej zejście byłoby pozorne.
         $this->assertFalse($shop->entitlement('bulk_mail'));
         $this->assertFalse($shop->entitlement('order_editing'));
-        $this->assertSame(48, (int) $shop->entitlement('max_products'));
+        $this->assertSame(72, (int) $shop->entitlement('max_products'));
         // Limit zmalał, więc nadwyżka schodzi z witryny — ale nic nie ginie.
-        $this->assertSame(48, $shop->products()->where('is_active', true)->count());
+        $this->assertSame(72, $shop->products()->where('is_active', true)->count());
         $this->assertSame(12, $shop->products()->whereNotNull('auto_hidden_at')->count());
-        $this->assertSame(60, $shop->products()->count());
+        $this->assertSame(84, $shop->products()->count());
     }
 
     public function test_downsize_mail_explains_the_hidden_products(): void
     {
         $this->fakePaynow();
         [$seller, $shop] = $this->sellerOn('pavilion', ['subscription_ends_at' => Carbon::parse('2026-08-03')]);
-        \App\Models\Product::factory()->count(50)->create(['shop_id' => $shop->id, 'is_active' => true]);
+        \App\Models\Product::factory()->count(74)->create(['shop_id' => $shop->id, 'is_active' => true]);
 
         $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']));
         $this->webhook('PAY-123', 'CONFIRMED')->assertOk();
@@ -413,7 +414,7 @@ class PackagePaymentTest extends TestCase
         $this->assertStringContainsString('750,00', $body);
         $this->assertStringContainsString('30.07.2027', $body);              // okres
         $this->assertStringContainsString('• Integracja płatności online (własne konto Paynow)', $body); // lista funkcji
-        $this->assertStringContainsString('• Do 48 produktów', $body);
+        $this->assertStringContainsString('• Do 72 produktów', $body);
     }
 
     public function test_payment_history_shows_status_and_validity(): void

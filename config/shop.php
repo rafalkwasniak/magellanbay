@@ -164,7 +164,14 @@ return [
     | `entitlements` = kanoniczna lista uprawnień (ZATWIERDZONA 2026-07-19, 8 kluczy).
     | Wygląd/kolory i NASZA analityka są dla wszystkich, więc NIE są uprawnieniem
     | (GA/GTM to osobny klucz `ga_analytics`, płatny od Straganu). `max_products`
-    | 24/48/96 dzieli się na pełne rzędy siatki.
+    | 24/72/240 dzieli się na pełne rzędy siatki (3/4/6 kolumn). Drabinka jest
+    | ROZCIĄGNIĘTA, nie równoległa (2026-08-09): limit produktów nie jest motorem
+    | konwersji — na płatny plan wypychają płatności/kurier/faktury, a na Pawilon
+    | edycja zamówienia i kody rabatowe. Limit pracuje dopiero w GÓRNYM OGONIE:
+    | sprzedawca z 200 pozycjami (biżuteria, koraliki) patrzył na najdroższy plan,
+    | widział „do 96" i odpadał przed rejestracją. Stąd wysoki sufit u góry i
+    | ostrożny w środku — Stragan 96 zabierałby powód, dla którego ktoś z 60
+    | produktami musi wziąć Pawilon. Kram zostaje na 24, bo to jest bramka.
     |
     | `price_yearly` = cena roczna BRUTTO (VAT 23%). Reguła: rok = 10× miesiąc, czyli
     | 2 miesiące gratis (75/mc→750/rok, 150/mc→1500/rok). To cena „na wystawie";
@@ -209,7 +216,7 @@ return [
             'price_yearly' => 750,
             'available' => true,
             'entitlements' => [
-                'max_products' => 48,
+                'max_products' => 72,
                 'ai_weekly_limit' => 400,
                 'online_payments' => true,
                 'courier_shipping' => true,
@@ -226,7 +233,7 @@ return [
             'price_yearly' => 1500,
             'available' => true,
             'entitlements' => [
-                'max_products' => 96,
+                'max_products' => 240,
                 'ai_weekly_limit' => 800,
                 'online_payments' => true,
                 'courier_shipping' => true,
