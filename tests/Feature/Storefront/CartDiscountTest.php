@@ -23,7 +23,7 @@ class CartDiscountTest extends TestCase
 
     private function shopWithProduct(float $price = 200): array
     {
-        $shop = Shop::factory()->withDiscountCodes()->create();
+        $shop = Shop::factory()->sellable()->withDiscountCodes()->create();
         $product = Product::factory()->create([
             'shop_id' => $shop->id,
             'price_gross' => $price,

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\DeliveryMethod;
 use App\Enums\IntegrationType;
+use App\Enums\PaymentMethod;
 use App\Enums\SaleUnit;
 use App\Enums\SendingMethod;
 use App\Enums\ShopStatus;
@@ -631,6 +632,77 @@ class Shop extends Model
         };
 
         return $value !== null ? (float) $value : null;
+    }
+
+    /**
+     * Metody dostawy realnie oferowane przez sklep, w kolejności prezentacji.
+     * JEDNO źródło dla kasy i dla storefrontu — kolejność ma znaczenie, bo kasa
+     * zaznacza pierwszą z brzegu.
+     *
+     * @return list<DeliveryMethod>
+     */
+    public function availableDeliveryMethods(): array
+    {
+        $methods = [];
+
+        if ($this->pickupAvailable()) {
+            $methods[] = DeliveryMethod::Pickup;
+        }
+
+        if ($this->courierAvailable()) {
+            $methods[] = DeliveryMethod::Courier;
+        }
+
+        if ($this->parcelLockerAvailable()) {
+            $methods[] = DeliveryMethod::ParcelLocker;
+        }
+
+        return $methods;
+    }
+
+    /**
+     * Metody płatności realnie oferowane przez sklep, w kolejności prezentacji
+     * (online na czele — przedpłata działa przy każdej dostawie). Lista jest
+     * BEZ kontekstu wybranej dostawy: zawężenie „kurier ⇒ nie ma płatności przy
+     * odbiorze" robi kasa, bo tylko ona wie, co klient zaznaczył.
+     *
+     * @return list<PaymentMethod>
+     */
+    public function availablePaymentMethods(): array
+    {
+        $methods = [];
+
+        if ($this->onlinePaymentsEnabled()) {
+            $methods[] = PaymentMethod::Online;
+        }
+
+        if ($this->bankTransferAvailable()) {
+            $methods[] = PaymentMethod::BankTransfer;
+        }
+
+        if ($this->payOnPickupAvailable()) {
+            $methods[] = PaymentMethod::PayOnPickup;
+        }
+
+        return $methods;
+    }
+
+    /**
+     * Czy w sklepie da się DOKOŃCZYĆ zakup: jest czym dostarczyć i czym zapłacić.
+     * Bez tego storefront nie pokazuje „Do koszyka" — sklep zostaje wykazem
+     * oferty (sprzedaż np. telefoniczna), a nie zepsutą kasą. Stan wynika wprost
+     * z ustawień i liczy się na żywo: sprzedawca odznacza metodę i przyciski
+     * znikają, włącza — wracają. Żadnej flagi w bazie, bo ta mogłaby się rozjechać
+     * z rzeczywistością.
+     *
+     * Para zawsze się złoży: jedyna płatność zależna od dostawy (przy odbiorze)
+     * wymaga dostępnego odbioru osobistego, więc gdy jest w liście płatności, to
+     * odbiór jest w liście dostaw.
+     */
+    public function acceptsOrders(): bool
+    {
+        return $this->availableDeliveryMethods() !== []
+            && $this->availablePaymentMethods() !== [];
     }
 
     /**

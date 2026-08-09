@@ -45,14 +45,22 @@ class CartService
 
     /**
      * Dodaje produkt do koszyka (zwiększa ilość o $qty; domyślnie o krok jednostki
-     * — 1 szt. albo 0,5 kg). Ignoruje produkt spoza sklepu lub nieaktywny. Ilość
-     * przycinana do stanu magazynowego, gdy śledzony.
+     * — 1 szt. albo 0,5 kg). Ignoruje produkt spoza sklepu, nieaktywny oraz taki,
+     * którego sklep nie ma czym dostarczyć albo czym opłacić. Ilość przycinana do
+     * stanu magazynowego, gdy śledzony.
+     *
+     * Warunek sklepu jest tu, a nie tylko w widoku: ukrycie przycisku to UX, nie
+     * zabezpieczenie — komponent Livewire da się wywołać z palca.
      */
     public function add(Product $product, ?float $qty = null): void
     {
         $qty ??= $product->sale_unit->step();
 
         if ($product->shop_id === null || ! $product->is_active || $qty <= 0) {
+            return;
+        }
+
+        if ($product->shop?->acceptsOrders() !== true) {
             return;
         }
 

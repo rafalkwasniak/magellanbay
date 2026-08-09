@@ -33,7 +33,7 @@ class CartLivewireTest extends TestCase
 
     public function test_add_to_cart_button_adds_and_broadcasts(): void
     {
-        $shop = Shop::factory()->create();
+        $shop = Shop::factory()->sellable()->create();
         $product = $this->product($shop);
 
         Livewire::test(AddToCart::class, ['product' => $product])
@@ -46,7 +46,7 @@ class CartLivewireTest extends TestCase
 
     public function test_add_to_cart_shows_available_stock(): void
     {
-        $shop = Shop::factory()->create();
+        $shop = Shop::factory()->sellable()->create();
         $product = $this->product($shop, ['track_stock' => true, 'stock' => 7]);
 
         Livewire::test(AddToCart::class, ['product' => $product])
@@ -56,7 +56,7 @@ class CartLivewireTest extends TestCase
 
     public function test_add_to_cart_unavailable_when_out_of_stock(): void
     {
-        $shop = Shop::factory()->create();
+        $shop = Shop::factory()->sellable()->create();
         $product = $this->product($shop, ['track_stock' => true, 'stock' => 0]);
 
         Livewire::test(AddToCart::class, ['product' => $product])
@@ -66,7 +66,7 @@ class CartLivewireTest extends TestCase
 
     public function test_add_to_cart_blocks_once_all_stock_is_in_cart(): void
     {
-        $shop = Shop::factory()->create();
+        $shop = Shop::factory()->sellable()->create();
         $product = $this->product($shop, ['track_stock' => true, 'stock' => 1]);
 
         Livewire::test(AddToCart::class, ['product' => $product])
@@ -80,7 +80,7 @@ class CartLivewireTest extends TestCase
 
     public function test_counter_is_hidden_when_cart_is_empty(): void
     {
-        $shop = Shop::factory()->create();
+        $shop = Shop::factory()->sellable()->create();
 
         // Pusty koszyk → licznik nic nie renderuje (nie zaśmieca winiety).
         Livewire::test(CartCounter::class, ['shopId' => $shop->id])
@@ -93,7 +93,7 @@ class CartLivewireTest extends TestCase
 
     public function test_counter_reflects_cart_and_refreshes_on_event(): void
     {
-        $shop = Shop::factory()->create();
+        $shop = Shop::factory()->sellable()->create();
         // Licznik pokazuje liczbę POZYCJI — dwa różne produkty → „2".
         app(CartService::class)->add($this->product($shop), 3);
         app(CartService::class)->add($this->product($shop), 1);
@@ -106,7 +106,7 @@ class CartLivewireTest extends TestCase
 
     public function test_listing_sells_and_home_single_product_does_not(): void
     {
-        $shop = Shop::factory()->active()->create();
+        $shop = Shop::factory()->sellable()->active()->create();
         $this->product($shop);
         $base = 'http://'.$shop->slug.'.'.config('tenancy.central_domain');
 
@@ -122,7 +122,7 @@ class CartLivewireTest extends TestCase
 
     public function test_cart_page_renders_with_livewire_component(): void
     {
-        $shop = Shop::factory()->active()->create();
+        $shop = Shop::factory()->sellable()->active()->create();
 
         $this->get('http://'.$shop->slug.'.'.config('tenancy.central_domain').'/koszyk')
             ->assertOk()
@@ -132,7 +132,7 @@ class CartLivewireTest extends TestCase
 
     public function test_cart_page_increments_decrements_and_removes(): void
     {
-        $shop = Shop::factory()->create();
+        $shop = Shop::factory()->sellable()->create();
         $product = $this->product($shop, ['price_gross' => 10.00]);
         app(CartService::class)->add($product, 1);
 
@@ -154,7 +154,7 @@ class CartLivewireTest extends TestCase
 
     public function test_single_quantity_line_shows_trash_not_minus(): void
     {
-        $shop = Shop::factory()->create();
+        $shop = Shop::factory()->sellable()->create();
         $product = $this->product($shop);
         app(CartService::class)->add($product, 1);
 
@@ -168,7 +168,7 @@ class CartLivewireTest extends TestCase
 
     public function test_decrement_at_one_does_not_remove(): void
     {
-        $shop = Shop::factory()->create();
+        $shop = Shop::factory()->sellable()->create();
         $product = $this->product($shop);
         app(CartService::class)->add($product, 1);
 
@@ -181,7 +181,7 @@ class CartLivewireTest extends TestCase
 
     public function test_increment_never_exceeds_stock(): void
     {
-        $shop = Shop::factory()->create();
+        $shop = Shop::factory()->sellable()->create();
         $product = $this->product($shop, ['track_stock' => true, 'stock' => 2]);
         app(CartService::class)->add($product, 2);
 
@@ -194,7 +194,7 @@ class CartLivewireTest extends TestCase
 
     public function test_weight_stepper_moves_by_half_kilo(): void
     {
-        $shop = Shop::factory()->create();
+        $shop = Shop::factory()->sellable()->create();
         $product = $this->product($shop, ['sale_unit' => \App\Enums\SaleUnit::Weight, 'track_stock' => false, 'stock' => null]);
         app(CartService::class)->add($product, 1.0);   // 1,00 kg
 
@@ -208,7 +208,7 @@ class CartLivewireTest extends TestCase
 
     public function test_weight_quantity_can_be_typed_by_hand(): void
     {
-        $shop = Shop::factory()->create();
+        $shop = Shop::factory()->sellable()->create();
         $product = $this->product($shop, ['sale_unit' => \App\Enums\SaleUnit::Weight, 'track_stock' => false, 'stock' => null]);
         app(CartService::class)->add($product, 0.5);
 
@@ -220,7 +220,7 @@ class CartLivewireTest extends TestCase
 
     public function test_weight_decrement_floors_at_half_kilo_and_shows_trash(): void
     {
-        $shop = Shop::factory()->create();
+        $shop = Shop::factory()->sellable()->create();
         $product = $this->product($shop, ['sale_unit' => \App\Enums\SaleUnit::Weight, 'track_stock' => false, 'stock' => null]);
         app(CartService::class)->add($product, 0.5);   // już na minimum
 
@@ -234,7 +234,7 @@ class CartLivewireTest extends TestCase
 
     public function test_cart_page_shows_banner_when_stock_dropped(): void
     {
-        $shop = Shop::factory()->create();
+        $shop = Shop::factory()->sellable()->create();
         $product = $this->product($shop, ['name' => 'Storczyk', 'track_stock' => true, 'stock' => 9]);
         app(CartService::class)->add($product, 8);
 
@@ -247,7 +247,7 @@ class CartLivewireTest extends TestCase
 
     public function test_cart_page_no_banner_when_nothing_changed(): void
     {
-        $shop = Shop::factory()->create();
+        $shop = Shop::factory()->sellable()->create();
         $product = $this->product($shop, ['track_stock' => true, 'stock' => 10]);
         app(CartService::class)->add($product, 2);
 

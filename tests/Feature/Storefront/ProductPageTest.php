@@ -33,7 +33,7 @@ class ProductPageTest extends TestCase
 
     public function test_product_page_renders(): void
     {
-        $shop = Shop::factory()->active()->create();
+        $shop = Shop::factory()->active()->sellable()->create();
         $product = $this->product($shop, ['name' => 'Kubek Ceramiczny', 'price_gross' => 29.90]);
 
         $this->get($this->host($shop).$product->storefrontPath())

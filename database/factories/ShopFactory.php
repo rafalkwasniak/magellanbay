@@ -44,6 +44,28 @@ class ShopFactory extends Factory
     }
 
     /**
+     * Sklep, w którym DA SIĘ dokończyć zakup: jest czym dostarczyć (odbiór
+     * osobisty — jedyna metoda bez uprawnienia pakietu) i czym zapłacić
+     * (płatność przy odbiorze). Bez tego storefront nie pokazuje „Do koszyka",
+     * bo sklep bez dostawy i płatności jest wykazem oferty, nie sklepem —
+     * patrz Shop::acceptsOrders().
+     *
+     * Odbiór wymaga KOMPLETNEGO adresu sklepu, więc state dokłada i adres.
+     */
+    public function sellable(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'street' => 'Kwiatowa',
+            'building_number' => '12',
+            'postal_code' => '00-001',
+            'city' => 'Warszawa',
+            'province' => config('shop.provinces')[0],
+            'pickup_enabled' => true,
+            'pay_on_pickup_enabled' => true,
+        ]);
+    }
+
+    /**
      * Sklep z danym pakietem (snapshot uprawnień z configu) — do testów tierów.
      */
     public function package(string $slug): static

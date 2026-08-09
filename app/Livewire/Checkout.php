@@ -182,25 +182,17 @@ class Checkout extends Component
     }
 
     /**
-     * Dostępne metody dostawy (tylko włączone i realnie gotowe). MVP: odbiór.
+     * Dostępne metody dostawy (tylko włączone i realnie gotowe) — z modelu, tym
+     * samym źródłem, z którego storefront bierze decyzję o przycisku „Do koszyka".
      *
      * @return array<string, string>
      */
     public function deliveryOptions(): array
     {
-        $shop = $this->shop();
         $options = [];
 
-        if ($shop->pickupAvailable()) {
-            $options[DeliveryMethod::Pickup->value] = DeliveryMethod::Pickup->label();
-        }
-
-        if ($shop->courierAvailable()) {
-            $options[DeliveryMethod::Courier->value] = DeliveryMethod::Courier->label();
-        }
-
-        if ($shop->parcelLockerAvailable()) {
-            $options[DeliveryMethod::ParcelLocker->value] = DeliveryMethod::ParcelLocker->label();
+        foreach ($this->shop()->availableDeliveryMethods() as $method) {
+            $options[$method->value] = $method->label();
         }
 
         return $options;
@@ -249,23 +241,18 @@ class Checkout extends Component
      */
     public function paymentOptions(): array
     {
-        $shop = $this->shop();
         $options = [];
 
-        // Płatność online na górze (preferowana): działa przy każdej dostawie,
-        // bo to przedpłata — pieniądze wpływają przed wydaniem towaru.
-        if ($shop->onlinePaymentsEnabled()) {
-            $options[PaymentMethod::Online->value] = PaymentMethod::Online->label();
-        }
+        foreach ($this->shop()->availablePaymentMethods() as $method) {
+            // Płatność przy odbiorze ma sens tylko przy odbiorze osobistym — przy
+            // wysyłce nie ma „odbioru", pod którym klient zapłaci. Kurier ⇒ przelew.
+            // To jedyne zawężenie zależne od WYBRANEJ dostawy, więc model listy
+            // płatności nie zna, a kasa je tu dokłada.
+            if ($method === PaymentMethod::PayOnPickup && $this->shippedDelivery()) {
+                continue;
+            }
 
-        if ($shop->bankTransferAvailable()) {
-            $options[PaymentMethod::BankTransfer->value] = PaymentMethod::BankTransfer->label();
-        }
-
-        // Płatność przy odbiorze ma sens tylko przy odbiorze osobistym — przy
-        // wysyłce nie ma „odbioru", pod którym klient zapłaci. Kurier ⇒ przelew.
-        if ($shop->payOnPickupAvailable() && ! $this->shippedDelivery()) {
-            $options[PaymentMethod::PayOnPickup->value] = PaymentMethod::PayOnPickup->label();
+            $options[$method->value] = $method->label();
         }
 
         return $options;

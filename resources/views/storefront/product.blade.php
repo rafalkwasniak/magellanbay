@@ -67,10 +67,16 @@
                 <x-storefront.delivery-summary :shop="$shop" class="mt-6" />
 
                 {{-- Przycisk „Do koszyka" pod tabelką, wyrównany do prawej krawędzi
-                     kolumny (compact = komponent nie dubluje linii dostępności). --}}
-                <div class="mt-6 flex justify-end">
-                    <livewire:add-to-cart :product="$product" :compact="true" />
-                </div>
+                     kolumny (compact = komponent nie dubluje linii dostępności).
+                     Sklep bez dostawy albo bez płatności przycisku nie pokazuje —
+                     zakupu i tak nie da się dokończyć, a strona zostaje wykazem
+                     oferty (kontakt ze sprzedawcą wg opisu). Bez komunikatu:
+                     nieobecność przycisku mówi wszystko, czego klient potrzebuje. --}}
+                @if ($shop->acceptsOrders())
+                    <div class="mt-6 flex justify-end">
+                        <livewire:add-to-cart :product="$product" :compact="true" />
+                    </div>
+                @endif
 
                 {{-- Tagi w kaflu jak na wykazie (Filtruj). --}}
                 @if (count($productTags))

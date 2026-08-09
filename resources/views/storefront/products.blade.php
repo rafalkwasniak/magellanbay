@@ -43,9 +43,12 @@
             @endif
         @else
             {{-- Liczba kolumn skalowana do wielkości katalogu (klasy statyczne dla Tailwinda). --}}
+            {{-- Pytanie „czy w tym sklepie da się kupić" zadajemy RAZ na wykaz, nie
+                 raz na kafel — odpowiedź jest ta sama dla wszystkich produktów. --}}
+            @php($canOrder = $shop->acceptsOrders())
             <div class="mt-8 grid gap-6 sm:grid-cols-2 {{ ($columns ?? 3) === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3' }}">
                 @foreach ($products as $product)
-                    <x-storefront.product-card :product="$product" :back="request()->getRequestUri()" />
+                    <x-storefront.product-card :product="$product" :back="request()->getRequestUri()" :can-order="$canOrder" />
                 @endforeach
             </div>
 

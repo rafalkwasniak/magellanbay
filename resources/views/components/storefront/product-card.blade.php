@@ -1,4 +1,8 @@
-@props(['product', 'aspect' => '1 / 1', 'back' => null])
+{{-- `canOrder` = czy sklep ma czym dostarczyć i czym opłacić zamówienie. Kafel
+     nie pyta o to sam (jedna odpowiedź na cały wykaz, nie jedna na produkt),
+     więc dostaje gotową. Domyślnie false: kafel bez tej wiedzy woli nie
+     obiecywać zakupu, niż obiecać go tam, gdzie się nie da dokończyć. --}}
+@props(['product', 'aspect' => '1 / 1', 'back' => null, 'canOrder' => false])
 
 @php
     $main = $product->mainImage();
@@ -49,7 +53,9 @@
     </a>
 
     {{-- Stopka z akcją — poza anchorem (przycisk nie może żyć w <a>), do prawej. --}}
-    <div class="mt-auto flex justify-end p-4 pt-3">
-        <livewire:add-to-cart :product="$product" :compact="true" wire:key="atc-{{ $product->id }}" />
-    </div>
+    @if ($canOrder)
+        <div class="mt-auto flex justify-end p-4 pt-3">
+            <livewire:add-to-cart :product="$product" :compact="true" wire:key="atc-{{ $product->id }}" />
+        </div>
+    @endif
 </div>

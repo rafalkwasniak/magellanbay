@@ -32,7 +32,7 @@ class DiscountEntitlementGateTest extends TestCase
      */
     private function shopWithoutEntitlement(): array
     {
-        $shop = Shop::factory()->create();   // Kram: discount_codes = false
+        $shop = Shop::factory()->sellable()->create();   // Kram: discount_codes = false
         $product = Product::factory()->create([
             'shop_id' => $shop->id,
             'price_gross' => 200,
@@ -56,7 +56,7 @@ class DiscountEntitlementGateTest extends TestCase
 
     public function test_cart_shows_the_field_with_the_entitlement(): void
     {
-        $shop = Shop::factory()->withDiscountCodes()->create();
+        $shop = Shop::factory()->sellable()->withDiscountCodes()->create();
         $product = Product::factory()->create(['shop_id' => $shop->id, 'stock' => 10]);
         app(CartService::class)->add($product, 1);
 

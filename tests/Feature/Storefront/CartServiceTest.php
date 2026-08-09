@@ -34,7 +34,7 @@ class CartServiceTest extends TestCase
 
     public function test_add_accumulates_quantity(): void
     {
-        $shop = Shop::factory()->create();
+        $shop = Shop::factory()->sellable()->create();
         $product = $this->product($shop);
 
         $this->cart()->add($product, 2);
@@ -47,7 +47,7 @@ class CartServiceTest extends TestCase
 
     public function test_add_caps_to_tracked_stock(): void
     {
-        $shop = Shop::factory()->create();
+        $shop = Shop::factory()->sellable()->create();
         $product = $this->product($shop, ['track_stock' => true, 'stock' => 4]);
 
         $this->cart()->add($product, 10);
@@ -57,7 +57,7 @@ class CartServiceTest extends TestCase
 
     public function test_inactive_or_foreign_products_are_ignored(): void
     {
-        $shop = Shop::factory()->create();
+        $shop = Shop::factory()->sellable()->create();
         $inactive = $this->product($shop, ['is_active' => false]);
 
         $this->cart()->add($inactive, 1);
@@ -67,7 +67,7 @@ class CartServiceTest extends TestCase
 
     public function test_set_quantity_zero_removes_line(): void
     {
-        $shop = Shop::factory()->create();
+        $shop = Shop::factory()->sellable()->create();
         $product = $this->product($shop);
         $this->cart()->add($product, 3);
 
@@ -78,7 +78,7 @@ class CartServiceTest extends TestCase
 
     public function test_lines_compute_totals_from_fresh_price(): void
     {
-        $shop = Shop::factory()->create();
+        $shop = Shop::factory()->sellable()->create();
         $product = $this->product($shop, ['price_gross' => 12.50]);
         $this->cart()->add($product, 2);
 
@@ -91,7 +91,7 @@ class CartServiceTest extends TestCase
 
     public function test_lines_drop_products_that_became_inactive(): void
     {
-        $shop = Shop::factory()->create();
+        $shop = Shop::factory()->sellable()->create();
         $product = $this->product($shop);
         $this->cart()->add($product, 2);
 
@@ -105,7 +105,7 @@ class CartServiceTest extends TestCase
 
     public function test_lines_cap_quantity_when_stock_drops(): void
     {
-        $shop = Shop::factory()->create();
+        $shop = Shop::factory()->sellable()->create();
         $product = $this->product($shop, ['track_stock' => true, 'stock' => 9]);
         $this->cart()->add($product, 8);
 
@@ -118,7 +118,7 @@ class CartServiceTest extends TestCase
 
     public function test_reconcile_reports_quantity_adjustment_when_stock_drops(): void
     {
-        $shop = Shop::factory()->create();
+        $shop = Shop::factory()->sellable()->create();
         $product = $this->product($shop, ['name' => 'Bukiet', 'track_stock' => true, 'stock' => 9]);
         $this->cart()->add($product, 8);
 
@@ -133,7 +133,7 @@ class CartServiceTest extends TestCase
 
     public function test_reconcile_reports_removed_product(): void
     {
-        $shop = Shop::factory()->create();
+        $shop = Shop::factory()->sellable()->create();
         $product = $this->product($shop, ['name' => 'Świeca']);
         $this->cart()->add($product, 2);
 
@@ -146,7 +146,7 @@ class CartServiceTest extends TestCase
 
     public function test_reconcile_reports_sold_out_product(): void
     {
-        $shop = Shop::factory()->create();
+        $shop = Shop::factory()->sellable()->create();
         $product = $this->product($shop, ['name' => 'Kubek', 'track_stock' => true, 'stock' => 4]);
         $this->cart()->add($product, 4);
 
@@ -161,7 +161,7 @@ class CartServiceTest extends TestCase
 
     public function test_reconcile_has_no_notices_when_nothing_changed(): void
     {
-        $shop = Shop::factory()->create();
+        $shop = Shop::factory()->sellable()->create();
         $product = $this->product($shop, ['track_stock' => true, 'stock' => 10]);
         $this->cart()->add($product, 3);
 
@@ -173,7 +173,7 @@ class CartServiceTest extends TestCase
 
     public function test_weight_product_takes_fractional_quantity_and_caps_to_stock(): void
     {
-        $shop = Shop::factory()->create();
+        $shop = Shop::factory()->sellable()->create();
         $product = $this->product($shop, [
             'sale_unit' => \App\Enums\SaleUnit::Weight,
             'track_stock' => true,
@@ -196,7 +196,7 @@ class CartServiceTest extends TestCase
 
     public function test_weight_quantity_below_minimum_removes_line(): void
     {
-        $shop = Shop::factory()->create();
+        $shop = Shop::factory()->sellable()->create();
         $product = $this->product($shop, ['sale_unit' => \App\Enums\SaleUnit::Weight]);
         $this->cart()->add($product, 1.0);
 
