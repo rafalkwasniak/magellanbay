@@ -6,9 +6,11 @@ namespace App\Models;
 use App\Enums\ConsentChannel;
 use App\Enums\LegalDocumentType;
 use App\Enums\UserRole;
+use Closure;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -30,6 +32,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'last_login_at' => 'datetime',
             'password' => 'hashed',
             'role' => UserRole::class,
         ];
@@ -78,6 +81,26 @@ class User extends Authenticatable
         return (bool) $this->marketingConsents
             ->firstWhere('channel', $channel)
             ?->isActive();
+    }
+
+    /**
+     * Warunek SQL „zgoda w tym kanale jest czynna", w kształcie do wstawienia w
+     * `whereHas()` / `whereDoesntHave()`.
+     *
+     * Istnieje po to, żeby definicja czynnej zgody miała JEDNO miejsce wspólne z
+     * `isActive()` na modelu zgody. Filtr listy sprzedawców i przyszłe narzędzie
+     * wysyłki muszą pytać dokładnie tak samo — rozjazd oznaczałby, że admin widzi
+     * inny zbiór adresów, niż dostanie wiadomość.
+     *
+     * @return Closure(Builder<UserMarketingConsent>): void
+     */
+    public static function activeMarketingConsent(ConsentChannel $channel = ConsentChannel::Email): Closure
+    {
+        return function ($query) use ($channel): void {
+            $query->where('channel', $channel)
+                ->whereNotNull('granted_at')
+                ->whereNull('revoked_at');
+        };
     }
 
     /**

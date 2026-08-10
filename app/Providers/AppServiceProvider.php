@@ -2,9 +2,11 @@
 
 namespace App\Providers;
 
+use App\Listeners\RecordLogin;
 use App\Listeners\ReportLockout;
 use App\Services\SlowQueryLogger;
 use Illuminate\Auth\Events\Lockout;
+use Illuminate\Auth\Events\Login;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Http\Request;
@@ -41,6 +43,10 @@ class AppServiceProvider extends ServiceProvider
         // Wyczerpany limit prób logowania leci na kanał alertów — inaczej nie
         // wiemy, czy cisza oznacza spokój, czy tylko brak obserwacji.
         Event::listen(Lockout::class, ReportLockout::class);
+
+        // Ostatnie logowanie na koncie — konsola admina odróżnia dzięki temu
+        // sprzedawcę pracującego od takiego, który zarejestrował się i zniknął.
+        Event::listen(Login::class, RecordLogin::class);
     }
 
     /**

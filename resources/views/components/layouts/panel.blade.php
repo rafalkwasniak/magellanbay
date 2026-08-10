@@ -31,7 +31,7 @@
         $nav = $isAdmin ? [
             ['label' => 'Pulpit', 'route' => 'administrator.dashboard', 'icon' => '🏠'],
             ['label' => 'Sklepy', 'route' => 'administrator.shops.index', 'active' => 'administrator.shops.*', 'icon' => '🛍️'],
-            ['label' => 'Sprzedawcy', 'route' => null, 'icon' => '👥'],
+            ['label' => 'Sprzedawcy', 'route' => 'administrator.sellers.index', 'active' => 'administrator.sellers.*', 'icon' => '👥'],
             ['label' => 'Zamówienia', 'route' => null, 'icon' => '📦'],
             ['label' => 'Pakiety', 'route' => null, 'icon' => '✨'],
             ['label' => 'Ustawienia', 'route' => null, 'icon' => '⚙️'],

@@ -71,8 +71,10 @@
                         <span>🛍️</span><span class="flex-1">Sklepy i pakiety</span><span>→</span>
                     </a>
                 </li>
-                <li class="flex items-center gap-3 rounded-2xl bg-white/10 px-4 py-2.5 text-amber-50">
-                    <span>👥</span><span class="flex-1">Sprzedawcy</span><span class="text-xs">wkrótce</span>
+                <li>
+                    <a href="{{ route('administrator.sellers.index') }}" class="flex items-center gap-3 rounded-2xl bg-white/15 px-4 py-2.5 backdrop-blur transition hover:brightness-105">
+                        <span>👥</span><span class="flex-1">Sprzedawcy</span><span>→</span>
+                    </a>
                 </li>
             </ul>
         </div>

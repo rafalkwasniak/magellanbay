@@ -3,6 +3,7 @@
 use App\Enums\LegalDocumentType;
 use App\Http\Controllers\Administrator\DashboardController as AdministratorDashboard;
 use App\Http\Controllers\Administrator\MailPreviewController;
+use App\Http\Controllers\Administrator\SellerController as AdministratorSellerController;
 use App\Http\Controllers\Administrator\ShopController as AdministratorShopController;
 use App\Http\Controllers\AiController;
 use App\Http\Controllers\Auth\ActivationController;
@@ -163,6 +164,13 @@ Route::middleware(['auth', 'role:admin'])
         // `przywroc` zatrzymuje usunięcie zlecone przez sprzedawcę.
         Route::post('/sklepy/{shop}/usun', [AdministratorShopController::class, 'destroy'])->name('shops.destroy');
         Route::post('/sklepy/{shop}/przywroc', [AdministratorShopController::class, 'restore'])->name('shops.restore');
+
+        // Sprzedawcy — konta z rolą `seller`: lista z filtrami i karta konta
+        // (dane, sklep, stan aktywacji, zgody). Podgląd plus jedna akcja
+        // pomocowa: ponowne wysłanie linku aktywacyjnego.
+        Route::get('/sprzedawcy', [AdministratorSellerController::class, 'index'])->name('sellers.index');
+        Route::get('/sprzedawcy/{user}', [AdministratorSellerController::class, 'show'])->name('sellers.show');
+        Route::post('/sprzedawcy/{user}/aktywacja', [AdministratorSellerController::class, 'resendActivation'])->name('sellers.activation');
 
         // Podgląd szablonów maili (na froncie, dla nas) — np. /administrator/podglad-maila/aktywacja
         Route::get('/podglad-maila/{template}', [MailPreviewController::class, 'show'])->name('mail.preview');
