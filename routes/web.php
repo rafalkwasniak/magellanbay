@@ -2,6 +2,7 @@
 
 use App\Enums\LegalDocumentType;
 use App\Http\Controllers\Administrator\DashboardController as AdministratorDashboard;
+use App\Http\Controllers\Administrator\MailingController as AdministratorMailingController;
 use App\Http\Controllers\Administrator\MailPreviewController;
 use App\Http\Controllers\Administrator\SellerController as AdministratorSellerController;
 use App\Http\Controllers\Administrator\ShopController as AdministratorShopController;
@@ -16,6 +17,7 @@ use App\Http\Controllers\CookieConsentController;
 use App\Http\Controllers\LegalController;
 use App\Http\Controllers\PackagePaymentWebhookController;
 use App\Http\Controllers\PaynowWebhookController;
+use App\Http\Controllers\PlatformUnsubscribeController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RobotsController;
 use App\Http\Controllers\Seller\AnalyticsController;
@@ -146,6 +148,19 @@ Route::get('/'.LegalDocumentType::Privacy->slug(), [LegalController::class, 'sho
 
 /*
 |--------------------------------------------------------------------------
+| Wypis z wiadomości handlowych Kramio (publiczny, bez logowania)
+|--------------------------------------------------------------------------
+| Link ze stopki wiadomości platformy do sprzedawców. Podpisany i BEZTERMINOWY
+| — mail sprzed roku musi dać się odsubskrybować tak samo jak dzisiejszy.
+| Odpowiednik `storefront.unsubscribe`, tylko na centrali i dla konta `User`.
+*/
+Route::get('/wypisz-sie/{user}', [PlatformUnsubscribeController::class, 'show'])
+    ->middleware('signed')->name('platform.unsubscribe');
+Route::post('/wypisz-sie/{user}/przywroc', [PlatformUnsubscribeController::class, 'restore'])
+    ->middleware('signed')->name('platform.unsubscribe.restore');
+
+/*
+|--------------------------------------------------------------------------
 | Panel administratora (rola: admin)
 |--------------------------------------------------------------------------
 */
@@ -171,6 +186,16 @@ Route::middleware(['auth', 'role:admin'])
         Route::get('/sprzedawcy', [AdministratorSellerController::class, 'index'])->name('sellers.index');
         Route::get('/sprzedawcy/{user}', [AdministratorSellerController::class, 'show'])->name('sellers.show');
         Route::post('/sprzedawcy/{user}/aktywacja', [AdministratorSellerController::class, 'resendActivation'])->name('sellers.activation');
+
+        // Wiadomości do sprzedawców — treści handlowe do kont ze zgodą.
+        // Kontroler prowadzi wyłącznie szkic; wybór odbiorców i wysyłkę
+        // obsługują komponenty Livewire na ekranie edycji.
+        Route::get('/wiadomosci', [AdministratorMailingController::class, 'index'])->name('mailings.index');
+        Route::get('/wiadomosci/nowa', [AdministratorMailingController::class, 'create'])->name('mailings.create');
+        Route::post('/wiadomosci', [AdministratorMailingController::class, 'store'])->name('mailings.store');
+        Route::get('/wiadomosci/{mailing}', [AdministratorMailingController::class, 'edit'])->name('mailings.edit');
+        Route::post('/wiadomosci/{mailing}', [AdministratorMailingController::class, 'update'])->name('mailings.update');
+        Route::post('/wiadomosci/{mailing}/usun', [AdministratorMailingController::class, 'destroy'])->name('mailings.destroy');
 
         // Podgląd szablonów maili (na froncie, dla nas) — np. /administrator/podglad-maila/aktywacja
         Route::get('/podglad-maila/{template}', [MailPreviewController::class, 'show'])->name('mail.preview');
