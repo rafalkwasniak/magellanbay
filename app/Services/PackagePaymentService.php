@@ -82,10 +82,49 @@ class PackagePaymentService
     }
 
     /**
+     * Rejestruje wpłatę przyjętą POZA bramką (przelew, gotówka) i od razu ją
+     * stosuje. Bez tego pakiet sprzedany z ręki nie zostawiał w bazie żadnego
+     * śladu w złotówkach, a przychód platformy pokazywał zero.
+     *
+     * `$issueInvoice` domyślnie FAŁSZ, w odróżnieniu od ścieżki z bramki:
+     * Fakturownia nie ma sandboxa, więc każde wywołanie tworzy REALNY dokument.
+     * Przy wpłacie z ręki faktura zwykle już istnieje (admin wpisuje jej numer),
+     * a wystawienie drugiej jest kłopotem, którego nie da się cofnąć jednym
+     * kliknięciem.
+     *
+     * @param  array{target_package: string, amount: float, method: string, paid_at: mixed, new_ends_at: mixed, invoice_number?: ?string, note?: ?string, recorded_by?: ?int}  $data
+     */
+    public function record(Shop $shop, array $data, bool $notify = true, bool $issueInvoice = false): PackagePayment
+    {
+        $payment = $shop->packagePayments()->create([
+            'target_package' => $data['target_package'],
+            'amount' => $data['amount'],
+            // Zniżki za resztówkę przy wpłacie z ręki nie liczymy — admin wpisuje
+            // kwotę, na którą się umówił, a doklejanie do niej wyliczonego
+            // upustu opisywałoby transakcję, której nie było.
+            'credit' => 0,
+            'new_ends_at' => $data['new_ends_at'],
+            'status' => PackagePayment::STATUS_PAID,
+            'method' => $data['method'],
+            'paid_at' => $data['paid_at'],
+            'invoice_number' => $data['invoice_number'] ?? null,
+            'note' => $data['note'] ?? null,
+            'recorded_by' => $data['recorded_by'] ?? null,
+        ]);
+
+        $this->apply($payment, $notify, $issueInvoice);
+
+        return $payment->fresh();
+    }
+
+    /**
      * Stosuje opłacony zakup: pakiet, snapshot (lepki), cena i termin z migawki.
      * Wołane z webhooka po CONFIRMED. Drugie wywołanie nic nie robi.
+     *
+     * Przełączniki są dla ścieżki RĘCZNEJ (patrz `record()`); webhook woła bez
+     * nich i zachowuje się dokładnie jak dotąd.
      */
-    public function apply(PackagePayment $payment): void
+    public function apply(PackagePayment $payment, bool $notify = true, bool $issueInvoice = true): void
     {
         if ($payment->isApplied()) {
             return;
@@ -153,13 +192,18 @@ class PackagePaymentService
             'shop_id' => $shop->id,
             'package' => $payment->target_package,
             'payment_id' => $payment->payment_id,
+            'method' => $payment->method,
         ]);
 
-        $this->mailPackageActivated($shop->fresh(), $payment, $isRenewal, $autoHidden);
+        if ($notify) {
+            $this->mailPackageActivated($shop->fresh(), $payment, $isRenewal, $autoHidden);
+        }
 
         // Faktura w tle: sprzedawca nie czeka na Fakturownię, a webhook Paynow
         // dostaje szybką odpowiedź (operator ponawia powiadomienia po timeoucie).
-        GeneratePackageInvoice::dispatch($payment->fresh());
+        if ($issueInvoice) {
+            GeneratePackageInvoice::dispatch($payment->fresh());
+        }
     }
 
     /**

@@ -4,6 +4,7 @@ use App\Enums\LegalDocumentType;
 use App\Http\Controllers\Administrator\DashboardController as AdministratorDashboard;
 use App\Http\Controllers\Administrator\MailingController as AdministratorMailingController;
 use App\Http\Controllers\Administrator\MailPreviewController;
+use App\Http\Controllers\Administrator\PackageController as AdministratorPackageController;
 use App\Http\Controllers\Administrator\SellerController as AdministratorSellerController;
 use App\Http\Controllers\Administrator\ShopController as AdministratorShopController;
 use App\Http\Controllers\AiController;
@@ -180,6 +181,16 @@ Route::middleware(['auth', 'role:admin'])
         Route::post('/sklepy/{shop}/usun', [AdministratorShopController::class, 'destroy'])->name('shops.destroy');
         Route::post('/sklepy/{shop}/przywroc', [AdministratorShopController::class, 'restore'])->name('shops.restore');
 
+        // Pakiety — przekrój pieniędzy platformy: przychód z opłat, wartość
+        // biegnących abonamentów, rozkład sklepów po pakietach. Zmiana pakietu
+        // pojedynczego sklepu zostaje w dziale „Sklepy".
+        Route::get('/pakiety', [AdministratorPackageController::class, 'index'])->name('packages.index');
+
+        // Rejestr opłat + rejestracja wpłaty przyjętej poza bramką (przelew,
+        // gotówka). Zapis prowadzi komponent Livewire, stąd sam GET.
+        Route::get('/pakiety/oplaty', [AdministratorPackageController::class, 'payments'])->name('packages.payments');
+        Route::get('/pakiety/oplaty/nowa', [AdministratorPackageController::class, 'recordPayment'])->name('packages.payments.create');
+
         // Sprzedawcy — konta z rolą `seller`: lista z filtrami i karta konta
         // (dane, sklep, stan aktywacji, zgody). Podgląd plus jedna akcja
         // pomocowa: ponowne wysłanie linku aktywacyjnego.
@@ -256,9 +267,11 @@ Route::middleware(['auth', 'role:seller', 'ensure.consents'])
         // przesyłek, a nie na pojedynczym zamówieniu.
         Route::get('/odbior-kuriera', [ShipmentPickupController::class, 'index'])->name('shipments.pickup');
 
-        // „Mój pakiet" — co sprzedawca ma wykupione i do kiedy. Zakup online
-        // dojdzie osobno (wymaga konta płatniczego platformy); na razie ekran
-        // informuje i kieruje do kontaktu.
+        // „Mój pakiet" — co sprzedawca ma wykupione i do kiedy, plus ZAKUP ONLINE
+        // przez Paynow z konta platformy (klucze produkcyjne w `.env`, webhook
+        // `payments.paynow.packages.webhook`). Zdanie „zakup dojdzie osobno"
+        // wisiało tu długo po tym, jak zakup powstał — i raz wprowadziło
+        // asystenta w błąd przy planowaniu. Nie wracać do niego.
         Route::get('/pakiet', [PackageController::class, 'show'])->name('package.show');
         Route::post('/pakiet/kup/{package}', [PackageController::class, 'purchase'])
             ->middleware('throttle:10,1')->name('package.purchase');

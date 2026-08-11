@@ -269,6 +269,22 @@ return [
     |
     */
 
+    /*
+    |--------------------------------------------------------------------------
+    | Opłaty za pakiety
+    |--------------------------------------------------------------------------
+    |
+    | `abandoned_after_hours` — po ilu godzinach rozpoczęta i nieopłacona
+    | płatność trafia w konsoli admina na listę „wisi". Bramka rozstrzyga się w
+    | minutach, ale przelew tradycyjny przez Paynow potrafi wpłynąć następnego
+    | dnia roboczego — stąd doba, a nie godzina.
+    |
+    */
+
+    'package_payments' => [
+        'abandoned_after_hours' => 24,
+    ],
+
     'subscription' => [
         'grace_days' => 7,
         'reminder_days' => [14, 7, 1],

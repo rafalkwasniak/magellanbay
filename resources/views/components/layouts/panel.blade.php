@@ -34,7 +34,7 @@
             ['label' => 'Sprzedawcy', 'route' => 'administrator.sellers.index', 'active' => 'administrator.sellers.*', 'icon' => '👥'],
             ['label' => 'Wiadomości', 'route' => 'administrator.mailings.index', 'active' => 'administrator.mailings.*', 'icon' => '📣'],
             ['label' => 'Zamówienia', 'route' => null, 'icon' => '📦'],
-            ['label' => 'Pakiety', 'route' => null, 'icon' => '✨'],
+            ['label' => 'Pakiety', 'route' => 'administrator.packages.index', 'active' => 'administrator.packages.*', 'icon' => '✨'],
             ['label' => 'Ustawienia', 'route' => null, 'icon' => '⚙️'],
         ] : [
             ['label' => 'Pulpit', 'route' => 'seller.dashboard', 'icon' => '🏠'],

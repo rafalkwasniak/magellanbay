@@ -1,21 +1,39 @@
 <x-layouts.panel title="Pulpit administratora">
+    {{-- Kafelki pieniędzy klikają w dział „Pakiety" — tam jest rozbicie, którego
+         cztery liczby nie pomieszczą. Kafelek „Sklepy" prowadzi do listy sklepów. --}}
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         @foreach ([
-            ['Sprzedane abonamenty', (string) $subscriptionsSold, 'Po uruchomieniu płatności za SaaS', '🧾'],
-            ['Przychód — sumarycznie', number_format($saasRevenueTotal, 2, ',', ' ').' zł', 'Po uruchomieniu płatności za SaaS', '💰'],
-            ['Przychód — 12 mies.', number_format($saasRevenue12m, 2, ',', ' ').' zł', 'Po uruchomieniu płatności za SaaS', '📈'],
-            ['Sklepy', (string) $shopsCount, $activeShopsCount.' '.trans_choice('aktywny|aktywne|aktywnych', $activeShopsCount), '🛍️'],
-        ] as [$label, $value, $hint, $icon])
-            <div class="rounded-3xl border border-white/60 bg-white/70 p-5 backdrop-blur">
+            ['Sprzedane abonamenty', (string) $revenue['count'], 'Opłacone opłaty za pakiety', '🧾', route('administrator.packages.payments')],
+            ['Przychód — sumarycznie', \App\Support\Money::pln($revenue['total']), 'Od początku platformy', '💰', route('administrator.packages.index')],
+            ['Przychód — 12 mies.', \App\Support\Money::pln($revenue['last12m']), 'Ostatnie 12 miesięcy, licząc od dziś', '📈', route('administrator.packages.index')],
+            ['Sklepy', (string) $shopsCount, $activeShopsCount.' '.trans_choice('aktywny|aktywne|aktywnych', $activeShopsCount), '🛍️', route('administrator.shops.index')],
+        ] as [$label, $value, $hint, $icon, $url])
+            <a href="{{ $url }}" class="block rounded-3xl border border-white/60 bg-white/70 p-5 backdrop-blur transition hover:bg-white">
                 <div class="flex items-center justify-between">
                     <p class="text-sm font-medium text-stone-500">{{ $label }}</p>
                     <span class="text-lg">{{ $icon }}</span>
                 </div>
-                <p class="mt-2 text-3xl font-semibold tracking-tight text-stone-900">{{ $value }}</p>
+                <p class="mt-2 text-2xl font-semibold tracking-tight tabular-nums text-stone-900">{{ $value }}</p>
                 <p class="mt-1 text-xs text-stone-400">{{ $hint }}</p>
-            </div>
+            </a>
         @endforeach
     </div>
+
+    @if ($attentionCount > 0)
+        {{-- Pulpit jest pierwszym ekranem po zalogowaniu. Kończący się abonament
+             musi się rzucić w oczy TU, a nie dopiero po wejściu w Pakiety —
+             przy sprzedaży z ręki nikt inny o terminie nie przypomni. --}}
+        <a href="{{ route('administrator.packages.index') }}"
+            class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-amber-200 bg-amber-50/70 px-5 py-4 backdrop-blur transition hover:bg-amber-50">
+            <span>
+                <span class="block text-sm font-medium text-amber-900">
+                    {{ $attentionCount }} {{ trans_choice('sprawa|sprawy|spraw', $attentionCount) }} wokół pakietów wymaga uwagi
+                </span>
+                <span class="mt-0.5 block text-sm text-amber-800">Kończące się abonamenty, zaległe wpłaty, opłaty bez faktury.</span>
+            </span>
+            <span class="shrink-0 text-sm font-medium text-amber-900">Zobacz →</span>
+        </a>
+    @endif
 
     <div class="mt-6 grid gap-6 lg:grid-cols-3">
         <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur lg:col-span-2">
@@ -68,12 +86,19 @@
             <ul class="mt-6 space-y-3 text-sm">
                 <li>
                     <a href="{{ route('administrator.shops.index') }}" class="flex items-center gap-3 rounded-2xl bg-white/15 px-4 py-2.5 backdrop-blur transition hover:brightness-105">
-                        <span>🛍️</span><span class="flex-1">Sklepy i pakiety</span><span>→</span>
+                        {{-- Było „Sklepy i pakiety" — od kiedy Pakiety są osobnym
+                             działem, ta nazwa prowadziłaby nie tam, gdzie obiecuje. --}}
+                        <span>🛍️</span><span class="flex-1">Sklepy</span><span>→</span>
                     </a>
                 </li>
                 <li>
                     <a href="{{ route('administrator.sellers.index') }}" class="flex items-center gap-3 rounded-2xl bg-white/15 px-4 py-2.5 backdrop-blur transition hover:brightness-105">
                         <span>👥</span><span class="flex-1">Sprzedawcy</span><span>→</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ route('administrator.packages.payments.create') }}" class="flex items-center gap-3 rounded-2xl bg-white/15 px-4 py-2.5 backdrop-blur transition hover:brightness-105">
+                        <span>💰</span><span class="flex-1">Zarejestruj wpłatę</span><span>→</span>
                     </a>
                 </li>
             </ul>
