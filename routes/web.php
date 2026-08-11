@@ -4,8 +4,10 @@ use App\Enums\LegalDocumentType;
 use App\Http\Controllers\Administrator\DashboardController as AdministratorDashboard;
 use App\Http\Controllers\Administrator\MailingController as AdministratorMailingController;
 use App\Http\Controllers\Administrator\MailPreviewController;
+use App\Http\Controllers\Administrator\OrderController as AdministratorOrderController;
 use App\Http\Controllers\Administrator\PackageController as AdministratorPackageController;
 use App\Http\Controllers\Administrator\SellerController as AdministratorSellerController;
+use App\Http\Controllers\Administrator\SettingsController as AdministratorSettingsController;
 use App\Http\Controllers\Administrator\ShopController as AdministratorShopController;
 use App\Http\Controllers\AiController;
 use App\Http\Controllers\Auth\ActivationController;
@@ -105,12 +107,14 @@ Route::post('/nowe-haslo', [PasswordResetController::class, 'update'])
 
 // Rejestracja sprzedawcy (nowe konta otrzymują rolę 'seller'). Konto powstaje
 // bez hasła — sprzedawca dostaje mailem link do jego ustawienia.
-Route::get('/rejestracja', [RegisterController::class, 'create'])->name('register');
+Route::get('/rejestracja', [RegisterController::class, 'create'])
+    ->middleware('registration.open')
+    ->name('register');
 // Limit per IP: ten formularz wysyła maila aktywacyjnego na DOWOLNY podany
 // adres, więc bez dławika jest gotowym narzędziem do zalewania cudzej skrzynki
 // naszym kosztem — reputacyjnym. Progi: config/security.php.
 Route::post('/rejestracja', [RegisterController::class, 'store'])
-    ->middleware('throttle:register')
+    ->middleware(['throttle:register', 'registration.open'])
     ->name('register.store');
 Route::view('/rejestracja/potwierdzenie', 'auth.registered')->name('register.confirmation');
 Route::post('/rejestracja/wyslij-ponownie', [ResendActivationController::class, 'store'])
@@ -184,6 +188,16 @@ Route::middleware(['auth', 'role:admin'])
         // Pakiety — przekrój pieniędzy platformy: przychód z opłat, wartość
         // biegnących abonamentów, rozkład sklepów po pakietach. Zmiana pakietu
         // pojedynczego sklepu zostaje w dziale „Sklepy".
+        // Zamówienia całej platformy — TYLKO DO ODCZYTU. Sterowanie zamówieniem
+        // zostaje u sprzedawcy; tu jest wyszukiwarka do wsparcia i przekrój.
+        // Ustawienia platformy: STAN (diagnostyka, tylko odczyt) + PRZEŁĄCZNIKI
+        // operacyjne. Cennik, progi i dane firmy zostają w config/.
+        Route::get('/ustawienia', [AdministratorSettingsController::class, 'index'])->name('settings.index');
+        Route::post('/ustawienia', [AdministratorSettingsController::class, 'update'])->name('settings.update');
+
+        Route::get('/zamowienia', [AdministratorOrderController::class, 'index'])->name('orders.index');
+        Route::get('/zamowienia/{order}', [AdministratorOrderController::class, 'show'])->name('orders.show');
+
         Route::get('/pakiety', [AdministratorPackageController::class, 'index'])->name('packages.index');
 
         // Rejestr opłat + rejestracja wpłaty przyjętej poza bramką (przelew,

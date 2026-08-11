@@ -127,33 +127,8 @@
                         </p>
                     </div>
                 @else
-                    <div class="mt-5 space-y-5">
-                        @foreach ($attention as $group)
-                            <div>
-                                <h3 @class([
-                                    'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium',
-                                    'bg-rose-50 text-rose-700' => $group['tone'] === 'rose',
-                                    'bg-amber-50 text-amber-700' => $group['tone'] === 'amber',
-                                    'bg-stone-100 text-stone-600' => $group['tone'] === 'stone',
-                                ])>{{ $group['label'] }} · {{ count($group['items']) }}</h3>
-                                <p class="mt-1.5 text-xs text-stone-400">{{ $group['hint'] }}</p>
-
-                                {{-- W wąskiej kolumnie nazwa i termin idą JEDNO POD DRUGIM.
-                                     Rozstrzelone w poprzek (jak było na pełnej szerokości)
-                                     zawijałyby się w schodki przy dłuższej nazwie sklepu. --}}
-                                <ul class="mt-2 space-y-1">
-                                    @foreach ($group['items'] as $item)
-                                        <li>
-                                            <a href="{{ $item['url'] }}"
-                                                class="block rounded-2xl px-3 py-2 transition hover:bg-white">
-                                                <span class="block truncate text-sm font-medium text-stone-900">{{ $item['title'] }}</span>
-                                                <span class="mt-0.5 block text-xs text-stone-500">{{ $item['note'] }}</span>
-                                            </a>
-                                        </li>
-                                    @endforeach
-                                </ul>
-                            </div>
-                        @endforeach
+                    <div class="mt-5">
+                        <x-attention-list :groups="$attention" />
                     </div>
                 @endif
             </div>

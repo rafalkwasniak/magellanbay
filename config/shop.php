@@ -285,6 +285,27 @@ return [
         'abandoned_after_hours' => 24,
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Zamówienia — progi listy „Wymaga uwagi" w konsoli admina
+    |--------------------------------------------------------------------------
+    |
+    | `stalled_days` — po ilu dniach opłacone, ale niewydane zamówienie uznajemy
+    | za zacięte. Trzy dni robocze to granica, po której klient zaczyna pisać;
+    | rękodzieło bywa robione na zamówienie, więc niżej schodzić nie ma sensu.
+    |
+    | `unpaid_hours` — po ilu godzinach porzucona płatność online przestaje być
+    | normalnym stanem „w toku". Doba, tak jak przy opłatach za pakiety.
+    |
+    */
+
+    'orders' => [
+        'attention' => [
+            'stalled_days' => 3,
+            'unpaid_hours' => 24,
+        ],
+    ],
+
     'subscription' => [
         'grace_days' => 7,
         'reminder_days' => [14, 7, 1],

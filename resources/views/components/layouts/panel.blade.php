@@ -33,9 +33,9 @@
             ['label' => 'Sklepy', 'route' => 'administrator.shops.index', 'active' => 'administrator.shops.*', 'icon' => '🛍️'],
             ['label' => 'Sprzedawcy', 'route' => 'administrator.sellers.index', 'active' => 'administrator.sellers.*', 'icon' => '👥'],
             ['label' => 'Wiadomości', 'route' => 'administrator.mailings.index', 'active' => 'administrator.mailings.*', 'icon' => '📣'],
-            ['label' => 'Zamówienia', 'route' => null, 'icon' => '📦'],
+            ['label' => 'Zamówienia', 'route' => 'administrator.orders.index', 'active' => 'administrator.orders.*', 'icon' => '📦'],
             ['label' => 'Pakiety', 'route' => 'administrator.packages.index', 'active' => 'administrator.packages.*', 'icon' => '✨'],
-            ['label' => 'Ustawienia', 'route' => null, 'icon' => '⚙️'],
+            ['label' => 'Ustawienia', 'route' => 'administrator.settings.index', 'active' => 'administrator.settings.*', 'icon' => '⚙️'],
         ] : [
             ['label' => 'Pulpit', 'route' => 'seller.dashboard', 'icon' => '🏠'],
             ['label' => 'Mój sklep', 'route' => 'seller.shop.edit', 'icon' => '🛍️'],
@@ -120,6 +120,18 @@
                 </header>
 
                 <main class="p-6">
+                    {{-- Przerwa techniczna nad wszystkim innym: to komunikat o
+                         stanie CAŁEJ platformy, więc dotyczy każdego ekranu i
+                         każdej roli. Tylko w centrali — na storefroncie sprzedawcy
+                         komunikat Kramio przejmowałby jego markę przed jego
+                         własnym klientem. --}}
+                    @if ($maintenanceNotice = \App\Models\PlatformSetting::maintenanceNotice())
+                        <div class="mb-6 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                            <p class="font-medium">Przerwa techniczna</p>
+                            <p class="mt-1 text-amber-800">{{ $maintenanceNotice }}</p>
+                        </div>
+                    @endif
+
                     {{-- Stan abonamentu nad KAŻDYM ekranem panelu, nie tylko na
                          „Mój pakiet": w karencji sprzedawca musi zobaczyć termin
                          nawet wtedy, gdy przyszedł tu po coś innego, a po
