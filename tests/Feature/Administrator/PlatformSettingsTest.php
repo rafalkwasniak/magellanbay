@@ -5,6 +5,7 @@ namespace Tests\Feature\Administrator;
 use App\Models\PlatformSetting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 /**
@@ -27,9 +28,21 @@ class PlatformSettingsTest extends TestCase
             ->assertSee('Integracje')
             ->assertSee('Zadania w tle i poczta')
             ->assertSee('Błędy w logach')
-            // Brak backupu ma kłuć w oczy, a nie czekać w notatkach.
+            // Stan kopii czytamy z daty ostatniej udanej, nie z samej
+            // konfiguracji — świeża baza nie ma żadnej, więc pasek jest czerwony.
             ->assertSee('Kopie zapasowe')
-            ->assertSee('NIE SKONFIGUROWANE');
+            ->assertSee('żadna kopia jeszcze się nie powiodła');
+    }
+
+    public function test_settings_show_the_date_of_the_last_backup(): void
+    {
+        Carbon::setTestNow('2026-08-12 09:00:00');
+        PlatformSetting::put(PlatformSetting::LAST_BACKUP_AT, Carbon::now()->subHours(6)->toIso8601String());
+
+        $this->actingAs(User::factory()->admin()->create())
+            ->get(route('administrator.settings.index'))
+            ->assertOk()
+            ->assertSee('12 sierpnia 2026');
     }
 
     public function test_seller_cannot_open_settings(): void

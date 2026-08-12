@@ -3,6 +3,8 @@
 namespace App\Support;
 
 use App\Models\EmailMessage;
+use App\Models\PlatformSetting;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 
@@ -55,13 +57,46 @@ class PlatformHealth
                     ? 'Błędy lecą na kanał'
                     : 'Brak webhooka — błędy zostają tylko w logu',
             ],
-            [
+            self::backups(),
+        ];
+    }
+
+    /**
+     * Kopie zapasowe. Zielone światło daje wyłącznie ŚWIEŻY ślad po udanym
+     * przebiegu — nie sama obecność konfiguracji. Wpis „skonfigurowane" przy
+     * kopii, która ostatnio powstała trzy tygodnie temu, byłby gorszy niż
+     * czerwony pasek: usypia dokładnie wtedy, gdy trzeba działać.
+     *
+     * @return array{name: string, ok: bool, detail: string}
+     */
+    private static function backups(): array
+    {
+        if (! config('backup.enabled')) {
+            return [
                 'name' => 'Kopie zapasowe',
-                // Twarde `false` i celowo: nic nie jest backupowane, ani pliki, ani
-                // baza. To ma kłuć w oczy na ekranie, a nie czekać w notatkach.
                 'ok' => false,
-                'detail' => 'NIE SKONFIGUROWANE — ani pliki, ani baza',
-            ],
+                'detail' => 'WYŁĄCZONE w konfiguracji (BACKUP_ENABLED=false)',
+            ];
+        }
+
+        $last = PlatformSetting::lastBackupAt();
+
+        if ($last === null) {
+            return [
+                'name' => 'Kopie zapasowe',
+                'ok' => false,
+                'detail' => 'Skonfigurowane, ale żadna kopia jeszcze się nie powiodła',
+            ];
+        }
+
+        $stale = $last->lt(Carbon::now()->subHours((int) config('backup.stale_after_hours')));
+
+        return [
+            'name' => 'Kopie zapasowe',
+            'ok' => ! $stale,
+            'detail' => $stale
+                ? 'PRZETERMINOWANE — ostatnia '.$last->translatedFormat('j F Y, H:i')
+                : 'Ostatnia '.$last->translatedFormat('j F Y, H:i').', retencja '.config('backup.retention_days').' dni',
         ];
     }
 

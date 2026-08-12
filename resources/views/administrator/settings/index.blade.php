@@ -171,7 +171,7 @@
                     </li>
                     <li class="flex gap-3">
                         <span class="mt-0.5 shrink-0 text-amber-500">💾</span>
-                        <span>Kopie zapasowe świecą na czerwono, bo <span class="text-stone-700">naprawdę ich nie ma</span>. To jedyna pozycja, która blokuje spokojne wpuszczenie sprzedawców.</span>
+                        <span>Kopie zapasowe pokazują <span class="text-stone-700">datę ostatniej udanej</span>, nie samą konfigurację. Czerwony pasek po dwóch dobach ciszy znaczy, że nocny backup przestał powstawać — zajrzyj, zanim będzie potrzebny.</span>
                     </li>
                 </ul>
             </div>

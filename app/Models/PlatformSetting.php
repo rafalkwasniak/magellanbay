@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 
 /**
@@ -25,6 +26,9 @@ class PlatformSetting extends Model
 
     /** Komunikat o przerwie technicznej; pusty = brak baneru. */
     public const MAINTENANCE_NOTICE = 'maintenance_notice';
+
+    /** Czas ostatniej UDANEJ kopii zapasowej (ISO 8601). */
+    public const LAST_BACKUP_AT = 'last_backup_at';
 
     private const CACHE_KEY = 'platform_settings';
 
@@ -72,6 +76,19 @@ class PlatformSetting extends Model
         $notice = trim((string) self::get(self::MAINTENANCE_NOTICE));
 
         return $notice !== '' ? $notice : null;
+    }
+
+    /**
+     * Czas ostatniej udanej kopii zapasowej albo null, gdy jeszcze żadna się nie
+     * powiodła. Zapisuje komenda `backup:run` — dopiero PO spakowaniu archiwum,
+     * więc ta data nie kłamie: nieudany przebieg jej nie rusza i strażnik
+     * `backup:check` zdąży zauważyć ciszę.
+     */
+    public static function lastBackupAt(): ?Carbon
+    {
+        $value = trim((string) self::get(self::LAST_BACKUP_AT));
+
+        return $value !== '' ? Carbon::parse($value) : null;
     }
 
     public static function put(string $key, ?string $value): void

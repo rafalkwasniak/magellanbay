@@ -37,6 +37,22 @@ Schedule::command('shipments:refresh --deliveries')->hourly()->withoutOverlappin
 // wpadają do kolejki. Komenda jest idempotentna, więc powtórka nic nie psuje.
 Schedule::command('subscriptions:check')->dailyAt('06:10')->withoutOverlapping();
 
+// Kopia zapasowa: baza + zdjęcia + .env do katalogu poza domeną. Nocą, z dala
+// od komend abonamentowych; przebieg trwa sekundy, więc limit procesów konta
+// nie jest zagrożony. Wpis rejestrujemy tylko przy włączonych kopiach — dzięki
+// temu `BACKUP_ENABLED=false` naprawdę wycisza harmonogram, zamiast odpalać co
+// noc komendę, która i tak od razu wychodzi.
+if (config('backup.enabled')) {
+    Schedule::command('backup:run')
+        ->dailyAt(config('backup.daily_at'))
+        ->withoutOverlapping();
+
+    // Strażnik: pilnuje ŚLADU po kopii, nie samego przebiegu — awaria, przez
+    // którą `backup:run` w ogóle się nie uruchamia, nie zgłosi się sama.
+    // O 9:00, bo alarm ma trafić na Discorda w godzinach, w których ktoś patrzy.
+    Schedule::command('backup:check')->dailyAt('09:00')->withoutOverlapping();
+}
+
 // Usuwanie sklepów: kasuje te po karencji i zwalnia adresy po kwarantannie.
 // Tuż po abonamentach, bo obie komendy są dobowe i nie mają na siebie wpływu.
 Schedule::command('shops:purge')->dailyAt('06:20')->withoutOverlapping();
