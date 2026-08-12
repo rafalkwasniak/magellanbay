@@ -28,7 +28,7 @@ Specyfika projektu **Kramio** (`kramio.pl`). Plik czytany przez asystenta na sta
   /opt/alt/php85/usr/bin/php $(which composer) ...
   ```
 - **Composer** 2.9.7.
-- **Baza:** MySQL, połączenie `mysql`, baza `host473413_shop` (dostęp w `.env`). Sesje, kolejka i cache na sterowniku `database`.
+- **Baza:** MySQL, połączenie `mysql`, baza `host473413_kramio` (dostęp w `.env`). Sesje, kolejka i cache na sterowniku `database`. **Zmiana nazwy 2026-08-12:** dane przeniesione zrzutem SQL ze starej `host473413_shop` (MySQL nie umie `RENAME DATABASE`, panel też nie — to była kopia, nie zmiana etykiety). Zgodność zweryfikowana: 39 tabel, sumy kontrolne, klucze obce, indeksy i `AUTO_INCREMENT` bez różnic. Baza ćwiczebna do odtworzeń: `host473413_kramio_backup`.
 - **Node 20.20 / npm 10.8** dostępne.
 - **Document root** domeny `kramio.pl` musi wskazywać na `…/domains/kramio.pl/public` (jak wcześniej dla shop — ustawienie w panelu hostingu). Hosting tworzy domyślnie `public_html` jako docroot; my używamy `public` Laravela.
 - Repozytorium Git: jeszcze nie zainicjowane. Setup wg `FOUNDATION.md` sek. 3 (klucz SSH, remote przez SSH, tożsamość commitów per-repo na `Rafał Kwaśniak <rafal@kwasniak.org>`, bez `--global`).
@@ -90,7 +90,7 @@ Zrobione:
 - Parytet `.env` ↔ `.env.example` wyrównany (48 kluczy, blok DB pod MySQL z pustymi wartościami w example).
 - Logowanie (`FOUNDATION` sek. 5): logi dzienne (kanał `daily`, retencja 14 dni w `config/logging.php`).
 - Monitoring wolnych zapytań SQL: serwis `App\Services\SlowQueryLogger` wpięty w `AppServiceProvider::boot()` przez `DB::listen` (tylko gdy próg > 0). Zapytania wolniejsze niż `config('monitoring.slow_query_ms')` (domyślnie 200 ms) trafiają do osobnego dziennego kanału `slow_queries` (`storage/logs/slow-query-*.log`) z czasem, SQL, bindings i miejscem w kodzie (plik:linia, pierwszy frame aplikacji za warstwą vendor). Pokryte testem `tests/Feature/SlowQueryLoggingTest.php`.
-- Baza: migracje startowe wykonane na MySQL `host473413_shop` (`migrate --force`). Uwaga historyczna: instalator odpalił migracje na SQLite; po przełączeniu na MySQL trzeba było je wykonać ponownie, inaczej `SESSION_DRIVER=database` wywracał każdy request (brak tabeli `sessions`).
+- Baza: migracje startowe wykonane na MySQL (wtedy `host473413_shop`, dziś `host473413_kramio` — patrz sek. 2) (`migrate --force`). Uwaga historyczna: instalator odpalił migracje na SQLite; po przełączeniu na MySQL trzeba było je wykonać ponownie, inaczej `SESSION_DRIVER=database` wywracał każdy request (brak tabeli `sessions`).
 - Alerty Discord: serwis `App\Services\DiscordErrorReporter` (natywny embed przez `Http::post`, nie hack `/slack`), wpięty w `bootstrap/app.php` przez `$exceptions->report()` — każdy reportowalny wyjątek leci na kanał obok logu. No-op gdy brak webhooka; błąd dostarczenia jest połykany (nie może zapętlić handlera). Webhook w `config/services.php` (`services.discord.webhook` ← `DISCORD_WEBHOOK_URL`), sekret tylko w `.env`. Wzorzec przeniesiony z projektu `kociaczek.com.pl`. Pokryte testem `tests/Feature/DiscordErrorReportingTest.php`.
 
 Wciąż do zrobienia (notatka, nie robimy z automatu):
