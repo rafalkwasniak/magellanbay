@@ -165,10 +165,20 @@
                             @endif
                             <p class="font-semibold text-stone-900">{{ $pkg['name'] }}</p>
                             @if ($yearly === 0)
-                                <p class="mt-3">
+                                {{-- Ten sam układ co w kartach płatnych (flex + gap + wspólna
+                                     linia bazowa), żeby trzy karty czytały się identycznie,
+                                     a drobny tekst nie kleił się do kwoty. --}}
+                                <p class="mt-3 flex items-baseline gap-2">
                                     <span class="text-3xl font-semibold tracking-tight text-stone-900">0 zł</span>
+                                    {{-- „na zawsze" pogrubione jak „rok" przy płatnych:
+                                         bezterminowość jest tu najmocniejszym argumentem,
+                                         a nie przypisem. --}}
+                                    <span class="text-sm text-stone-500">/ <span class="font-semibold text-stone-700">na zawsze</span></span>
                                 </p>
-                                <p class="mt-1 text-xs text-stone-500">Za darmo, bez limitu czasu · bez karty</p>
+                                {{-- Bez powtarzania „bez limitu czasu" — to samo mówi już
+                                     „na zawsze" wyżej. Linijka niesie za to fakt, którego
+                                     nie ma w cenie: to nie jest okres próbny. --}}
+                                <p class="mt-1 text-xs text-stone-500">Bez karty · bez okresu próbnego</p>
                             @else
                                 {{-- Cena 12 miesięcy przekreślona obok rocznej — zysk widać
                                      bez liczenia. `<s>` zamiast klasy `line-through`, bo tej
@@ -181,7 +191,10 @@
                                          hierarchię — cena roczna zostaje najmocniejsza. --}}
                                     <s class="text-xl text-stone-400">{{ $listYearly }} zł</s>
                                     <span class="text-3xl font-semibold tracking-tight text-stone-900">{{ $yearly }} zł</span>
-                                    <span class="text-sm text-stone-500">/ rok</span>
+                                    {{-- „rok" pogrubione: bez tego kwota czyta się jak cena
+                                         miesięczna albo bliżej nieokreślona, a to ZA CAŁY ROK
+                                         jest tu najmocniejszym argumentem. --}}
+                                    <span class="text-sm text-stone-500">/ <span class="font-semibold text-stone-700">rok</span></span>
                                 </p>
                                 <p class="mt-1 text-xs">
                                     <span class="font-medium text-emerald-700">{{ $freeMonths }} {{ trans_choice('miesiąc|miesiące|miesięcy', $freeMonths) }} za darmo</span>
