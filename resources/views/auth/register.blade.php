@@ -35,7 +35,7 @@
                 <p class="mt-0.5 text-xs text-stone-500">Adres sklepu utworzymy z nazwy — sprawdź, czy jest wolny.</p>
                 <div class="mt-1.5 space-y-2">
                     <input id="shop_name" name="shop_name" type="text" required autofocus
-                        value="{{ old('shop_name') }}" placeholder="np. Mój nowy sklep"
+                        value="{{ old('shop_name', $suggestedName ?? '') }}" placeholder="np. Mój nowy sklep"
                         class="block w-full rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
                     <div class="flex w-full items-center overflow-hidden rounded-2xl border border-stone-200 bg-stone-100 px-4 py-3 text-sm"
                         title="Adres sklepu — tworzony automatycznie z nazwy">

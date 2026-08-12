@@ -29,8 +29,12 @@
             <div class="w-full max-w-md">
                 {{-- Logo klikalne — jak w layoucie stron publicznych. Z logowania,
                      rejestracji, aktywacji i resetu hasła nie było jak wrócić na
-                     stronę główną; nazwa platformy to naturalne wyjście. --}}
-                <a href="{{ url('/') }}" class="mb-6 flex items-center justify-center transition hover:opacity-80" title="Strona główna {{ config('app.name') }}">
+                     stronę główną; nazwa platformy to naturalne wyjście.
+
+                     Adres bezwzględny na centralę, bo tego layoutu używa też
+                     strona wolnej subdomeny — `url('/')` prowadziłoby wtedy
+                     z powrotem na tę samą subdomenę, a nie do Kramio. --}}
+                <a href="{{ \App\Support\Central::url('/') }}" class="mb-6 flex items-center justify-center transition hover:opacity-80" title="Strona główna {{ config('app.name') }}">
                     <img src="{{ asset('images/kramio-logo.png') }}" alt="{{ config('app.name') }} — twój sklep w 15 minut" class="h-12 w-auto">
                 </a>
 
@@ -45,6 +49,6 @@
             </div>
         </div>
     </div>
-    <x-cookie-consent owner="Kramio" privacy-url="/polityka-prywatnosci">logowanie i Twój panel działały poprawnie</x-cookie-consent>
+    <x-cookie-consent owner="Kramio" :privacy-url="\App\Support\Central::url('/polityka-prywatnosci')">logowanie i Twój panel działały poprawnie</x-cookie-consent>
 </body>
 </html>

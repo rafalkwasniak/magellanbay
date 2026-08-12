@@ -10,6 +10,7 @@ use App\Models\EmailMessage;
 use App\Models\LegalDocument;
 use App\Models\Shop;
 use App\Models\User;
+use App\Services\SlugService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -35,6 +36,27 @@ class RegistrationTest extends TestCase
     public function test_registration_screen_can_be_rendered(): void
     {
         $this->get(route('register'))->assertOk();
+    }
+
+    public function test_address_from_unclaimed_subdomain_prefills_shop_name(): void
+    {
+        // Ktoś wpisał kwiatki-u-ani.kramio.pl, zobaczył „adres wolny" i kliknął.
+        // Formularz nie ma pola adresu (slug liczy serwer z nazwy), więc adres
+        // musi wrócić jako NAZWA dająca dokładnie ten sam slug.
+        $this->get(route('register', ['adres' => 'kwiatki-u-ani']))
+            ->assertOk()
+            ->assertSee('value="Kwiatki U Ani"', false);
+
+        $this->assertSame('kwiatki-u-ani', app(SlugService::class)->make('Kwiatki U Ani'));
+    }
+
+    public function test_malformed_address_in_query_is_ignored(): void
+    {
+        // Cokolwiek doklei się do URL-a, nie może wylądować w polu nazwy —
+        // sprzedawca zająłby adres inny niż ten, po który przyszedł.
+        $this->get(route('register', ['adres' => 'Zły Adres!']))
+            ->assertOk()
+            ->assertDontSee('Zły Adres', false);
     }
 
     public function test_new_users_register_as_sellers_without_logging_in(): void

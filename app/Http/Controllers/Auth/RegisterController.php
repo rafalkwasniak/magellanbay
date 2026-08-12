@@ -11,8 +11,10 @@ use App\Models\LegalDocument;
 use App\Models\User;
 use App\Services\ActivationMailer;
 use App\Services\ConsentRecorder;
+use App\Services\SlugService;
 use Illuminate\Contracts\Support\Renderable;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -21,14 +23,38 @@ class RegisterController extends Controller
 {
     /**
      * Formularz rejestracji sprzedawcy.
+     *
+     * `?adres=` przynosi etykietę subdomeny ze strony wolnego adresu
+     * ({slug}.{central_domain} bez sklepu). Formularz nie ma pola adresu —
+     * slug liczy serwer z nazwy sklepu — więc podpowiadamy NAZWĘ odtworzoną
+     * z adresu tak, by wróciła dokładnie ta sama etykieta.
      */
-    public function create(): Renderable|RedirectResponse
+    public function create(Request $request, SlugService $slugs): Renderable|RedirectResponse
     {
         if ($user = Auth::user()) {
             return redirect()->route($user->role->homeRoute());
         }
 
-        return view('auth.register');
+        return view('auth.register', [
+            'suggestedName' => $this->nameFromSlug($request->query('adres'), $slugs),
+        ]);
+    }
+
+    /**
+     * Nazwa sklepu podpowiedziana na podstawie adresu z parametru. Cokolwiek
+     * przyszło w URL-u, sprawdzamy dwa razy: musi być czystym slugiem, a nazwa
+     * z niego zrobiona musi wracać do tego samego sluga. Inaczej sprzedawca
+     * zająłby adres inny niż ten, po który kliknął — a to gorsze niż puste pole.
+     */
+    private function nameFromSlug(mixed $slug, SlugService $slugs): ?string
+    {
+        if (! is_string($slug) || $slugs->make($slug) !== $slug) {
+            return null;
+        }
+
+        $name = Str::headline(str_replace('-', ' ', $slug));
+
+        return $slugs->make($name) === $slug ? $name : $slug;
     }
 
     /**
