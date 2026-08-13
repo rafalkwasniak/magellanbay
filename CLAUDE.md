@@ -2,7 +2,9 @@
 
 Specyfika projektu **Kramio** (`kramio.pl`). Plik czytany przez asystenta na starcie każdej sesji.
 
-> **Przeniesienie (2026-06-28):** serwis przeniesiony z tymczasowego `shop.kwasniak.org` do docelowego `kramio.pl` (ten sam katalog domeny na hostingu). **Baza bez zmian** (`host473413_shop`). Stary katalog `…/domains/shop.kwasniak.org` zostaje jako backup do czasu pełnej weryfikacji. Pamięć Claude skopiowana do klucza nowego projektu.
+> **Przeniesienie (2026-06-28):** serwis przeniesiony z tymczasowego `shop.kwasniak.org` do docelowego `kramio.pl` (ten sam katalog domeny na hostingu). Baza wtedy bez zmian (`host473413_shop`; od 12.08 → `host473413_kramio`, patrz sek. 2). Pamięć Claude skopiowana do klucza nowego projektu.
+>
+> **Sprzątanie (2026-08-13):** stary katalog `…/domains/shop.kwasniak.org` **USUNIĘTY**. Po zmianie nazwy bazy jego `.env` (`host473413_shop`) przestał się łączyć, a że miał `SESSION_DRIVER=database`, `APP_NAME=Kramio` i ten sam webhook Discorda, każde przypadkowe wejście na starą domenę wyglądało jak awaria Kramio. Nic unikalnego tam nie było: kod na `origin/main` (247 commitów za produkcją), `storage/app` pusty, baza wspólna. **Zostało do zrobienia przez Rafała: usunąć domenę `shop.kwasniak.org` w panelu hostingu** (dziś zwraca 404 od Apache'a).
 
 **Relacja do `FOUNDATION.md`:** `FOUNDATION.md` = uniwersalne zasady współpracy (te same w każdym projekcie). Ten plik = specyfika tego projektu (domena, stos, decyzje produktowe, stan środowiska). W kwestiach projektowych `CLAUDE.md` ma pierwszeństwo; zasady współpracy z `FOUNDATION.md` obowiązują zawsze.
 
