@@ -2,13 +2,16 @@
 
 namespace Tests\Feature\Seller;
 
+use App\Models\EmailMessage;
 use App\Models\PackagePayment;
+use App\Models\Product;
 use App\Models\Shop;
 use App\Models\User;
 use App\Services\PaynowService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 /**
@@ -66,7 +69,7 @@ class PackagePaymentTest extends TestCase
         ])]);
     }
 
-    private function webhook(string $paymentId, string $status, ?string $key = 'platform-sign'): \Illuminate\Testing\TestResponse
+    private function webhook(string $paymentId, string $status, ?string $key = 'platform-sign'): TestResponse
     {
         $body = json_encode(['paymentId' => $paymentId, 'status' => $status], JSON_UNESCAPED_SLASHES);
 
@@ -81,7 +84,7 @@ class PackagePaymentTest extends TestCase
         $this->fakePaynow();
         [$seller, $shop] = $this->sellerOn('booth', ['subscription_ends_at' => Carbon::parse('2026-09-30')]);
 
-        $response = $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'pavilion']));
+        $response = $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'pavilion']), ['immediate_start' => '1']);
 
         $response->assertRedirect('https://sandbox.paynow.pl/pay/PAY-123');
 
@@ -94,12 +97,75 @@ class PackagePaymentTest extends TestCase
         $this->assertSame('2027-07-30', $payment->new_ends_at->format('Y-m-d'));
     }
 
+    /**
+     * Bez wyraźnego żądania nie ruszamy płatności — art. 15 ust. 3 u.p.k.
+     *
+     * To NIE jest formalność: §9 ust. 2 Regulaminu pozwala nam przy odstąpieniu
+     * zatrzymać zapłatę za wykorzystany okres, ale tylko wtedy, gdy żądanie
+     * padło PRZED uruchomieniem pakietu. Gdyby ten test zaczął przechodzić bez
+     * `immediate_start`, odstępujący sprzedawca odzyskiwałby całą wpłatę.
+     */
+    public function test_purchase_without_the_immediate_start_declaration_is_rejected(): void
+    {
+        $this->fakePaynow();
+        [$seller, $shop] = $this->sellerOn('stall');
+
+        $this->actingAs($seller)
+            ->post(route('seller.package.purchase', ['package' => 'booth']))
+            ->assertSessionHasErrors('immediate_start');
+
+        $this->assertSame(0, $shop->packagePayments()->count());
+        Http::assertNothingSent();
+    }
+
+    /**
+     * Odbicie z JEDNEGO przycisku nie może zapalić czerwonego tekstu pod
+     * wszystkimi zgodami na stronie.
+     *
+     * Worek błędów jest wspólny dla całej strony, a formularzy zakupu potrafi być
+     * kilka naraz (przedłużenie + zejście niżej). Bez zawężenia po `form_package`
+     * sprzedawca widział „zaznacz zgodę" pod pudełkiem, którego nie dotknął.
+     */
+    public function test_the_consent_error_shows_only_under_the_submitted_form(): void
+    {
+        $this->fakePaynow();
+        // Pawilon 21 dni przed końcem: ekran pokazuje NARAZ przedłużenie i
+        // zejście na Stragan, czyli dwie zgody obok siebie.
+        [$seller, $shop] = $this->sellerOn('pavilion', ['subscription_ends_at' => Carbon::parse('2026-08-20')]);
+
+        $screen = $this->actingAs($seller)->get(route('seller.package.show'));
+        $this->assertSame(2, substr_count($screen->getContent(), 'name="immediate_start"'));
+
+        // `from()` + `followingRedirects()` odtwarza to, co robi przeglądarka:
+        // odbicie wraca NA TEN SAM ekran, a błąd i stare dane żyją w tym jednym
+        // przeładowaniu. Osobne `get()` po `post()` już ich nie widzi.
+        $content = $this->actingAs($seller)
+            ->from(route('seller.package.show'))
+            ->followingRedirects()
+            ->post(route('seller.package.purchase', ['package' => 'booth']), ['form_package' => 'booth'])
+            ->getContent();
+
+        $this->assertSame(1, substr_count($content, 'Zaznacz zgodę na natychmiastowe uruchomienie'));
+    }
+
+    public function test_purchase_records_the_proof_of_the_immediate_start_request(): void
+    {
+        $this->fakePaynow();
+        [$seller, $shop] = $this->sellerOn('stall');
+
+        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']), ['immediate_start' => '1']);
+
+        $payment = $shop->packagePayments()->firstOrFail();
+        $this->assertSame('2026-07-30 12:00:00', $payment->immediate_start_at->format('Y-m-d H:i:s'));
+        $this->assertNotNull($payment->immediate_start_ip);
+    }
+
     public function test_confirmed_webhook_applies_the_package_from_the_snapshot(): void
     {
         $this->fakePaynow();
         [$seller, $shop] = $this->sellerOn('stall');
 
-        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']));
+        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']), ['immediate_start' => '1']);
 
         $this->webhook('PAY-123', 'CONFIRMED')->assertOk();
 
@@ -119,7 +185,7 @@ class PackagePaymentTest extends TestCase
             'entitlements' => array_merge(config('shop.packages.stall.entitlements'), ['bulk_mail' => true, 'ai_weekly_limit' => 900]),
         ]);
 
-        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']));
+        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']), ['immediate_start' => '1']);
         $this->webhook('PAY-123', 'CONFIRMED')->assertOk();
 
         $shop->refresh();
@@ -132,7 +198,7 @@ class PackagePaymentTest extends TestCase
     {
         $this->fakePaynow();
         [$seller, $shop] = $this->sellerOn('stall');
-        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']));
+        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']), ['immediate_start' => '1']);
 
         $this->webhook('PAY-123', 'CONFIRMED', null)->assertStatus(400);
 
@@ -143,7 +209,7 @@ class PackagePaymentTest extends TestCase
     {
         $this->fakePaynow();
         [$seller, $shop] = $this->sellerOn('stall');
-        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']));
+        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']), ['immediate_start' => '1']);
 
         $this->webhook('PAY-123', 'CONFIRMED')->assertOk();
         $appliedAt = $shop->packagePayments()->first()->applied_at;
@@ -160,7 +226,7 @@ class PackagePaymentTest extends TestCase
     {
         $this->fakePaynow();
         [$seller, $shop] = $this->sellerOn('stall');
-        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']));
+        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']), ['immediate_start' => '1']);
 
         $this->webhook('PAY-123', 'PENDING')->assertOk();
         $this->webhook('PAY-123', 'REJECTED')->assertOk();
@@ -174,7 +240,7 @@ class PackagePaymentTest extends TestCase
     {
         $this->fakePaynow();
         [$seller, $shop] = $this->sellerOn('stall');
-        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']));
+        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']), ['immediate_start' => '1']);
         $this->webhook('PAY-123', 'REJECTED')->assertOk();
 
         // Baner mówi prawdę („nie doszła do skutku"), a przyciski Kup zostają.
@@ -185,7 +251,7 @@ class PackagePaymentTest extends TestCase
             ->assertSee('Kup Stragan');
 
         // Ponowienie tworzy NOWY wiersz, który przejmuje baner jako pending.
-        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']));
+        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']), ['immediate_start' => '1']);
         $this->assertSame(2, $shop->packagePayments()->count());
 
         $this->actingAs($seller)->get(route('seller.package.show'))
@@ -198,7 +264,7 @@ class PackagePaymentTest extends TestCase
     {
         $this->fakePaynow();
         [$seller, $shop] = $this->sellerOn('stall');
-        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']));
+        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']), ['immediate_start' => '1']);
 
         $this->webhook('PAY-123', 'CONFIRMED')->assertOk();
         $this->webhook('PAY-123', 'REJECTED')->assertOk();
@@ -213,7 +279,7 @@ class PackagePaymentTest extends TestCase
         $this->fakePaynow();
         [$seller, $shop] = $this->sellerOn('pavilion', ['subscription_ends_at' => Carbon::parse('2026-09-30')]);
 
-        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']))
+        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']), ['immediate_start' => '1'])
             ->assertRedirect(route('seller.package.show'))
             ->assertSessionHas('error');
 
@@ -228,7 +294,7 @@ class PackagePaymentTest extends TestCase
         // do terminu, więc wychodzi 30.09.2027, a nie 29.07.2027.
         [$seller, $shop] = $this->sellerOn('pavilion', ['subscription_ends_at' => Carbon::parse('2026-09-30')]);
 
-        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'pavilion']))
+        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'pavilion']), ['immediate_start' => '1'])
             ->assertRedirect('https://sandbox.paynow.pl/pay/PAY-123');
 
         $payment = $shop->packagePayments()->firstOrFail();
@@ -248,15 +314,15 @@ class PackagePaymentTest extends TestCase
         $this->fakePaynow();
         [$seller, $shop] = $this->sellerOn('pavilion', ['subscription_ends_at' => Carbon::parse('2026-09-30')]);
 
-        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'pavilion']));
+        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'pavilion']), ['immediate_start' => '1']);
 
-        $started = \App\Models\EmailMessage::latest('id')->firstOrFail();
+        $started = EmailMessage::latest('id')->firstOrFail();
         $this->assertStringContainsString('Przedłużenie pakietu Pawilon', $started->subject);
         $this->assertStringContainsString('30.09.2027', json_encode($started->intro_lines, JSON_UNESCAPED_UNICODE));
 
         $this->webhook('PAY-123', 'CONFIRMED')->assertOk();
 
-        $activated = \App\Models\EmailMessage::latest('id')->firstOrFail();
+        $activated = EmailMessage::latest('id')->firstOrFail();
         $this->assertStringContainsString('przedłużony do 30.09.2027', $activated->subject);
         // „Kupiłeś" byłoby nieprawdą — sprzedawca nic nowego nie dostaje.
         $this->assertStringNotContainsString('jest aktywny', $activated->subject);
@@ -272,7 +338,7 @@ class PackagePaymentTest extends TestCase
             'subscription_ends_at' => Carbon::parse('2026-09-30'),
         ]);
 
-        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'pavilion']));
+        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'pavilion']), ['immediate_start' => '1']);
 
         $this->assertSame('900.00', $shop->packagePayments()->firstOrFail()->amount);
 
@@ -290,9 +356,9 @@ class PackagePaymentTest extends TestCase
             'entitlements' => array_merge(config('shop.packages.pavilion.entitlements'), ['bulk_mail' => true]),
             'subscription_ends_at' => Carbon::parse('2026-08-03'),
         ]);
-        \App\Models\Product::factory()->count(84)->create(['shop_id' => $shop->id, 'is_active' => true]);
+        Product::factory()->count(84)->create(['shop_id' => $shop->id, 'is_active' => true]);
 
-        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']))
+        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']), ['immediate_start' => '1'])
             ->assertRedirect('https://sandbox.paynow.pl/pay/PAY-123');
 
         // 750 − (1500 × 4/365 = 16,44) = 733,56 → 733.
@@ -317,12 +383,12 @@ class PackagePaymentTest extends TestCase
     {
         $this->fakePaynow();
         [$seller, $shop] = $this->sellerOn('pavilion', ['subscription_ends_at' => Carbon::parse('2026-08-03')]);
-        \App\Models\Product::factory()->count(74)->create(['shop_id' => $shop->id, 'is_active' => true]);
+        Product::factory()->count(74)->create(['shop_id' => $shop->id, 'is_active' => true]);
 
-        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']));
+        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']), ['immediate_start' => '1']);
         $this->webhook('PAY-123', 'CONFIRMED')->assertOk();
 
-        $mail = \App\Models\EmailMessage::latest('id')->firstOrFail();
+        $mail = EmailMessage::latest('id')->firstOrFail();
         // Bez tego zdania sprzedawca szukałby, gdzie podziały się produkty.
         $this->assertStringContainsString('2 produkty zostały ukryte', json_encode($mail->outro_lines, JSON_UNESCAPED_UNICODE));
     }
@@ -333,7 +399,7 @@ class PackagePaymentTest extends TestCase
         // Nie wystarczy nie pokazywać przycisku — sam adres też musi odmówić.
         [$seller, $shop] = $this->sellerOn('pavilion', ['subscription_ends_at' => Carbon::parse('2027-07-28')]);
 
-        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']))
+        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']), ['immediate_start' => '1'])
             ->assertRedirect(route('seller.package.show'))
             ->assertSessionHas('error');
 
@@ -347,7 +413,7 @@ class PackagePaymentTest extends TestCase
         [$seller, $shop] = $this->sellerOn('stall');
 
         // Kram jest darmowy — nie ma czego przedłużać za zero złotych.
-        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'stall']))
+        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'stall']), ['immediate_start' => '1'])
             ->assertRedirect(route('seller.package.show'))
             ->assertSessionHas('error');
 
@@ -360,7 +426,7 @@ class PackagePaymentTest extends TestCase
         Http::fake(['*/v1/payments' => Http::response(['error' => 'boom'], 500)]);
         [$seller, $shop] = $this->sellerOn('stall');
 
-        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']))
+        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']), ['immediate_start' => '1'])
             ->assertSessionHas('error');
 
         $this->assertSame('failed', $shop->packagePayments()->first()->status);
@@ -376,7 +442,7 @@ class PackagePaymentTest extends TestCase
             ->assertSee('Kup Stragan — 750,00 zł')
             ->assertSee('Kup Pawilon — 1 500,00 zł');
 
-        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']));
+        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']), ['immediate_start' => '1']);
 
         $this->actingAs($seller)->get(route('seller.package.show'))
             ->assertOk()
@@ -387,11 +453,11 @@ class PackagePaymentTest extends TestCase
     {
         $this->fakePaynow();
         [$seller] = $this->sellerOn('stall');
-        \App\Models\EmailMessage::query()->delete();
+        EmailMessage::query()->delete();
 
-        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']));
+        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']), ['immediate_start' => '1']);
 
-        $mail = \App\Models\EmailMessage::where('to_email', $seller->email)->firstOrFail();
+        $mail = EmailMessage::where('to_email', $seller->email)->firstOrFail();
         $this->assertStringContainsString('Zamówienie pakietu Stragan', $mail->subject);
         // Link ratunkowy: prowadzi z powrotem do bramki.
         $this->assertSame('https://sandbox.paynow.pl/pay/PAY-123', $mail->action_url);
@@ -403,12 +469,12 @@ class PackagePaymentTest extends TestCase
     {
         $this->fakePaynow();
         [$seller, $shop] = $this->sellerOn('stall');
-        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']));
-        \App\Models\EmailMessage::query()->delete();
+        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']), ['immediate_start' => '1']);
+        EmailMessage::query()->delete();
 
         $this->webhook('PAY-123', 'CONFIRMED')->assertOk();
 
-        $mail = \App\Models\EmailMessage::where('to_email', $seller->email)->firstOrFail();
+        $mail = EmailMessage::where('to_email', $seller->email)->firstOrFail();
         $body = json_encode($mail->intro_lines, JSON_UNESCAPED_UNICODE);
         $this->assertStringContainsString('Pakiet Stragan jest aktywny', $mail->subject);
         $this->assertStringContainsString('750,00', $body);
@@ -426,9 +492,9 @@ class PackagePaymentTest extends TestCase
         [$seller, $shop] = $this->sellerOn('stall');
 
         // Nieudana próba, potem udany zakup — obie w historii.
-        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']));
+        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']), ['immediate_start' => '1']);
         $this->webhook('PAY-1', 'REJECTED')->assertOk();
-        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']));
+        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']), ['immediate_start' => '1']);
         $this->webhook('PAY-2', 'CONFIRMED')->assertOk();
 
         // `fresh()`: actingAs trzyma jeden obiekt między requestami, więc bez
@@ -467,7 +533,7 @@ class PackagePaymentTest extends TestCase
             ->assertSee('Uzupełnij nazwę i adres')
             ->assertDontSee('Kup Stragan');
 
-        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']))
+        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']), ['immediate_start' => '1'])
             ->assertRedirect(route('seller.package.show'))
             ->assertSessionHas('error');
 
@@ -488,7 +554,7 @@ class PackagePaymentTest extends TestCase
             ->assertSee('Anna Kowalska')
             ->assertSee('Kup Stragan');
 
-        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']))
+        $this->actingAs($seller)->post(route('seller.package.purchase', ['package' => 'booth']), ['immediate_start' => '1'])
             ->assertRedirect('https://sandbox.paynow.pl/pay/PAY-123');
 
         $this->assertSame(1, $shop->packagePayments()->count());

@@ -3,12 +3,13 @@
 namespace App\Http\Controllers\Seller;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Seller\PackagePurchaseRequest;
 use App\Services\AiQuota;
 use App\Services\PackagePaymentService;
-use Illuminate\Http\RedirectResponse;
 use App\Support\PackageFeatures;
 use App\Support\PackageUpgrade;
 use Illuminate\Contracts\Support\Renderable;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 /**
@@ -86,7 +87,7 @@ class PackageController extends Controller
      * Kwotę i termin liczy PackageUpgrade — dokładnie te same liczby, które
      * sprzedawca widział na ekranie.
      */
-    public function purchase(Request $request, string $package, PackagePaymentService $payments): RedirectResponse
+    public function purchase(PackagePurchaseRequest $request, string $package, PackagePaymentService $payments): RedirectResponse
     {
         $shop = $request->user()->shop;
 
@@ -100,7 +101,12 @@ class PackageController extends Controller
                 ->with('error', 'Uzupełnij dane do faktury w „Mój sklep", zanim kupisz pakiet — bez nich nie wystawimy dokumentu.');
         }
 
-        $redirectUrl = $payments->start($shop, $package, route('seller.package.show', ['platnosc' => 'powrot']));
+        $redirectUrl = $payments->start(
+            $shop,
+            $package,
+            route('seller.package.show', ['platnosc' => 'powrot']),
+            $request->ip(),
+        );
 
         if ($redirectUrl === null) {
             return redirect()

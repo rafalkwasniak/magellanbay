@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * Jedna opłata za pakiet Kramio — migawka wyceny z chwili rozpoczęcia
  * płatności. `shop_id` nie jest mass-assignable (tworzymy przez relację).
  */
-#[Fillable(['target_package', 'amount', 'credit', 'new_ends_at', 'status', 'payment_id', 'method', 'recorded_by', 'note', 'paid_at', 'invoice_number'])]
+#[Fillable(['target_package', 'amount', 'credit', 'new_ends_at', 'status', 'payment_id', 'method', 'recorded_by', 'note', 'paid_at', 'invoice_number', 'immediate_start_at', 'immediate_start_ip', 'immediate_start_terms_version'])]
 class PackagePayment extends Model
 {
     /** @use HasFactory<PackagePaymentFactory> */
@@ -69,6 +69,7 @@ class PackagePayment extends Model
             'new_ends_at' => 'datetime',
             'paid_at' => 'datetime',
             'applied_at' => 'datetime',
+            'immediate_start_at' => 'datetime',
         ];
     }
 

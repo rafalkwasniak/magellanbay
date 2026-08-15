@@ -2,9 +2,12 @@
 
 namespace App\Services;
 
+use App\Enums\LegalDocumentType;
 use App\Enums\MailPriority;
 use App\Jobs\GeneratePackageInvoice;
 use App\Models\EmailMessage;
+use App\Models\LegalDocument;
+use App\Models\PackageChange;
 use App\Models\PackagePayment;
 use App\Models\Shop;
 use App\Support\Money;
@@ -35,8 +38,14 @@ class PackagePaymentService
      * Rozpoczyna zakup: migawka wyceny + płatność w Paynow. Zwraca adres
      * przekierowania do bramki albo null (brak konfiguracji / błąd API / pakiet
      * nie do kupienia z tego stanu).
+     *
+     * `$requestIp` utrwala wyraźne żądanie natychmiastowego uruchomienia pakietu
+     * (art. 15 ust. 3 u.p.k.) — bramkę na samą zgodę trzyma
+     * `PackagePurchaseRequest`, tutaj zapisujemy tylko dowód. Domyślny null jest
+     * dla wywołań spoza formularza (rejestracja wpłaty ręcznej idzie osobną
+     * ścieżką i nie dotyka tej metody).
      */
-    public function start(Shop $shop, string $targetPackage, string $continueUrl): ?string
+    public function start(Shop $shop, string $targetPackage, string $continueUrl, ?string $requestIp = null): ?string
     {
         $quote = PackageUpgrade::quote($shop, $targetPackage);
 
@@ -53,6 +62,9 @@ class PackagePaymentService
             'credit' => $quote['credit'],
             'new_ends_at' => $quote['new_ends_at'],
             'status' => PackagePayment::STATUS_PENDING,
+            'immediate_start_at' => now(),
+            'immediate_start_ip' => $requestIp,
+            'immediate_start_terms_version' => LegalDocument::current(LegalDocumentType::Terms)?->version,
         ]);
 
         $created = $this->paynow->createPlatformPayment(
@@ -175,7 +187,7 @@ class PackagePaymentService
             'applied_at' => now(),
         ])->save();
 
-        $shop->refresh()->recordPackageChange(\App\Models\PackageChange::SOURCE_PAYMENT, $payment);
+        $shop->refresh()->recordPackageChange(PackageChange::SOURCE_PAYMENT, $payment);
 
         // Zamek limitu w obie strony: po zejściu niżej limit MALEJE, więc nadwyżkę
         // trzeba schować (nic nie ginie, wraca przy wyższym pakiecie). W każdym

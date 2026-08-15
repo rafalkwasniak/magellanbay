@@ -183,7 +183,7 @@
                                 @endif
 
                                 @if ($onlinePurchase && $quote !== null && $quote['amount'] > 0)
-                                    <form method="POST" action="{{ route('seller.package.purchase', ['package' => $package['key']]) }}" class="mt-3">
+                                    <form method="POST" action="{{ route('seller.package.purchase', ['package' => $package['key']]) }}" class="mt-3" novalidate data-validate>
                                         @csrf
                                         {{-- `inline-flex`, nie `w-full`: przycisk ma być przyciskiem,
                                              nie paskiem przez całą kartę (tak jak przy przedłużeniu). --}}
@@ -192,6 +192,7 @@
                                             Kup {{ $package['name'] }} — {{ \App\Support\Money::pln($quote['amount']) }}
                                         </button>
                                         <p class="mt-1.5 text-xs text-stone-400">BLIK, karta lub szybki przelew (Paynow)</p>
+                                        @include('seller.package._immediate-start', ['purchasePackage' => $package['key']])
                                     </form>
                                 @endif
                                 <ul class="mt-4 space-y-2 text-sm">

@@ -7,7 +7,7 @@
      (darmowy i gratisowy nie mają czego przedłużać). Bez tego zostaje ścieżka
      kontaktowa — żadnych martwych przycisków. --}}
 @if ($onlinePurchase && $renewal['kind'] === 'renewal')
-    <form method="POST" action="{{ route('seller.package.purchase', ['package' => $shop->package]) }}" class="mt-3">
+    <form method="POST" action="{{ route('seller.package.purchase', ['package' => $shop->package]) }}" class="mt-3" novalidate data-validate>
         @csrf
         {{-- `inline-flex`, nie `w-full`: przycisk ma być przyciskiem, nie paskiem
              przez cały box. Świadomie bez `sm:w-auto` — tej klasy nie ma w
@@ -21,6 +21,7 @@
                  posiadanego, więc nikt nie traci dni za wczesną wpłatę. --}}
             Opłacone do {{ $renewal['new_ends_at']->format('d.m.Y') }} · BLIK, karta lub szybki przelew (Paynow)
         </p>
+        @include('seller.package._immediate-start', ['purchasePackage' => $shop->package])
     </form>
 @else
     <p class="mt-2 text-xs">Napisz do nas na <a href="mailto:{{ $contactEmail }}" class="font-medium underline underline-offset-2">{{ $contactEmail }}</a>, żeby przedłużyć — zdążymy bez przerwy w działaniu sklepu.</p>
@@ -33,7 +34,7 @@
     <div class="mt-4 border-t border-stone-200 pt-3">
         <p class="text-xs text-stone-500">Albo przejdź na mniejszy pakiet na kolejny rok:</p>
         @foreach ($downsizes as $slug => $quote)
-            <form method="POST" action="{{ route('seller.package.purchase', ['package' => $slug]) }}" class="mt-2">
+            <form method="POST" action="{{ route('seller.package.purchase', ['package' => $slug]) }}" class="mt-2" novalidate data-validate>
                 @csrf
                 <button type="submit" class="inline-flex rounded-2xl border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:border-stone-400">
                     {{ config("shop.packages.{$slug}.name") }} — {{ \App\Support\Money::pln($quote['amount']) }}
@@ -45,6 +46,7 @@
                     @endif
                     mniejsze limity wchodzą od razu, produkty ponad limit zostaną ukryte
                 </span>
+                @include('seller.package._immediate-start', ['purchasePackage' => $slug])
             </form>
         @endforeach
     </div>
