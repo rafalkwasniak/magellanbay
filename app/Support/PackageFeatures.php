@@ -142,9 +142,12 @@ class PackageFeatures
                 'requires' => null,
             ],
             [
+                // Umowa powierzenia (§18 Regulaminu) zawiera się z chwilą zawarcia
+                // Umowy, więc obejmuje KAŻDY pakiet, także darmowy — stąd `requires`
+                // zostaje puste. Zmiana §18 = zmiana tego zdania.
                 'icon' => '↩',
                 'title' => 'Zgodność z prawem',
-                'description' => 'Pouczenie o odstąpieniu w mailu, formularz zwrotu dla klienta i rozliczenie w panelu. Do tego najniższa cena z 30 dni przy obniżkach i zgoda na ciasteczka.',
+                'description' => 'Pouczenie o odstąpieniu w mailu, formularz zwrotu dla klienta i rozliczenie w panelu. Najniższa cena z 30 dni przy obniżkach. Baner cookies, który naprawdę blokuje śledzenie do czasu zgody. Umowę powierzenia danych osobowych masz zawartą od razu — nie musisz jej nigdzie załatwiać.',
                 'requires' => null,
             ],
             [
