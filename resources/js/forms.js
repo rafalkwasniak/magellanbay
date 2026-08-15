@@ -6,7 +6,7 @@
 //
 // Konwencja (trzymamy jej w każdym formularzu):
 //   <form novalidate data-validate>           — włącza moduł, wyłącza dymki przeglądarki
-//   <input required>                           — pole wymagane (też checkbox)
+//   <input required>                           — pole wymagane (też checkbox i grupa radio)
 //   data-msg-required="..."                    — własny komunikat „wymagane"
 //   data-match="password"                      — wartość musi równać się polu o tym id
 //   data-msg-email / data-msg-match="..."      — własne komunikaty
@@ -18,12 +18,25 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const DEFAULTS = {
     required: 'To pole jest wymagane.',
     requiredCheckbox: 'Zaznacz to pole, aby kontynuować.',
+    requiredRadio: 'Wybierz jedną z opcji.',
     email: 'Podaj poprawny adres e-mail.',
     match: 'Pola muszą być identyczne.',
 };
 
 function isCheckable(control) {
     return control.type === 'checkbox' || control.type === 'radio';
+}
+
+// Radio jest polem GRUPOWYM: „wymagane" znaczy „wybierz coś z grupy", a nie
+// „zaznacz akurat ten przycisk". Bez tego rozróżnienia zaznaczenie jednej opcji
+// zapalało błąd przy pozostałych — formularz odmawiał wysyłki mimo dokonanego
+// wyboru (złapane na ekranie rozstrzygania zgłoszeń, 15.08).
+function radioGroup(control, form) {
+    return form.querySelectorAll(`input[type="radio"][name="${CSS.escape(control.name)}"]`);
+}
+
+function groupChecked(control, form) {
+    return Array.from(radioGroup(control, form)).some((radio) => radio.checked);
 }
 
 // Komunikat: własny z data-msg-* albo domyślny.
@@ -74,7 +87,9 @@ function firstViolation(control, form) {
     const value = control.value.trim();
 
     if (control.required) {
-        if (isCheckable(control)) {
+        if (control.type === 'radio') {
+            if (!groupChecked(control, form)) return message(control, 'required', DEFAULTS.requiredRadio);
+        } else if (isCheckable(control)) {
             if (!control.checked) return message(control, 'required', DEFAULTS.requiredCheckbox);
         } else if (value === '') {
             return message(control, 'required', DEFAULTS.required);
@@ -99,8 +114,17 @@ function validate(form) {
     clearAll(form);
 
     const invalid = [];
+    // Grupa radio ma dostać JEDEN komunikat, nie tyle, ile ma przycisków —
+    // inaczej pod każdą opcją wyskoczyłoby to samo zdanie.
+    const sprawdzoneGrupy = new Set();
+
     form.querySelectorAll('input, select, textarea').forEach((control) => {
         if (control.disabled || control.type === 'hidden') return;
+
+        if (control.type === 'radio') {
+            if (sprawdzoneGrupy.has(control.name)) return;
+            sprawdzoneGrupy.add(control.name);
+        }
 
         const violation = firstViolation(control, form);
         if (violation !== null) {
@@ -129,6 +153,16 @@ function initForm(form) {
 
     // Błąd znika, gdy użytkownik zaczyna poprawiać pole.
     const clearIfInvalid = (e) => {
+        // Przy grupie radio komunikat wisi pod PIERWSZYM przyciskiem, a kliknąć
+        // można dowolny — więc czyścimy całą grupę, nie tylko ten trafiony.
+        if (e.target.type === 'radio' && e.target.name) {
+            radioGroup(e.target, form).forEach((radio) => {
+                if (radio.getAttribute('aria-invalid')) clearControl(radio);
+            });
+
+            return;
+        }
+
         if (e.target.getAttribute('aria-invalid')) clearControl(e.target);
     };
     form.addEventListener('input', clearIfInvalid);

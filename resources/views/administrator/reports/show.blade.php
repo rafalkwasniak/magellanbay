@@ -84,19 +84,18 @@
             <form method="POST" action="{{ route('administrator.reports.decide', $report) }}" class="mt-4 space-y-4" novalidate data-validate>
                 @csrf
 
-                {{-- ŚWIADOMIE BEZ `required` na radio. `forms.js` sprawdza każdy
-                     przycisk z osobna („czy TEN jest zaznaczony"), a nie grupę po
-                     nazwie — więc wybranie „Uznane" i tak zapalało błąd przy
-                     „Odrzucone". To jedyna grupa radio w aplikacji z `required`,
-                     stąd luka nigdy wcześniej nie wyszła.
+                {{-- `required` działa tu dopiero od 15.08, gdy `forms.js` nauczył
+                     się grup radio: wcześniej sprawdzał każdy przycisk osobno, więc
+                     wybranie „Uznane" zapalało błąd przy „Odrzucone" i formularz
+                     odmawiał wysyłki mimo dokonanego wyboru.
 
-                     Brak wyboru łapie `ContentReportDecisionRequest` (źródło
-                     prawdy) i pokazuje `@error('status')` niżej. Kiedy `forms.js`
-                     nauczy się grup radio, `required` można tu wrócić. --}}
+                     Źródłem prawdy pozostaje `ContentReportDecisionRequest` —
+                     `required` to wyłącznie warstwa UX. --}}
                 <div class="flex flex-wrap gap-3">
                     @foreach ([\App\Enums\ContentReportStatus::Upheld, \App\Enums\ContentReportStatus::Rejected] as $case)
                         <label class="flex items-center gap-2 rounded-2xl border border-stone-200 bg-white/80 px-4 py-2.5 text-sm">
-                            <input type="radio" name="status" value="{{ $case->value }}"
+                            <input type="radio" name="status" value="{{ $case->value }}" required
+                                data-msg-required="Wybierz, czy zgłoszenie jest uznane, czy odrzucone."
                                 @checked(old('status') === $case->value)>
                             <span class="font-medium text-stone-700">{{ $case->label() }}</span>
                         </label>

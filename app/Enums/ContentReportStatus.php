@@ -35,9 +35,13 @@ enum ContentReportStatus: string
      * kolory nie rozjechały się przy pierwszej zmianie.
      *
      * Bursztyn = czeka na Ciebie, zieleń = zgłoszenie uznane, czerwień =
-     * odrzucone. Odrzucone dostaje tło `-50` zamiast `-100`, bo `bg-rose-100`
-     * NIE MA w zbudowanym CSS — klasa spoza buildu nic nie robi po cichu, więc
-     * plakietka wyszłaby bez tła. Zrównanie odcieni wymaga przebudowy CSS.
+     * odrzucone — wszystkie w tym samym odcieniu `-100`, żeby miały równą wagę.
+     *
+     * `bg-rose-100` weszła do buildu dopiero razem z tym plikiem: Tailwind
+     * generuje wyłącznie klasy, które gdzieś w projekcie WYSTĘPUJĄ, więc dopóki
+     * nikt jej nie użył, nie istniała. Test `ContentReportPanelTest` czyta
+     * zbudowany arkusz i pilnuje, że każda z tych klas w nim jest — klasa spoza
+     * buildu nic nie robi po cichu, a plakietka wychodzi bez tła.
      *
      * @return array{0: string, 1: string} tło, kolor tekstu
      */
@@ -46,7 +50,7 @@ enum ContentReportStatus: string
         return match ($this) {
             self::New => ['bg-amber-100', 'text-amber-900'],
             self::Upheld => ['bg-emerald-100', 'text-emerald-800'],
-            self::Rejected => ['bg-rose-50', 'text-rose-700'],
+            self::Rejected => ['bg-rose-100', 'text-rose-700'],
         };
     }
 }
