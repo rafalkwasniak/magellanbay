@@ -373,6 +373,7 @@
                         <a href="{{ route('legal.terms') }}" class="transition hover:text-stone-800">Regulamin</a>
                         <a href="{{ route('legal.privacy') }}" class="transition hover:text-stone-800">Polityka prywatności</a>
                         <x-cookie-settings-link class="inline text-stone-500 transition hover:text-stone-800" />
+                        <x-report-content-link class="inline text-stone-500 transition hover:text-stone-800" />
                     </nav>
                 </div>
                 <p class="mt-6 text-center text-xs text-stone-400">© {{ now()->year }} {{ config('app.name') }}. Widok sklepu w nagłówku to wizualizacja produktu.</p>

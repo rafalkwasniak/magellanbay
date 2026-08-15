@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\LegalDocumentType;
+use App\Http\Controllers\Administrator\ContentReportController as AdministratorContentReportController;
 use App\Http\Controllers\Administrator\DashboardController as AdministratorDashboard;
 use App\Http\Controllers\Administrator\MailingController as AdministratorMailingController;
 use App\Http\Controllers\Administrator\MailPreviewController;
@@ -16,6 +17,7 @@ use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\ResendActivationController;
 use App\Http\Controllers\Consent\ConsentController;
+use App\Http\Controllers\ContentReportController;
 use App\Http\Controllers\CookieConsentController;
 use App\Http\Controllers\LegalController;
 use App\Http\Controllers\PackagePaymentWebhookController;
@@ -166,6 +168,22 @@ Route::post('/wypisz-sie/{user}/przywroc', [PlatformUnsubscribeController::class
 
 /*
 |--------------------------------------------------------------------------
+| Zgłaszanie treści bezprawnych (publiczne, bez logowania) — art. 16 DSA
+|--------------------------------------------------------------------------
+| Mechanizm musi być „łatwo dostępny", więc żadnego logowania i link w stopce
+| każdego storefrontu. Formularz stoi na CENTRALI, bo obowiązek jest nasz, nie
+| sprzedawcy — link ze storefrontu buduj przez `Central::url()`, inaczej trafi
+| w subdomenę sklepu, którego zgłoszenie dotyczy.
+|
+| `throttle` bo formularz jest otwarty dla świata; limit dobrany tak, żeby nie
+| przeszkadzał człowiekowi zgłaszającemu kilka adresów pod rząd.
+*/
+Route::get('/zglos-tresc', [ContentReportController::class, 'create'])->name('reports.create');
+Route::post('/zglos-tresc', [ContentReportController::class, 'store'])
+    ->middleware('throttle:10,60')->name('reports.store');
+
+/*
+|--------------------------------------------------------------------------
 | Panel administratora (rola: admin)
 |--------------------------------------------------------------------------
 */
@@ -221,6 +239,12 @@ Route::middleware(['auth', 'role:admin'])
         Route::get('/wiadomosci/{mailing}', [AdministratorMailingController::class, 'edit'])->name('mailings.edit');
         Route::post('/wiadomosci/{mailing}', [AdministratorMailingController::class, 'update'])->name('mailings.update');
         Route::post('/wiadomosci/{mailing}/usun', [AdministratorMailingController::class, 'destroy'])->name('mailings.destroy');
+
+        // Zgłoszenia treści bezprawnych (art. 16 DSA). Ekran kończy się na
+        // decyzji z uzasadnieniem — akcje na sklepie zostają w dziale „Sklepy”.
+        Route::get('/zgloszenia', [AdministratorContentReportController::class, 'index'])->name('reports.index');
+        Route::get('/zgloszenia/{report}', [AdministratorContentReportController::class, 'show'])->name('reports.show');
+        Route::post('/zgloszenia/{report}/rozstrzygnij', [AdministratorContentReportController::class, 'decide'])->name('reports.decide');
 
         // Podgląd szablonów maili (na froncie, dla nas) — np. /administrator/podglad-maila/aktywacja
         Route::get('/podglad-maila/{template}', [MailPreviewController::class, 'show'])->name('mail.preview');

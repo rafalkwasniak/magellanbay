@@ -39,4 +39,9 @@ return [
     'email' => 'kontakt@kramio.pl',
     'phone' => '+48 668 196 229',
 
+    // Punkt kontaktowy w sprawach treści bezprawnych (art. 16 DSA) — osobny od
+    // ogólnego, żeby zgłoszenia prawne nie ginęły między pytaniami o cennik.
+    // Skrzynka jest catch-all, więc adres nie wymaga zakładania konta.
+    'abuse_email' => 'naruszenia@kramio.pl',
+
 ];

@@ -436,6 +436,7 @@
                     {{-- Wycofanie zgody — ten sam komponent co w centrali.
                          Widoczne po podjęciu decyzji; wcześniej pyta o nią baner. --}}
                     <li><x-cookie-settings-link /></li>
+                    <li><x-report-content-link /></li>
                 </ul>
             </div>
 

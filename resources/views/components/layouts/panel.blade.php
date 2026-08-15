@@ -35,6 +35,11 @@
             ['label' => 'Wiadomości', 'route' => 'administrator.mailings.index', 'active' => 'administrator.mailings.*', 'icon' => '📣'],
             ['label' => 'Zamówienia', 'route' => 'administrator.orders.index', 'active' => 'administrator.orders.*', 'icon' => '📦'],
             ['label' => 'Pakiety', 'route' => 'administrator.packages.index', 'active' => 'administrator.packages.*', 'icon' => '✨'],
+            // Odznaka liczy nierozpatrzone: od chwili zgłoszenia mamy wiedzę o
+            // treści, więc to jedyna kolejka w panelu, w której zaleganie ma
+            // koszt prawny (art. 6 DSA). COUNT po indeksowanym `status`.
+            // Komentarz PHP, NIE bladowy — jesteśmy w środku bloku @php.
+            ['label' => 'Zgłoszenia', 'route' => 'administrator.reports.index', 'active' => 'administrator.reports.*', 'icon' => '🚩', 'badge' => \App\Models\ContentReport::pending()->count()],
             ['label' => 'Ustawienia', 'route' => 'administrator.settings.index', 'active' => 'administrator.settings.*', 'icon' => '⚙️'],
         ] : [
             ['label' => 'Pulpit', 'route' => 'seller.dashboard', 'icon' => '🏠'],
