@@ -1,10 +1,21 @@
-<!-- Źródło treści wersji 2 w `legal_documents` (opublikowana 2026-08-06).
+<!-- Źródło treści wersji 3 w `legal_documents` (opublikowana 2026-08-15).
      Konwencja HTML jak w legal_documents (h2/h3/p/ul — styluje .legal-content).
-     Zmiana treści = nowa wersja w bazie (mechanizm ponownej akceptacji), ten plik aktualizować razem z nią. -->
+     Zmiana treści = nowa wersja w bazie (mechanizm ponownej akceptacji), ten plik aktualizować razem z nią.
 
-<p>Ta polityka wyjaśnia, jak w serwisie Kramio przetwarzane są dane osobowe. Kramio to platforma, na której niezależni sprzedawcy prowadzą własne sklepy internetowe — dlatego dokument ma dwie części:</p>
+     ZMIANY W WERSJI 3 (2026-08-15):
+     - Słowo „platforma" zastąpione „serwisem" (5 miejsc). NIE jest to kosmetyka: przy
+       kwalifikacji Kramio jako dostawcy HOSTINGU, a nie platformy internetowej w rozumieniu
+       DSA, własny dokument nie może podawać drugiej stronie gotowego cytatu przeciwko nam.
+       Patrz §4 Regulaminu.
+     - Dodany cel przetwarzania: zgłoszenia treści bezprawnych (art. 16 DSA). Zbieramy tam
+       dane osób spoza grona sprzedawców i klientów, więc musi to być opisane.
+       UWAGA: zdanie „bez Twoich danych kontaktowych" ma pokrycie w kodzie —
+       `ContentReportMailer::statementOfReasons()` przekazuje sprzedawcy adres treści,
+       kategorię i uzasadnienie, ale NIE dane zgłaszającego. Zmiana tam = zmiana tutaj. -->
+
+<p>Ta polityka wyjaśnia, jak w serwisie Kramio przetwarzane są dane osobowe. Kramio to serwis, w którym niezależni sprzedawcy prowadzą własne sklepy internetowe — dlatego dokument ma dwie części:</p>
 <ul>
-    <li><strong>Część I</strong> dotyczy serwisu Kramio (kramio.pl): kont sprzedawców, rozliczeń i strony głównej platformy. Administratorem danych jest tu operator Kramio.</li>
+    <li><strong>Część I</strong> dotyczy serwisu Kramio (kramio.pl): kont sprzedawców, rozliczeń i stron samego serwisu. Administratorem danych jest tu operator Kramio.</li>
     <li><strong>Część II</strong> dotyczy sklepów prowadzonych na Kramio (adresy w rodzaju <em>nazwa-sklepu.kramio.pl</em>): zakupów, kont klientów i newsletterów sklepów. Administratorem danych jest tu sprzedawca prowadzący dany sklep, a Kramio przetwarza dane w jego imieniu.</li>
 </ul>
 <p>Na końcu znajdziesz wspólne informacje o plikach cookies oraz o Twoich prawach.</p>
@@ -25,9 +36,11 @@
 
 <p><strong>Korespondencja.</strong> Gdy piszesz do nas e-mailem, przetwarzamy Twoje dane kontaktowe i treść wiadomości, aby załatwić sprawę (art. 6 ust. 1 lit. f RODO). Korespondencję przechowujemy przez czas potrzebny do jej obsługi, a jeśli może wiązać się z roszczeniami — do upływu terminów ich przedawnienia.</p>
 
+<p><strong>Zgłoszenia treści bezprawnych.</strong> Gdy zgłaszasz nam treść dostępną w serwisie, przetwarzamy podany adres e-mail, opcjonalnie imię i nazwisko lub nazwę, treść zgłoszenia oraz adres IP. Robimy to, aby zgłoszenie rozpatrzyć i poinformować Cię o rozstrzygnięciu — jest to nasz obowiązek prawny (art. 6 ust. 1 lit. c RODO w związku z art. 16 rozporządzenia (UE) 2022/2065 o usługach cyfrowych) oraz nasz prawnie uzasadniony interes polegający na możliwości wykazania, jak zgłoszenie zostało załatwione (art. 6 ust. 1 lit. f RODO). Sprzedawcy, którego zgłoszenie dotyczy, przekazujemy powód i uzasadnienie decyzji — <strong>bez Twoich danych kontaktowych</strong>, chyba że obowiązek ich ujawnienia wynika z przepisów. Zgłoszenia i rozstrzygnięcia przechowujemy przez czas potrzebny do ich obsługi i wykazania zgodności, nie dłużej niż do upływu terminów przedawnienia roszczeń.</p>
+
 <p><strong>Marketing własny Kramio.</strong> Informacje o nowościach i ofertach Kramio wysyłamy sprzedawcom wyłącznie za zgodą (art. 6 ust. 1 lit. a RODO), którą można cofnąć w każdej chwili w ustawieniach konta. Dla celów dowodowych zapisujemy datę, adres IP i treść wyrażonej zgody (art. 6 ust. 1 lit. f RODO).</p>
 
-<p><strong>Statystyki i analityka.</strong> Na stronach platformy możemy korzystać z narzędzi analitycznych (Google Analytics) — wyłącznie po wyrażeniu przez Ciebie zgody w banerze cookies (szczegóły w części „Pliki cookies"). Dopóki zgody nie ma, kod analityczny w ogóle nie jest uruchamiany.</p>
+<p><strong>Statystyki i analityka.</strong> Na stronach serwisu Kramio możemy korzystać z narzędzi analitycznych (Google Analytics) — wyłącznie po wyrażeniu przez Ciebie zgody w banerze cookies (szczegóły w części „Pliki cookies"). Dopóki zgody nie ma, kod analityczny w ogóle nie jest uruchamiany.</p>
 
 <p><strong>Dochodzenie i obrona roszczeń.</strong> Dane związane z umową możemy przechowywać do upływu terminów przedawnienia roszczeń (art. 6 ust. 1 lit. f RODO).</p>
 
@@ -52,7 +65,7 @@
 
 <h3>Kto jest administratorem Twoich danych, gdy kupujesz w sklepie</h3>
 <p>Każdy sklep dostępny pod adresem w rodzaju <em>nazwa-sklepu.kramio.pl</em> jest prowadzony przez niezależnego sprzedawcę. To <strong>sprzedawca jest administratorem danych osobowych</strong>, które podajesz w jego sklepie — przy zakupie, zakładaniu konta klienta, zapisie na newsletter czy składaniu zwrotu. Dane sprzedawcy (nazwa, adres, kontakt) znajdziesz w stopce sklepu oraz w jego regulaminie.</p>
-<p>Kramio (Operator wskazany w Części I) przetwarza te dane <strong>w imieniu sprzedawcy</strong>, jako podmiot przetwarzający w rozumieniu art. 28 RODO — na podstawie umowy powierzenia zawartej w Regulaminie platformy. Oznacza to, że dostarczamy sprzedawcy techniczne narzędzie do prowadzenia sklepu, ale to sprzedawca decyduje o celach wykorzystania danych swoich klientów.</p>
+<p>Kramio (Operator wskazany w Części I) przetwarza te dane <strong>w imieniu sprzedawcy</strong>, jako podmiot przetwarzający w rozumieniu art. 28 RODO — na podstawie umowy powierzenia zawartej w Regulaminie serwisu. Oznacza to, że dostarczamy sprzedawcy techniczne narzędzie do prowadzenia sklepu, ale to sprzedawca decyduje o celach wykorzystania danych swoich klientów.</p>
 
 <h3>Jakie dane pojawiają się w sklepach</h3>
 <ul>
@@ -66,7 +79,7 @@
 <p>Swoje prawa (opisane niżej) wykonujesz wobec sprzedawcy prowadzącego sklep. Jeżeli napiszesz w takiej sprawie do nas, przekażemy sprawę sprzedawcy i pomożemy technicznie w jej realizacji.</p>
 
 <h2>Pliki cookies</h2>
-<p>Przy pierwszej wizycie — zarówno na kramio.pl, jak i w każdym sklepie — pytamy Cię o zgodę na cookies w banerze z równorzędnym wyborem („zgadzam się" / „nie zgadzam się"). Decyzję możesz w każdej chwili zmienić, klikając „Ciasteczka" w stopce strony. Zgoda dotyczy tej witryny, na której ją wyraziłeś (osobno platforma, osobno każdy sklep), a informację o Twojej decyzji przechowujemy wyłącznie w pliku cookie w Twojej przeglądarce.</p>
+<p>Przy pierwszej wizycie — zarówno na kramio.pl, jak i w każdym sklepie — pytamy Cię o zgodę na cookies w banerze z równorzędnym wyborem („zgadzam się" / „nie zgadzam się"). Decyzję możesz w każdej chwili zmienić, klikając „Ciasteczka" w stopce strony. Zgoda dotyczy tej witryny, na której ją wyraziłeś (osobno serwis Kramio, osobno każdy sklep), a informację o Twojej decyzji przechowujemy wyłącznie w pliku cookie w Twojej przeglądarce.</p>
 <p>Używamy dwóch kategorii cookies:</p>
 <ul>
     <li><strong>niezbędne</strong> — sesja, bezpieczeństwo formularzy, koszyk, zapamiętanie Twojej decyzji dotyczącej cookies; działają zawsze, bo bez nich strona nie może poprawnie funkcjonować (podstawa: art. 6 ust. 1 lit. f RODO oraz przepisy ustawy z 12 lipca 2024 r. — Prawo komunikacji elektronicznej);</li>
@@ -97,4 +110,4 @@
 <h2>Zmiany polityki</h2>
 <p>Polityka może się zmieniać wraz z rozwojem serwisu. O istotnych zmianach poinformujemy w serwisie, a posiadaczy kont — także e-mailem; każda wersja ma datę obowiązywania.</p>
 
-<p>Polityka obowiązuje od dnia: 06.08.2026.</p>
+<p>Polityka obowiązuje od dnia: 15.08.2026.</p>

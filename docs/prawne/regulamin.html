@@ -1,4 +1,4 @@
-<!-- Źródło treści wersji 2 w `legal_documents` (opublikowana 2026-08-06).
+<!-- Źródło treści wersji 3 w `legal_documents` (opublikowana 2026-08-15).
      Konwencja HTML jak w legal_documents (h2/h3/p/ul/ol — styluje .legal-content).
      Zmiana treści = nowa wersja w bazie (mechanizm ponownej akceptacji), ten plik aktualizować razem z nią.
 
@@ -7,7 +7,30 @@
      - Sprzedawcą może być przedsiębiorca LUB osoba prowadząca działalność nierejestrowaną.
      - Kramio = SaaS, nie marketplace: nie jest stroną sprzedaży w Sklepach, nie pośredniczy w płatnościach.
      - Bez platformy ODR (zamknięta 20.07.2025, rozporządzenie 2024/3228).
-     - Rozdział „Powierzenie przetwarzania danych" = umowa powierzenia z art. 28 RODO. -->
+     - Rozdział „Powierzenie przetwarzania danych" = umowa powierzenia z art. 28 RODO.
+
+     ZMIANY W WERSJI 3 (2026-08-15):
+     - §4: dopisany stan faktyczny, z którego wynika kwalifikacja HOSTING (nie platforma
+       internetowa) w rozumieniu DSA. UWAGA: to zdanie ma pokrycie w kodzie — Serwis nie ma
+       publicznego katalogu sklepów, a mapa strony centrali zawiera wyłącznie landing,
+       regulamin i politykę. Uruchomienie galerii „sklepy na Kramio" UNIEWAŻNIŁOBY ten zapis.
+     - §11 NOWY: zgłaszanie treści bezprawnych i zasady moderacji (art. 14 i 16 DSA).
+       Dawne §11–§19 przesunięte na §12–§20; odesłania przenumerowane (§6 ust. 6 → §14,
+       §14 ust. 4 → §18, §17 ust. 2 → §18).
+     - §14 ust. 1: dopisane, że usunięcie obejmuje także Konto i dane Sprzedawcy — kod
+       (`ShopEraser`) kasuje właściciela razem ze sklepem, a §6 ust. 6 już o tym mówił.
+     - §14 ust. 2: rozszerzone o elementy uzasadnienia z art. 17 DSA (fakty, podstawa,
+       brak automatu, tryb odwołania).
+     - §2: zdefiniowane „Regulamin" i „Polityka Prywatności" — używane wielką literą.
+     - §8: ujednolicone nazewnictwo pakietu bezpłatnego (było „Pakiet podstawowy" w ust. 2
+       i „pakiet bezpłatny" w ust. 5).
+
+     DECYZJE ŚWIADOME — nie „poprawiać":
+     - §16 ust. 2 (reklamacje): milczące uznanie po 14 dniach obowiązuje WSZYSTKICH
+       Sprzedawców, także spółek, choć ustawa wymaga tego wyłącznie wobec konsumentów.
+       Decyzja Rafała z 15.08: „lepiej w tę stronę wizerunkowo".
+     - §11: NIE deklarujemy terminu rozpatrzenia zgłoszenia. DSA nie narzuca sztywnego
+       terminu, a niedotrzymanie własnej deklaracji jest gorsze niż jej brak. -->
 
 <h2>§1 / Postanowienia ogólne</h2>
 <p>Serwis internetowy Kramio, dostępny pod adresem https://kramio.pl wraz z podstronami sklepów w subdomenach (np. nazwa-sklepu.kramio.pl), prowadzony jest przez Rafała Kwaśniaka, prowadzącego działalność gospodarczą pod firmą Red Paprika Rafał Kwaśniak, ul. Okrzei 73, 42-582 Rogoźnik, NIP 6252118589, REGON 240381039, wpisaną do Centralnej Ewidencji i Informacji o Działalności Gospodarczej.</p>
@@ -17,6 +40,8 @@
 <ul>
     <li><strong>Operator</strong> — Red Paprika Rafał Kwaśniak, podmiot prowadzący Serwis, wskazany w §1.</li>
     <li><strong>Serwis</strong> — platforma internetowa Kramio dostępna pod adresem https://kramio.pl wraz ze sklepami w subdomenach.</li>
+    <li><strong>Regulamin</strong> — niniejszy dokument, w aktualnej wersji opublikowanej w Serwisie.</li>
+    <li><strong>Polityka Prywatności</strong> — dokument opisujący zasady przetwarzania danych osobowych w Serwisie, dostępny w Serwisie.</li>
     <li><strong>Sprzedawca</strong> — osoba, która prowadzi w Serwisie własny Sklep: przedsiębiorca albo osoba fizyczna prowadząca działalność nierejestrowaną w rozumieniu ustawy — Prawo przedsiębiorców.</li>
     <li><strong>Sklep</strong> — sklep internetowy Sprzedawcy prowadzony w ramach Serwisu, dostępny pod adresem w subdomenie Serwisu.</li>
     <li><strong>Klient Sklepu</strong> — osoba dokonująca zakupów w Sklepie lub korzystająca z jego funkcji (konto klienta, newsletter).</li>
@@ -32,8 +57,10 @@
 <ul>
     <li>adres: ul. Okrzei 73, 42-582 Rogoźnik,</li>
     <li>e-mail: kontakt@kramio.pl,</li>
-    <li>telefon: +48 668 196 229.</li>
+    <li>telefon: +48 668 196 229,</li>
+    <li>zgłoszenia treści bezprawnych: naruszenia@kramio.pl (§11).</li>
 </ul>
+<p>Adres naruszenia@kramio.pl jest punktem kontaktowym w sprawach dotyczących treści publikowanych w Serwisie, w tym dla organów i użytkowników. Kontakt prowadzimy w języku polskim.</p>
 
 <h2>§4 / Charakter usługi</h2>
 <p>Kramio jest narzędziem (usługą typu SaaS), za pomocą którego Sprzedawca prowadzi <strong>własny</strong> sklep internetowy. W szczególności:</p>
@@ -43,6 +70,7 @@
     <li>za ofertę, treści, ceny, realizację zamówień, reklamacje i zwroty w Sklepie odpowiada Sprzedawca;</li>
     <li>Operator odpowiada za działanie Serwisu jako narzędzia, na zasadach opisanych w Regulaminie.</li>
 </ul>
+<p>Serwis <strong>nie prowadzi katalogu Sklepów ani nie zestawia ofert Sprzedawców</strong>: Sklepy nie są w Serwisie wzajemnie powiązane, wyszukiwane wspólnie ani promowane względem siebie, a każdy Sklep działa pod własnym adresem jako odrębna witryna swojego Sprzedawcy. Operator udostępnia miejsce i działające oprogramowanie, nie działa zaś w imieniu Sprzedawcy ani na jego rachunek.</p>
 
 <h2>§5 / Wymagania techniczne</h2>
 <p>Do korzystania z Serwisu niezbędne są: urządzenie z dostępem do Internetu i aktualną przeglądarką internetową, aktywne konto e-mail oraz włączona obsługa niezbędnych plików cookies.</p>
@@ -54,7 +82,7 @@
     <li>Rejestracja wymaga podania imienia, adresu e-mail i hasła oraz potwierdzenia adresu e-mail. Założenie Konta jest bezpłatne.</li>
     <li>Sprzedawca zobowiązany jest podawać dane prawdziwe i aktualizować je w razie zmian; dane firmowe Sklepu (nazwa, adres, NIP, kontakt) prezentowane są Klientom Sklepu m.in. w stopce Sklepu.</li>
     <li>Sprzedawca nie udostępnia danych logowania osobom trzecim i odpowiada za działania wykonane po zalogowaniu na jego Konto, chyba że doszło do nich z przyczyn leżących po stronie Operatora.</li>
-    <li>Sprzedawca może w każdej chwili usunąć Konto wraz ze Sklepem (§13).</li>
+    <li>Sprzedawca może w każdej chwili usunąć Konto wraz ze Sklepem (§14).</li>
 </ol>
 
 <h2>§7 / Sklep i jego adres</h2>
@@ -68,10 +96,10 @@
 <h2>§8 / Pakiety i płatności</h2>
 <ol>
     <li>Zakres funkcji Sklepu wynika z wybranego Pakietu. Aktualne Pakiety i ceny określa Cennik; ceny są cenami brutto, w złotych polskich.</li>
-    <li>Pakiet podstawowy jest bezpłatny. Pakiety płatne opłacane są z góry za roczny okres rozliczeniowy.</li>
+    <li>Pakiet bezpłatny nie wymaga żadnych opłat. Pakiety płatne opłacane są z góry za roczny okres rozliczeniowy.</li>
     <li>Zakup Pakietu odbywa się z poziomu panelu Sprzedawcy; płatność realizowana jest online za pośrednictwem operatora płatności. Po zaksięgowaniu płatności Operator aktywuje Pakiet i wystawia fakturę, którą doręcza elektronicznie na adres e-mail Sprzedawcy, na co Sprzedawca wyraża zgodę.</li>
     <li>Pakiet <strong>nie odnawia się automatycznie</strong> i żadne płatności nie są pobierane bez działania Sprzedawcy. Przed końcem okresu Operator przypomina o możliwości przedłużenia. Sprzedawca może przy przedłużeniu wybrać inny Pakiet, w tym niższy.</li>
-    <li>Po upływie opłaconego okresu Sklep przechodzi w tryb ograniczony: przez 7 dni karencji działa bez zmian, a następnie funkcje wykraczające poza pakiet bezpłatny zostają zablokowane do czasu przedłużenia. Dane Sklepu nie są w związku z tym usuwane.</li>
+    <li>Po upływie opłaconego okresu Sklep przechodzi w tryb ograniczony: przez 7 dni karencji działa bez zmian, a następnie funkcje wykraczające poza Pakiet bezpłatny zostają zablokowane do czasu przedłużenia. Dane Sklepu nie są w związku z tym usuwane.</li>
     <li>Operator może przyznać danemu Sklepowi warunki indywidualne (np. inną cenę lub zakres funkcji); warunki indywidualne mają pierwszeństwo przed Cennikiem.</li>
     <li>Funkcje oparte na usługach zewnętrznych (np. asystent AI) mogą podlegać limitom ilościowym określonym w opisie Pakietu.</li>
     <li>Zmiany Cennika nie wpływają na okresy już opłacone.</li>
@@ -80,7 +108,7 @@
 <h2>§9 / Prawo odstąpienia od umowy</h2>
 <ol>
     <li>Sprzedawca będący Konsumentem lub Przedsiębiorcą na prawach konsumenta może odstąpić od umowy o płatny Pakiet w terminie 14 dni od jej zawarcia, bez podania przyczyny — składając oświadczenie, np. e-mailem na adres z §3. Operator niezwłocznie potwierdza jego otrzymanie.</li>
-    <li>Aktywacja Pakietu następuje — na wyraźne żądanie Sprzedawcy — bezpośrednio po opłaceniu, a więc przed upływem terminu odstąpienia. W razie odstąpienia Sprzedawca zapłaci za świadczenie spełnione do chwili odstąpienia (proporcjonalnie do wykorzystanego okresu), a Operator zwróci pozostałą część płatności w terminie 14 dni, tą samą metodą płatności, chyba że Sprzedawca zgodzi się na inną.</li>
+    <li>Aktywacja Pakietu następuje — na wyraźne żądanie Sprzedawcy składane przy zakupie — bezpośrednio po opłaceniu, a więc przed upływem terminu odstąpienia. W razie odstąpienia Sprzedawca zapłaci za świadczenie spełnione do chwili odstąpienia (proporcjonalnie do wykorzystanego okresu), a Operator zwróci pozostałą część płatności w terminie 14 dni, tą samą metodą płatności, chyba że Sprzedawca zgodzi się na inną.</li>
     <li>Prawo odstąpienia nie przysługuje w zakresie, w jakim usługa została w pełni wykonana za wyraźną zgodą Sprzedawcy poinformowanego o utracie prawa odstąpienia.</li>
 </ol>
 
@@ -99,49 +127,62 @@
     <li>Sprzedawca zwalnia Operatora z odpowiedzialności za roszczenia osób trzecich wynikające z treści opublikowanych przez Sprzedawcę lub z jego działalności handlowej, w zakresie dopuszczalnym przez prawo.</li>
 </ol>
 
-<h2>§11 / Treści Sprzedawcy i licencja</h2>
+<h2>§11 / Zgłaszanie treści bezprawnych i moderacja</h2>
+<ol>
+    <li>Każda osoba lub podmiot może zgłosić Operatorowi treść dostępną w Serwisie, którą uważa za bezprawną. Zgłoszenie składa się przez formularz dostępny pod adresem https://kramio.pl/zglos-tresc, do którego odsyła stopka każdego Sklepu i stron Serwisu, albo na adres naruszenia@kramio.pl. Zgłoszenie nie wymaga posiadania Konta.</li>
+    <li>Zgłoszenie powinno zawierać: dokładny adres (URL) zgłaszanej treści, wyjaśnienie, dlaczego zgłaszający uważa ją za bezprawną, dane kontaktowe zgłaszającego (adres e-mail; imię i nazwisko lub nazwa są nieobowiązkowe) oraz oświadczenie, że informacje zawarte w zgłoszeniu są — według najlepszej wiedzy zgłaszającego — prawidłowe i kompletne, a zgłoszenie składane jest w dobrej wierze.</li>
+    <li>Operator niezwłocznie potwierdza otrzymanie zgłoszenia na podany adres e-mail.</li>
+    <li>Operator rozpatruje zgłoszenia w sposób terminowy, staranny, niearbitralny i obiektywny. <strong>Decyzje podejmuje człowiek</strong> — Operator nie stosuje do oceny zgłoszeń zautomatyzowanego przetwarzania ani zautomatyzowanego podejmowania decyzji.</li>
+    <li>O rozstrzygnięciu Operator informuje zgłaszającego wraz z uzasadnieniem, także wtedy, gdy zgłoszenie zostaje odrzucone. Informacja zawiera pouczenie o możliwości zakwestionowania decyzji.</li>
+    <li>Jeżeli zgłoszenie zostanie uznane, Operator może ograniczyć dostępność zgłoszonej treści, w szczególności ją usunąć lub uniemożliwić dostęp do niej, a w przypadkach określonych w §14 zawiesić Sklep lub Konto. O ograniczeniu i jego przyczynach Operator informuje Sprzedawcę na zasadach z §14 ust. 2.</li>
+    <li>Operator może ograniczyć dostępność treści naruszającej §10 również wtedy, gdy stwierdzi naruszenie samodzielnie, bez zgłoszenia.</li>
+    <li>Zgłoszenia składane w złej wierze, w szczególności oczywiście bezzasadne i powtarzane, Operator może pozostawić bez rozpoznania, informując o tym zgłaszającego.</li>
+    <li>Postanowienia niniejszego paragrafu nie dotyczą reklamacji zakupów dokonanych w Sklepach — te kieruje się do właściwego Sprzedawcy (§16 ust. 3).</li>
+</ol>
+
+<h2>§12 / Treści Sprzedawcy i licencja</h2>
 <ol>
     <li>Sprzedawca zachowuje wszystkie prawa do treści, które umieszcza w Sklepie (zdjęcia, opisy, logo).</li>
     <li>Sprzedawca udziela Operatorowi nieodpłatnej, niewyłącznej licencji na korzystanie z tych treści w zakresie niezbędnym do świadczenia usługi: przechowywania, wyświetlania w Sklepie, tworzenia miniatur i grafik podglądowych (np. karty udostępniania w mediach społecznościowych) oraz prezentowania Sklepu w materiałach promujących Serwis. Licencja wygasa z chwilą usunięcia treści lub Sklepu, z tym że materiały promocyjne wytworzone wcześniej mogą być wykorzystywane do wyczerpania nakładu.</li>
     <li>Operator zaleca zachowywanie własnych kopii materiałów źródłowych (w szczególności zdjęć) — Serwis nie jest archiwum treści Sprzedawcy.</li>
 </ol>
 
-<h2>§12 / Dostępność i rozwój Serwisu</h2>
+<h2>§13 / Dostępność i rozwój Serwisu</h2>
 <ol>
     <li>Operator dokłada starań, aby Serwis działał w sposób ciągły, i wykonuje regularne kopie zapasowe danych. Operator zastrzega możliwość przerw technicznych, o których — jeśli są planowane — informuje z wyprzedzeniem.</li>
     <li>Operator nie odpowiada za przerwy wynikające z siły wyższej, awarii u dostawców zewnętrznych (hosting, operator płatności, przewoźnicy) lub z przyczyn leżących po stronie Sprzedawcy.</li>
     <li>Serwis jest rozwijany: funkcje mogą być dodawane, zmieniane i wycofywane. Zmiana istotnie ograniczająca funkcje opłaconego Pakietu w trakcie opłaconego okresu uprawnia Sprzedawcę do wypowiedzenia Umowy i proporcjonalnego zwrotu.</li>
 </ol>
 
-<h2>§13 / Usunięcie Sklepu i rozwiązanie Umowy</h2>
+<h2>§14 / Usunięcie Sklepu i rozwiązanie Umowy</h2>
 <ol>
-    <li>Sprzedawca może w każdej chwili zlecić usunięcie Sklepu w panelu. Usunięcie następuje po 7 dniach karencji, w trakcie których można je cofnąć. Usunięcie jest nieodwracalne i obejmuje dane Sklepu wraz z przesłanymi plikami.</li>
-    <li>Operator może zawiesić Sklep lub Konto, a w poważnych przypadkach rozwiązać Umowę ze skutkiem natychmiastowym, jeżeli Sprzedawca istotnie narusza Regulamin (w szczególności §10), a mimo wezwania nie zaprzestał naruszeń — albo gdy naruszenie jest rażące (treści bezprawne, oszustwo, zagrożenie bezpieczeństwa). O zawieszeniu i jego przyczynie Operator informuje Sprzedawcę e-mailem.</li>
+    <li>Sprzedawca może w każdej chwili zlecić usunięcie Sklepu w panelu. Usunięcie następuje po 7 dniach karencji, w trakcie których można je cofnąć. Usunięcie jest nieodwracalne i obejmuje dane Sklepu wraz z przesłanymi plikami, a także <strong>Konto Sprzedawcy i jego dane</strong> — po jego wykonaniu logowanie do Serwisu nie jest możliwe.</li>
+    <li>Operator może ograniczyć dostępność treści, zawiesić Sklep lub Konto, a w poważnych przypadkach rozwiązać Umowę ze skutkiem natychmiastowym, jeżeli Sprzedawca istotnie narusza Regulamin (w szczególności §10), a mimo wezwania nie zaprzestał naruszeń — albo gdy naruszenie jest rażące (treści bezprawne, oszustwo, zagrożenie bezpieczeństwa). O każdym takim ograniczeniu Operator informuje Sprzedawcę e-mailem, wskazując: czego ograniczenie dotyczy, ustalenia faktyczne, na których je oparł, podstawę (przepis prawa albo postanowienie Regulaminu), informację, że decyzja nie została podjęta w sposób zautomatyzowany, oraz sposób jej zakwestionowania — Sprzedawca może odpowiedzieć na tę wiadomość i przedstawić swoje stanowisko, które Operator rozpatruje ponownie. Nie ogranicza to prawa Sprzedawcy do dochodzenia roszczeń przed sądem.</li>
     <li>W przypadku rozwiązania Umowy z przyczyn leżących po stronie Sprzedawcy opłata za rozpoczęty okres rozliczeniowy nie podlega zwrotowi w zakresie dopuszczalnym przez prawo; wobec Konsumentów i Przedsiębiorców na prawach konsumenta stosuje się rozliczenie proporcjonalne.</li>
-    <li>Niezależnie od trybu zakończenia Umowy, obowiązki dotyczące danych osobowych Klientów Sklepu określa §17.</li>
+    <li>Niezależnie od trybu zakończenia Umowy, obowiązki dotyczące danych osobowych Klientów Sklepu określa §18.</li>
 </ol>
 
-<h2>§14 / Odpowiedzialność Operatora</h2>
+<h2>§15 / Odpowiedzialność Operatora</h2>
 <ol>
-    <li>Operator nie odpowiada za treści publikowane przez Sprzedawców ani za wykonanie umów sprzedaży zawieranych w Sklepach (§4).</li>
+    <li>Operator nie odpowiada za treści publikowane przez Sprzedawców ani za wykonanie umów sprzedaży zawieranych w Sklepach (§4). Operator nie ma obowiązku uprzedniego sprawdzania treści umieszczanych przez Sprzedawców; po powzięciu wiarygodnej wiadomości o bezprawnym charakterze treści działa na zasadach z §11.</li>
     <li>Wobec Sprzedawców niebędących Konsumentami ani Przedsiębiorcami na prawach konsumenta odpowiedzialność Operatora ograniczona jest do szkody rzeczywistej i do wysokości opłat uiszczonych przez Sprzedawcę za ostatnie 12 miesięcy, z wyłączeniem utraconych korzyści. Ograniczenie nie dotyczy szkód wyrządzonych umyślnie.</li>
     <li>Wobec Konsumentów i Przedsiębiorców na prawach konsumenta Operator odpowiada na zasadach ustawowych.</li>
 </ol>
 
-<h2>§15 / Reklamacje dotyczące Serwisu</h2>
+<h2>§16 / Reklamacje dotyczące Serwisu</h2>
 <ol>
     <li>Reklamacje dotyczące działania Serwisu można składać e-mailem na adres z §3. Reklamacja powinna zawierać opis problemu i dane pozwalające zidentyfikować Konto.</li>
     <li>Operator odpowiada w terminie 14 dni. Brak odpowiedzi w tym terminie oznacza uznanie reklamacji.</li>
     <li>Reklamacje dotyczące zakupów w Sklepach należy kierować do właściwego Sprzedawcy; przekazane Operatorowi zostaną niezwłocznie przekierowane.</li>
 </ol>
 
-<h2>§16 / Dane osobowe</h2>
+<h2>§17 / Dane osobowe</h2>
 <ol>
     <li>Zasady przetwarzania danych osobowych w Serwisie — w tym podział ról między Operatorem a Sprzedawcami — opisuje Polityka Prywatności dostępna w Serwisie.</li>
-    <li>W zakresie danych Sprzedawców (konto, rozliczenia) administratorem jest Operator. W zakresie danych Klientów Sklepu administratorem jest Sprzedawca, a Operator przetwarza je jako podmiot przetwarzający — na zasadach §17.</li>
+    <li>W zakresie danych Sprzedawców (konto, rozliczenia) administratorem jest Operator. W zakresie danych Klientów Sklepu administratorem jest Sprzedawca, a Operator przetwarza je jako podmiot przetwarzający — na zasadach §18.</li>
 </ol>
 
-<h2>§17 / Powierzenie przetwarzania danych osobowych</h2>
+<h2>§18 / Powierzenie przetwarzania danych osobowych</h2>
 <p>Postanowienia niniejszego paragrafu stanowią umowę powierzenia przetwarzania danych osobowych w rozumieniu art. 28 RODO, zawieraną między Sprzedawcą (administratorem) a Operatorem (podmiotem przetwarzającym) z chwilą zawarcia Umowy.</p>
 <ol>
     <li><strong>Przedmiot i czas trwania.</strong> Operator przetwarza dane osobowe Klientów Sklepu w imieniu Sprzedawcy przez czas trwania Umowy, wyłącznie w celu i zakresie niezbędnym do świadczenia usług Serwisu.</li>
@@ -163,20 +204,20 @@
     <li><strong>Obowiązki Sprzedawcy.</strong> Sprzedawca jako administrator odpowiada za podstawy prawne przetwarzania danych swoich Klientów, treść własnych klauzul informacyjnych i zgodne z prawem korzystanie z funkcji Serwisu (w tym z wysyłki newsletterów wyłącznie do osób, które wyraziły zgodę).</li>
 </ol>
 
-<h2>§18 / Zmiany Regulaminu</h2>
+<h2>§19 / Zmiany Regulaminu</h2>
 <ol>
     <li>Operator może zmienić Regulamin z ważnych przyczyn: zmiany przepisów, zmiany funkcji Serwisu, względów bezpieczeństwa lub zmian organizacyjnych po stronie Operatora.</li>
     <li>O zmianie Operator informuje Sprzedawców e-mailem co najmniej 14 dni przed jej wejściem w życie. Sprzedawca, który nie akceptuje zmian, może do dnia ich wejścia w życie wypowiedzieć Umowę; w przypadku opłaconego Pakietu otrzyma proporcjonalny zwrot za niewykorzystany okres.</li>
     <li>Korzystanie z Serwisu po wejściu zmian w życie wymaga ich akceptacji; Serwis może poprosić o jej potwierdzenie przy logowaniu.</li>
 </ol>
 
-<h2>§19 / Postanowienia końcowe</h2>
+<h2>§20 / Postanowienia końcowe</h2>
 <ol>
     <li>Umowy zawierane są w języku polskim i podlegają prawu polskiemu.</li>
     <li>Konsument może skorzystać z pozasądowych sposobów rozpatrywania reklamacji i dochodzenia roszczeń, m.in. z pomocy wojewódzkich inspektoratów Inspekcji Handlowej, stałych sądów polubownych przy Inspekcji Handlowej oraz powiatowych (miejskich) rzeczników konsumentów. Szczegóły na stronie uokik.gov.pl.</li>
     <li>Spory z Sprzedawcami niebędącymi Konsumentami ani Przedsiębiorcami na prawach konsumenta rozstrzyga sąd właściwy dla siedziby Operatora.</li>
     <li>Jeżeli którekolwiek postanowienie Regulaminu okaże się nieważne lub bezskuteczne, pozostałe postanowienia pozostają w mocy.</li>
-    <li>W sprawach nieuregulowanych stosuje się przepisy prawa polskiego, w szczególności Kodeksu cywilnego, ustawy o prawach konsumenta, ustawy o świadczeniu usług drogą elektroniczną oraz przepisy o ochronie danych osobowych.</li>
+    <li>W sprawach nieuregulowanych stosuje się przepisy prawa polskiego, w szczególności Kodeksu cywilnego, ustawy o prawach konsumenta, ustawy o świadczeniu usług drogą elektroniczną, przepisów o ochronie danych osobowych oraz rozporządzenia (UE) 2022/2065 o jednolitym rynku usług cyfrowych.</li>
 </ol>
 
-<p>Regulamin obowiązuje od dnia: 06.08.2026.</p>
+<p>Regulamin obowiązuje od dnia: 15.08.2026.</p>
