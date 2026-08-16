@@ -62,7 +62,7 @@ class ShopManager extends Component
     {
         return [
             'online_payments' => 'Płatności online',
-            'courier_shipping' => 'Wysyłka kurierska (InPost + Furgonetka)',
+            'courier_shipping' => 'Wysyłka kurierska i paczkomat (InPost)',
             'invoices' => 'Faktury (Fakturownia)',
             'ga_analytics' => 'Google Analytics / Tag Manager',
             'order_editing' => 'Edycja zamówienia',

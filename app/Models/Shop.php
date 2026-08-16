@@ -547,7 +547,7 @@ class Shop extends Model
 
     /**
      * Czy sklep oferuje dostawę kurierem. Wymaga uprawnienia pakietu
-     * `courier_shipping` (Stragan+; wysyłka InPost+Furgonetka to funkcja płatna —
+     * `courier_shipping` (Stragan+; wysyłka InPost to funkcja płatna —
      * Kram ma tylko odbiór osobisty) ORAZ włączonej fiszki. Nie wymaga adresu
      * sklepu: paczkę wysyła sprzedawca do klienta. Koszt bywa 0 (kurier gratis),
      * dlatego warunkiem jest włącznik, a nie „koszt > 0". Stan efektywny.
@@ -575,8 +575,8 @@ class Shop extends Model
 
     /**
      * Czy sklep oferuje dostawę do paczkomatu InPost. Jak kurier: wymaga
-     * uprawnienia `courier_shipping` (Stragan+; InPost jest w tym samym płatnym
-     * pakiecie wysyłkowym co Furgonetka) ORAZ włączonej fiszki. Nie wymaga adresu
+     * uprawnienia `courier_shipping` (Stragan+; paczkomat i kurier siedzą w tym
+     * samym płatnym uprawnieniu) ORAZ włączonej fiszki. Nie wymaga adresu
      * sklepu ani konta w InPoście (koszt bywa 0 = gratis). Mapa NIE jest
      * warunkiem — gdy jej nie ma, klient wpisuje kod z palca.
      */

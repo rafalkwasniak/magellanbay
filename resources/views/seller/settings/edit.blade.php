@@ -71,7 +71,7 @@
                             </label>
                         </div>
 
-                        {{-- Kurier + Paczkomat = wysyłka InPost/Furgonetka, funkcja płatna
+                        {{-- Kurier + Paczkomat = wysyłka InPost, funkcja płatna
                              (courier_shipping, Stragan+). Kram ma tylko odbiór osobisty. --}}
                         @if ($shop->entitlement('courier_shipping'))
                         {{-- Kurier — Poziom 1: bez integracji, bez mapy. Włącznik + koszt + opcjonalny próg. --}}

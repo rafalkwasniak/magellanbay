@@ -4,7 +4,7 @@ namespace App\Enums;
 
 /**
  * Metody dostawy (spec „Dostawy"). Odbiór osobisty, kurier „pod adres",
- * paczkomat InPost. Kolejne (Furgonetka, dostawa własna) dojdą jako nowe case'y
+ * paczkomat InPost. Kolejne (np. dostawa własna) dojdą jako nowe case'y
  * + konfiguracja per-sklep.
  */
 enum DeliveryMethod: string
