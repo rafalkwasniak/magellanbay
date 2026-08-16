@@ -20,6 +20,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 #[Fillable([
     'title', 'slug', 'content', 'meta_description', 'position', 'published', 'show_on_homepage',
+    'terms_template_version',
 ])]
 class Page extends Model
 {
@@ -35,6 +36,7 @@ class Page extends Model
             'position' => 'integer',
             'published' => 'boolean',
             'is_system' => 'boolean',
+            'terms_answers' => 'array',
             'show_on_homepage' => 'boolean',
         ];
     }

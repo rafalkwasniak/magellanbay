@@ -34,6 +34,15 @@
                         <div>
                             <label class="block text-sm font-medium text-stone-700">Treść</label>
                             <x-rich-editor name="content" :value="old('content', $page->content)" ai-field="page_content" :max="config('pages.content_max')">Napisz treść strony — np. zasady dostawy, zwrotów albo słowo o sklepie.</x-rich-editor>
+                            @if ($page->is_system)
+                                {{-- Wersja wzoru jedzie razem z treścią, a nie osobnym zapisem:
+                                     wstawienie do edytora niczego nie utrwala, więc wersję da się
+                                     zapisać dopiero wtedy, gdy sprzedawca faktycznie kliknie
+                                     „Zapisz". Wartość podstawia `insertTerms()` przez `withInput()`,
+                                     a przy zwykłej edycji wraca ta już zapisana. --}}
+                                <input type="hidden" name="terms_template_version"
+                                    value="{{ old('terms_template_version', $page->terms_template_version) }}">
+                            @endif
                             @error('content')
                                 <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
                             @enderror
@@ -94,6 +103,120 @@
         </div>
 
         <aside class="lg:col-span-4 space-y-6">
+            {{-- Kreator regulaminu — OSOBNY formularz, bo celuje w inną trasę niż
+                 zapis strony. Tylko przy stronie systemowej: pozostałe podstrony
+                 sprzedawca pisze sam.
+
+                 GRANICA: pola są WYPEŁNIONE podpowiedziami z profilu, ale zmiana
+                 ich tutaj NIE zapisuje się do sklepu — trafia wyłącznie do
+                 regulaminu. Adres rejestrowy, zwrotów i kontaktowy bywają trzema
+                 różnymi rzeczami i sprzedawca ma prawo je rozróżnić. --}}
+            @if ($page->exists && $page->is_system)
+                @php($kreator = session('terms_wizard'))
+                <div class="rounded-3xl border border-amber-200 bg-amber-50 p-6">
+                    @if ($kreator || $errors->any())
+                        @php($w = fn (string $pole) => old($pole, $kreator[$pole] ?? ($page->terms_answers[$pole] ?? '')))
+                        <h2 class="font-semibold text-stone-900">Wzór regulaminu</h2>
+
+                        @unless (\App\Support\SellerTerms::holdsPlaceholder($page->content))
+                            <p class="mt-2 rounded-2xl bg-white px-4 py-3 text-sm text-amber-900">
+                                W edytorze jest już Twój tekst — wzór go zastąpi. <span class="font-medium">Nic nie zostanie zapisane</span>,
+                                dopóki nie klikniesz „Zapisz zmiany".
+                            </p>
+                        @endunless
+
+                        <p class="mt-3 text-sm leading-relaxed text-stone-600">
+                            Pola wypełniliśmy tym, co wiemy o Twoim sklepie. Popraw, jeśli w regulaminie ma być co innego —
+                            <span class="font-medium text-stone-700">te zmiany trafią tylko do regulaminu</span>, a danych sklepu
+                            (stopka, faktury) nie ruszą.
+                        </p>
+
+                        <form method="POST" action="{{ route('seller.pages.terms.insert', $page) }}" class="mt-4 space-y-4" novalidate data-validate>
+                            @csrf
+
+                            @foreach ([
+                                ['seller_name', 'Kto prowadzi sklep', 'Nazwa firmy albo imię i nazwisko.', true],
+                                ['nip', 'NIP', 'Zostaw puste przy działalności nierejestrowanej.', false],
+                                ['address', 'Adres', 'Wchodzi do §1 i do formularza odstąpienia.', true],
+                                ['email', 'E-mail', 'Kanał reklamacji i odstąpienia od umowy.', true],
+                                ['phone', 'Telefon', 'Nieobowiązkowy.', false],
+                                ['return_address', 'Adres do zwrotów', 'Tylko jeśli inny niż powyżej.', false],
+                            ] as [$pole, $etykieta, $podpowiedz, $wymagane])
+                                <div>
+                                    <label for="t-{{ $pole }}" class="block text-sm font-medium text-stone-700">{{ $etykieta }}</label>
+                                    <input id="t-{{ $pole }}" name="{{ $pole }}" type="text" value="{{ $w($pole) }}"
+                                        @if ($wymagane) required data-msg-required="To pole wchodzi wprost do regulaminu — bez niego dokument miałby lukę." @endif
+                                        class="mt-1 block w-full rounded-2xl border border-amber-200 bg-white px-4 py-2.5 text-sm shadow-sm transition focus:border-amber-400 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
+                                    <p class="mt-1 text-xs text-stone-500">{{ $podpowiedz }}</p>
+                                    @error($pole)
+                                        <p class="mt-1 text-sm text-rose-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                            @endforeach
+
+                            <div>
+                                <label for="t-shipping_days" class="block text-sm font-medium text-stone-700">Wysyłka w ciągu (dni roboczych)</label>
+                                <input id="t-shipping_days" name="shipping_days" type="number" min="1" max="60" required
+                                    value="{{ $w('shipping_days') }}"
+                                    data-msg-required="Podaj, w ile dni roboczych wysyłasz zamówienia — to obowiązek informacyjny."
+                                    class="mt-1 block w-full rounded-2xl border border-amber-200 bg-white px-4 py-2.5 text-sm shadow-sm transition focus:border-amber-400 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
+                                @error('shipping_days')
+                                    <p class="mt-1 text-sm text-rose-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            <div>
+                                <label for="t-withdrawal_exclusions" class="block text-sm font-medium text-stone-700">Towary bez prawa zwrotu</label>
+                                <textarea id="t-withdrawal_exclusions" name="withdrawal_exclusions" rows="2"
+                                    placeholder="np. torty na zamówienie, produkty personalizowane"
+                                    class="mt-1 block w-full rounded-2xl border border-amber-200 bg-white px-4 py-2.5 text-sm shadow-sm transition focus:border-amber-400 focus:outline-none focus:ring-4 focus:ring-amber-500/15">{{ $w('withdrawal_exclusions') }}</textarea>
+                                <p class="mt-1 text-xs text-stone-500">Zostaw puste, jeśli nie masz takich towarów — ustawowe wyjątki i tak zostaną opisane.</p>
+                                @error('withdrawal_exclusions')
+                                    <p class="mt-1 text-sm text-rose-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            @if ($page->shop->availableDeliveryMethods() === [] || $page->shop->availablePaymentMethods() === [])
+                                {{-- Nie blokujemy — ale mówimy prawdę: bez metod w kasie regulamin
+                                     nie ma czego wyliczyć i zostaną zdania ogólne. --}}
+                                <p class="rounded-2xl bg-white px-4 py-3 text-xs leading-relaxed text-stone-600">
+                                    Twój sklep nie ma jeszcze włączonej dostawy albo płatności, więc te paragrafy wyjdą ogólnie.
+                                    Możesz je uzupełnić w <a href="{{ route('seller.settings.edit') }}" class="font-medium text-stone-800 underline decoration-amber-300 underline-offset-2">Ustawieniach sklepu</a> i wstawić wzór ponownie.
+                                </p>
+                            @endif
+
+                            <div class="flex flex-wrap gap-2">
+                                <button type="submit"
+                                    class="inline-flex items-center rounded-full bg-amber-600 px-4 py-1.5 text-sm font-medium text-white shadow-sm transition hover:bg-amber-700">
+                                    Wstaw wzór do edytora
+                                </button>
+                                <a href="{{ route('seller.pages.edit', $page) }}"
+                                    class="inline-flex items-center rounded-full border border-stone-200 bg-white px-4 py-1.5 text-sm font-medium text-stone-600 transition hover:bg-stone-50">
+                                    Nie, wróć
+                                </a>
+                            </div>
+                        </form>
+                    @else
+                        <h2 class="font-semibold text-stone-900">Nie masz regulaminu?</h2>
+                        <p class="mt-2 text-sm leading-relaxed text-stone-600">
+                            Przygotujemy wzór wypełniony danymi Twojego sklepu — adresem, sposobami dostawy i płatności.
+                            Zapytamy tylko o to, czego nie wiemy.
+                        </p>
+                        <form method="POST" action="{{ route('seller.pages.terms', $page) }}" class="mt-4">
+                            @csrf
+                            <button type="submit"
+                                class="inline-flex rounded-2xl bg-gradient-to-br from-amber-500 to-rose-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-rose-500/20 transition hover:brightness-105">
+                                Wstaw wzór regulaminu
+                            </button>
+                        </form>
+                    @endif
+
+                    <p class="mt-3 text-xs leading-relaxed text-stone-500">
+                        To wzór do uzupełnienia i sprawdzenia, a nie gotowy dokument. Publikujesz go jako własny regulamin i odpowiadasz za jego treść.
+                    </p>
+                </div>
+            @endif
+
             <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
                 <h2 class="font-semibold text-stone-900">Wskazówki</h2>
                 <ul class="mt-4 space-y-3 text-sm text-stone-500">

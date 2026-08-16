@@ -349,6 +349,14 @@ Route::middleware(['auth', 'role:seller', 'ensure.consents'])
         Route::post('/informacje/{page}', [PageController::class, 'update'])->name('pages.update');
         Route::post('/informacje/{page}/usun', [PageController::class, 'destroy'])->name('pages.destroy');
 
+        // Wzór regulaminu sklepu. `wzor` otwiera kreator (pola wypełnione
+        // podpowiedziami z profilu), `wzor/wstaw` wkleja gotowy dokument do
+        // EDYTORA — bez zapisu treści. Publikuje dopiero „Zapisz" sprzedawcy,
+        // bo podstrona systemowa jest zawsze opublikowana i zapis oznaczałby
+        // publikację w jego imieniu.
+        Route::post('/informacje/{page}/wzor', [PageController::class, 'termsWizard'])->name('pages.terms');
+        Route::post('/informacje/{page}/wzor/wstaw', [PageController::class, 'insertTerms'])->name('pages.terms.insert');
+
         // Produkty (edycja/usuwanie przez POST — FOUNDATION sek. 5).
         Route::get('/produkty', [ProductController::class, 'index'])->name('products.index');
         Route::get('/produkty/nowy', [ProductController::class, 'create'])->name('products.create');

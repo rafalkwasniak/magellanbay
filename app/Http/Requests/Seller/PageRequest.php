@@ -57,6 +57,9 @@ class PageRequest extends FormRequest
             'title' => ['required', 'string', 'max:120'],
             'slug' => ['required', 'string'],
             'content' => ['nullable', 'string', 'max:'.config('pages.content_max')],
+            // Wersja wzoru wędruje ukrytym polem i zapisuje się razem z treścią —
+            // po poprawkach prawnika po niej poznamy, kto ma starą wersję.
+            'terms_template_version' => ['nullable', 'integer', 'min:1', 'max:65535'],
             // Opis SEO strony — wyłącznie ręczny (bez AI, patrz migracja).
             'meta_description' => ['nullable', 'string', 'max:255'],
             'published' => ['boolean'],
