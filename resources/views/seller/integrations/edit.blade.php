@@ -134,7 +134,7 @@
                         <div class="flex-1">
                             <h2 class="font-semibold text-stone-900">Nadawanie przesyłek InPost</h2>
                             <p class="mt-1 text-sm text-stone-500">
-                                Nadawaj paczki jednym kliknięciem z karty zamówienia i pobieraj gotową etykietę do druku. Potrzebujesz konta firmowego w
+                                Nadawaj paczki jednym kliknięciem z karty zamówienia i pobieraj gotową etykietę do druku. To połączenie odblokowuje też <span class="font-medium text-stone-600">dostawę za pobraniem</span> — bez niego nie ma kto zainkasować pieniędzy od klienta. Potrzebujesz konta firmowego w
                                 <a href="https://inpost.pl" target="_blank" rel="noopener" class="font-medium text-stone-600 underline decoration-amber-300 underline-offset-2">InPost</a>
                                 oraz dwóch wartości z jego panelu. Za przesyłki płacisz InPostowi ze swojego konta — Kramio niczego nie pośredniczy.
                             </p>

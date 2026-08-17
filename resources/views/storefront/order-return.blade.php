@@ -138,7 +138,7 @@
                                 <label for="bank_account" class="block text-sm opacity-80">Numer konta <span class="opacity-60">— opcjonalnie</span></label>
                                 <input type="text" id="bank_account" name="bank_account" value="{{ old('bank_account') }}" inputmode="numeric"
                                     class="st-border mt-1 block w-full rounded-xl border bg-transparent px-3 py-2.5 text-sm focus:outline-none">
-                                <p class="mt-1 text-xs opacity-60">Podaj, jeśli pieniądze nie mogą wrócić tą samą drogą, którą przyszły (np. płatność przy odbiorze).</p>
+                                <p class="mt-1 text-xs opacity-60">Podaj, jeśli pieniądze nie mogą wrócić tą samą drogą, którą przyszły (np. płatność za pobraniem lub przy odbiorze).</p>
                                 @error('bank_account')
                                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                 @enderror

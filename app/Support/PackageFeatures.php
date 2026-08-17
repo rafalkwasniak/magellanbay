@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use App\Models\Shop;
+
 /**
  * Lista funkcji pakietu na stronę główną, z zaznaczeniem tego, co DOCHODZI
  * względem pakietu niżej.
@@ -28,7 +30,7 @@ class PackageFeatures
      * zmianie presetów albo nowym pakiecie — a to nieprawda, której nikt nie
      * zauważy, bo brzmi wiarygodnie.
      *
-     * @return array{key: string, name: string, price_yearly: int}|null  null, gdy funkcji nie ma nigdzie
+     * @return array{key: string, name: string, price_yearly: int}|null null, gdy funkcji nie ma nigdzie
      */
     public static function cheapestWith(string $entitlement): ?array
     {
@@ -173,7 +175,12 @@ class PackageFeatures
             [
                 'icon' => '📦',
                 'title' => 'Wysyłka i nadawanie paczek',
-                'description' => 'Paczkomat i kurier w koszyku, a paczkę nadasz i wydrukujesz etykietę wprost z karty zamówienia. Przelew i odbiór osobisty działają w każdym pakiecie.',
+                // Pobranie dopisane 17.08 razem z wdrożeniem. To NIE jest kolejna
+                // pozycja na liście — dla części sprzedawców jest to jedyny sposób
+                // sprzedaży wysyłkowej, bo nie wymaga umowy z operatorem płatności
+                // ani czekania na przelew. Milczenie o nim na landingu ukrywałoby
+                // najmocniejszy argument tego pakietu.
+                'description' => 'Paczkomat i kurier w koszyku — także za pobraniem, gdy wolisz, żeby klient płacił przy odbiorze. Paczkę nadasz i wydrukujesz etykietę wprost z karty zamówienia. Przelew i odbiór osobisty działają w każdym pakiecie.',
                 'requires' => 'courier_shipping',
             ],
             [
@@ -222,7 +229,7 @@ class PackageFeatures
      *
      * @return list<string>
      */
-    public static function forShop(\App\Models\Shop $shop, bool $raw = false): array
+    public static function forShop(Shop $shop, bool $raw = false): array
     {
         $keys = ['max_products', 'ai_weekly_limit', 'online_payments', 'courier_shipping', 'invoices', 'ga_analytics', 'order_editing', 'discount_codes', 'bulk_mail'];
 
@@ -261,7 +268,7 @@ class PackageFeatures
             // podłączenie, a nie usługę płatniczą: umowę z operatorem sprzedawca
             // zawiera sam i wkleja własne klucze (patrz Integracje).
             'payments' => $entitlements['online_payments'] ? 'Integracja płatności online (własne konto Paynow)' : 'Przelew i odbiór osobisty',
-            'shipping' => $entitlements['courier_shipping'] ? 'Paczkomat, kurier i nadawanie paczek InPost' : null,
+            'shipping' => $entitlements['courier_shipping'] ? 'Paczkomat, kurier i nadawanie paczek InPost — także za pobraniem' : null,
             'invoices' => $entitlements['invoices'] ? 'Integracja z Fakturownią' : null,
             // Google Analytics jest płatny i egzekwowany (`Shop::tracksWith…`),
             // a nie był wymieniony w ŻADNEJ karcie — kupujący nie miał jak się

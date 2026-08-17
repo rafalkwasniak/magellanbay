@@ -17,7 +17,7 @@ class LandingPackagesTest extends TestCase
     use RefreshDatabase;
 
     /**
-     * @return array<string, array<string, bool>>  pakiet => [etykieta => czy nowa]
+     * @return array<string, array<string, bool>> pakiet => [etykieta => czy nowa]
      */
     private function featureMap(): array
     {
@@ -43,7 +43,7 @@ class LandingPackagesTest extends TestCase
         $stragan = $this->featureMap()['Stragan'];
 
         $this->assertTrue($stragan['Integracja płatności online (własne konto Paynow)']);
-        $this->assertTrue($stragan['Paczkomat, kurier i nadawanie paczek InPost']);
+        $this->assertTrue($stragan['Paczkomat, kurier i nadawanie paczek InPost — także za pobraniem']);
         $this->assertTrue($stragan['Integracja z Fakturownią']);
         $this->assertTrue($stragan['Google Analytics i Tag Manager']);
         // Wyższy limit produktów to też różnica, choć cecha ta sama.

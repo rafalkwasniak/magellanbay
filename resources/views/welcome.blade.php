@@ -141,6 +141,12 @@
                          pakiet daje integrację, umowę z operatorem sprzedawca zawiera
                          sam, a pieniądze nigdy nie przechodzą przez Kramio. --}}
                     <p class="mt-2 text-stone-600">Płatności online działają na <span class="font-medium text-stone-800">Twojej własnej umowie z Paynow</span> (bramka mBanku) — konto płatnicze zakładasz u operatora i to on Cię weryfikuje. Pakiet daje gotową integrację, w którą wklejasz swoje klucze; pieniądze od klientów idą wprost na Twoje konto, a Kramio nie jest stroną tych transakcji ani ich nie pośredniczy.</p>
+                    {{-- Pobranie postawione OBOK Paynow, a nie w liście funkcji, bo dla
+                         części sprzedawców jest odpowiedzią na akapit wyżej: „nie chcę
+                         zakładać konta u operatora". Warunki podane wprost (konto InPost,
+                         płatny pakiet), żeby zdanie nie obiecywało sprzedaży bez niczego —
+                         landing ma nie wyprzedzać kodu. --}}
+                    <p class="mt-2 text-stone-600">Nie chcesz zakładać konta u operatora płatności? Włącz <span class="font-medium text-stone-800">dostawę za pobraniem</span> — klient zapłaci przy odbiorze paczki, a pieniądze zbierze InPost i przeleje je na Twoje konto. Potrzebujesz do tego własnego konta w InPoście i płatnego pakietu; tak jak wyżej, Kramio tych pieniędzy nie dotyka.</p>
                 </div>
                 <div class="mt-8 grid gap-5 sm:grid-cols-3">
                     {{-- Cechy pakietów liczy App\Support\PackageFeatures: zna kolejność
