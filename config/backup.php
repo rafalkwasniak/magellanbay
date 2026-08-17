@@ -47,27 +47,48 @@ return [
     | dzisiejszych ~4,5 MB na dobę to ~65 MB; okno musi przeżyć urlop, bo część
     | szkód (skasowana kategoria, zepsuty import) widać dopiero po tygodniu.
     |
-    | `daily_at` — godzina nocnego przebiegu, z dala od `subscriptions:check`
-    | (06:10) i `shops:purge` (06:20).
+    | `daily_at` — LISTA godzin przebiegu (po przecinku w `.env`). Od 17.08 dwa
+    | razy na dobę: 04:00 i 16:00. Cel jest jeden — skrócić okno utraty danych z
+    | ~24 h do ~12 h w najgorszym przypadku.
+    |
+    | Retencji to NIE dotyczy: kasujemy po WIEKU pliku, nie po ich liczbie, więc
+    | druga kopia dziennie wygasa tak samo po 14 dniach. Świadomie NIE nadpisujemy
+    | kopii porannej popołudniową, choć trzymałoby to liczbę plików na 14. Dwa
+    | powody: nieudane nadpisanie skasowałoby jedyną dzisiejszą dobrą kopię, a
+    | szkoda zauważona po południu (zepsuty import) zabrałaby ze sobą czystą kopię
+    | sprzed niej. Cena tej ostrożności to ~35 MB.
+    |
+    | Godziny z dala od pozostałych cronów: `subscriptions:check` (06:10) i
+    | `shops:purge` (06:20) — dlatego 04:00, a nie 06:00.
     |
     */
 
     'retention_days' => (int) env('BACKUP_RETENTION_DAYS', 14),
 
-    'daily_at' => env('BACKUP_DAILY_AT', '03:00'),
+    'daily_at' => array_values(array_filter(array_map(
+        trim(...),
+        explode(',', (string) env('BACKUP_DAILY_AT', '04:00,16:00'))
+    ))),
 
     /*
     |--------------------------------------------------------------------------
     | Próg strażnika
     |--------------------------------------------------------------------------
     |
-    | Po ilu godzinach bez UDANEJ kopii `backup:check` bije na alarm. 36 h, nie
-    | 24: jeden spóźniony albo ręcznie przesunięty przebieg nie ma budzić
-    | nikogo, dwie pominięte doby już tak.
+    | Po ilu godzinach bez UDANEJ kopii `backup:check` bije na alarm.
+    |
+    | Próg MUSI iść za częstotliwością, inaczej cicho przestaje pilnować. Przy
+    | jednej kopii na dobę 36 h znaczyło „dwie pominięte doby". Od dwóch kopii
+    | dziennie te same 36 h przepuściłyby już TRZY nieudane przebiegi, więc próg
+    | schodzi do 24 h.
+    |
+    | Rachunek na strażniku o 09:00: wszystko działa → 5 h od kopii z 04:00;
+    | jeden pominięty przebieg → 17 h (cisza, bo pojedyncza czkawka nie ma nikogo
+    | budzić); dwa pod rząd → 29 h, czyli alarm.
     |
     */
 
-    'stale_after_hours' => 36,
+    'stale_after_hours' => 24,
 
     /*
     |--------------------------------------------------------------------------

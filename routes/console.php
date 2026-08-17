@@ -43,9 +43,15 @@ Schedule::command('subscriptions:check')->dailyAt('06:10')->withoutOverlapping()
 // temu `BACKUP_ENABLED=false` naprawdę wycisza harmonogram, zamiast odpalać co
 // noc komendę, która i tak od razu wychodzi.
 if (config('backup.enabled')) {
-    Schedule::command('backup:run')
-        ->dailyAt(config('backup.daily_at'))
-        ->withoutOverlapping();
+    // Kopia leci DWA RAZY na dobę (04:00 i 16:00) — każda godzina to osobny wpis
+    // w harmonogramie, bo Laravel nie zna „co 12 godzin od tej godziny".
+    // `withoutOverlapping()` chroni pojedynczy przebieg przed samym sobą; między
+    // wpisami mutexy są różne, ale 12 godzin odstępu czyni to teoretycznym.
+    foreach ((array) config('backup.daily_at') as $time) {
+        Schedule::command('backup:run')
+            ->dailyAt($time)
+            ->withoutOverlapping();
+    }
 
     // Strażnik: pilnuje ŚLADU po kopii, nie samego przebiegu — awaria, przez
     // którą `backup:run` w ogóle się nie uruchamia, nie zgłosi się sama.

@@ -203,12 +203,36 @@ class BackupRunTest extends TestCase
         $this->artisan('backup:run');
     }
 
-    public function test_backup_is_scheduled_nightly(): void
+    public function test_backup_is_scheduled_twice_a_day(): void
     {
+        // Dwa przebiegi na dobę skracają okno utraty danych z ~24 h do ~12 h.
+        // Godziny NIE są przypadkowe: 04:00 trzyma się z dala od
+        // `subscriptions:check` (06:10) i `shops:purge` (06:20), a 16:00 dzieli
+        // dobę równo. Test pilnuje jednego i drugiego, bo cicha zmiana na
+        // pojedynczy przebieg wróciłaby do 24-godzinnego okna niezauważona.
         $events = collect(app(Schedule::class)->events())
             ->filter(fn ($event) => str_contains((string) $event->command, 'backup:run'));
 
-        $this->assertCount(1, $events, 'Kopia zapasowa musi być w harmonogramie.');
-        $this->assertSame('0 3 * * *', $events->first()->expression);
+        $this->assertCount(2, $events, 'Kopia zapasowa musi lecieć dwa razy na dobę.');
+        // Kolejność jak w configu — sortowanie po stringu ustawiłoby „0 16" przed „0 4".
+        $this->assertSame(['0 4 * * *', '0 16 * * *'], $events->pluck('expression')->values()->all());
+    }
+
+    public function test_backup_times_come_from_a_comma_separated_list(): void
+    {
+        // `.env` niesie godziny jednym stringiem — rozjazd w parsowaniu cicho
+        // zabrałby drugi przebieg, a harmonogram dalej wyglądałby poprawnie.
+        $this->assertSame(['04:00', '16:00'], config('backup.daily_at'));
+    }
+
+    public function test_watchdog_threshold_matches_the_backup_cadence(): void
+    {
+        // Próg strażnika MUSI iść za częstotliwością. Przy kopii co 12 h alarm
+        // o 09:00 ma milczeć po JEDNYM pominiętym przebiegu (17 h od ostatniej
+        // udanej), a odezwać się po dwóch pod rząd (29 h).
+        $hours = (int) config('backup.stale_after_hours');
+
+        $this->assertGreaterThan(17, $hours, 'Pojedyncza czkawka nie ma budzić nikogo.');
+        $this->assertLessThan(29, $hours, 'Dwa pominięte przebiegi muszą zapalić alarm.');
     }
 }
