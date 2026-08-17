@@ -36,7 +36,11 @@ final class OrderFlow
         // trzeba wtedy dopisać świadomie, a nie odziedziczyć po cichu.
         $handover = match ($delivery) {
             DeliveryMethod::Pickup => OrderStatus::ReadyForPickup,
-            DeliveryMethod::Courier, DeliveryMethod::ParcelLocker => OrderStatus::ReadyForShipment,
+            // Pobraniowe idą tą samą ścieżką co przedpłacone wysyłki: z punktu
+            // widzenia sprzedawcy to ta sama praca (spakuj, nadaj, wydrukuj
+            // etykietę), a moment zapłaty niesie `delivered_at`, nie status.
+            DeliveryMethod::Courier, DeliveryMethod::ParcelLocker,
+            DeliveryMethod::CourierCod, DeliveryMethod::ParcelLockerCod => OrderStatus::ReadyForShipment,
         };
 
         // Przedpłata: brak „Nowego" — zaraz po złożeniu i tak oczekujemy wpłaty,

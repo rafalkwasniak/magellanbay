@@ -115,6 +115,15 @@
             @if ($platnosci->contains('pay_on_pickup'))
                 <li><strong>płatność przy odbiorze osobistym</strong> — gotówką lub w inny sposób uzgodniony ze Sprzedawcą w chwili odbioru;</li>
             @endif
+            {{-- Pobranie nie jest pozycją w `availablePaymentMethods()`, bo Klient
+                 go nie wybiera — wynika z dostawy. Regulamin musi je jednak
+                 wymienić, inaczej Sklep sprzedający wyłącznie za pobraniem miałby
+                 tu pustą listę. Świadomie NIE piszemy „gotówką": paczkomat
+                 przyjmuje wyłącznie płatność bezgotówkową, więc obietnica gotówki
+                 byłaby w regulaminie nieprawdziwa. --}}
+            @if ($shop->cashOnDeliveryAvailable())
+                <li><strong>płatność za pobraniem</strong> — przy odbiorze przesyłki, sposobami udostępnianymi przez przewoźnika w miejscu wydania; kwota pobrania obejmuje cenę Towarów i koszt dostawy;</li>
+            @endif
             @if ($platnosci->isEmpty())
                 {{-- Sklep bez metod płatności nie przyjmuje zamówień (Shop::acceptsOrders),
                      więc regulamin nie ma czego wyliczyć. Zamiast znacznika do uzupełnienia
@@ -135,6 +144,12 @@
             @endif
             @if ($dostawa->contains('parcel_locker'))
                 <li><strong>paczkomat</strong> — koszt {{ $koszt($shop->parcel_locker_cost) }}{{ $odFrazy($shop->parcel_locker_free_from) }};</li>
+            @endif
+            @if ($dostawa->contains('courier_cod'))
+                <li><strong>kurier za pobraniem</strong> — koszt {{ $koszt($shop->courier_cod_cost) }}{{ $odFrazy($shop->courier_cod_free_from) }};</li>
+            @endif
+            @if ($dostawa->contains('parcel_locker_cod'))
+                <li><strong>paczkomat za pobraniem</strong> — koszt {{ $koszt($shop->parcel_locker_cod_cost) }}{{ $odFrazy($shop->parcel_locker_cod_free_from) }};</li>
             @endif
             @if ($dostawa->contains('pickup'))
                 <li><strong>odbiór osobisty</strong> — bezpłatnie, pod adresem wskazanym w §1, po wcześniejszym uzgodnieniu terminu;</li>

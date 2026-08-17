@@ -171,7 +171,110 @@
                             </div>
                         </div>
 
-                        <p class="text-xs text-stone-400">Automatyczne etykiety i nadania dojdą tu jako osobna integracja.</p>
+                        {{-- Pobraniowe warianty obu wysyłek. Osobne fiszki i osobne ceny,
+                             NIEZALEŻNE od metod przedpłaconych: sprzedawca może chcieć np.
+                             sam paczkomat i sam paczkomat pobraniowy (decyzja Rafała 17.08).
+                             Jedyny dodatkowy warunek: skonfigurowany InPost — to on inkasuje
+                             pieniądze i przelewa je sprzedawcy, więc bez integracji ta metoda
+                             nie ma jak zadziałać. --}}
+                        @php($inpostReady = $shop->shipxEnabled())
+
+                        <div class="rounded-2xl border border-stone-200 bg-white/60 p-5 sm:p-6">
+                            <div class="flex items-start gap-4">
+                                <input type="hidden" name="courier_cod_enabled" value="0">
+                                <input type="checkbox" id="courier_cod_enabled" name="courier_cod_enabled" value="1"
+                                    @checked(old('courier_cod_enabled', $shop->courier_cod_enabled))
+                                    @disabled(! $inpostReady)
+                                    class="mt-0.5 h-5 w-5 shrink-0 rounded-md border-stone-300 text-amber-600 focus:ring-4 focus:ring-amber-500/20 disabled:cursor-not-allowed">
+                                <label for="courier_cod_enabled" class="flex-1 {{ $inpostReady ? 'cursor-pointer' : 'cursor-not-allowed' }}">
+                                    <span class="block text-sm font-medium text-stone-800">Dostawa kurierem za pobraniem</span>
+                                    <span class="mt-0.5 block text-sm text-stone-500">Klient płaci kurierowi przy odbiorze — gotówką lub kartą. Pieniądze zbiera InPost i przelewa je na Twoje konto.</span>
+                                    @unless($inpostReady)
+                                        <span class="mt-1.5 block text-xs text-amber-700">Pobranie wymaga podłączonego konta InPost — ustawisz je w <a href="{{ route('seller.integrations.edit') }}" class="font-medium underline decoration-amber-300 underline-offset-2">Integracjach</a>.</span>
+                                    @endunless
+                                </label>
+                            </div>
+
+                            <div class="mt-5 grid grid-cols-12 gap-5">
+                                <div class="col-span-6 sm:col-span-4">
+                                    <label for="courier_cod_cost" class="block text-sm font-medium text-stone-700">Koszt dostawy</label>
+                                    <div class="relative mt-1.5">
+                                        <input id="courier_cod_cost" name="courier_cod_cost" type="text" inputmode="decimal" placeholder="0,00"
+                                            value="{{ old('courier_cod_cost', $shop->courier_cod_cost) }}"
+                                            class="block w-full rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 pr-10 text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
+                                        <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm text-stone-400">zł</span>
+                                    </div>
+                                    @error('courier_cod_cost')
+                                        <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
+                                    @enderror
+                                    <p class="mt-1.5 text-xs text-stone-400">Cena własna, niezależna od zwykłego kuriera — InPost liczy za obsługę pobrania osobno.</p>
+                                </div>
+
+                                <div class="col-span-6 sm:col-span-4">
+                                    <label for="courier_cod_free_from" class="block text-sm font-medium text-stone-700">Darmowa dostawa od <span class="font-normal text-stone-400">(opcjonalnie)</span></label>
+                                    <div class="relative mt-1.5">
+                                        <input id="courier_cod_free_from" name="courier_cod_free_from" type="text" inputmode="decimal" placeholder="np. 250"
+                                            value="{{ old('courier_cod_free_from', $shop->courier_cod_free_from) }}"
+                                            class="block w-full rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 pr-10 text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
+                                        <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm text-stone-400">zł</span>
+                                    </div>
+                                    @error('courier_cod_free_from')
+                                        <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
+                                    @enderror
+                                    <p class="mt-1.5 text-xs text-stone-400">Powyżej tej wartości koszyka dostawa jest gratis. Puste = darmowej dostawy nie ma.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="rounded-2xl border border-stone-200 bg-white/60 p-5 sm:p-6">
+                            <div class="flex items-start gap-4">
+                                <input type="hidden" name="parcel_locker_cod_enabled" value="0">
+                                <input type="checkbox" id="parcel_locker_cod_enabled" name="parcel_locker_cod_enabled" value="1"
+                                    @checked(old('parcel_locker_cod_enabled', $shop->parcel_locker_cod_enabled))
+                                    @disabled(! $inpostReady)
+                                    class="mt-0.5 h-5 w-5 shrink-0 rounded-md border-stone-300 text-amber-600 focus:ring-4 focus:ring-amber-500/20 disabled:cursor-not-allowed">
+                                <label for="parcel_locker_cod_enabled" class="flex-1 {{ $inpostReady ? 'cursor-pointer' : 'cursor-not-allowed' }}">
+                                    <span class="block text-sm font-medium text-stone-800">Paczkomat InPost za pobraniem</span>
+                                    {{-- Paczkomat NIE przyjmuje gotówki (tylko oddział InPostu, gdy paczka
+                                         tam trafi po 48 h). Sprzedawca musi to wiedzieć, zanim obieca
+                                         klientowi „płatność gotówką przy odbiorze". --}}
+                                    <span class="mt-0.5 block text-sm text-stone-500">Klient płaci przy skrytce — BLIK, kartą lub w aplikacji InPost. Gotówki paczkomat nie przyjmie.</span>
+                                    @unless($inpostReady)
+                                        <span class="mt-1.5 block text-xs text-amber-700">Pobranie wymaga podłączonego konta InPost — ustawisz je w <a href="{{ route('seller.integrations.edit') }}" class="font-medium underline decoration-amber-300 underline-offset-2">Integracjach</a>.</span>
+                                    @endunless
+                                </label>
+                            </div>
+
+                            <div class="mt-5 grid grid-cols-12 gap-5">
+                                <div class="col-span-6 sm:col-span-4">
+                                    <label for="parcel_locker_cod_cost" class="block text-sm font-medium text-stone-700">Koszt dostawy</label>
+                                    <div class="relative mt-1.5">
+                                        <input id="parcel_locker_cod_cost" name="parcel_locker_cod_cost" type="text" inputmode="decimal" placeholder="0,00"
+                                            value="{{ old('parcel_locker_cod_cost', $shop->parcel_locker_cod_cost) }}"
+                                            class="block w-full rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 pr-10 text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
+                                        <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm text-stone-400">zł</span>
+                                    </div>
+                                    @error('parcel_locker_cod_cost')
+                                        <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
+                                    @enderror
+                                    <p class="mt-1.5 text-xs text-stone-400">Cena własna, niezależna od zwykłego paczkomatu — InPost liczy za obsługę pobrania osobno.</p>
+                                </div>
+
+                                <div class="col-span-6 sm:col-span-4">
+                                    <label for="parcel_locker_cod_free_from" class="block text-sm font-medium text-stone-700">Darmowa dostawa od <span class="font-normal text-stone-400">(opcjonalnie)</span></label>
+                                    <div class="relative mt-1.5">
+                                        <input id="parcel_locker_cod_free_from" name="parcel_locker_cod_free_from" type="text" inputmode="decimal" placeholder="np. 200"
+                                            value="{{ old('parcel_locker_cod_free_from', $shop->parcel_locker_cod_free_from) }}"
+                                            class="block w-full rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 pr-10 text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
+                                        <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm text-stone-400">zł</span>
+                                    </div>
+                                    @error('parcel_locker_cod_free_from')
+                                        <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
+                                    @enderror
+                                    <p class="mt-1.5 text-xs text-stone-400">Powyżej tej wartości koszyka dostawa jest gratis. Puste = darmowej dostawy nie ma.</p>
+                                </div>
+                            </div>
+                        </div>
                         @endif
                     </div>
                 </div>

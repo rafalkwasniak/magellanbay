@@ -10,6 +10,7 @@ use App\Enums\SendingMethod;
 use App\Enums\ShopStatus;
 use App\Enums\VatRate;
 use App\Observers\ShopObserver;
+use App\Services\PhoneService;
 use App\Support\Color;
 use App\Support\Excerpt;
 use Carbon\CarbonInterface;
@@ -20,6 +21,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Sklep jednego sprzedawcy. `slug` = etykieta subdomeny ({slug}.{central_domain}).
@@ -37,6 +40,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'pickup_enabled', 'pay_on_pickup_enabled',
     'courier_enabled', 'courier_cost', 'courier_free_from',
     'parcel_locker_enabled', 'parcel_locker_cost', 'parcel_locker_free_from',
+    'courier_cod_enabled', 'courier_cod_cost', 'courier_cod_free_from',
+    'parcel_locker_cod_enabled', 'parcel_locker_cod_cost', 'parcel_locker_cod_free_from',
     'shipment_sending_method',
     'courier_parcel_length_cm', 'courier_parcel_width_cm', 'courier_parcel_height_cm', 'courier_parcel_weight_kg',
     'package', 'entitlements', 'price_yearly', 'subscription_ends_at', 'comped',
@@ -66,6 +71,12 @@ class Shop extends Model
             'parcel_locker_enabled' => 'boolean',
             'parcel_locker_cost' => 'decimal:2',
             'parcel_locker_free_from' => 'decimal:2',
+            'courier_cod_enabled' => 'boolean',
+            'courier_cod_cost' => 'decimal:2',
+            'courier_cod_free_from' => 'decimal:2',
+            'parcel_locker_cod_enabled' => 'boolean',
+            'parcel_locker_cod_cost' => 'decimal:2',
+            'parcel_locker_cod_free_from' => 'decimal:2',
             'shipment_sending_method' => SendingMethod::class,
             'courier_parcel_weight_kg' => 'decimal:2',
             'entitlements' => 'array',
@@ -244,7 +255,7 @@ class Shop extends Model
      */
     public function allocateOrderNumber(): int
     {
-        return \Illuminate\Support\Facades\DB::transaction(function (): int {
+        return DB::transaction(function (): int {
             $locked = self::whereKey($this->getKey())->lockForUpdate()->firstOrFail();
             $next = $locked->last_order_number + 1;
             $locked->last_order_number = $next;
@@ -261,9 +272,9 @@ class Shop extends Model
      * produktów (`products_count`), najpopularniejsze najpierw. Wejście do
      * przeglądania po tagach (główna, chmura na wykazie bez filtra).
      *
-     * @return \Illuminate\Support\Collection<int, Tag>
+     * @return Collection<int, Tag>
      */
-    public function activeTagsByPopularity(): \Illuminate\Support\Collection
+    public function activeTagsByPopularity(): Collection
     {
         return $this->tags()
             ->whereHas('products', fn ($query) => $query->where('is_active', true))
@@ -603,6 +614,79 @@ class Shop extends Model
     }
 
     /**
+     * Czy sklep oferuje kuriera ZA POBRANIEM. Trzy warunki: to samo uprawnienie
+     * co zwykła wysyłka (`courier_shipping`), własna fiszka ORAZ skonfigurowany
+     * i włączony InPost.
+     *
+     * Ten trzeci warunek jest tym, co odróżnia pobranie od reszty dostaw i
+     * dlatego nie da się go pominąć: zwykłego kuriera sprzedawca może obsłużyć
+     * sam (własne auto, cena 0 zł), a pobranie z definicji wymaga kogoś, kto
+     * odbierze pieniądze od klienta i przeleje je sprzedawcy — czyli InPostu.
+     * Bez integracji ta metoda nie miałaby jak zadziałać, więc nie pokazujemy
+     * jej ani w kasie, ani w regulaminie.
+     *
+     * Fiszka jest NIEZALEŻNA od `courier_enabled`: sprzedawca może chcieć
+     * wyłącznie pobraniowe albo wyłącznie przedpłacone (decyzja Rafała 17.08).
+     */
+    public function courierCodAvailable(): bool
+    {
+        return $this->entitlement('courier_shipping') === true
+            && $this->courier_cod_enabled
+            && $this->shipxEnabled();
+    }
+
+    /**
+     * Efektywny koszt kuriera za pobraniem. Cennik jest WŁASNY, nie dopłatą do
+     * `courier_cost` — sprzedawca ustala go osobno, bo osobno płaci InPostowi
+     * za obsługę pobrania. Próg darmowej dostawy też własny i niezależny.
+     */
+    public function courierCodCostFor(float $itemsGross): float
+    {
+        $freeFrom = $this->courier_cod_free_from;
+
+        if ($freeFrom !== null && $itemsGross >= (float) $freeFrom) {
+            return 0.0;
+        }
+
+        return (float) ($this->courier_cod_cost ?? 0);
+    }
+
+    /**
+     * Czy sklep oferuje paczkomat ZA POBRANIEM. Bliźniak
+     * {@see courierCodAvailable()} — te same trzy warunki, własna fiszka.
+     */
+    public function parcelLockerCodAvailable(): bool
+    {
+        return $this->entitlement('courier_shipping') === true
+            && $this->parcel_locker_cod_enabled
+            && $this->shipxEnabled();
+    }
+
+    /**
+     * Efektywny koszt paczkomatu za pobraniem. Jak wyżej: własna cena, własny próg.
+     */
+    public function parcelLockerCodCostFor(float $itemsGross): float
+    {
+        $freeFrom = $this->parcel_locker_cod_free_from;
+
+        if ($freeFrom !== null && $itemsGross >= (float) $freeFrom) {
+            return 0.0;
+        }
+
+        return (float) ($this->parcel_locker_cod_cost ?? 0);
+    }
+
+    /**
+     * Czy sklep w ogóle przyjmuje pobranie (którakolwiek z dwóch metod).
+     * JEDNO źródło dla kasy (ustawia metodę płatności), regulaminu (wylicza
+     * sposoby zapłaty) i Ustawień.
+     */
+    public function cashOnDeliveryAvailable(): bool
+    {
+        return $this->courierCodAvailable() || $this->parcelLockerCodAvailable();
+    }
+
+    /**
      * Efektywny koszt dostawy dla danej metody i wartości koszyka (brutto).
      * JEDNO źródło dla kasy i OrderService — wcześniej koszt liczyło się jako
      * „wysyłka → courierCostFor()", co przy paczkomacie kazałoby mu płacić
@@ -616,6 +700,8 @@ class Shop extends Model
             DeliveryMethod::Pickup => 0.0,
             DeliveryMethod::Courier => $this->courierCostFor($itemsGross),
             DeliveryMethod::ParcelLocker => $this->parcelLockerCostFor($itemsGross),
+            DeliveryMethod::CourierCod => $this->courierCodCostFor($itemsGross),
+            DeliveryMethod::ParcelLockerCod => $this->parcelLockerCodCostFor($itemsGross),
         };
     }
 
@@ -629,6 +715,8 @@ class Shop extends Model
             DeliveryMethod::Pickup => null,
             DeliveryMethod::Courier => $this->courier_free_from,
             DeliveryMethod::ParcelLocker => $this->parcel_locker_free_from,
+            DeliveryMethod::CourierCod => $this->courier_cod_free_from,
+            DeliveryMethod::ParcelLockerCod => $this->parcel_locker_cod_free_from,
         };
 
         return $value !== null ? (float) $value : null;
@@ -655,6 +743,16 @@ class Shop extends Model
 
         if ($this->parcelLockerAvailable()) {
             $methods[] = DeliveryMethod::ParcelLocker;
+        }
+
+        // Pobraniowe na końcu: przedpłata jest dla sprzedawcy tańsza i pewniejsza,
+        // a kasa zaznacza pierwszą z brzegu.
+        if ($this->courierCodAvailable()) {
+            $methods[] = DeliveryMethod::CourierCod;
+        }
+
+        if ($this->parcelLockerCodAvailable()) {
+            $methods[] = DeliveryMethod::ParcelLockerCod;
         }
 
         return $methods;
@@ -698,11 +796,18 @@ class Shop extends Model
      * Para zawsze się złoży: jedyna płatność zależna od dostawy (przy odbiorze)
      * wymaga dostępnego odbioru osobistego, więc gdy jest w liście płatności, to
      * odbiór jest w liście dostaw.
+     *
+     * POBRANIE JEST DRUGĄ DROGĄ DO ZAPŁATY, obok listy metod płatności. Nie ma
+     * go w `availablePaymentMethods()`, bo klient go nie wybiera — wynika z
+     * dostawy — więc bez tego warunku sklep oferujący WYŁĄCZNIE pobranie
+     * zostałby uznany za niezdolny do sprzedaży i wylądował w trybie katalogu.
+     * A to jest dokładnie ten sprzedawca, dla którego pobranie zrobiliśmy: taki,
+     * który nie chce zakładać konta u operatora płatności ani czekać na przelewy.
      */
     public function acceptsOrders(): bool
     {
         return $this->availableDeliveryMethods() !== []
-            && $this->availablePaymentMethods() !== [];
+            && ($this->availablePaymentMethods() !== [] || $this->cashOnDeliveryAvailable());
     }
 
     /**
@@ -1027,7 +1132,7 @@ class Shop extends Model
      */
     public function formattedContactPhone(): ?string
     {
-        return app(\App\Services\PhoneService::class)->format($this->contact_phone);
+        return app(PhoneService::class)->format($this->contact_phone);
     }
 
     /**

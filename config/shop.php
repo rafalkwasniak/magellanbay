@@ -306,6 +306,29 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Pobranie (COD)
+    |--------------------------------------------------------------------------
+    |
+    | Górne limity kwoty pobrania u InPostu, w złotych brutto, OSOBNE dla każdej
+    | drogi: paczkomat inkasuje przez terminal skrytki, kurier przyjmuje też
+    | gotówkę, więc progi się różnią. Wartości potwierdzone przez Rafała 17.08.
+    |
+    | Limit sprawdzamy W KASIE, a nie dopiero przy nadawaniu. Inaczej klient
+    | złożyłby zamówienie, dostał potwierdzenie, a sprzedawca odbiłby się od
+    | InPostu przy próbie nadania — z paczką, której nie da się wysłać, i
+    | zamówieniem, które trzeba anulować ręcznie.
+    |
+    */
+
+    'cash_on_delivery' => [
+        'max_amount' => [
+            'parcel_locker' => 5000,
+            'courier' => 15000,
+        ],
+    ],
+
     'subscription' => [
         'grace_days' => 7,
         'reminder_days' => [14, 7, 1],

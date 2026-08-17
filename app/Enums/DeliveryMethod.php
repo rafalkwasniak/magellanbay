@@ -4,14 +4,28 @@ namespace App\Enums;
 
 /**
  * Metody dostawy (spec „Dostawy"). Odbiór osobisty, kurier „pod adres",
- * paczkomat InPost. Kolejne (np. dostawa własna) dojdą jako nowe case'y
- * + konfiguracja per-sklep.
+ * paczkomat InPost oraz pobraniowe warianty obu wysyłek. Kolejne (np. dostawa
+ * własna) dojdą jako nowe case'y + konfiguracja per-sklep.
+ *
+ * DLACZEGO POBRANIE JEST DOSTAWĄ, A NIE PŁATNOŚCIĄ (decyzja Rafała 17.08):
+ * sprzedawca ustala dla niego OSOBNĄ CENĘ i włącza je OSOBNYM przełącznikiem —
+ * dokładnie tak, jak dla kuriera i paczkomatu. Gdyby pobranie było metodą
+ * płatności, cennik i włącznik trzeba by budować drugi raz, w innym miejscu i
+ * innym językiem. Zamówienie i tak dostaje własną metodę płatności
+ * ({@see PaymentMethod::CashOnDelivery}), ale klient jej nie wybiera — wynika
+ * z dostawy.
+ *
+ * Pobranie NIE działa bez konta InPost (to InPost inkasuje pieniądze i przelewa
+ * je sprzedawcy), inaczej niż zwykły kurier, który bywa dostawą własną za 0 zł.
+ * Warunek egzekwuje Shop::courierCodAvailable() / parcelLockerCodAvailable().
  */
 enum DeliveryMethod: string
 {
     case Pickup = 'pickup';
     case Courier = 'courier';
     case ParcelLocker = 'parcel_locker';
+    case CourierCod = 'courier_cod';
+    case ParcelLockerCod = 'parcel_locker_cod';
 
     public function label(): string
     {
@@ -19,6 +33,28 @@ enum DeliveryMethod: string
             self::Pickup => 'Odbiór osobisty',
             self::Courier => 'Kurier',
             self::ParcelLocker => 'Paczkomat InPost',
+            // Etykiety pobraniowych są DOKLEJKĄ do metod bazowych („Kurier" →
+            // „Kurier za pobraniem"), a nie osobnymi nazwami. Klient widzi obie
+            // pozycje obok siebie w jednej liście, więc muszą się rymować —
+            // inaczej wyglądają jak dwie niezwiązane usługi.
+            self::CourierCod => 'Kurier za pobraniem',
+            self::ParcelLockerCod => 'Paczkomat InPost za pobraniem',
+        };
+    }
+
+    /**
+     * Czy klient płaci dopiero przy odbiorze, a pieniądze inkasuje InPost.
+     * Rozstrzyga o trzech rzeczach naraz: metodzie płatności zamówienia,
+     * dorzuceniu `cod`/`insurance` do przesyłki oraz zamku na edycję po nadaniu
+     * (kwoty pobrania NIE DA SIĘ już zmienić — zweryfikowane na sandboxie
+     * 17.08: `PUT` na przesyłce w stanie `confirmed` zwraca 400
+     * `shipment_status_incorrect`, anulowanie przesyłki również).
+     */
+    public function isCashOnDelivery(): bool
+    {
+        return match ($this) {
+            self::Pickup, self::Courier, self::ParcelLocker => false,
+            self::CourierCod, self::ParcelLockerCod => true,
         };
     }
 
@@ -35,7 +71,7 @@ enum DeliveryMethod: string
     {
         return match ($this) {
             self::Pickup => false,
-            self::Courier, self::ParcelLocker => true,
+            self::Courier, self::ParcelLocker, self::CourierCod, self::ParcelLockerCod => true,
         };
     }
 
@@ -49,8 +85,8 @@ enum DeliveryMethod: string
     public function requiresShippingAddress(): bool
     {
         return match ($this) {
-            self::Pickup, self::ParcelLocker => false,
-            self::Courier => true,
+            self::Pickup, self::ParcelLocker, self::ParcelLockerCod => false,
+            self::Courier, self::CourierCod => true,
         };
     }
 
@@ -61,6 +97,6 @@ enum DeliveryMethod: string
      */
     public function requiresParcelLocker(): bool
     {
-        return $this === self::ParcelLocker;
+        return $this === self::ParcelLocker || $this === self::ParcelLockerCod;
     }
 }

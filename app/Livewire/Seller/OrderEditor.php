@@ -5,6 +5,7 @@ namespace App\Livewire\Seller;
 use App\Exceptions\OrderEditException;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Product;
 use App\Services\OrderEditor as OrderEditorService;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\On;
@@ -66,7 +67,19 @@ class OrderEditor extends Component
         // Edycja zamówienia to funkcja pakietu Pawilon (`order_editing`). Bez niej
         // nie wchodzimy w tryb edycji, a i tak zablokuje ją guard w run().
         return $this->order->shop?->entitlement('order_editing') === true
-            && ! $this->order->status->isTerminal();
+            && ! $this->order->status->isTerminal()
+            && ! $this->frozenByCashOnDelivery();
+    }
+
+    /**
+     * Czy zamówienie zamroziło nadanie przesyłki pobraniowej. Kwota pobrania jest
+     * wtedy u InPostu i nie da się jej zmienić, więc kontrolek nie pokazujemy —
+     * serwis i tak by je odbił (patrz OrderEditor::guardEditable).
+     */
+    public function frozenByCashOnDelivery(): bool
+    {
+        return $this->order->delivery_method?->isCashOnDelivery() === true
+            && $this->order->hasShipment();
     }
 
     /**
@@ -258,7 +271,7 @@ class OrderEditor extends Component
     /**
      * Aktywne produkty sklepu do dodania (nazwa + cena + stan w opcji selecta).
      *
-     * @return Collection<int, \App\Models\Product>
+     * @return Collection<int, Product>
      */
     private function addableProducts(): Collection
     {

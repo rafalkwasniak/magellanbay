@@ -261,6 +261,20 @@
                 <div class="st-card st-border rounded-3xl border p-6">
                     <h2 class="st-brand st-box-title">Płatność</h2>
                     <div class="mt-4 space-y-2">
+                        @if ($cashOnDelivery)
+                            {{-- Pobranie nie daje wyboru — płatność wynika z dostawy, więc
+                                 zamiast listy z jedną pozycją pokazujemy zdanie. Sposób zapłaty
+                                 MUSI być tu prawdziwy: paczkomat gotówki nie przyjmie, a klient
+                                 dowiadujący się o tym przy skrytce paczki po prostu nie odbierze. --}}
+                            <div class="st-border rounded-xl border p-4 text-sm">
+                                <span class="font-medium">Płatność za pobraniem</span>
+                                @if ($parcelDelivery)
+                                    <span class="block text-xs opacity-60">Zapłacisz przy odbiorze paczki — BLIK, kartą lub w aplikacji InPost. Paczkomat nie przyjmuje gotówki.</span>
+                                @else
+                                    <span class="block text-xs opacity-60">Zapłacisz kurierowi przy odbiorze przesyłki — gotówką lub kartą.</span>
+                                @endif
+                            </div>
+                        @else
                         @foreach ($paymentOptions as $value => $label)
                             <label class="st-border flex cursor-pointer items-center gap-3 rounded-xl border p-4 text-sm">
                                 <input type="radio" wire:model="payment_method" value="{{ $value }}" class="h-5 w-5 shrink-0" style="accent-color: var(--brand);">
@@ -276,6 +290,7 @@
                                 </span>
                             </label>
                         @endforeach
+                        @endif
                     </div>
                     @error('payment_method') <p class="mt-1 text-xs text-rose-600">{{ $message }}</p> @enderror
                 </div>

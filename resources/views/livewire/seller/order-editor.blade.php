@@ -16,6 +16,11 @@
             >{{ $editing ? 'Gotowe' : 'Edytuj zamówienie' }}</button>
         @elseif ($this->order->status->isTerminal())
             <span class="rounded-full bg-stone-100 px-3 py-1 text-xs font-medium text-stone-500">Anulowane — tylko podgląd</span>
+        @elseif ($this->frozenByCashOnDelivery() && $this->order->shop?->entitlement('order_editing') === true)
+            {{-- Ta gałąź MUSI być przed upsellem pakietu: sklep z Pawilonem, który
+                 nadał paczkę pobraniową, przeczytałby inaczej, że edycja wymaga
+                 wyższego pakietu — a on go ma. Ten sam błąd co przy anulowanych. --}}
+            <span class="rounded-full bg-stone-100 px-3 py-1 text-xs font-medium text-stone-500">Kwota pobrania jest już u InPostu — tylko podgląd</span>
         @else
             {{-- DWA różne powody braku przycisku zlewały się w jeden komunikat:
                  sklep bez uprawnienia `order_editing` czytał „Anulowane — tylko

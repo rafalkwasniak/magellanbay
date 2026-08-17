@@ -49,6 +49,28 @@
         ];
     }
 
+    if ($shop->courierCodAvailable()) {
+        $courierCodCost = (float) ($shop->courier_cod_cost ?? 0);
+        $deliveries[] = [
+            'label' => \App\Enums\DeliveryMethod::CourierCod->label(),
+            'value' => $courierCodCost > 0 ? \App\Support\Money::pln($courierCodCost) : 'Gratis',
+            'note' => ($courierCodCost > 0 && $shop->courier_cod_free_from !== null)
+                ? 'gratis od '.\App\Support\Money::pln((float) $shop->courier_cod_free_from)
+                : null,
+        ];
+    }
+
+    if ($shop->parcelLockerCodAvailable()) {
+        $lockerCodCost = (float) ($shop->parcel_locker_cod_cost ?? 0);
+        $deliveries[] = [
+            'label' => \App\Enums\DeliveryMethod::ParcelLockerCod->label(),
+            'value' => $lockerCodCost > 0 ? \App\Support\Money::pln($lockerCodCost) : 'Gratis',
+            'note' => ($lockerCodCost > 0 && $shop->parcel_locker_cod_free_from !== null)
+                ? 'gratis od '.\App\Support\Money::pln((float) $shop->parcel_locker_cod_free_from)
+                : null,
+        ];
+    }
+
     $payments = [];
 
     // Płatność online na czele (preferowana), spójnie z kolejnością w kasie.
@@ -62,6 +84,13 @@
 
     if ($shop->payOnPickupAvailable()) {
         $payments[] = \App\Enums\PaymentMethod::PayOnPickup->label();
+    }
+
+    // Pobranie NIE jest wyborem klienta (wynika z dostawy), ale jako sposób
+    // zapłaty musi się tu pojawić — inaczej sklep sprzedający wyłącznie za
+    // pobraniem miałby pustą rubrykę „Płatność".
+    if ($shop->cashOnDeliveryAvailable()) {
+        $payments[] = \App\Enums\PaymentMethod::CashOnDelivery->label();
     }
 @endphp
 

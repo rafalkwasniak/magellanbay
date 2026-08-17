@@ -2,6 +2,8 @@
 
 namespace App\Enums;
 
+use App\Support\OrderFlow;
+
 /**
  * Metody płatności. Przelew tradycyjny na konto, płatność przy odbiorze oraz
  * płatność online przez operatora (Paynow/mBank). Metoda jest świadomie
@@ -13,6 +15,7 @@ enum PaymentMethod: string
     case BankTransfer = 'bank_transfer';
     case PayOnPickup = 'pay_on_pickup';
     case Online = 'online';
+    case CashOnDelivery = 'cash_on_delivery';
 
     public function label(): string
     {
@@ -20,7 +23,20 @@ enum PaymentMethod: string
             self::BankTransfer => 'Przelew na konto',
             self::PayOnPickup => 'Płatność przy odbiorze',
             self::Online => 'Płatność online Paynow',
+            self::CashOnDelivery => 'Płatność za pobraniem',
         };
+    }
+
+    /**
+     * Czy klient WYBIERA tę metodę w kasie. Pobranie — nie: wynika z metody
+     * dostawy ({@see DeliveryMethod::isCashOnDelivery()}), więc pokazywanie go
+     * jako osobnej opcji kazałoby klientowi zaznaczyć drugi raz to, co już
+     * zaznaczył. Metoda istnieje na zamówieniu, bo ścieżka statusów
+     * ({@see OrderFlow}) i maile pytają o płatność, nie o dostawę.
+     */
+    public function isChosenByCustomer(): bool
+    {
+        return $this !== self::CashOnDelivery;
     }
 
     /**
@@ -37,6 +53,12 @@ enum PaymentMethod: string
             // Online = przedpłata: reużywa ścieżki „Oczekuje na płatność → Opłacone
             // → …", ale do „Opłacone" przenosi webhook operatora, nie sprzedawca.
             self::Online => true,
+            // Pobranie: pieniądze inkasuje InPost przy wydaniu paczki, więc
+            // ścieżka jest ta sama co przy płatności przy odbiorze — bez kroku
+            // „Opłacone". Fakt zapłaty niesie `delivered_at` (bez zapłaty klient
+            // paczki nie odbierze), więc osobny status byłby mailem do kogoś,
+            // kto trzyma już przesyłkę w ręku (decyzja Rafała 17.08).
+            self::CashOnDelivery => false,
         };
     }
 }

@@ -172,8 +172,33 @@ class OrderEditor
      */
     private function guardEditable(?Order $order): void
     {
-        if ($order !== null && $order->status->isTerminal()) {
+        if ($order === null) {
+            return;
+        }
+
+        if ($order->status->isTerminal()) {
             throw new OrderEditException('Zamówienie jest anulowane — nie można go już edytować.');
+        }
+
+        // Pobranie po nadaniu jest ZAMROŻONE. Kwota do zainkasowania poszła do
+        // InPostu razem z przesyłką i nie da się jej już ruszyć: `PUT` odpowiada
+        // 400 `shipment_status_incorrect`, anulowanie przesyłki tak samo
+        // (sprawdzone na sandboxie 17.08).
+        //
+        // Bez tej bramki edycja rozjeżdżałaby zamówienie z rzeczywistością w
+        // sposób, którego nikt nie zdąży naprawić: klient zapłaciłby STARĄ kwotę
+        // przy skrytce albo kurierowi, sprzedawca dostałby od InPostu tyle samo,
+        // a zamówienie i faktura mówiłyby co innego. Rozbieżność wychodzi wtedy
+        // u klienta, nie w panelu.
+        //
+        // Granicą jest NADANIE, nie metoda płatności — przed nadaniem edycja
+        // zamówienia pobraniowego jest bezpieczniejsza niż opłaconego, bo nie ma
+        // czego zwracać.
+        if ($order->delivery_method?->isCashOnDelivery() === true && $order->hasShipment()) {
+            throw new OrderEditException(
+                'Przesyłka jest już nadana, a kwota pobrania przekazana do InPostu — nie da się jej zmienić. '
+                .'Edycja tego zamówienia jest zablokowana, żeby kurier nie pobrał od klienta innej kwoty, niż mówi zamówienie.',
+            );
         }
     }
 

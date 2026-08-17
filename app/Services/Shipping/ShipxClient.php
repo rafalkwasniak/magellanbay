@@ -312,6 +312,17 @@ class ShipxClient
         return match ($error) {
             'debt_collection' => 'Brak środków na koncie InPost. Zasil konto i spróbuj ponownie.',
             'offer_expired' => 'Oferta InPostu wygasła. Spróbuj nadać przesyłkę ponownie.',
+            // Przesyłka POBRANIOWA wymaga od konta InPost kompletu danych — sam
+            // token nie wystarczy. Objawia się cicho: przesyłka powstaje (201),
+            // po czym wisi nieopłacona.
+            //
+            // Komunikat InPostu brzmi tu `customer_lack_of_address_data`, czyli
+            // „brak danych adresowych" — i JEST MYLĄCY. W sondzie z 17.08 dane
+            // adresowe były komplet, a brakowało numeru rachunku bankowego (tym
+            // rachunkiem InPost oddaje pobrania). Dlatego wymieniamy rachunek
+            // jako pierwszy, ale mówimy o całym komplecie: sprzedawcy może
+            // brakować dowolnego z tych trzech.
+            'company_data_missing' => 'InPost nie przyjmie przesyłki pobraniowej, dopóki Twoje konto w Managerze Paczek nie ma kompletu danych: numeru rachunku bankowego (to na niego wracają pobrania), danych adresowych firmy i danych do faktury. Uzupełnij je i nadaj przesyłkę ponownie.',
             default => 'InPost odrzucił nadanie'.(is_string($error) && $error !== '' ? ' (kod: '.$error.')' : '').'.',
         };
     }
@@ -343,7 +354,7 @@ class ShipxClient
             $receiver['address'] = $this->receiverAddress($order);
         }
 
-        return [
+        $payload = [
             'receiver' => $receiver,
             'parcels' => [$parcel->toShipxParcel()],
             'custom_attributes' => array_filter([
@@ -353,6 +364,27 @@ class ShipxClient
             'service' => config('services.inpost.shipx.service.'.($toLocker ? 'locker' : 'courier')),
             'reference' => 'Zamówienie '.$order->number,
         ];
+
+        // Pobranie: kwota do zainkasowania = CAŁA suma zamówienia (produkty po
+        // rabacie + dostawa), bo to jest to, co klient ma zapłacić przy odbiorze.
+        //
+        // `insurance` NIE jest ozdobnikiem — InPost odrzuca przesyłkę pobraniową
+        // z niższym ubezpieczeniem („Insurance should be equal or higher than
+        // COD"), więc idzie tą samą kwotą. Zweryfikowane na sandboxie 17.08 dla
+        // obu naszych usług (`inpost_locker_standard`, `inpost_courier_c2c`).
+        //
+        // OD TEJ CHWILI KWOTY NIE DA SIĘ ZMIENIĆ: `PUT` na przesyłce po zakupie
+        // zwraca 400 `shipment_status_incorrect`, a anulowanie przesyłki też.
+        // Dlatego edycja zamówienia pobraniowego jest zablokowana od momentu
+        // nadania (patrz OrderEditor::guardEditable()).
+        if ($order->delivery_method?->isCashOnDelivery() === true) {
+            $amount = round((float) $order->total_gross, 2);
+
+            $payload['cod'] = ['amount' => $amount, 'currency' => 'PLN'];
+            $payload['insurance'] = ['amount' => $amount, 'currency' => 'PLN'];
+        }
+
+        return $payload;
     }
 
     /**

@@ -842,6 +842,21 @@ class OrderMailer
             ];
         }
 
+        if ($order->payment_method === PaymentMethod::CashOnDelivery) {
+            // Kwota MUSI tu być: klient płaci ją komuś obcemu, przy skrytce albo
+            // w drzwiach, i to jest jedyne miejsce, gdzie może ją wcześniej
+            // sprawdzić. Sposób zapłaty różni się między paczkomatem a kurierem
+            // i nie wolno go uogólnić — paczkomat gotówki nie przyjmie, a klient,
+            // który się o tym dowie przy skrytce, po prostu nie odbierze paczki.
+            return [
+                'Sposób płatności: '.$order->payment_method->label(),
+                'Do zapłaty przy odbiorze: **'.Money::pln($order->total_gross).'**',
+                $order->delivery_method?->requiresParcelLocker() === true
+                    ? 'W paczkomacie zapłacisz BLIK-iem, kartą lub w aplikacji InPost — gotówki paczkomat nie przyjmuje.'
+                    : 'Kurierowi zapłacisz gotówką lub kartą.',
+            ];
+        }
+
         return ['Sposób płatności: '.$order->payment_method->label().' — zapłacisz na miejscu przy odbiorze.'];
     }
 
