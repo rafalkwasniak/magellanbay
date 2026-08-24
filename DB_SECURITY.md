@@ -156,6 +156,43 @@ Czego to **nie** załatwia (świadomy dług, do decyzji osobno):
 
 ---
 
+## Warstwa 7 — fabryki nie działają na produkcji
+
+Poprzednie warstwy pilnują, żeby nic z produkcyjnej bazy **nie zniknęło**. Ta pilnuje
+czegoś odwrotnego: żeby nic się w niej **nie pojawiło** z fabryki.
+
+**Incydent 2026-08-16 (wykryty 24.08):** ktoś wykonał `User::factory()->create()` na
+produkcyjnym połączeniu — najpewniej w tinkerze, „tylko na chwilę". Została po tym
+Klaudia Lewandowska, `skubiak@example.net`, rola **sprzedawca**, konto aktywne,
+z domyślnym hasłem fabryki **`password`**. Przeżyło 8 dni, aż konsola admina pokazała
+je jako „sprzedawca bez sklepu".
+
+Warto zauważyć, czego **nie** było winne — bo pierwsza hipoteza była groźniejsza niż
+prawda: to nie były testy (chodzą na sqlite `:memory:`, Warstwa 3) ani seeder (tworzy
+sztywny `test@example.com`). Ślad dało dopiero hasło: `Hash::check('password', …)`
+przeszło, a to sygnatura `UserFactory`.
+
+Blokada w `AppServiceProvider::prohibitFactoriesInProduction()`: gdy `APP_ENV=production`,
+resolver nazw fabryk rzuca wyjątkiem. Przechodzi przez niego każde `Model::factory()`
+(żaden model nie ma własnego `newFactory()`), więc łapie wszystkie 12 fabryk naraz.
+Fabryka służy do wypełniania bazy zmyślonymi danymi — na produkcji nie ma legalnego
+zastosowania, więc blokada niczego nie odbiera.
+
+Przy okazji rozbrojony `DatabaseSeeder`: szkielet Laravela trzymał w nim gotowe konto
+`test@example.com` z hasłem `password`, czekające na przypadkowe `db:seed --force`.
+
+Pilnuje tego `tests/Feature/Security/FactoryGuardTest.php` — sprawdza obie strony:
+że na produkcji rzuca i że poza nią fabryki działają normalnie (gdyby garda złapała
+środowisko testowe, przewróciłaby całą suitę).
+
+**Weryfikacja na żywym środowisku:**
+
+```bash
+/opt/alt/php85/usr/bin/php artisan tinker --execute="try { App\Models\User::factory()->make(); echo 'GARDA NIE DZIAŁA'; } catch (RuntimeException \$e) { echo 'ok: '.\$e->getMessage(); }"
+```
+
+---
+
 ## Checklista wdrożenia w nowym projekcie
 
 - [ ] `DB::prohibitDestructiveCommands($this->app->environment('production'))` w `AppServiceProvider::boot()`
@@ -164,6 +201,7 @@ Czego to **nie** załatwia (świadomy dług, do decyzji osobno):
 - [ ] Guard sqlite-only w `tests/TestCase.php::setUp()`
 - [ ] `phpunit.xml` wymusza `DB_CONNECTION=sqlite` + `DB_DATABASE=:memory:`
 - [ ] Guard dysków w `tests/TestCase.php::isolateDisks()` (Warstwa 6)
+- [ ] Blokada fabryk na produkcji w `AppServiceProvider` + pusty `DatabaseSeeder` (Warstwa 7)
 - [ ] Produkcyjny user DB bez `DROP`/`ALTER` (migracje schematu osobnym kontem)
 - [ ] Automatyczny dzienny backup z przetestowanym odtwarzaniem
 
