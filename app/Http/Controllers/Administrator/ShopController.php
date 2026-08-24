@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Administrator;
 
 use App\Enums\ShopStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Administrator\SellerNoticeRequest;
 use App\Http\Requests\Administrator\ShopDeletionRequest;
 use App\Models\Shop;
+use App\Services\SellerNoticeService;
 use App\Services\ShopEraser;
 use Illuminate\Contracts\Support\Renderable;
 use Illuminate\Http\RedirectResponse;
@@ -75,6 +77,22 @@ class ShopController extends Controller
         return redirect()
             ->route('administrator.shops.index')
             ->with('success', 'Sklep '.$name.' został usunięty razem z kontem właściciela.');
+    }
+
+    /**
+     * Wiadomość serwisowa do właściciela tego sklepu. Świadomie POZA zgodą
+     * marketingową — powód i granica opisane w {@see SellerNoticeService}.
+     */
+    public function message(SellerNoticeRequest $request, Shop $shop, SellerNoticeService $notices): RedirectResponse
+    {
+        $notices->send(
+            $shop,
+            $request->string('subject')->toString(),
+            $request->string('body')->toString(),
+            $request->user(),
+        );
+
+        return back()->with('success', 'Wiadomość do '.$shop->owner->email.' została zakolejkowana — wyjdzie w ciągu minuty.');
     }
 
     /**

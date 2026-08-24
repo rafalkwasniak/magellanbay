@@ -203,6 +203,10 @@ Route::middleware(['auth', 'role:admin'])
         Route::post('/sklepy/{shop}/usun', [AdministratorShopController::class, 'destroy'])->name('shops.destroy');
         Route::post('/sklepy/{shop}/przywroc', [AdministratorShopController::class, 'restore'])->name('shops.restore');
 
+        // Wiadomość serwisowa do właściciela sklepu — POZA zgodą marketingową
+        // (awaria, sprawa konta). Handlowe treści idą działem „Wiadomości".
+        Route::post('/sklepy/{shop}/wiadomosc', [AdministratorShopController::class, 'message'])->name('shops.message');
+
         // Pakiety — przekrój pieniędzy platformy: przychód z opłat, wartość
         // biegnących abonamentów, rozkład sklepów po pakietach. Zmiana pakietu
         // pojedynczego sklepu zostaje w dziale „Sklepy".

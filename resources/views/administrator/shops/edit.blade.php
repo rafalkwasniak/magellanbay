@@ -94,6 +94,45 @@
                     </li>
                 </ul>
             </div>
+
+            {{-- Wiadomość serwisowa do właściciela sklepu. Świadomie POZA zgodą
+                 marketingową — awarii nie da się „nie zaprenumerować". Powód
+                 i granica: App\Services\SellerNoticeService. --}}
+            <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                <h2 class="font-semibold text-stone-900">Napisz do sprzedawcy</h2>
+                <p class="mt-2 text-sm text-stone-500">
+                    Trafi na <span class="text-stone-700">{{ $shop->owner->email }}</span>, z adresu Kramio.
+                    Odpowiedź wróci na Twój adres.
+                </p>
+
+                <form method="POST" action="{{ route('administrator.shops.message', $shop) }}" class="mt-5 space-y-4">
+                    @csrf
+
+                    <div>
+                        <label for="subject" class="block text-sm font-medium text-stone-700">Temat</label>
+                        <input type="text" id="subject" name="subject" maxlength="150" required
+                            value="{{ old('subject') }}"
+                            placeholder="np. Usterka w Twoim sklepie — już naprawiona"
+                            class="mt-1 block w-full rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-800 focus:border-amber-400 focus:outline-none">
+                        @error('subject')
+                            <p class="mt-1 text-sm text-rose-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label for="body" class="block text-sm font-medium text-stone-700">Treść</label>
+                        <x-rich-editor name="body" :value="old('body')" :max="config('platform_mail.body_max')">Sprawy konta, awarie, odpowiedzi na zgłoszenia. Nowości i oferty wyślij działem „Wiadomości" — te wymagają zgody.</x-rich-editor>
+                        @error('body')
+                            <p class="mt-1 text-sm text-rose-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <button type="submit"
+                        class="rounded-2xl bg-gradient-to-br from-amber-500 to-rose-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-rose-500/20 transition hover:brightness-105">
+                        Wyślij wiadomość
+                    </button>
+                </form>
+            </div>
         </aside>
     </div>
 </x-layouts.panel>
