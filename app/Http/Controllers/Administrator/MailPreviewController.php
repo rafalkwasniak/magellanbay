@@ -47,7 +47,7 @@ class MailPreviewController extends Controller
                     'Aby dokończyć zakładanie konta, ustaw hasło i uzupełnij dane — zajmie to chwilę.',
                 ],
                 'actionText' => 'Dokończ rejestrację',
-                'actionUrl' => 'https://shop.kwasniak.org/aktywacja/przyklad-token',
+                'actionUrl' => config('app.url').'/aktywacja/przyklad-token',
                 'outroLines' => [
                     'Link jest ważny przez 24 godziny.',
                 ],
