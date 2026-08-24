@@ -3,9 +3,11 @@
         <h1 class="st-brand font-serif text-4xl leading-tight tracking-tight sm:text-5xl">Sprawdź skrzynkę</h1>
 
         <div class="st-card st-border mt-8 rounded-2xl border p-6 text-left text-sm leading-relaxed opacity-80">
-            <p>
-                Wysłaliśmy link aktywacyjny@if (filled($email)) na <strong class="st-brand">{{ $email }}</strong>@endif.
-            </p>
+            @if (filled($email))
+                <p>Wysłaliśmy link aktywacyjny na <strong class="st-brand">{{ $email }}</strong>.</p>
+            @else
+                <p>Wysłaliśmy link aktywacyjny.</p>
+            @endif
             <p class="mt-3">
                 Kliknij w niego, ustaw hasło i gotowe — od razu będziesz zalogowany. Link jest ważny przez 24 godziny.
             </p>

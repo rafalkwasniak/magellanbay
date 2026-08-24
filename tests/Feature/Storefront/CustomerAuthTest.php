@@ -73,6 +73,23 @@ class CustomerAuthTest extends TestCase
         $this->assertDatabaseHas('customers', ['shop_id' => $b->id, 'email' => 'ktos@example.com']);
     }
 
+    public function test_confirmation_screen_renders_with_and_without_remembered_email(): void
+    {
+        $shop = Shop::factory()->create();
+
+        $this->withSession(['registered_email' => 'nowy@example.com'])
+            ->get($this->host($shop).'/rejestracja/potwierdzenie')
+            ->assertOk()
+            ->assertSee('nowy@example.com');
+
+        // Bez zapamiętanego adresu — sesja testu przeżywa między requestami, więc czyścimy.
+        $this->flushSession();
+
+        $this->get($this->host($shop).'/rejestracja/potwierdzenie')
+            ->assertOk()
+            ->assertSee('Wysłaliśmy link aktywacyjny.');
+    }
+
     public function test_activation_sets_password_logs_in_and_claims_guest_orders(): void
     {
         $shop = Shop::factory()->create();
