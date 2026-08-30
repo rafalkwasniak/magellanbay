@@ -98,3 +98,46 @@ Zrobione:
 Wciąż do zrobienia (notatka, nie robimy z automatu):
 - `APP_LOCALE` / `APP_FALLBACK_LOCALE` — po decyzji o locale (sek. 3).
 - Każda zmiana w `.env` = aktualizacja `.env.example` w tym samym kroku.
+
+---
+
+## 6. Przeprowadzka na nowy serwer
+
+Ta sekcja jest po to, żeby pierwsza sesja na nowym serwerze — nawet z pustą pamięcią asystenta — od razu wiedziała, czego brakuje i skąd to wziąć.
+
+### 6.1. Pamięć asystenta (robić najpierw)
+
+Pamięć Claude'a (handoffy, gotchy, decyzje produktowe — ok. 160 plików) mieszka w **katalogu domowym konta**, poza projektem: `~/.claude/projects/<klucz>/memory/`. Git jej nie widzi, więc sama by nie pojechała. Dlatego repozytorium wozi jej kopię w `.claude/memory/`, a `.claude/memory-sync.sh` przenosi ją w obie strony:
+
+```bash
+.claude/memory-sync.sh status     # co gdzie leży i czy się różni
+.claude/memory-sync.sh save       # $HOME -> repozytorium (przed commitem)
+.claude/memory-sync.sh restore    # repozytorium -> $HOME (po przeprowadzce)
+```
+
+**Nazwa katalogu w `$HOME` to ścieżka bezwzględna projektu z ukośnikami i kropkami zamienionymi na myślniki** (`/home/host473413/domains/kramio.pl` → `-home-host473413-domains-kramio-pl`). Po przeprowadzce na konto o innej nazwie skopiowanie katalogu 1:1 **nic nie da** — klucz się zmienia i asystent szuka gdzie indziej. Skrypt liczy klucz z bieżącej ścieżki, więc trafia poprawnie także na nowym serwerze.
+
+**Zasada dla asystenta:** kopia starzeje się cicho. Przy każdym „CP" po sesji, w której powstał handoff lub nowa notatka — najpierw `save`, potem commit. Kopia sprzed trzech miesięcy jest niewiele lepsza od jej braku.
+
+Czego NIE trzeba przenosić: transkryptów sesji (`*.jsonl`, ~120 MB obok pamięci — potrzebne tylko do wznawiania starych rozmów) ani `~/.claude/settings.json` (dwie preferencje, szybciej ustawić od nowa).
+
+### 6.2. Czego nie ma w repozytorium
+
+- **`.env`** — odtworzyć z `.env.example` i uzupełnić sekrety (baza, `DISCORD_WEBHOOK_URL`, Paynow, Fakturownia, InPost, DeepSeek, GUS). Każda zmiana `.env` = aktualizacja `.env.example` w tym samym kroku.
+- **`storage/app/`** (~19 MB) — zdjęcia produktów, logotypy, pliki sklepów. Bez tego storefronty stracą grafiki. Przenieść razem z uprawnieniami.
+- **Baza danych** — zrzut SQL, nie kopia katalogu MySQL. Po odtworzeniu sprawdzić liczbę tabel, klucze obce i `AUTO_INCREMENT` (tak robiliśmy przy zmianie nazwy bazy 12.08, sek. 2).
+- **`vendor/`, `node_modules/`, `public/build/`** — odtwarzane komendami, nie przenoszone.
+
+### 6.3. Konfiguracja do sprawdzenia po przeprowadzce
+
+1. **Ścieżka do PHP 8.5** — dziś `/opt/alt/php85/usr/bin/php`, na nowym serwerze prawie na pewno inna. Zaktualizować sek. 2 tego pliku. Domyślne `php` w shellu bywa starsze niż runtime WWW — sprawdzić `php -v` i porównać z wersją na stronie.
+2. **Document root** domeny musi wskazywać na `…/kramio.pl/public` (nie `public_html`).
+3. **Wildcard DNS i wildcard SSL `*.kramio.pl`** — bez tego padają wszystkie storefronty, a nie tylko centrala.
+4. **Jeden wpis crona:** `* * * * * php artisan schedule:run` (pełną ścieżką do PHP 8.5). Wszystko resztę — kopie zapasowe 04:00 i 16:00, strażnik kopii 09:00, wysyłka maili, odświeżanie przesyłek, abonamenty, kasowanie sklepów po karencji — planuje `routes/console.php`. Bez tego jednego wpisu nie działa nic z tej listy, po cichu.
+5. **Klucz SSH i remote gita** — `FOUNDATION.md` sek. 3, tożsamość commitów per-repo (`--local`, nie `--global`).
+6. **Katalog kopii zapasowych** i jego wolne miejsce (patrz ekran Ustawień w panelu admina).
+7. `composer install`, `npm ci && npm run build`, `php artisan migrate --force`, `storage:link`, uprawnienia do `storage/` i `bootstrap/cache/`.
+
+### 6.4. Sprawdzian, że wszystko wróciło
+
+`php artisan test` — pełna suita. Zielona suita jest tu najtańszym dowodem, że baza, pliki i konfiguracja dojechały w komplecie. Potem wejść na centralę, na dowolny storefront pod subdomeną i na `/administrator/panel`.
