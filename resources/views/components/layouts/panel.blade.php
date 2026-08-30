@@ -34,6 +34,7 @@
             ['label' => 'Sprzedawcy', 'route' => 'administrator.sellers.index', 'active' => 'administrator.sellers.*', 'icon' => '👥'],
             ['label' => 'Wiadomości', 'route' => 'administrator.mailings.index', 'active' => 'administrator.mailings.*', 'icon' => '📣'],
             ['label' => 'Zamówienia', 'route' => 'administrator.orders.index', 'active' => 'administrator.orders.*', 'icon' => '📦'],
+            ['label' => 'Analityka', 'route' => 'administrator.analytics.index', 'icon' => '📊'],
             ['label' => 'Pakiety', 'route' => 'administrator.packages.index', 'active' => 'administrator.packages.*', 'icon' => '✨'],
             // Odznaka liczy nierozpatrzone: od chwili zgłoszenia mamy wiedzę o
             // treści, więc to jedyna kolejka w panelu, w której zaleganie ma

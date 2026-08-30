@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\AnalyticsPeriod;
 use App\Enums\OrderStatus;
 use App\Enums\SaleUnit;
+use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Shop;
 use App\Models\ShopStat;
@@ -23,6 +24,12 @@ use Illuminate\Support\Facades\Cache;
  * produkcji), wynik trzymany krótko w cache. Przy skali sklepów butikowych okno to
  * kilkadziesiąt–kilkaset wierszy, więc pobranie i zsumowanie w PHP jest tańsze niż
  * kombinowanie z driver-specyficznym GROUP BY.
+ *
+ * Ten sam serwis liczy JEDEN sklep (panel sprzedawcy) i CAŁĄ PLATFORMĘ (panel
+ * administratora) — `$shop === null` zdejmuje zawężenie do sklepu. Dwa serwisy
+ * dawałyby dwa ekrany podające dwie różne prawdy o tych samych zamówieniach.
+ * W przekroju platformy liczymy WSZYSTKIE sklepy z bazy, także wyłączone i te w
+ * karencji na usunięcie: ich sprzedaż się wydarzyła i nie ma znikać z historii.
  */
 class ShopAnalytics
 {
@@ -30,15 +37,16 @@ class ShopAnalytics
     private const CACHE_TTL_SECONDS = 120;
 
     /**
+     * @param  Shop|null  $shop  null = przekrój całej platformy (panel administratora)
      * @return array{
      *     period: AnalyticsPeriod,
      *     kpis: array<string, array{value: float, delta: float|null, spark: list<float>}>
      * }
      */
-    public function for(Shop $shop, AnalyticsPeriod $period): array
+    public function for(?Shop $shop, AnalyticsPeriod $period): array
     {
         return Cache::remember(
-            "analytics:{$shop->id}:{$period->value}",
+            'analytics:'.($shop?->id ?? 'all').":{$period->value}",
             self::CACHE_TTL_SECONDS,
             fn () => $this->compute($shop, $period),
         );
@@ -47,7 +55,7 @@ class ShopAnalytics
     /**
      * @return array{period: AnalyticsPeriod, kpis: array<string, array{value: float, delta: float|null, spark: list<float>}>}
      */
-    private function compute(Shop $shop, AnalyticsPeriod $period): array
+    private function compute(?Shop $shop, AnalyticsPeriod $period): array
     {
         $now = now();
         $start = $period->start($now);
@@ -118,10 +126,10 @@ class ShopAnalytics
      *
      * @return array{visits: int, product_views: int, conversion: float|null}
      */
-    private function traffic(Shop $shop, CarbonInterface $start, CarbonInterface $end, int $ordersCount): array
+    private function traffic(?Shop $shop, CarbonInterface $start, CarbonInterface $end, int $ordersCount): array
     {
         $row = ShopStat::query()
-            ->where('shop_id', $shop->id)
+            ->when($shop, fn (Builder $query) => $query->where('shop_id', $shop->id))
             ->whereBetween('date', [$start->toDateString(), $end->toDateString()])
             ->selectRaw('COALESCE(SUM(visits), 0) as visits, COALESCE(SUM(product_views), 0) as product_views')
             ->first();
@@ -137,35 +145,35 @@ class ShopAnalytics
 
     /**
      * Nowi vs powracający wśród klientów, którzy kupili w oknie. „Powracający" =
-     * miał jakiekolwiek nie-anulowane zamówienie PRZED początkiem okna; reszta to
-     * „nowi" (pierwszy zakup w tym oknie). Jedno dodatkowe lekkie zapytanie o same
-     * e-maile sprzed okna; dopasowanie po znormalizowanym adresie w PHP.
+     * miał jakiekolwiek nie-anulowane zamówienie W TYM SKLEPIE przed początkiem
+     * okna; reszta to „nowi" (pierwszy zakup w tym oknie). Jedno dodatkowe lekkie
+     * zapytanie o same e-maile sprzed okna; dopasowanie w PHP po kluczu klienta.
      *
-     * @param  Collection<int, \App\Models\Order>  $current
+     * @param  Collection<int, Order>  $current
      * @return array{new: int, returning: int, returning_rate: float|null}
      */
-    private function customerBreakdown(Shop $shop, Collection $current, CarbonInterface $start): array
+    private function customerBreakdown(?Shop $shop, Collection $current, CarbonInterface $start): array
     {
-        $windowEmails = $current
-            ->map(fn ($order) => mb_strtolower(trim((string) $order->buyer_email)))
+        $windowCustomers = $current
+            ->map(fn ($order) => $this->customerKey($order))
             ->filter()
             ->unique();
 
-        $total = $windowEmails->count();
+        $total = $windowCustomers->count();
 
         if ($total === 0) {
             return ['new' => 0, 'returning' => 0, 'returning_rate' => null];
         }
 
-        $priorEmails = $shop->orders()
+        $priorCustomers = $this->ordersQuery($shop)
             ->countedAsSale()
             ->where('created_at', '<', $start)
-            ->get(['buyer_email'])
-            ->map(fn ($order) => mb_strtolower(trim((string) $order->buyer_email)))
+            ->get(['shop_id', 'buyer_email'])
+            ->map(fn (Order $order) => $this->customerKey($order))
             ->filter()
             ->unique();
 
-        $returning = $windowEmails->intersect($priorEmails)->count();
+        $returning = $windowCustomers->intersect($priorCustomers)->count();
         $new = $total - $returning;
 
         return [
@@ -181,30 +189,36 @@ class ShopAnalytics
      * Sumujemy ilości z pozycji zamówień; jednostki liczymy 1:1 (1 kg = 1 szt.),
      * a wynik podłoga do liczby całkowitej. Grupujemy po znormalizowanym e-mailu
      * kupującego (z zamówienia pozycji). Etykieta = imię i nazwisko, a gdy brak —
-     * sam e-mail.
+     * sam e-mail; w przekroju platformy dopisujemy nazwę sklepu, bo ta sama osoba
+     * kupująca w dwóch sklepach daje dwa wiersze i bez tego byłyby nie do
+     * odróżnienia.
      *
      * @return list<array{label: string, items: int}>
      */
-    private function topCustomers(Shop $shop, CarbonInterface $from, CarbonInterface $to, int $limit = 5): array
+    private function topCustomers(?Shop $shop, CarbonInterface $from, CarbonInterface $to, int $limit = 5): array
     {
         $items = OrderItem::query()
             ->whereHas('order', fn (Builder $query) => $query
-                ->where('shop_id', $shop->id)
+                ->when($shop, fn (Builder $scoped) => $scoped->where('shop_id', $shop->id))
                 ->where('status', '!=', OrderStatus::Cancelled->value)
                 ->where('created_at', '>=', $from)
                 ->where('created_at', '<', $to))
-            ->with(['order' => fn ($query) => $query->select('id', 'buyer_email', 'buyer_name', 'buyer_surname')])
+            ->with([
+                'order' => fn ($query) => $query->select('id', 'shop_id', 'buyer_email', 'buyer_name', 'buyer_surname'),
+                'order.shop' => fn ($query) => $query->select('id', 'name'),
+            ])
             ->get(['order_id', 'quantity', 'returned_quantity']);
 
         return $items
             ->filter(fn (OrderItem $item) => filled($item->order?->buyer_email))
-            ->groupBy(fn (OrderItem $item) => mb_strtolower(trim((string) $item->order->buyer_email)))
-            ->map(function (Collection $rows) {
+            ->groupBy(fn (OrderItem $item) => $this->customerKey($item->order))
+            ->map(function (Collection $rows) use ($shop) {
                 $order = $rows->first()->order;
                 $name = trim(($order->buyer_name ?? '').' '.($order->buyer_surname ?? ''));
+                $label = $name !== '' ? $name : (string) $order->buyer_email;
 
                 return [
-                    'label' => $name !== '' ? $name : (string) $order->buyer_email,
+                    'label' => $shop === null ? $label.' · '.($order->shop?->name ?? 'sklep usunięty') : $label,
                     // Sztuki zwrócone nie są sprzedażą — liczymy ilość efektywną.
                     'items' => (int) floor((float) $rows->sum(fn (OrderItem $r) => $r->effectiveQuantity())),
                 ];
@@ -221,24 +235,31 @@ class ShopAnalytics
      * zamówień (`order_items`), więc wierne nawet po zmianie/usunięciu produktu.
      * Grupujemy po produkcie (a gdy pozycja bez `product_id` — po nazwie migawki).
      * Anulowane zamówienia odpadają. `unit` niesie jednostkę (szt./kg) do
-     * sformatowania ilości w widoku.
+     * sformatowania ilości w widoku. W przekroju platformy dopisujemy do nazwy
+     * sklep — dwa sklepy potrafią mieć produkt o tej samej nazwie.
      *
      * @return list<array{name: string, quantity: float, unit: string}>
      */
-    private function bestsellers(Shop $shop, CarbonInterface $from, CarbonInterface $to, int $limit = 5): array
+    private function bestsellers(?Shop $shop, CarbonInterface $from, CarbonInterface $to, int $limit = 5): array
     {
         $items = OrderItem::query()
             ->whereHas('order', fn (Builder $query) => $query
-                ->where('shop_id', $shop->id)
+                ->when($shop, fn (Builder $scoped) => $scoped->where('shop_id', $shop->id))
                 ->where('status', '!=', OrderStatus::Cancelled->value)
                 ->where('created_at', '>=', $from)
                 ->where('created_at', '<', $to))
-            ->get(['product_id', 'name', 'quantity', 'returned_quantity', 'sale_unit']);
+            ->when($shop === null, fn (Builder $query) => $query->with([
+                'order' => fn ($scoped) => $scoped->select('id', 'shop_id'),
+                'order.shop' => fn ($scoped) => $scoped->select('id', 'name'),
+            ]))
+            ->get(['order_id', 'product_id', 'name', 'quantity', 'returned_quantity', 'sale_unit']);
 
         return $items
             ->groupBy(fn (OrderItem $item) => $item->product_id ?? 'name:'.$item->name)
             ->map(fn (Collection $rows) => [
-                'name' => (string) $rows->first()->name,
+                'name' => $shop === null
+                    ? (string) $rows->first()->name.' · '.($rows->first()->order?->shop?->name ?? 'sklep usunięty')
+                    : (string) $rows->first()->name,
                 'quantity' => (float) $rows->sum(fn (OrderItem $r) => $r->effectiveQuantity()),
                 'unit' => ($rows->first()->sale_unit ?? SaleUnit::Piece)->value,
             ])
@@ -253,7 +274,7 @@ class ShopAnalytics
      * liczba, obrót i udział w liczbie zamówień. Sortowane malejąco. Pusta lista
      * przy braku zamówień (widok pokaże stan pusty).
      *
-     * @param  Collection<int, \App\Models\Order>  $orders
+     * @param  Collection<int, Order>  $orders
      * @return list<array{label: string, count: int, revenue: float, share: float}>
      */
     private function split(Collection $orders, string $attribute): array
@@ -281,19 +302,44 @@ class ShopAnalytics
      * Zamówienia liczone jako zakup w oknie [od, do). Pobieramy tylko kolumny
      * potrzebne do metryk — bez dociągania całych rekordów.
      *
-     * @return Collection<int, \App\Models\Order>
+     * @return Collection<int, Order>
      */
-    private function orders(Shop $shop, CarbonInterface $from, CarbonInterface $to): Collection
+    private function orders(?Shop $shop, CarbonInterface $from, CarbonInterface $to): Collection
     {
-        return $shop->orders()
+        return $this->ordersQuery($shop)
             ->countedAsSale()
             ->where('created_at', '>=', $from)
             ->where('created_at', '<', $to)
-            ->get(['total_gross', 'buyer_email', 'buyer_name', 'buyer_surname', 'created_at', 'payment_method', 'delivery_method']);
+            ->get(['shop_id', 'total_gross', 'buyer_email', 'buyer_name', 'buyer_surname', 'created_at', 'payment_method', 'delivery_method']);
     }
 
     /**
-     * @param  Collection<int, \App\Models\Order>  $orders
+     * Jedyne miejsce, w którym decyduje się zakres: konkretny sklep albo cała
+     * platforma. Bez zawężenia biorą udział wszystkie sklepy z bazy — również
+     * wyłączone i te w karencji na usunięcie.
+     *
+     * @return Builder<Order>
+     */
+    private function ordersQuery(?Shop $shop): Builder
+    {
+        return Order::query()->when($shop, fn (Builder $query) => $query->where('shop_id', $shop->id));
+    }
+
+    /**
+     * Klucz klienta = SKLEP + znormalizowany e-mail. Konta klientów są per sklep,
+     * więc ta sama osoba kupująca w dwóch sklepach to dwóch klientów: dzięki temu
+     * przekrój platformy jest sumą pojedynczych sklepów, a nie liczbą, której nie
+     * da się z niczym pogodzić. Pusty adres daje pusty klucz (odfiltrowywany).
+     */
+    private function customerKey(Order $order): string
+    {
+        $email = mb_strtolower(trim((string) $order->buyer_email));
+
+        return $email === '' ? '' : $order->shop_id.'|'.$email;
+    }
+
+    /**
+     * @param  Collection<int, Order>  $orders
      */
     private function revenue(Collection $orders): float
     {
@@ -303,7 +349,7 @@ class ShopAnalytics
     /**
      * Średni koszyk (AOV) = obrót / liczba zamówień; brak zamówień → 0.
      *
-     * @param  Collection<int, \App\Models\Order>  $orders
+     * @param  Collection<int, Order>  $orders
      */
     private function aov(Collection $orders): float
     {
@@ -313,15 +359,15 @@ class ShopAnalytics
     }
 
     /**
-     * Liczba unikalnych klientów w oknie = unikalne (znormalizowane) adresy e-mail
-     * kupujących. Obejmuje i zalogowanych, i gości — e-mail jest wspólnym kluczem.
+     * Liczba unikalnych klientów w oknie. Obejmuje i zalogowanych, i gości —
+     * e-mail jest wspólnym kluczem (patrz `customerKey`).
      *
-     * @param  Collection<int, \App\Models\Order>  $orders
+     * @param  Collection<int, Order>  $orders
      */
     private function customers(Collection $orders): int
     {
         return $orders
-            ->map(fn ($order) => mb_strtolower(trim((string) $order->buyer_email)))
+            ->map(fn (Order $order) => $this->customerKey($order))
             ->filter()
             ->unique()
             ->count();
@@ -376,8 +422,8 @@ class ShopAnalytics
      * zamówień daje 0.0, żeby wykres nie „ściskał" osi czasu.
      *
      * @param  list<string>  $keys
-     * @param  Collection<string, Collection<int, \App\Models\Order>>  $grouped
-     * @param  callable(Collection<int, \App\Models\Order>): float  $metric
+     * @param  Collection<string, Collection<int, Order>>  $grouped
+     * @param  callable(Collection<int, Order>): float  $metric
      * @return list<float>
      */
     private function sparkline(array $keys, Collection $grouped, callable $metric): array

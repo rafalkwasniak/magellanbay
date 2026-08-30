@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\LegalDocumentType;
+use App\Http\Controllers\Administrator\AnalyticsController as AdministratorAnalyticsController;
 use App\Http\Controllers\Administrator\ContentReportController as AdministratorContentReportController;
 use App\Http\Controllers\Administrator\DashboardController as AdministratorDashboard;
 use App\Http\Controllers\Administrator\MailingController as AdministratorMailingController;
@@ -216,6 +217,10 @@ Route::middleware(['auth', 'role:admin'])
         // operacyjne. Cennik, progi i dane firmy zostają w config/.
         Route::get('/ustawienia', [AdministratorSettingsController::class, 'index'])->name('settings.index');
         Route::post('/ustawienia', [AdministratorSettingsController::class, 'update'])->name('settings.update');
+
+        // Analityka platformy — ten sam ekran co u sprzedawcy, domyślnie sumarycznie
+        // dla wszystkich sklepów; filtr `sklep` zawęża do jednego.
+        Route::get('/analityka', [AdministratorAnalyticsController::class, 'index'])->name('analytics.index');
 
         Route::get('/zamowienia', [AdministratorOrderController::class, 'index'])->name('orders.index');
         Route::get('/zamowienia/{order}', [AdministratorOrderController::class, 'show'])->name('orders.show');
