@@ -141,3 +141,20 @@ Czego NIE trzeba przenosić: transkryptów sesji (`*.jsonl`, ~120 MB obok pamię
 ### 6.4. Sprawdzian, że wszystko wróciło
 
 `php artisan test` — pełna suita. Zielona suita jest tu najtańszym dowodem, że baza, pliki i konfiguracja dojechały w komplecie. Potem wejść na centralę, na dowolny storefront pod subdomeną i na `/administrator/panel`.
+
+### 6.5. Stary serwer zostaje żywy — wyłączyć na nim crona
+
+**Decyzja Rafała (2026-08-30):** stara maszyna nie znika, zostaje pod inne projekty. Komplet plików i danych Kramio zostaje na niej nietknięty; przenosimy tylko domenę. To świetna polisa na odtworzenie — i jednocześnie powtórka sytuacji, przez którą 13.08 kasowaliśmy katalog `shop.kwasniak.org` (patrz nagłówek tego pliku): druga żywa kopia tej samej aplikacji.
+
+**Sedno: przekierowanie domeny dotyczy wyłącznie ruchu HTTP. Cron nie pyta o DNS.** Stary serwer dalej co minutę odpali `schedule:run` na swojej kopii bazy, a te komendy sięgają na zewnątrz:
+
+- `email:dispatch` (co minutę) — **realne maile** do realnych sprzedawców i klientów z outboxu starej bazy.
+- `queue:work` (co minutę) — faktury w Fakturowni; ta usługa **nie ma sandboxa**, każde żądanie tworzy realny dokument.
+- `shipments:refresh` (co minutę) — realne wywołania InPost ShipX.
+- `subscriptions:check` (06:10) — drugi komplet przypomnień o wygasającym pakiecie.
+- `backup:check` (09:00) — alarmy o kopiach martwej już instalacji.
+- Każdy błąd starej kopii leci na **ten sam webhook Discorda** → alert nie do odróżnienia od awarii produkcji.
+
+**Do zrobienia przez admina zaraz po przełączeniu domeny: usunąć wpis crona `* * * * * php artisan schedule:run` dla starego katalogu Kramio.** To zdejmuje całą powyższą listę naraz. Pas i szelki: wyczyścić `DISCORD_WEBHOOK_URL` i ustawić `BACKUP_ENABLED=false` w starym `.env`.
+
+**Okno propagacji DNS.** Przez kilka godzin część ruchu pójdzie jeszcze na stary serwer. Zamówienie złożone w tym czasie wyląduje w STAREJ bazie i zniknie z pola widzenia. Sprawdzenie jest darmowe: po przenosinach porównać liczbę zamówień w starej bazie z migawką sprzed przeprowadzki (stan 2026-08-30: 9 zamówień, 9 sklepów, 47 produktów, 40 tabel, 139 plików w `storage/app`, 90 migracji, 1713 zielonych testów). Jeśli urosła — ktoś kupił na starym serwerze i trzeba to przenieść ręcznie.

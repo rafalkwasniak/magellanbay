@@ -118,6 +118,7 @@
 - [Shipping aggregator](shipping-aggregator-idea.md) — **ZAMKNIĘTE 08.08: Furgonetka WYPADA** (InPost umie kuriera pod adres).
 
 ## Handoffy (najnowsze u góry)
+- [2026-08-30 pulpit + analityka platformy + pamięć w repo](handoff-2026-08-30.md) — 3 commity, 1704→1713. **ZAMROŻENIE KODU do przeprowadzki na nowy serwer (tydzień 31.08–06.09).** Migawka „przed" i checklisty w sek. 6 CLAUDE.md; **stary serwer zostaje żywy → admin musi wyłączyć na nim crona.**
 - [2026-08-24 awaria rejestracji + korespondencja serwisowa + garda fabryk](handoff-2026-08-24.md) — sesja INTERWENCYJNA, 4 commity, 1693→1704. **2× pierwsza hipoteza groźniejsza niż prawda — rozstrzygał dopiero konkretny dowód.** Pierwsi prawdziwi sprzedawcy już wchodzą.
 - [2026-08-17 pobranie InPost + teksty + kopie 2×/dobę](handoff-2026-08-17.md) — 3 commity, 1657→1693. **Sonda na sandboxie przed decyzją — to ona przesądziła sens modułu.** GOTCHY: dokumentacja Confluence obcina się, pełna treść przez REST API; „w którym PAKIECIE", nie „na jakim uprawnieniu". **Rafał 2× przeciął moje myślenie, oba razy trafnie.**
 - [2026-08-15 audyt prawny + moduł DSA + dokumenty v3](handoff-2026-08-15.md) — 4 commity, 1653→1657. **Rafał znalazł 5 wad na froncie, w tym grupy radio blokujące wysyłkę.** GOTCHY: Pint tylko na własnych plikach; klasy sprawdzać w buildzie PRZED wysłaniem widoku.
