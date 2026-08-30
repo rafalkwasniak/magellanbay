@@ -140,6 +140,25 @@ class ShopDeletionTest extends TestCase
     }
 
     /**
+     * Pulpit pokazuje najnowsze sklepy tym samym wierszem co lista, więc i tę
+     * samą prawdę: sklep w karencji nie może tam wisieć jako „Aktywny" ani
+     * podbijać licznika aktywnych — jest już niewidoczny dla klientów.
+     */
+    public function test_dashboard_marks_shops_awaiting_deletion(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $shop = Shop::factory()->active()->create();
+        $shop->forceFill(['deletion_scheduled_at' => now()->addDays(5)])->save();
+
+        $this->actingAs($admin)
+            ->get(route('administrator.dashboard'))
+            ->assertOk()
+            ->assertSee('usunięcie '.$shop->deletion_scheduled_at->format('d.m'))
+            // Kafelek „Sklepy": jeden sklep w bazie, zero aktywnych.
+            ->assertSee('0 '.trans_choice('aktywny|aktywne|aktywnych', 0));
+    }
+
+    /**
      * Ścieżka admina omija karencję — sklep ma zniknąć w chwili kliknięcia,
      * nie za tydzień.
      */

@@ -18,7 +18,10 @@ class DashboardController extends Controller
         return view('administrator.dashboard', [
             // Realne, operacyjne dane platformy.
             'shopsCount' => Shop::count(),
-            'activeShopsCount' => Shop::where('status', ShopStatus::Active)->count(),
+            // Sklep w karencji przed usunięciem jest już niewidoczny dla klientów,
+            // więc do „aktywnych" się nie liczy — tak samo jak nie ma go w rachunku
+            // przychodu (PackageRevenue) i na liście widnieje pod plakietką usunięcia.
+            'activeShopsCount' => Shop::where('status', ShopStatus::Active)->whereNull('deletion_scheduled_at')->count(),
             'recentShops' => Shop::with('owner')->latest()->limit(6)->get(),
 
             // Pieniądze z TEGO SAMEGO źródła co dział „Pakiety" — dwa ekrany

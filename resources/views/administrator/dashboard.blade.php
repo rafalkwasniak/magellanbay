@@ -57,11 +57,20 @@
                                 <p class="truncate text-xs text-stone-400">{{ trim(($shop->owner?->name ?? '').' '.($shop->owner?->surname ?? '')) ?: $shop->owner?->email }}</p>
                             </div>
                             <span class="shrink-0 rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-700">{{ $shop->packageName() }}</span>
-                            <span @class([
-                                'shrink-0 rounded-full px-2.5 py-1 text-xs font-medium',
-                                'bg-emerald-100 text-emerald-700' => $shop->status === \App\Enums\ShopStatus::Active,
-                                'bg-stone-100 text-stone-500' => $shop->status !== \App\Enums\ShopStatus::Active,
-                            ])>{{ $shop->status->label() }}</span>
+                            @if ($shop->deletion_scheduled_at)
+                                {{-- Ta sama plakietka co na liście sklepów: sklep w karencji jest
+                                     już niewidoczny dla klientów, więc „Aktywny" mówiłby nieprawdę. --}}
+                                <span class="inline-flex shrink-0 items-center rounded-full bg-rose-50 px-2.5 py-1 text-xs font-medium text-rose-700"
+                                    title="Sprzedawca zlecił usunięcie — sklep jest już niewidoczny">
+                                    usunięcie {{ $shop->deletion_scheduled_at->format('d.m') }}
+                                </span>
+                            @else
+                                <span @class([
+                                    'shrink-0 rounded-full px-2.5 py-1 text-xs font-medium',
+                                    'bg-emerald-100 text-emerald-700' => $shop->status === \App\Enums\ShopStatus::Active,
+                                    'bg-stone-100 text-stone-500' => $shop->status !== \App\Enums\ShopStatus::Active,
+                                ])>{{ $shop->status->label() }}</span>
+                            @endif
                             {{-- Podgląd storefrontu w nowej karcie — tak samo jak na pełnej
                                  liście sklepów, żeby ten sam wiersz działał wszędzie tak samo. --}}
                             <a href="https://{{ $shop->host() }}" target="_blank" rel="noopener"
