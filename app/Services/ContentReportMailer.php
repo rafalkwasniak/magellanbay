@@ -71,6 +71,68 @@ class ContentReportMailer
     }
 
     /**
+     * Sygnał do WŁAŚCICIELA, że przyszło nowe zgłoszenie — tylko w sklepie
+     * dedykowanym.
+     *
+     * DLACZEGO W OGÓLE: w panelu jest licznik przy „Zgłoszeniach", ale licznik
+     * widzi tylko ten, kto się zaloguje. Właściciel jednego sklepu nie zagląda
+     * do panelu codziennie, a przy zgłoszeniu treści zwłoka ma cenę — od chwili
+     * doręczenia wie o sprawie. Bez maila zgłoszenie potrafi przeleżeć tydzień.
+     *
+     * DLACZEGO NIE W KRAMIO: tam kolejkę zgłoszeń pilnuje konsola admina, do
+     * której zaglądamy sami. Mail „przyszło zgłoszenie" do właściciela sklepu
+     * byłby zawiadomieniem o cudzych zarzutach, których jeszcze nie rozpatrzyliśmy
+     * — dokładnie to, czego unikamy przy art. 17 (patrz `statementOfReasons`).
+     *
+     * BEZ TREŚCI ZGŁOSZENIA. Podajemy numer, adres i rodzaj — resztę właściciel
+     * przeczyta w panelu. Uzasadnienie pisze obca osoba i bywa długie,
+     * emocjonalne albo zawiera cudze dane; przepisywanie go do maila rozsiewa
+     * je po skrzynkach bez powodu, skoro i tak trzeba wejść, żeby rozstrzygnąć.
+     */
+    public function notifyOwner(ContentReport $report): void
+    {
+        if (! Mode::dedicated()) {
+            return;
+        }
+
+        $owner = $report->shop?->owner;
+
+        if ($owner === null) {
+            return;
+        }
+
+        EmailMessage::create([
+            'priority' => MailPriority::High,
+            // Mail sklepu, nie platformy — w tym trybie nie ma drugiego podmiotu.
+            'shop_id' => $report->shop_id,
+            'to_email' => $owner->email,
+            'to_name' => trim($owner->name.' '.$owner->surname),
+            'subject' => 'Nowe zgłoszenie '.$report->reference().' — wymaga Twojej decyzji',
+            'preheader' => 'Ktoś zgłosił treść w Twoim sklepie.',
+            'heading' => 'Nowe zgłoszenie treści',
+            'greeting' => Vocative::greeting($owner->name),
+            'intro_lines' => [
+                [
+                    'Ktoś zgłosił treść w Twoim sklepie jako naruszającą prawo. Zgłoszenie czeka na Twoją decyzję.',
+                ],
+                [
+                    'Numer sprawy: **'.$report->reference().'**',
+                    'Zgłoszony adres: **'.$report->url.'**',
+                    'Rodzaj zarzutu: **'.$report->category->label().'**',
+                ],
+                [
+                    'Treść zgłoszenia i przycisk rozstrzygnięcia znajdziesz w panelu, w dziale „Zgłoszenia".',
+                ],
+            ],
+            'action_text' => 'Otwórz zgłoszenie',
+            'action_url' => route('seller.reports.show', $report),
+            'outro_lines' => [
+                'Zgłaszający dostał już potwierdzenie odbioru. O rozstrzygnięciu powiadomimy go automatycznie, gdy podejmiesz decyzję.',
+            ],
+        ]);
+    }
+
+    /**
      * Rozstrzygnięcie do zgłaszającego — art. 16 ust. 5, razem z pouczeniem
      * o środkach odwoławczych.
      */

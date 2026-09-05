@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\ShopStatus;
 use App\Enums\UserRole;
+use App\Models\EmailMessage;
 use App\Models\Order;
 use App\Models\Page;
 use App\Models\Product;
@@ -319,6 +320,47 @@ class DeploymentSeederTest extends TestCase
         $this->expectExceptionMessage('Nieznany szablon');
 
         $this->seedDeployment();
+    }
+
+    /**
+     * Mail aktywacyjny mówi tym, co się NAPRAWDĘ stało. W sklepie dedykowanym
+     * nikt się nie rejestrował — konto założył ten seeder, sklep już stoi,
+     * a właściciel dostaje klucze do rzeczy, którą zamówił. Powinszowanie
+     * „pierwszego kroku do sprzedaży w internecie" brzmiałoby jak reklama
+     * cudzej usługi wysłana pod zły adres.
+     */
+    public function test_the_activation_mail_does_not_talk_about_registration(): void
+    {
+        $this->deploymentConfig();
+        $this->seedDeployment();
+
+        $mail = EmailMessage::query()->sole();
+        $tresc = $mail->subject.' '.json_encode($mail->intro_lines, JSON_UNESCAPED_UNICODE);
+
+        $this->assertStringNotContainsString('rejestracj', $tresc);
+        $this->assertStringNotContainsString('w kilka minut', $tresc);
+        $this->assertStringContainsString('Magellan Bay', $mail->subject);
+        $this->assertSame('Ustaw hasło', $mail->action_text);
+    }
+
+    /**
+     * Link musi wyjść Z MAILERA, nie powstać obok: broker `activation` kasuje
+     * poprzedni token przy tworzeniu nowego, więc drugie wywołanie unieważniłoby
+     * ten wysłany w mailu — i właściciel dostałby martwy link.
+     */
+    public function test_the_printed_link_is_the_same_one_that_was_mailed(): void
+    {
+        $this->deploymentConfig();
+        $this->seedDeployment();
+
+        $owner = User::query()->sole();
+        $mail = EmailMessage::query()->sole();
+
+        $this->assertStringContainsString('/aktywacja/', (string) $mail->action_url);
+
+        // Ten sam token nadal działa — ekran aktywacji go przyjmuje.
+        $this->get($mail->action_url)->assertOk();
+        $this->assertSame($owner->email, $mail->to_email);
     }
 
     public function test_it_refuses_to_run_without_owner_email(): void

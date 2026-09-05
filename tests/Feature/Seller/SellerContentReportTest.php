@@ -244,6 +244,60 @@ class SellerContentReportTest extends TestCase
         $this->assertSame(ContentReportStatus::New, $report->fresh()->status);
     }
 
+    // --- Sygnał o nowym zgłoszeniu ----------------------------------------
+
+    /**
+     * Licznik w panelu widzi tylko ten, kto się zaloguje. Właściciel jednego
+     * sklepu nie zagląda tam codziennie, a przy zgłoszeniu treści zwłoka ma cenę
+     * — od chwili doręczenia wie o sprawie.
+     */
+    public function test_owner_is_notified_when_a_report_arrives(): void
+    {
+        [$owner, $shop] = $this->sklepDedykowany();
+
+        $this->post(route('reports.store'), [
+            'url' => 'https://'.$shop->host().'/produkt/12-magnes',
+            'category' => ContentReportCategory::Copyright->value,
+            'justification' => 'Zdjęcie na tej karcie produktu jest moje i nie wyraziłem zgody na jego użycie.',
+            'reporter_email' => 'zglaszajacy@example.com',
+            'good_faith' => '1',
+        ])->assertRedirect(route('reports.create'));
+
+        $mail = EmailMessage::query()->where('to_email', $owner->email)->sole();
+
+        $report = ContentReport::query()->sole();
+        $this->assertStringContainsString($report->reference(), $mail->subject);
+        $this->assertSame($shop->id, $mail->shop_id);
+
+        // Bez treści zgłoszenia: uzasadnienie pisze obca osoba, bywa długie
+        // i zawiera cudze dane. Właściciel przeczyta je w panelu.
+        $this->assertStringNotContainsString('nie wyraziłem zgody', (string) json_encode($mail->intro_lines));
+    }
+
+    /**
+     * W Kramio kolejkę pilnuje konsola admina. Mail „przyszło zgłoszenie" do
+     * sprzedawcy byłby zawiadomieniem o cudzych zarzutach, których jeszcze nikt
+     * nie rozpatrzył — dokładnie to, czego unikamy przy art. 17.
+     */
+    public function test_seller_is_not_notified_about_new_reports_in_saas(): void
+    {
+        $owner = User::factory()->consented()->create();
+        $shop = Shop::factory()->active()->create(['owner_id' => $owner->id, 'slug' => 'lemoniady']);
+
+        $this->post(route('reports.store'), [
+            'url' => 'https://lemoniady.'.config('tenancy.central_domain').'/produkt/12',
+            'category' => ContentReportCategory::Copyright->value,
+            'justification' => 'Zdjęcie na tej karcie produktu jest moje i nie wyraziłem zgody na jego użycie.',
+            'reporter_email' => 'zglaszajacy@example.com',
+            'good_faith' => '1',
+        ]);
+
+        $this->assertFalse(EmailMessage::query()->where('to_email', $owner->email)->exists());
+        // Zgłaszający potwierdzenie dostaje w obu trybach.
+        $this->assertTrue(EmailMessage::query()->where('to_email', 'zglaszajacy@example.com')->exists());
+        $this->assertSame($shop->id, ContentReport::query()->sole()->shop_id);
+    }
+
     // --- Formularz publiczny ----------------------------------------------
 
     /**

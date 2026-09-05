@@ -4,6 +4,7 @@ namespace Tests\Feature\Mail;
 
 use App\Models\Shop;
 use App\Support\MailBranding;
+use App\Support\Mode;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -26,6 +27,43 @@ class MailBrandingTest extends TestCase
         // Gradient wycofany — paleta jest płaska.
         $this->assertArrayNotHasKey('gradient_from', $brand);
         $this->assertArrayNotHasKey('gradient_to', $brand);
+    }
+
+    /**
+     * W SKLEPIE DEDYKOWANYM NIE MA MAILI „PLATFORMY".
+     *
+     * `system()` opisuje tożsamość operatora — barwy Kramio i dane firmowe
+     * z `config/company.php`. Tam gdzie operatora nie ma, właściciel dostawałby
+     * listy w bursztynie i z naszym adresem w stopce, czyli od obcej firmy,
+     * o której nigdy nie słyszał. Dotyczy WSZYSTKICH maili bez `shop_id`:
+     * aktywacji konta, resetu hasła i sygnału o nowym zgłoszeniu.
+     */
+    public function test_platform_branding_becomes_the_shop_when_dedicated(): void
+    {
+        config()->set('shop.mode', Mode::DEDICATED);
+        $shop = Shop::factory()->create(['name' => 'Magellan Bay']);
+
+        $brand = MailBranding::for(null);
+
+        $this->assertSame('Magellan Bay', $brand['name']);
+        $this->assertNull($brand['glyph']);              // znak ◐ jest marką Kramio
+        $this->assertSame($shop->themeTokens()['brand'], $brand['brand']);
+        $this->assertNotSame(config('company.email'), $brand['contact_email']);
+    }
+
+    /**
+     * Pusta baza tuż po migracji, przed seederem wdrożeniowym: nie ma sklepu,
+     * z którego dałoby się wziąć tożsamość. Wysyłka ma wtedy zejść na wartości
+     * zapasowe, a nie się wywrócić.
+     */
+    public function test_dedicated_branding_falls_back_when_there_is_no_shop_yet(): void
+    {
+        config()->set('shop.mode', Mode::DEDICATED);
+
+        $brand = MailBranding::for(null);
+
+        $this->assertSame(config('app.name'), $brand['name']);
+        $this->assertSame('#f59e0b', $brand['brand']);
     }
 
     public function test_shop_branding_maps_theme_name_and_no_glyph(): void

@@ -55,6 +55,45 @@ class MailBranding
      */
     public static function system(): array
     {
+        /*
+         * W SKLEPIE DEDYKOWANYM NIE MA MAILI „PLATFORMY".
+         *
+         * `system()` opisuje tożsamość operatora — barwy Kramio i dane firmowe
+         * z `config/company.php`. Sensowne, gdy nadawcą jest ktoś inny niż sklep
+         * (aktywacja konta sprzedawcy, reset hasła, korespondencja DSA).
+         *
+         * U klienta dedykowanego takiego nadawcy nie ma. Właściciel dostawałby
+         * maile w bursztynie Kramio, z naszym adresem i telefonem w stopce —
+         * czyli listy od obcej firmy, o której nigdy nie słyszał. Dlatego tam
+         * tożsamość systemowa to po prostu tożsamość jedynego sklepu.
+         *
+         * Fallback zostaje: gdyby sklepu jeszcze nie było (baza tuż po migracji,
+         * przed seederem), wracamy do wartości poniżej, zamiast wywracać wysyłkę.
+         */
+        if (Mode::dedicated()) {
+            $shop = Shop::query()->first();
+
+            if ($shop !== null) {
+                return self::forShop($shop);
+            }
+        }
+
+        return self::platformDefaults();
+    }
+
+    /**
+     * Barwy i dane operatora platformy — wartości, na których stoi Kramio.
+     *
+     * Wydzielone z `system()` z powodu, który wyszedł dopiero przy sklepie
+     * dedykowanym: `forShop()` używa tych wartości jako FALLBACKU dla brakujących
+     * tokenów motywu, a `system()` w trybie dedykowanym zwraca `forShop()`.
+     * Gdyby `forShop()` wołało `system()`, obie metody wołałyby się nawzajem
+     * bez końca. Osobna metoda przecina to raz i czytelnie.
+     *
+     * @return array<string, string|null>
+     */
+    private static function platformDefaults(): array
+    {
         return [
             'name' => config('app.name'),
             'glyph' => '◐',             // fallback marki Kramio, gdyby logo_url opróżniono
@@ -90,7 +129,11 @@ class MailBranding
     private static function forShop(Shop $shop): array
     {
         $tokens = $shop->themeTokens();
-        $system = self::system();
+
+        // `platformDefaults()`, NIE `system()` — ta druga w trybie dedykowanym
+        // wraca tutaj i obie metody wołałyby się bez końca. Tu chodzi wyłącznie
+        // o wartości zapasowe dla brakujących tokenów motywu.
+        $system = self::platformDefaults();
 
         return [
             'name' => $shop->name,

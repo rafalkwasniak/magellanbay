@@ -7,13 +7,13 @@ use App\Enums\UserRole;
 use App\Enums\VatRate;
 use App\Models\Shop;
 use App\Models\User;
+use App\Services\ActivationMailer;
 use App\Services\SlugService;
 use App\Support\Mode;
 use App\Support\SellerPrivacy;
 use App\Support\SellerTerms;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use RuntimeException;
 
@@ -289,15 +289,17 @@ class DeploymentSeeder extends Seeder
     }
 
     /**
-     * Link aktywacyjny WYPISUJEMY, zamiast wysyłać mailem — z dwóch powodów.
+     * Mail aktywacyjny do kolejki ORAZ link wypisany na konsolę.
      *
-     * 1. Seeder chodzi zaraz po `migrate`, gdy SMTP bywa nieskonfigurowany, a
-     *    crona (który jako jedyny opróżnia outbox) jeszcze nie ma. Mail wpadłby
-     *    do kolejki i tam został, a wdrażający byłby przekonany, że poszedł.
-     * 2. Treść maila aktywacyjnego mówi dziś językiem platformy („dziękujemy za
-     *    rejestrację", „postawisz swój sklep w kilka minut"). W sklepie
-     *    dedykowanym nikt się nie rejestrował. To pozycja kroku 4 (marka) —
-     *    do czasu jej poprawienia nie wysyłamy tego klientowi.
+     * Jedno i drugie, bo każde z osobna zawodzi w innym momencie. Seeder chodzi
+     * zaraz po `migrate`: SMTP bywa jeszcze nieskonfigurowany, a crona — który
+     * jako jedyny opróżnia outbox — zwykle nie ma. Sam mail utknąłby w kolejce,
+     * a wdrażający byłby przekonany, że poszedł. Sam wydruk z kolei ginie, gdy
+     * sklep stawia ktoś inny niż właściciel.
+     *
+     * Link musi wyjść Z MAILERA, nie powstać tutaj obok: broker `activation`
+     * kasuje poprzedni token przy tworzeniu nowego, więc wygenerowanie drugiego
+     * unieważniłoby ten wysłany w mailu — i właściciel dostałby martwy link.
      *
      * Token żyje 24 h. Gdy wygaśnie, właściciel bierze nowy przez „nie pamiętam
      * hasła" — nie trzeba niczego seedować ponownie.
@@ -306,10 +308,7 @@ class DeploymentSeeder extends Seeder
     {
         $owner = $shop->owner;
 
-        $url = route('activation.show', [
-            'token' => Password::broker('activation')->createToken($owner),
-            'email' => $owner->email,
-        ]);
+        $url = app(ActivationMailer::class)->send($owner);
 
         $this->command?->newLine();
         $this->command?->info('Sklep założony: '.$shop->name);

@@ -52,6 +52,11 @@ class ContentReportController extends Controller
         // wysyłka nie może wywrócić przyjęcia zgłoszenia.
         $mailer->acknowledge($report);
 
+        // Sygnał do właściciela sklepu dedykowanego — bez niego zgłoszenie
+        // widziałby wyłącznie licznik w panelu, do którego trzeba się zalogować.
+        // W Kramio metoda nic nie robi: tam kolejkę pilnuje konsola admina.
+        $mailer->notifyOwner($report);
+
         // `success`, nie `status`: pierwsze daje zielony toast (operacja się
         // udała), drugie bursztynowy komunikat informacyjny. Wariant wybiera
         // `x-toasts` po kluczu sesji, więc pomyłka w kluczu = zły kolor.

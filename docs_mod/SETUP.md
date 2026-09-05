@@ -103,6 +103,11 @@ Potem wejść na stronę główną, kartę produktu i panel po zalogowaniu.
 - [ ] Marka klienta zamiast Kramio wszędzie, gdzie widać (dok. 04)
 - [ ] Cron działa, kopia zapasowa wykonana i **odtworzona próbnie**
 - [ ] Dane demonstracyjne usunięte
+- [ ] **Konto właściciela BEZ znanego hasła.** Seeder ustawia losowe i wysyła link
+      aktywacyjny — właściciel ustawia własne. Na środowisku roboczym bywa hasło
+      wpisane ręcznie dla wygody; na serwer klienta nie ma prawa pojechać.
+      Sprawdzenie: `Hash::check('magellan@kwasniak.org', User::first()->password)`
+      musi zwrócić `false`.
 
 ### Nasze materiały wycięte z archiwum
 
