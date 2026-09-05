@@ -131,6 +131,30 @@ final class ProductConfiguration
         $raw = is_array($input['fields'] ?? null) ? $input['fields'] : [];
         $values = [];
 
+        /*
+         * NAJPIERW pytamy, czy kupujący w ogóle tknął tę grupę.
+         *
+         * Bez tego pole oznaczone jako wymagane blokowało POMINIĘCIE całej grupy
+         * nieobowiązkowej: „Grawer — nieobowiązkowy" z wymaganym polem „Tekst"
+         * nie dawał się przeskoczyć, więc opcja dodatkowa zachowywała się jak
+         * przymusowa. „Wymagane" znaczy „wymagane, JEŚLI korzystasz z tej grupy",
+         * a nie „musisz z niej skorzystać" — od tego drugiego jest `required`
+         * na samej grupie.
+         */
+        $tknieta = false;
+
+        foreach ($group->fields as $field) {
+            if (trim((string) ($raw[$field->id] ?? '')) !== '') {
+                $tknieta = true;
+
+                break;
+            }
+        }
+
+        if (! $tknieta) {
+            return $group->required ? false : null;
+        }
+
         foreach ($group->fields as $field) {
             // `Str::squish` nie wystarczy: liczy się też to, że klient wkleja
             // teksty z niewidocznymi spacjami na końcu, a te trafiłyby na wydruk.

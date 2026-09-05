@@ -55,7 +55,7 @@
     {{-- Stopka z akcją — poza anchorem (przycisk nie może żyć w <a>), do prawej. --}}
     @if ($canOrder)
         <div class="mt-auto flex justify-end p-4 pt-3">
-            <livewire:add-to-cart :product="$product" :compact="true" wire:key="atc-{{ $product->id }}" />
+            <livewire:add-to-cart :product="$product" :compact="true" :with-options="false" wire:key="atc-{{ $product->id }}" />
         </div>
     @endif
 </div>

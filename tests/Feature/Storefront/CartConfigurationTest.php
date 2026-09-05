@@ -176,11 +176,35 @@ class CartConfigurationTest extends TestCase
     public function test_a_missing_required_field_keeps_the_product_out_of_the_cart(): void
     {
         [$shop, $product, $group] = $this->sklepZFormatka();
+        $group->update(['required' => true]);
 
-        $this->cart()->add($product, 1, $this->imie($group, ''));
-        $this->cart()->add($product, 1, []);
+        $this->cart()->add($product->fresh(), 1, $this->imie($group, ''));
+        $this->cart()->add($product->fresh(), 1, []);
 
         $this->assertSame(0, $this->cart()->count($shop->id));
+    }
+
+    /**
+     * „WYMAGANE" NA POLU ZNACZY „wymagane, jeśli korzystasz z tej grupy",
+     * a nie „musisz z niej skorzystać". Od tego drugiego jest `required` na
+     * samej grupie.
+     *
+     * Bez tego rozróżnienia grupa opisana jako nieobowiązkowa zachowywała się
+     * jak przymusowa: „Grawer — nieobowiązkowy" z wymaganym polem „Tekst" nie
+     * dawał się przeskoczyć. Złapał to dopiero test formularza.
+     */
+    public function test_an_optional_group_can_be_skipped_even_with_required_fields(): void
+    {
+        [$shop, $product, $group] = $this->sklepZFormatka();
+
+        $this->assertFalse((bool) $group->required);
+        $this->assertTrue((bool) $group->fields->first()->required);
+
+        $this->cart()->add($product, 1, []);
+
+        $line = $this->cart()->lines($shop->id)->first();
+        $this->assertSame(24.90, $line['unit_price']);   // bez dopłaty
+        $this->assertSame([], $line['personalisation']);
     }
 
     /**
