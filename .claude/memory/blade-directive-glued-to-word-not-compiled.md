@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: reference
   originSessionId: bf48269a-c52a-49c6-9a8e-6a7c2b21dfa6
-  modified: 2026-08-24T09:42:45.223Z
+  modified: 2026-09-05T19:55:06.689Z
 ---
 
 Dyrektywa Blade poprzedzona **znakiem słownym bez spacji** (`aktywacyjny@if (...)`, `§1@if (...)`) **nie zostaje skompilowana** — zostaje w wyjściu jako zwykły tekst. Domykający `@endif` (poprzedzony `)`, `>` itp.) kompiluje się normalnie, więc w pliku wynikowym ląduje osierocony `<?php endif; ?>` i **cały widok** pada:
@@ -41,6 +41,8 @@ php artisan view:clear && php artisan view:cache
 for f in storage/framework/views/*.php; do php -l "$f" >/dev/null || echo "BŁĄD: $f"; done
 ```
 
-**Historia:** trafione 2× — przy kreatorze regulaminu sprzedawcy (komentarz w `resources/views/seller/legal/templates/regulamin.blade.php`) i 24.08 na produkcji w `storefront/auth/registered.blade.php` (ekran „Sprawdź skrzynkę" po rejestracji klienta wywracał się 500 dla KAŻDEGO rejestrującego się; konto i mail aktywacyjny szły poprawnie, padał tylko ekran potwierdzenia). Testy tego nie łapały, bo sprawdzały `assertRedirect` na adres, nigdy nie renderując widoku — **na ekran po redirectcie potrzebny jest osobny `get()` z `assertOk()`**.
+**Wariant sklejenia od DRUGIEJ strony** (05.09, Magellan): `…obowiązkowa@endif` w formularzu produktu. Tu nieskompilowany zostaje `@endif` (poprzedzony literą), a otwierający `@if` kompiluje się normalnie → PHP widzi `if (…):` bez zamknięcia i pada na `unexpected token "endforeach", expecting "elseif" or "else" or "endif"`. **Reguła jest symetryczna: żadna dyrektywa nie może dotykać litery ani cyfry — ani z lewej, ani z prawej.** Wstawka warunkowa wewnątrz zdania to zawsze `{{ $warunek ? '…' : '' }}`, nigdy `@if`.
+
+**Historia:** trafione 3× — przy kreatorze regulaminu sprzedawcy (komentarz w `resources/views/seller/legal/templates/regulamin.blade.php`) i 24.08 na produkcji w `storefront/auth/registered.blade.php` (ekran „Sprawdź skrzynkę" po rejestracji klienta wywracał się 500 dla KAŻDEGO rejestrującego się; konto i mail aktywacyjny szły poprawnie, padał tylko ekran potwierdzenia). Testy tego nie łapały, bo sprawdzały `assertRedirect` na adres, nigdy nie renderując widoku — **na ekran po redirectcie potrzebny jest osobny `get()` z `assertOk()`**.
 
 Pokrewne: [[blade-php-block-breaks-inline-php]], [[blade-never-name-view-variable-errors]].

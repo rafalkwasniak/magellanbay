@@ -113,6 +113,7 @@
 - [Shipping aggregator](shipping-aggregator-idea.md) — **ZAMKNIĘTE: Furgonetka WYPADA.**
 
 ## Handoffy (najnowsze u góry)
+- [09-05 Magellan: Etap 1 domknięty, Etap 2 do C4](handoff-2026-09-05.md) — →1907. **Specyfikacja klienta jest w repo (`docs_mod/07`).** Licencja awersu siedzi na PRODUKCIE.
 - [08-30 pulpit + analityka platformy](handoff-2026-08-30.md) — 1704→1713. **ZAMROŻENIE KODU do przeprowadzki; stary serwer zostaje żywy → wyłączyć na nim crona.**
 - [08-24 awaria rejestracji + garda fabryk](handoff-2026-08-24.md) — 1693→1704. **2× pierwsza hipoteza groźniejsza niż prawda.** Pierwsi sprzedawcy wchodzą.
 - [08-17 pobranie InPost + kopie 2×/dobę](handoff-2026-08-17.md) — 1657→1693. **Sonda na sandboxie przesądziła sens modułu.** Rafał 2× przeciął myślenie trafnie.
