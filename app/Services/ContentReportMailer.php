@@ -6,6 +6,7 @@ use App\Enums\ContentReportStatus;
 use App\Enums\MailPriority;
 use App\Models\ContentReport;
 use App\Models\EmailMessage;
+use App\Support\Mode;
 use App\Support\Vocative;
 use Illuminate\Support\Str;
 
@@ -113,9 +114,22 @@ class ContentReportMailer
      * faktycznie ograniczamy treść. Odrzucone zgłoszenie nic sprzedawcy nie robi,
      * więc zawiadamianie go o cudzych zarzutach, których nie podzieliliśmy, tylko
      * by go niepokoiło.
+     *
+     * W SKLEPIE DEDYKOWANYM NIE WYSYŁAMY GO WCALE. Ten mail zawiadamia jeden
+     * podmiot o decyzji drugiego — a tam podmiot jest jeden: właściciel czyta
+     * zgłoszenie, sam je rozstrzyga i sam byłby adresatem zawiadomienia
+     * o własnej decyzji. Dostałby więc pismo urzędowe od siebie do siebie,
+     * kilka sekund po kliknięciu przycisku.
+     *
+     * Warunek siedzi TUTAJ, a nie w kontrolerze, żeby obowiązywał niezależnie
+     * od tego, skąd wołamy — dziś są dwa takie miejsca.
      */
     public function statementOfReasons(ContentReport $report): void
     {
+        if (Mode::dedicated()) {
+            return;
+        }
+
         $owner = $report->shop?->owner;
 
         if ($owner === null || $report->status !== ContentReportStatus::Upheld) {

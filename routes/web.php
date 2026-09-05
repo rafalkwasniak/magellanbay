@@ -30,6 +30,7 @@ use App\Http\Controllers\Seller\AnalyticsController;
 use App\Http\Controllers\Seller\AppearanceController;
 use App\Http\Controllers\Seller\BulkMailingController;
 use App\Http\Controllers\Seller\CompanyLookupController;
+use App\Http\Controllers\Seller\ContentReportController as SellerContentReportController;
 use App\Http\Controllers\Seller\CustomerController;
 use App\Http\Controllers\Seller\DashboardController as SellerDashboard;
 use App\Http\Controllers\Seller\DiscountCodeController;
@@ -405,6 +406,18 @@ Route::middleware(['auth', 'role:seller', 'ensure.consents'])
         Route::get('/wiadomosci/{bulkMailing}/edycja', [BulkMailingController::class, 'edit'])->name('mailings.edit');
         Route::post('/wiadomosci/{bulkMailing}', [BulkMailingController::class, 'update'])->name('mailings.update');
         Route::post('/wiadomosci/{bulkMailing}/usun', [BulkMailingController::class, 'destroy'])->name('mailings.destroy');
+
+        // Zgłoszenia treści bezprawnych — TYLKO w sklepie dedykowanym.
+        //
+        // W Kramio rozpatruje je PLATFORMA i tak ma zostać: na tym stoi nasza
+        // kwalifikacja jako dostawcy hostingu (art. 6 DSA) — o cudzej treści
+        // decyduje operator, a nie sprzedawca, którego ta treść dotyczy.
+        // W sklepie dedykowanym podmiot jest jeden, więc konflikt nie istnieje.
+        Route::middleware('dedicated')->group(function (): void {
+            Route::get('/zgloszenia', [SellerContentReportController::class, 'index'])->name('reports.index');
+            Route::get('/zgloszenia/{report}', [SellerContentReportController::class, 'show'])->name('reports.show');
+            Route::post('/zgloszenia/{report}/rozstrzygnij', [SellerContentReportController::class, 'decide'])->name('reports.decide');
+        });
 
         // Informacje (strony tekstowe storefrontu). Edycja/usuwanie przez POST;
         // kolejność (drag & drop) zapisywana AJAX-em przez POST.

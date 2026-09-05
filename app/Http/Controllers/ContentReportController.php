@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Enums\ContentReportCategory;
 use App\Http\Requests\ContentReportRequest;
 use App\Models\ContentReport;
+use App\Models\Shop;
 use App\Services\ContentReportMailer;
+use App\Support\Mode;
 use Illuminate\Contracts\Support\Renderable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -27,6 +29,11 @@ class ContentReportController extends Controller
             // Adres zgłaszanej strony można podać linkiem („?adres=..."), żeby
             // zgłaszający nie musiał go przepisywać ze stopki storefrontu.
             'prefilledUrl' => (string) $request->query('adres', ''),
+            // Sklep potrzebny WYŁĄCZNIE w trybie dedykowanym, gdzie formularz
+            // renderuje się w szacie sklepu. Bierzemy go tak samo jak ResolveShop
+            // (jedyny rekord), bo ta trasa nie należy do grupy storefrontu i nie
+            // przechodzi przez to middleware.
+            'shop' => Mode::dedicated() ? Shop::query()->first() : null,
         ]);
     }
 

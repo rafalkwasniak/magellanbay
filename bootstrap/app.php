@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\AuthenticateCustomer;
 use App\Http\Middleware\EnsureConsentsAreCurrent;
+use App\Http\Middleware\EnsureDedicatedMode;
 use App\Http\Middleware\EnsureRegistrationIsOpen;
 use App\Http\Middleware\EnsureSaasMode;
 use App\Http\Middleware\EnsureUserHasRole;
@@ -31,6 +32,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'registration.open' => EnsureRegistrationIsOpen::class,
             // Trasy warstwy platformy — nieobecne w sklepie dedykowanym.
             'saas' => EnsureSaasMode::class,
+            // I odwrotnie: trasy, ktore maja sens WYLACZNIE w sklepie jednego klienta.
+            'dedicated' => EnsureDedicatedMode::class,
         ]);
 
         // `saas` musi wykonać się PRZED uwierzytelnianiem, a kolejność wypisana

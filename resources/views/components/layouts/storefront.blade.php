@@ -456,9 +456,21 @@
             @endif
         </div>
 
-        <div class="st-border border-t py-6 text-center text-xs opacity-60">
-            Sklep zbudowany na <a href="https://{{ config('tenancy.central_domain') }}" class="font-semibold">Kramio</a>
-        </div>
+        {{-- Podpis platformy TYLKO w Kramio.
+
+             W sklepie dedykowanym klient kupił silnik na własny serwer i ma go
+             na wyłączność — stopka reklamująca nasz produkt na KAŻDEJ jego
+             podstronie byłaby reklamą, za którą nikt nie zapłacił, a do tego
+             kierowałaby jego klientów do konkurencyjnej oferty sklepów.
+
+             To był ostatni ślad Kramio widoczny dla kupujących. Nie znalazłby
+             się przez `grep` po treści maili ani po ekranach panelu — siedział
+             w stopce layoutu, czyli na każdej stronie naraz. --}}
+        @if (\App\Support\Mode::saas())
+            <div class="st-border border-t py-6 text-center text-xs opacity-60">
+                Sklep zbudowany na <a href="https://{{ config('tenancy.central_domain') }}" class="font-semibold">{{ config('app.name') }}</a>
+            </div>
+        @endif
     </footer>
     @endunless
 

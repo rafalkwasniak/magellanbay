@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\ContentReportCategory;
 use App\Enums\ContentReportStatus;
+use App\Support\Mode;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -101,6 +102,28 @@ class ContentReport extends Model
 
         if (! is_string($host) || $host === '') {
             return null;
+        }
+
+        /*
+         * SKLEP DEDYKOWANY NIE MA SUBDOMENY — stoi na domenie głównej, więc
+         * etykiety do wycięcia po prostu nie ma. Bez tego warunku każde
+         * zgłoszenie zapisywało się z pustym `shop_id`: adres
+         * „magellan.kwasniak.org/produkt/12" nie kończy się na
+         * „.magellan.kwasniak.org", więc funkcja zwracała null.
+         *
+         * Skutek był cichy i dokładnie taki, jakiego nie widać: zgłoszenie
+         * przyjęte, potwierdzenie wysłane, a w panelu właściciela pusto —
+         * bo nic go z tym sklepem nie wiązało.
+         *
+         * Porównujemy z `host()` sklepu, nie z samą domeną z configu: sklep
+         * może stać na własnej domenie klienta i wtedy to ona jest adresem.
+         */
+        if (Mode::dedicated()) {
+            $shop = Shop::query()->first();
+
+            return $shop !== null && strcasecmp($host, $shop->host()) === 0
+                ? $shop
+                : null;
         }
 
         $suffix = '.'.config('tenancy.central_domain');

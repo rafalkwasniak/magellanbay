@@ -59,6 +59,22 @@
             ['label' => 'Wiadomości', 'route' => 'seller.mailings.index', 'active' => 'seller.mailings.*', 'icon' => '📣'],
             ['label' => 'Analityka', 'route' => 'seller.analytics.index', 'icon' => '📊'],
             ['label' => 'Informacje', 'route' => 'seller.pages.index', 'active' => 'seller.pages.*', 'icon' => '📄'],
+            // Zgłoszenia treści bezprawnych trafiają do właściciela WYŁĄCZNIE
+            // w sklepie dedykowanym — w Kramio rozpatruje je platforma, a trasy
+            // są tam zamknięte middlewarem `dedicated`. Bez tego warunku menu
+            // pokazywałoby sprzedawcom Kramio pozycję prowadzącą w 404.
+            ...(\App\Support\Mode::dedicated()
+                ? [[
+                    'label' => 'Zgłoszenia',
+                    'route' => 'seller.reports.index',
+                    'active' => 'seller.reports.*',
+                    'icon' => '🚩',
+                    'badge' => (int) \App\Models\ContentReport::query()
+                        ->where('shop_id', $user->shop?->id)
+                        ->pending()
+                        ->count(),
+                ]]
+                : []),
             ['label' => 'Wygląd', 'route' => 'seller.appearance.edit', 'icon' => '🎨'],
             ['label' => 'Ustawienia', 'route' => 'seller.settings.edit', 'icon' => '⚙️'],
             ['label' => 'Integracje', 'route' => 'seller.integrations.edit', 'icon' => '🔌'],
