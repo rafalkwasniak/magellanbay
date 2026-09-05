@@ -191,7 +191,9 @@ class LicensorPanelTest extends TestCase
             ->assertSee('Bieg Gdański')
             // Liczby mówią, czy partnera wolno skasować — bez nich sprzedawca
             // klika „Usuń", dostaje odmowę i nie wie dlaczego.
-            ->assertSee('Grafik w bibliotece:');
+            ->assertSee('Grafik: 2')
+            // Przycisk „Usuń" NIE pokazuje się tam, gdzie i tak nie zadziała.
+            ->assertDontSee('Usunąć Bieg Gdański z kartoteki?');
     }
 
     public function test_the_menu_links_to_the_registry(): void

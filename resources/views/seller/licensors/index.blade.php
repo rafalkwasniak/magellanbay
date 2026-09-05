@@ -1,74 +1,98 @@
 <x-layouts.panel title="Partnerzy licencyjni">
-    <x-slot:actions>
-        <a href="{{ route('seller.licensors.create') }}"
-            class="rounded-2xl bg-gradient-to-br from-amber-500 to-rose-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-rose-500/20 transition hover:brightness-105">
-            Dodaj partnera
-        </a>
-    </x-slot:actions>
+    <x-slot:heading>Partnerzy licencyjni</x-slot:heading>
 
     <div class="grid gap-6 lg:grid-cols-12">
+        {{-- Główna kolumna: kartoteka. Układ jak przy kodach rabatowych —
+             jedna karta, nagłówek z opisem i przyciskiem w jednym wierszu,
+             lista pod spodem. To standard tego panelu. --}}
         <div class="lg:col-span-8">
-            @if ($licensors->isEmpty())
-                <div class="flex flex-col items-center justify-center rounded-3xl border border-dashed border-stone-300 bg-white/40 px-6 py-16 text-center">
-                    <span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-stone-100 text-2xl">🤝</span>
-                    <p class="mt-4 font-medium text-stone-700">Kartoteka jest pusta</p>
-                    <p class="mt-1 max-w-sm text-sm text-stone-500">
-                        Dodaj firmę, która udziela Ci prawa do swojego logotypu — organizatora biegu, klub, wydawcę.
-                        Dopiero wtedy przypiszesz jej opłatę przy produkcie albo przy grafice graweru.
-                    </p>
+            <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <h2 class="font-semibold text-stone-900">Twoi partnerzy</h2>
+                        <p class="mt-1 text-sm text-stone-500">Firmy, których znak umieszczasz na produktach — i które biorą za to opłatę.</p>
+                    </div>
+                    <a href="{{ route('seller.licensors.create') }}"
+                        class="shrink-0 rounded-2xl bg-gradient-to-br from-amber-500 to-rose-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-rose-500/20 transition hover:brightness-105">
+                        Dodaj partnera
+                    </a>
                 </div>
-            @else
-                <div class="space-y-3">
-                    @foreach ($licensors as $licensor)
-                        <div class="rounded-3xl border border-white/60 bg-white/70 p-5 backdrop-blur">
-                            <div class="flex flex-wrap items-center gap-3">
-                                <a href="{{ route('seller.licensors.edit', $licensor) }}"
-                                    class="font-medium text-stone-800 hover:underline">{{ $licensor->name }}</a>
-                                @unless ($licensor->is_active)
-                                    <span class="rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-500">Wygaszony</span>
-                                @endunless
-                            </div>
 
-                            <p class="mt-1 text-xs text-stone-400">
-                                @if ($licensor->agreement_reference)
-                                    Umowa {{ $licensor->agreement_reference }} ·
-                                @endif
-                                {{ $licensor->contact_email ?: 'bez kontaktu' }}
-                            </p>
+                @if ($licensors->isEmpty())
+                    <div class="mt-8 flex flex-col items-center justify-center rounded-2xl border border-dashed border-stone-300 px-6 py-12 text-center">
+                        <span class="flex h-14 w-14 items-center justify-center rounded-2xl bg-stone-100 text-2xl">🤝</span>
+                        <p class="mt-4 font-medium text-stone-700">Kartoteka jest pusta</p>
+                        <p class="mt-1 text-sm text-stone-500">
+                            Dodaj firmę, która udziela Ci prawa do swojego logotypu — organizatora biegu, klub, wydawcę.
+                            Dopiero wtedy przypiszesz jej opłatę przy produkcie albo przy grafice graweru.
+                        </p>
+                    </div>
+                @else
+                    <div class="mt-6 space-y-2">
+                        @foreach ($licensors as $licensor)
+                            <div class="rounded-2xl border border-stone-200 bg-white/80 px-4 py-3.5 shadow-sm transition hover:border-amber-300">
+                                <div class="flex items-start justify-between gap-4">
+                                    {{-- Lewa: kto to jest i na jakiej podstawie --}}
+                                    <div class="min-w-0">
+                                        <a href="{{ route('seller.licensors.edit', $licensor) }}"
+                                            class="font-semibold text-stone-900 transition hover:text-amber-700">{{ $licensor->name }}</a>
+                                        <p class="mt-0.5 truncate text-sm text-stone-600">
+                                            {{ $licensor->contact_person ?: 'bez osoby kontaktowej' }}
+                                            @if ($licensor->contact_email)
+                                                · {{ $licensor->contact_email }}
+                                            @endif
+                                        </p>
+                                        <p class="text-xs text-stone-400">
+                                            @if ($licensor->agreement_reference)
+                                                Umowa {{ $licensor->agreement_reference }}
+                                            @else
+                                                Bez numeru umowy
+                                            @endif
+                                        </p>
+                                    </div>
 
-                            {{-- Liczby mówią, czy partnera wolno skasować. Bez nich
-                                 sprzedawca klika „Usuń", dostaje odmowę i nie wie
-                                 dlaczego. --}}
-                            <p class="mt-2 text-xs text-stone-500">
-                                Grafik w bibliotece: <span class="font-medium tabular-nums text-stone-700">{{ $licensor->choices_count }}</span>
-                                · Sprzedanych pozycji z jego znakiem: <span class="font-medium tabular-nums text-stone-700">{{ $licensor->components_count }}</span>
-                            </p>
+                                    {{-- Prawa: stan i ile na nim wisi. Te liczby mówią, czy
+                                         partnera wolno skasować — bez nich sprzedawca klika
+                                         „Usuń", dostaje odmowę i nie wie dlaczego. --}}
+                                    <div class="flex shrink-0 flex-col items-end gap-1.5 text-right">
+                                        <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium {{ $licensor->is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-stone-100 text-stone-500' }}">
+                                            {{ $licensor->is_active ? 'Aktywny' : 'Wygaszony' }}
+                                        </span>
+                                        <span class="text-xs text-stone-400">Grafik: {{ $licensor->choices_count }}</span>
+                                        <span class="text-xs text-stone-400">Sprzedano: {{ $licensor->components_count }}</span>
+                                    </div>
+                                </div>
 
-                            <div class="mt-3 flex flex-wrap gap-2">
-                                <a href="{{ route('seller.licensors.edit', $licensor) }}"
-                                    class="rounded-full border border-stone-200 bg-white px-4 py-1.5 text-sm font-medium text-stone-600 transition hover:bg-stone-50">Edytuj</a>
+                                <div class="mt-3 flex flex-wrap items-center gap-3 border-t border-stone-100 pt-3">
+                                    <a href="{{ route('seller.licensors.edit', $licensor) }}"
+                                        class="rounded-xl border border-stone-200 bg-white px-3 py-1.5 text-sm font-medium text-stone-700 transition hover:bg-stone-100">Edytuj</a>
 
-                                <form method="POST" action="{{ route('seller.licensors.toggle', $licensor) }}">
-                                    @csrf
-                                    <button type="submit"
-                                        class="rounded-full border border-stone-200 bg-white px-4 py-1.5 text-sm font-medium text-stone-600 transition hover:bg-stone-50">
-                                        {{ $licensor->is_active ? 'Wygaś' : 'Przywróć' }}
-                                    </button>
-                                </form>
-
-                                @if ($licensor->choices_count === 0 && $licensor->components_count === 0)
-                                    <form method="POST" action="{{ route('seller.licensors.destroy', $licensor) }}"
-                                        onsubmit="return confirm('Usunąć {{ $licensor->name }} z kartoteki?')">
+                                    <form method="POST" action="{{ route('seller.licensors.toggle', $licensor) }}">
                                         @csrf
                                         <button type="submit"
-                                            class="rounded-full border border-stone-200 bg-white px-4 py-1.5 text-sm font-medium text-rose-600 transition hover:bg-rose-50">Usuń</button>
+                                            class="rounded-xl border border-stone-200 bg-white px-3 py-1.5 text-sm font-medium text-stone-700 transition hover:bg-stone-100">
+                                            {{ $licensor->is_active ? 'Wygaś' : 'Przywróć' }}
+                                        </button>
                                     </form>
-                                @endif
+
+                                    {{-- Przycisk pokazuje się TYLKO tam, gdzie zadziała.
+                                         Partner, na którego poszła sprzedaż, jest gaszony,
+                                         nie kasowany — inaczej rozliczenie sprzed roku
+                                         zostaje bez adresata. --}}
+                                    @if ($licensor->choices_count === 0 && $licensor->components_count === 0)
+                                        <form method="POST" action="{{ route('seller.licensors.destroy', $licensor) }}"
+                                            onsubmit="return confirm('Usunąć {{ $licensor->name }} z kartoteki?')">
+                                            @csrf
+                                            <button type="submit"
+                                                class="rounded-xl border border-stone-200 bg-white px-3 py-1.5 text-sm font-medium text-rose-600 transition hover:bg-rose-50">Usuń</button>
+                                        </form>
+                                    @endif
+                                </div>
                             </div>
-                        </div>
-                    @endforeach
-                </div>
-            @endif
+                        @endforeach
+                    </div>
+                @endif
+            </div>
         </div>
 
         <aside class="lg:col-span-4 space-y-6">
@@ -76,13 +100,13 @@
                 <h2 class="font-semibold text-stone-900">Po co jest ta kartoteka</h2>
                 <p class="mt-2 text-sm leading-relaxed text-stone-500">
                     Partner to firma, która pozwala Ci umieścić swój znak na produkcie i bierze za to opłatę.
-                    Ta opłata doliczana jest do ceny i jest <span class="text-stone-700">widoczna dla kupującego</span>
+                    Opłata doliczana jest do ceny i jest <span class="text-stone-700">widoczna dla kupującego</span>
                     jako osobna pozycja.
                 </p>
                 <ul class="mt-4 space-y-3 text-sm text-stone-500">
                     <li class="flex gap-3">
                         <span class="mt-0.5 shrink-0 text-amber-500">➕</span>
-                        <span>Opłatę przypisujesz w <span class="text-stone-700">dwóch miejscach</span>: przy produkcie (logotyp na awersie) i przy grafice graweru.</span>
+                        <span>Kwotę ustawiasz w <span class="text-stone-700">dwóch miejscach</span>: przy produkcie (logotyp na awersie) i przy grafice graweru. Tutaj definiujesz tylko, kto ją dostaje.</span>
                     </li>
                     <li class="flex gap-3">
                         <span class="mt-0.5 shrink-0 text-amber-500">🧮</span>

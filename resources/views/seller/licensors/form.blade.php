@@ -1,9 +1,16 @@
 <x-layouts.panel :title="$licensor->exists ? 'Partner: '.$licensor->name : 'Nowy partner'">
-    <a href="{{ route('seller.licensors.index') }}" class="text-sm font-medium text-stone-500 underline-offset-2 hover:underline">← Wszyscy partnerzy</a>
+    <x-slot:heading>{{ $licensor->exists ? 'Partner: '.$licensor->name : 'Nowy partner' }}</x-slot:heading>
+
+    <x-slot:actions>
+        <a href="{{ route('seller.licensors.index') }}"
+            class="rounded-full bg-white/70 px-4 py-1.5 text-sm font-medium text-stone-600 backdrop-blur transition hover:bg-white">
+            Wróć do listy
+        </a>
+    </x-slot:actions>
 
     <form method="POST"
         action="{{ $licensor->exists ? route('seller.licensors.update', $licensor) : route('seller.licensors.store') }}"
-        class="mt-4 grid gap-6 lg:grid-cols-12" novalidate data-validate>
+        class="grid gap-6 lg:grid-cols-12" novalidate data-validate>
         @csrf
 
         <div class="lg:col-span-8 space-y-6">
