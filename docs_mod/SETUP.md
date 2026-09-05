@@ -103,4 +103,21 @@ Potem wejść na stronę główną, kartę produktu i panel po zalogowaniu.
 - [ ] Marka klienta zamiast Kramio wszędzie, gdzie widać (dok. 04)
 - [ ] Cron działa, kopia zapasowa wykonana i **odtworzona próbnie**
 - [ ] Dane demonstracyjne usunięte
-- [ ] `docs_mod/` skasowany — to nasze notatki robocze, nie materiał dla klienta
+
+### Nasze materiały wycięte z archiwum
+
+Klient dostaje kod. Nie dostaje naszych notatek roboczych, warunków handlowych ani dokumentów prawnych naszej firmy. Przed spakowaniem usunąć **komplet**:
+
+- [ ] `docs_mod/` — plan przeróbki, uzasadnienia, wątpliwości
+- [ ] `.claude/` — pamięć asystenta: **historia zlecenia, ceny, ustalenia z pośrednikiem**
+- [ ] `CLAUDE.md`, `FOUNDATION.md` — specyfika instalacji i zasady współpracy
+- [ ] `docs/` — specyfikacja Kramio oraz regulamin i polityka prywatności **naszej** firmy
+- [ ] `.git/` — historia sięga commitów Kramio sprzed odbicia
+
+Sprawdzenie na spakowanym archiwum, zanim wyjdzie:
+
+```bash
+unzip -l sklep.zip | grep -iE 'claude|docs_mod|FOUNDATION|docs/|\.git/'
+```
+
+Pusty wynik = w porządku. Jakikolwiek wiersz = **nie wysyłać**.

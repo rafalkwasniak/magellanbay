@@ -17,20 +17,40 @@ Ta instalacja to **sklep dedykowany dla Magellan Bay**, odbity od Kramio i przer
 | 1 | Pakiet `dedicated` — brak limitów, wszystkie funkcje otwarte, nic nie wygasa | `93fb164` |
 | 2 | Przełącznik `SHOP_MODE` — wygaszenie rejestracji, konsoli admina, pakietów, dwóch komend crona | `db60556` |
 | 3 | Sklep na domenie głównej zamiast subdomeny, rozstrzygnięcie 9 kolizji adresów | `8003f21` |
+| 5 | Seedery danych startowych — `DeploymentSeeder` i `DemoSeeder` | *bieżąca sesja* |
 
-Suita: **1728 testów zielonych.** Zachowania trybu pilnuje `tests/Feature/DedicatedModeTest.php` — każde w parze „nie ma w dedykowanym" / „nadal jest w Kramio".
+Suita: **1745 testów zielonych.** Zachowania trybu pilnuje `tests/Feature/DedicatedModeTest.php` — każde w parze „nie ma w dedykowanym" / „nadal jest w Kramio". Seedery pilnuje `tests/Feature/DeploymentSeederTest.php`.
 
 ---
 
 ## Co dalej — TYLKO w tym repozytorium
 
-Od tego momentu prace **nie dotykają już Kramio**. Kroki 4 i 5 z pierwotnego planu plus właściwe zamówienie klienta:
+Od tego momentu prace **nie dotykają już Kramio**. Zostaje krok 4 plus właściwe zamówienie klienta:
 
-### Krok 4 — marka klienta
-Szczegóły w [04-branding-i-dokumenty.md](04-branding-i-dokumenty.md). Logo, favicon, tytuły stron, stopki maili, `config/company.php`, dokumenty prawne sklepu. Polityki prywatności dla sklepu **nie mamy** — trzeba napisać wzór.
+### Krok 4 — marka klienta i dokumenty
+Szczegóły w [04-branding-i-dokumenty.md](04-branding-i-dokumenty.md). Logo, favicon, tytuły stron, stopki maili, `config/company.php`, dokumenty prawne sklepu.
 
-### Krok 5 — seeder wdrożeniowy
-Szczegóły w [06-dane-startowe.md](06-dane-startowe.md). `DeploymentSeeder` (produkcja klienta, pisany ręcznie, **bez fabryk**) i `DemoSeeder` (tylko środowisko robocze). To on sprawi, że kolejny klient kosztuje cztery godziny zamiast czterech dni.
+Stan cząstkowy:
+- **Materiały graficzne** — czekają na barwy i logotypy klienta.
+- **Regulamin sklepu** — jest kreator (`resources/views/seller/legal/templates/regulamin.blade.php`), trzeba go wypełnić pod Magellana. **Produkty personalizowane są wyłączone z prawa odstąpienia** (art. 38 pkt 3 u.p.k.) — kreator umie o to zapytać i musi dostać odpowiedź „tak".
+- **Polityka prywatności sklepu** — nie istnieje w żadnej formie. Podstawą będzie nasza polityka z `docs/prawne/polityka-prywatnosci.html`, oczyszczona z warstwy platformy (pośrednik znika, zostaje sklep ↔ kupujący).
+- **Treść maila aktywacyjnego** (`App\Services\ActivationMailer`) mówi językiem platformy: „dziękujemy za rejestrację", „postawisz swój sklep w kilka minut". W sklepie dedykowanym nikt się nie rejestrował. Do przepisania — **dlatego seeder wdrożeniowy wypisuje link aktywacyjny na konsolę, zamiast wysyłać ten mail.**
+
+### Krok 5 — seeder wdrożeniowy — ZROBIONE
+
+`DeploymentSeeder` zakłada konto właściciela i jedyny rekord sklepu; parametry czyta z `config/deployment.php` ← `.env` (klucze `DEPLOY_*`), więc **następne wdrożenie nie dotyka kodu seedera**. Pisany ręcznie, bez fabryk.
+
+Odmawia startu w trzech sytuacjach — i to jest w nim najważniejsze:
+
+| Sytuacja | Dlaczego to groźne |
+|---|---|
+| `SHOP_MODE` inny niż `dedicated` | puszczony na Kramio zakłada sprzedawcę z dożywotnim pakietem bez limitów, bez śladu w historii |
+| w bazie jest już sklep | `ResolveShop` bierze `Shop::first()`, więc drugi sklep byłby **niewidoczny** |
+| brak `DEPLOY_OWNER_EMAIL` lub nazwy sklepu | konto bez adresu = właściciel nigdy nie ustawi hasła |
+
+Garda „druga instalacja" sprawdzona **na żywej bazie roboczej**: seeder odmówił, nic nie zapisał.
+
+`DemoSeeder` dokłada 12 produktów (magnesy podróżnicze), 5 tagów i 2 zamówienia z policzonymi kwotami — żeby dało się pracować nad wyglądem i pokazać klientowi działający sklep. **Nie działa na `APP_ENV=production`.** Przed przekazaniem sklepu klientowi baza idzie od nowa.
 
 ### Etap 2 oferty — funkcje Magellan Bay
 Personalizacja nadruku (formatki), grawerka rewersu, cena z czterech składników, koszyk rozpoznający konfigurację, partnerzy licencyjni z regułą nienakładania się, katalog w trzech podziałach, rozliczenia XLSX, wstrzymanie sprzedaży serii.

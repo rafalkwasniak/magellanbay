@@ -19,6 +19,7 @@
 - [DSA: Kramio = HOSTING](legal-dsa-hosting-classification.md) — decyzja 15.08. **Galeria sklepów zabiłaby argument nr 1.**
 - [Regulamin i polityka v3](legal-audit-2026-08-15.md) — **numeracja się przesunęła**; stare odesłania nieaktualne.
 - [Wzory dokumentów dla sprzedawców](plan-seller-legal-templates.md) — regulamin ZROBIONY, zostaje POLITYKA. NIP nie może być twardym warunkiem.
+- [Dokumenty prawne Magellana](plan-magellan-legal-documents.md) — **produkty personalizowane WYŁĄCZONE z prawa odstąpienia** (art. 38 pkt 3 u.p.k.).
 
 ## Otwarte / do decyzji
 - [Magellan Bay — osobny projekt](plan-magellan-bay-separate-project.md) — **oferta 6 000 zł wysłana 01.09, czekamy.** NIE część roadmapy Kramio.
