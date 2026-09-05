@@ -35,6 +35,7 @@ use App\Http\Controllers\Seller\CustomerController;
 use App\Http\Controllers\Seller\DashboardController as SellerDashboard;
 use App\Http\Controllers\Seller\DiscountCodeController;
 use App\Http\Controllers\Seller\IntegrationController;
+use App\Http\Controllers\Seller\LicensorController;
 use App\Http\Controllers\Seller\OrderController;
 use App\Http\Controllers\Seller\PackageController;
 use App\Http\Controllers\Seller\PageController;
@@ -406,6 +407,17 @@ Route::middleware(['auth', 'role:seller', 'ensure.consents'])
         Route::get('/wiadomosci/{bulkMailing}/edycja', [BulkMailingController::class, 'edit'])->name('mailings.edit');
         Route::post('/wiadomosci/{bulkMailing}', [BulkMailingController::class, 'update'])->name('mailings.update');
         Route::post('/wiadomosci/{bulkMailing}/usun', [BulkMailingController::class, 'destroy'])->name('mailings.destroy');
+
+        // Kartoteka licencjodawców — firm inkasujących opłatę za użycie swojego
+        // znaku. Kasowanie ograniczone do wpisów nieużywanych (patrz kontroler):
+        // partner, na którego poszła sprzedaż, jest GASZONY, nie usuwany.
+        Route::get('/partnerzy', [LicensorController::class, 'index'])->name('licensors.index');
+        Route::get('/partnerzy/nowy', [LicensorController::class, 'create'])->name('licensors.create');
+        Route::post('/partnerzy', [LicensorController::class, 'store'])->name('licensors.store');
+        Route::get('/partnerzy/{licensor}/edycja', [LicensorController::class, 'edit'])->name('licensors.edit');
+        Route::post('/partnerzy/{licensor}', [LicensorController::class, 'update'])->name('licensors.update');
+        Route::post('/partnerzy/{licensor}/przelacz', [LicensorController::class, 'toggle'])->name('licensors.toggle');
+        Route::post('/partnerzy/{licensor}/usun', [LicensorController::class, 'destroy'])->name('licensors.destroy');
 
         // Zgłoszenia treści bezprawnych — TYLKO w sklepie dedykowanym.
         //

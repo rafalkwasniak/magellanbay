@@ -58,6 +58,7 @@
             ['label' => 'Kody rabatowe', 'route' => 'seller.discounts.index', 'active' => 'seller.discounts.*', 'icon' => '🎟️'],
             ['label' => 'Wiadomości', 'route' => 'seller.mailings.index', 'active' => 'seller.mailings.*', 'icon' => '📣'],
             ['label' => 'Analityka', 'route' => 'seller.analytics.index', 'icon' => '📊'],
+            ['label' => 'Partnerzy', 'route' => 'seller.licensors.index', 'active' => 'seller.licensors.*', 'icon' => '🤝'],
             ['label' => 'Informacje', 'route' => 'seller.pages.index', 'active' => 'seller.pages.*', 'icon' => '📄'],
             // Zgłoszenia treści bezprawnych trafiają do właściciela WYŁĄCZNIE
             // w sklepie dedykowanym — w Kramio rozpatruje je platforma, a trasy
