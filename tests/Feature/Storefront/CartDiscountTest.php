@@ -76,7 +76,7 @@ class CartDiscountTest extends TestCase
             ->assertViewHas('total', 180.0);
 
         // Druga sztuka → 10% liczy się od nowej wartości koszyka, nie od starej.
-        $component->call('increment', $product->id)->assertViewHas('total', 360.0);
+        $component->call('increment', $this->cartKey($product))->assertViewHas('total', 360.0);
     }
 
     public function test_code_that_stops_working_stays_with_its_reason(): void
@@ -90,7 +90,7 @@ class CartDiscountTest extends TestCase
             ->assertViewHas('total', 180.0);
 
         // Klient wyjmuje produkt → koszyk spada poniżej progu.
-        $component->call('remove', $product->id);
+        $component->call('remove', $this->cartKey($product));
 
         // Kod zostaje przyklejony (może wrócić), ale nie obniża niczego.
         $this->assertSame('ODDWUSTU', app(CartService::class)->discountCode($shop->id));

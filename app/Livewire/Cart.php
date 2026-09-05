@@ -8,6 +8,7 @@ use App\Services\CartService;
 use App\Services\DiscountResolver;
 use App\Support\DiscountResult;
 use App\Support\Money;
+use Illuminate\Support\Collection;
 use Livewire\Component;
 
 /**
@@ -30,38 +31,57 @@ class Cart extends Component
         $this->shopId = $shopId;
     }
 
-    public function increment(int $productId): void
+    /*
+     * POZYCJĄ RZĄDZI KLUCZ, NIE `product_id`. Magnes z imieniem „Zosia" i magnes
+     * z imieniem „Antek" to jeden produkt w katalogu, ale dwie osobne pozycje
+     * koszyka — z osobną ilością i osobnym koszem. Komponent operuje więc na
+     * kluczu pozycji, a produkt odczytuje z niej dopiero po to, żeby poznać
+     * jednostkę sprzedaży (krok i minimum).
+     */
+    public function increment(string $lineKey): void
     {
-        $product = $this->product($productId);
+        $product = $this->productOfLine($lineKey);
 
         if ($product === null) {
             return;
         }
 
         $cart = app(CartService::class);
-        $current = (float) ($cart->raw($this->shopId)[$productId] ?? 0);
-        $cart->setQuantity($this->shopId, $productId, $current + $product->sale_unit->step());
+        $current = $cart->quantityOf($this->shopId, $lineKey);
+        $cart->setQuantity($this->shopId, $lineKey, $current + $product->sale_unit->step());
         $this->dispatch('cart-updated');
     }
 
-    public function decrement(int $productId): void
+    public function decrement(string $lineKey): void
     {
-        $product = $this->product($productId);
+        $product = $this->productOfLine($lineKey);
 
         if ($product === null) {
             return;
         }
 
         $cart = app(CartService::class);
-        $current = (float) ($cart->raw($this->shopId)[$productId] ?? 0);
+        $current = $cart->quantityOf($this->shopId, $lineKey);
         $step = $product->sale_unit->step();
 
         // „−" schodzi tylko do minimum (1 szt. / 0,5 kg) — poniżej jest KOSZ,
         // żeby dwuklik nie skasował pozycji przez przypadek.
         if ($current - $step >= $product->sale_unit->minQuantity()) {
-            $cart->setQuantity($this->shopId, $productId, $current - $step);
+            $cart->setQuantity($this->shopId, $lineKey, $current - $step);
             $this->dispatch('cart-updated');
         }
+    }
+
+    /**
+     * Produkt stojący za pozycją koszyka. Bierzemy go z SESJI, nie z parametru
+     * wywołania — komponent Livewire da się wywołać z palca, a wtedy podany
+     * `product_id` mógłby wskazywać co innego niż pozycja, którą zmieniamy.
+     */
+    private function productOfLine(string $lineKey): ?Product
+    {
+        $line = app(CartService::class)->raw($this->shopId)[$lineKey] ?? null;
+
+        return $line === null ? null : $this->product($line['product_id']);
     }
 
     /**
@@ -69,17 +89,17 @@ class Cart extends Component
      * spacje); CartService normalizuje wg jednostki, przycina do stanu i usuwa
      * pozycję, gdy zejdzie poniżej minimum.
      */
-    public function updateQuantity(int $productId, string $value): void
+    public function updateQuantity(string $lineKey, string $value): void
     {
         $qty = (float) str_replace([' ', "\u{a0}", ','], ['', '', '.'], trim($value));
 
-        app(CartService::class)->setQuantity($this->shopId, $productId, $qty);
+        app(CartService::class)->setQuantity($this->shopId, $lineKey, $qty);
         $this->dispatch('cart-updated');
     }
 
-    public function remove(int $productId): void
+    public function remove(string $lineKey): void
     {
-        app(CartService::class)->remove($this->shopId, $productId);
+        app(CartService::class)->remove($this->shopId, $lineKey);
         $this->dispatch('cart-updated');
     }
 
@@ -193,9 +213,9 @@ class Cart extends Component
      * przestał działać, NIE odklejamy po cichu — pokazujemy powód, bo klient
      * zwykle może go przywrócić, dokładając coś do koszyka.
      *
-     * @param  \Illuminate\Support\Collection<int, array{product: Product, quantity: float, unit_price: float, line_total: float}>  $lines
+     * @param  Collection<int, array{product: Product, quantity: float, unit_price: float, line_total: float}>  $lines
      */
-    private function resolveStoredDiscount(\Illuminate\Support\Collection $lines): ?DiscountResult
+    private function resolveStoredDiscount(Collection $lines): ?DiscountResult
     {
         $code = app(CartService::class)->discountCode($this->shopId);
         $shop = $code !== null ? Shop::find($this->shopId) : null;

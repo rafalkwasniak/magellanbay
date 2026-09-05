@@ -57,7 +57,10 @@ class AddToCart extends Component
 
     public function render()
     {
-        $inCart = app(CartService::class)->raw($this->shopId)[$this->productId] ?? 0;
+        // Suma po WSZYSTKICH konfiguracjach produktu: kupującego interesuje,
+        // czy ma już ten magnes i ile mu zostało ze stanu, a nie w ilu wariantach
+        // napisu leży w koszyku.
+        $inCart = app(CartService::class)->quantityOfProduct($this->shopId, $this->productId);
         $limited = $this->trackStock && $this->stock !== null;
         $remaining = $limited ? max(0, $this->stock - $inCart) : null;
 

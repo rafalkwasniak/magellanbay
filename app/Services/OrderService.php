@@ -11,6 +11,7 @@ use App\Models\Product;
 use App\Models\Shop;
 use App\Support\DiscountResult;
 use App\Support\OrderFlow;
+use App\Support\ProductConfiguration;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -50,7 +51,7 @@ class OrderService
 
             // Blokada wierszy produktów — nikt równolegle nie zmieni stanu w trakcie.
             $products = Product::where('shop_id', $shop->id)
-                ->whereIn('id', array_keys($raw))
+                ->whereIn('id', array_column($raw, 'product_id'))
                 ->lockForUpdate()
                 ->get()
                 ->keyBy('id');
@@ -59,8 +60,18 @@ class OrderService
             $reconciled = [];
             $lines = [];
 
-            foreach ($raw as $productId => $qty) {
-                $product = $products->get($productId);
+            /*
+             * Stan magazynowy zużywany NARASTAJĄCO. Odkąd klucz pozycji przestał
+             * być `product_id`, ten sam produkt bywa w koszyku kilka razy w różnych
+             * konfiguracjach — sprawdzanie każdej z osobna przepuściłoby zamówienie
+             * na 6 sztuk czegoś, czego sklep ma 3. To jest ten moment, w którym
+             * taki błąd kosztuje najwięcej: zamówienie już przyjęte i opłacone.
+             */
+            $used = [];
+
+            foreach ($raw as $lineKey => $line) {
+                $product = $products->get($line['product_id']);
+                $qty = (float) $line['quantity'];
 
                 if ($product === null || ! $product->is_active) {
                     $messages[] = 'Jeden lub więcej produktów nie jest już dostępnych i został usunięty z koszyka.';
@@ -69,7 +80,10 @@ class OrderService
                 }
 
                 $limited = $product->track_stock && $product->stock !== null;
-                $finalQty = $limited ? min((float) $qty, (float) $product->stock) : (float) $qty;
+                $alreadyUsed = $used[$product->id] ?? 0.0;
+                $finalQty = $limited
+                    ? max(0.0, min($qty, (float) $product->stock - $alreadyUsed))
+                    : $qty;
 
                 if ($finalQty <= 0) {
                     $messages[] = 'Produkt „'.$product->name.'" jest wyprzedany i został usunięty z koszyka.';
@@ -81,8 +95,31 @@ class OrderService
                     $messages[] = 'Ilość „'.$product->name.'" została dostosowana do dostępności ('.$product->sale_unit->formatQuantity($finalQty).').';
                 }
 
-                $reconciled[$productId] = $finalQty;
-                $lines[] = ['product' => $product, 'quantity' => $finalQty];
+                // Konfigurację sprawdzamy PONOWNIE, na świeżych danych: sprzedawca
+                // mógł w międzyczasie wycofać grafikę albo zacieśnić limit znaków,
+                // a wtedy zamówienie byłoby niewykonalne w chwili przyjęcia.
+                $config = ProductConfiguration::normalise($product, $line['config']);
+
+                if ($config === null) {
+                    $messages[] = 'Personalizacja produktu „'.$product->name.'" jest już niedostępna — pozycja została usunięta z koszyka.';
+
+                    continue;
+                }
+
+                $used[$product->id] = $alreadyUsed + $finalQty;
+
+                $reconciled[$lineKey] = [
+                    'product_id' => $product->id,
+                    'quantity' => $finalQty,
+                    'config' => $config,
+                ];
+
+                $lines[] = [
+                    'product' => $product,
+                    'quantity' => $finalQty,
+                    'configuration' => $config,
+                    'surcharge' => ProductConfiguration::surcharge($product, $config),
+                ];
             }
 
             if ($messages !== []) {
@@ -182,21 +219,40 @@ class OrderService
         foreach ($lines as $line) {
             $product = $line['product'];
             $quantity = $line['quantity'];
+            $configuration = $line['configuration'] ?? [];
+            $surcharge = (float) ($line['surcharge'] ?? 0);
 
-            [$lineGross] = $this->totals->lineAmounts((float) $product->price_gross, $quantity, $product->vat_rate);
+            /*
+             * DOPŁATA WCHODZI W CENĘ JEDNOSTKOWĄ, nie w osobną pozycję zamówienia
+             * (ustalenie z klientem: „dopłata do produktu"). Konsekwencje, dla
+             * których to jest właściwy wybór: rabat procentowy obejmuje wtedy
+             * całość tak samo jak cenę towaru, stawka VAT jest jedna (personalizacja
+             * to świadczenie pomocnicze do dostawy towaru), a zwrot zdejmuje
+             * pozycję w całości, zamiast zostawiać osierocony wiersz „grawer"
+             * po zwróconym magnesie.
+             */
+            $unitPrice = round((float) $product->price_gross + $surcharge, 2);
+
+            [$lineGross] = $this->totals->lineAmounts($unitPrice, $quantity, $product->vat_rate);
             $itemsGross += $lineGross;
 
             $discountLines[] = [
                 'product' => $product,
                 'quantity' => $quantity,
-                'unit_price' => (float) $product->price_gross,
+                'unit_price' => $unitPrice,
                 'line_total' => $lineGross,
             ];
 
             $itemRows[] = [
                 'product_id' => $product->id,
                 'name' => $product->name,
-                'unit_price_gross' => (float) $product->price_gross,
+                // Migawka dla człowieka + odpowiedź maszynowa. Patrz migracja
+                // `add_personalisation_to_order_items_table` — dwie kolumny,
+                // bo mail i arkusz produkcyjny potrzebują czego innego.
+                'personalisation' => ProductConfiguration::describe($product, $configuration) ?: null,
+                'configuration' => $configuration ?: null,
+                'unit_price_gross' => $unitPrice,
+                'personalisation_surcharge_gross' => $surcharge,
                 'vat_rate' => $product->vat_rate->value,
                 'quantity' => $quantity,
                 'sale_unit' => $product->sale_unit->value,

@@ -37,7 +37,7 @@
                 @foreach ($lines as $line)
                     @php($product = $line['product'])
                     @php($image = $product->mainImage())
-                    <div wire:key="line-{{ $product->id }}"
+                    <div wire:key="line-{{ $line['key'] }}"
                         class="st-card st-border flex items-center gap-4 rounded-2xl border p-4">
                         <div class="st-border h-20 w-20 shrink-0 overflow-hidden rounded-xl border" style="aspect-ratio: 1 / 1;">
                             @if ($image)
@@ -55,28 +55,48 @@
                             <a href="{{ $product->storefrontPath() }}" wire:navigate class="block st-brand font-serif text-xl font-normal break-words hover:underline">{{ $product->name }}</a>
                             <p class="mt-0.5 text-sm opacity-70">{{ \App\Support\Money::pln($line['unit_price']) }} / {{ $product->sale_unit->abbreviation() }}</p>
 
+                            {{-- Personalizacja. BEZ NIEJ dwie pozycje tego samego
+                                 produktu wyglądałyby identycznie i różniły się
+                                 wyłącznie ceną — kupujący nie miałby jak sprawdzić,
+                                 które imię wpisał, ani co usuwa. --}}
+                            @if ($line['personalisation'] !== [])
+                                <dl class="mt-2 space-y-0.5 text-xs opacity-70">
+                                    @foreach ($line['personalisation'] as $wpis)
+                                        <div class="flex flex-wrap gap-x-1.5">
+                                            <dt class="opacity-80">{{ $wpis['label'] }}:</dt>
+                                            <dd class="font-medium break-words">{{ $wpis['value'] }}</dd>
+                                        </div>
+                                    @endforeach
+                                </dl>
+                                @if ($line['surcharge'] > 0)
+                                    <p class="mt-1 text-xs opacity-60">
+                                        w tym dopłata za personalizację {{ \App\Support\Money::pln($line['surcharge']) }}
+                                    </p>
+                                @endif
+                            @endif
+
                             {{-- Ilość: krok +/− wg jednostki (1 szt. / 0,5 kg), pole wpisywane z palca.
                                  Przy minimum lewy przycisk to KOSZ (usuwa), wyżej „−". --}}
                             <div class="mt-3 flex items-center gap-3">
                                 <div class="inline-flex items-center gap-1">
                                     @if ($atMin)
-                                        <button type="button" wire:click="remove({{ $product->id }})"
+                                        <button type="button" wire:click="remove('{{ $line['key'] }}')"
                                             class="st-border flex h-8 w-8 items-center justify-center rounded-full border transition hover:border-rose-400 hover:text-rose-600"
                                             aria-label="Usuń z koszyka" title="Usuń z koszyka">
                                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="h-4 w-4" aria-hidden="true"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m4 5v6m6-6v6"/></svg>
                                         </button>
                                     @else
-                                        <button type="button" wire:click="decrement({{ $product->id }})"
+                                        <button type="button" wire:click="decrement('{{ $line['key'] }}')"
                                             class="st-border flex h-8 w-8 items-center justify-center rounded-full border text-lg leading-none transition hover:brightness-95"
                                             aria-label="Zmniejsz ilość">−</button>
                                     @endif
                                     <input type="text" inputmode="decimal"
-                                        wire:key="qty-{{ $product->id }}-{{ $line['quantity'] }}"
+                                        wire:key="qty-{{ $line['key'] }}-{{ $line['quantity'] }}"
                                         value="{{ $product->sale_unit->inputAmount($line['quantity']) }}"
-                                        x-on:change="$wire.updateQuantity({{ $product->id }}, $event.target.value)"
+                                        x-on:change="$wire.updateQuantity('{{ $line['key'] }}', $event.target.value)"
                                         aria-label="Ilość"
                                         class="st-border h-8 w-14 rounded-full border bg-transparent text-center text-sm font-semibold tabular-nums focus:outline-none focus:ring-2 focus:ring-current/20">
-                                    <button type="button" wire:click="increment({{ $product->id }})" @disabled($atMax)
+                                    <button type="button" wire:click="increment('{{ $line['key'] }}')" @disabled($atMax)
                                         class="st-border flex h-8 w-8 items-center justify-center rounded-full border text-lg leading-none transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-40"
                                         aria-label="Zwiększ ilość">+</button>
                                     <span class="ml-1 text-sm opacity-70">{{ $product->sale_unit->abbreviation() }}</span>

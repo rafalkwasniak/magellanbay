@@ -3,6 +3,8 @@
 namespace Tests;
 
 use App\Jobs\GenerateShopOgImage;
+use App\Models\Product;
+use App\Support\ProductConfiguration;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
@@ -43,6 +45,22 @@ abstract class TestCase extends BaseTestCase
      *
      * 3. ŻADNYCH PRAWDZIWYCH PLIKÓW. Lekcja z 2026-08-04, patrz `isolateDisks()`.
      */
+    /**
+     * Klucz pozycji koszyka dla produktu w danej konfiguracji.
+     *
+     * Odkąd koszyk rozpoznaje personalizację, `product_id` przestał być kluczem:
+     * magnes z imieniem „Zosia" i z imieniem „Antek" to dwie osobne pozycje.
+     * Testy liczą klucz TĄ SAMĄ funkcją co aplikacja — wpisany ręcznie
+     * rozjechałby się przy pierwszej zmianie reguł i test przestałby cokolwiek
+     * pilnować, nadal świecąc na zielono.
+     *
+     * @param  array<int, mixed>  $configuration
+     */
+    protected function cartKey(Product $product, array $configuration = []): string
+    {
+        return ProductConfiguration::key($product->id, $configuration);
+    }
+
     protected function setUp(): void
     {
         parent::setUp();

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\SaleUnit;
 use App\Enums\VatRate;
 use Database\Factories\OrderItemFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -17,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 #[Fillable([
     'product_id', 'name', 'unit_price_gross', 'vat_rate', 'quantity', 'sale_unit', 'line_total_gross',
+    'personalisation', 'configuration', 'personalisation_surcharge_gross',
 ])]
 class OrderItem extends Model
 {
@@ -30,9 +32,12 @@ class OrderItem extends Model
     {
         return [
             'unit_price_gross' => 'decimal:2',
+            'personalisation' => 'array',
+            'configuration' => 'array',
+            'personalisation_surcharge_gross' => 'decimal:2',
             'line_total_gross' => 'decimal:2',
             'vat_rate' => VatRate::class,
-            'sale_unit' => \App\Enums\SaleUnit::class,
+            'sale_unit' => SaleUnit::class,
             'quantity' => 'decimal:2',
             'returned_quantity' => 'decimal:2',
         ];

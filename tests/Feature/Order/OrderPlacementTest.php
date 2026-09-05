@@ -3,14 +3,17 @@
 namespace Tests\Feature\Order;
 
 use App\Enums\DeliveryMethod;
+use App\Enums\MailPriority;
 use App\Enums\OrderStatus;
+use App\Enums\SaleUnit;
 use App\Exceptions\CartNeedsReviewException;
-use App\Support\OrderFlow;
 use App\Models\EmailMessage;
 use App\Models\Product;
 use App\Models\Shop;
 use App\Services\CartService;
 use App\Services\OrderService;
+use App\Support\Money;
+use App\Support\OrderFlow;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -65,7 +68,7 @@ class OrderPlacementTest extends TestCase
         $item = $order->items->first();
         $this->assertSame('123.00', $item->unit_price_gross);
         $this->assertSame('2.00', $item->quantity);
-        $this->assertSame(\App\Enums\SaleUnit::Piece, $item->sale_unit);
+        $this->assertSame(SaleUnit::Piece, $item->sale_unit);
         $this->assertSame('246.00', $item->line_total_gross);
 
         // Sumy: 246 brutto → netto 200, VAT 46.
@@ -118,7 +121,7 @@ class OrderPlacementTest extends TestCase
         // Zamówienie NIE powstało, koszyk uzgodniony do dostępnych 2, brak maili.
         $this->assertSame(0, $shop->orders()->count());
         $this->assertSame(1, app(CartService::class)->count($shop->id));   // jedna pozycja
-        $this->assertSame(2.0, app(CartService::class)->raw($shop->id)[$product->id]);
+        $this->assertSame(2.0, app(CartService::class)->quantityOf($shop->id, $this->cartKey($product)));
         $this->assertSame('2.00', $product->fresh()->stock);   // stan nietknięty przez zamówienie
         $this->assertSame(0, EmailMessage::count());
     }
@@ -138,7 +141,7 @@ class OrderPlacementTest extends TestCase
         $this->assertDatabaseHas('email_messages', [
             'to_email' => 'jan@example.com',
             'subject' => 'Potwierdzenie zamówienia #'.$order->number.' — '.$shop->name,
-            'priority' => \App\Enums\MailPriority::Mid->value,
+            'priority' => MailPriority::Mid->value,
         ]);
         $this->assertDatabaseHas('email_messages', ['to_email' => $shop->owner->email]);
     }
@@ -185,7 +188,7 @@ class OrderPlacementTest extends TestCase
 
         // Cały tytuł przelewu (nie samo #N) i kwota są pogrubione — to wartości do skopiowania.
         $this->assertContains('Tytuł przelewu: **Zamówienie #'.$order->number.'**', $lines);
-        $this->assertContains('Kwota: **'.\App\Support\Money::pln($order->total_gross).'**', $lines);
+        $this->assertContains('Kwota: **'.Money::pln($order->total_gross).'**', $lines);
         // Fraza „zamówienie #N" w zdaniu jest pogrubiona w całości, nie samo #N.
         $this->assertContains('Otrzymaliśmy Twoje **zamówienie #'.$order->number.'** i już się nim zajmujemy.', $lines);
     }
