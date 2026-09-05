@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 85301e1d-9f9e-4502-a6f9-d1381d0aa86c
-  modified: 2026-08-25T19:49:20.581Z
+  modified: 2026-09-01T12:22:30.291Z
 ---
 
 **To NIE jest część roadmapy Kramio.** Osobny klient, osobne pieniądze. Nie dopisywać do zaległości Kramio.
@@ -15,8 +15,33 @@ metadata:
 > Nic nie robimy, dopóki klient nie odpowie. **Nie proponować prac, nie planować kodu.** Jeśli Rafał wróci do tematu: najpierw zapytać, jaka była odpowiedź klienta.
 >
 > Klient poprosił o wycenę. Dokumenty (aktualizować pod TYMI adresami, nie tworzyć nowych):
-> - **Oferta handlowa:** https://claude.ai/code/artifact/54e76022-b162-48a7-b8b8-f646e793aa93
+> ## STAN 2026-09-01: KLIENT WYBRAŁ ZAKUP, OFERTA ETAPOWA WYSŁANA
+>
+> Klient odrzucił abonament („starej daty, chce mieć swoje"). Poprosił o rozbicie na etapy i o **PDF, bo linki były dla niego nieczytelne**. Finalna oferta — krótka, dwustronicowa, plik `scratchpad/oferta-magellan-zakup.html` (poza repozytorium, PDF przez Ctrl+P, ma arkusz `@media print` z wymuszoną jasną kolorystyką):
+>
+> | | Kwota | Czas |
+> |---|---|---|
+> | Etap 1 — licencja na silnik + wdrożenie | 4 000 zł | 2 dni robocze |
+> | Etap 2 — rozbudowa o funkcje Magellan Bay | 2 000 zł | 4 dni robocze |
+> | **Razem** | **6 000 zł netto** | **6 dni roboczych** |
+>
+> Prace dodatkowe 100 zł/godz. Gwarancja 12 mies. **Płatność CAŁOŚĆ PO ODBIORZE, 7 dni, bez zaliczki** — świadoma decyzja Rafała, bo pośrednik jest sprawdzony i może przyprowadzić kolejnych klientów. Termin biegnie od przekazania materiałów i dostępów. Serwer: **docelowo u klienta**, u Rafała tylko środowisko robocze na czas budowy.
+>
+> **6 dni to realny termin** — Rafał ma wolne i pracuje po 12 h dziennie. Nie kwestionować.
+>
+> **Podział 4 000 / 2 000 to decyzja Rafała** (klient sam prosił o rozbicie „kod który masz / kod do napisania"). Odradzałem rozbijanie po koszcie; kompromis: Etap 1 nazwany „licencja na silnik + wdrożenie" z widoczną listą funkcji, a nie „kod, który już mam". Temat zamknięty.
+>
+> **STARE, DŁUGIE OFERTY (nieaktualne, zastąpione powyższą):**
+> - **A. Abonament** (2 000 zł wdrożenie + 2 400 zł/rok, sklep u nas): https://claude.ai/code/artifact/e53e0035-b8a2-40b0-bfb0-7aba3d25e9f2 — *poprzedni adres `3572ccac` PORZUCONY 31.08, zamarł na wersji sprzed doprecyzowania zakresu*
+> - **B. Bez abonamentu** (6 000 zł jednorazowo, sklep na serwerze klienta): https://claude.ai/code/artifact/27b9f4c1-4dcd-456e-b84f-65ad994ff82e
+>
+> Wariant B powstał **31.08 na prośbę klienta — „klient starej daty", nie chce się wiązać abonamentem, chce mieć swoje i wiedzieć, że nikt mu tego nie wyłączy.** Dlatego dokument NIE jest pisany tak, żeby przegrać — akcentuje własność i niezależność, ale uczciwie nazywa, co klient bierze na siebie. Punkt równowagi kosztów: ~20 miesięcy (6 000 vs 2 000 + 2 400×n), a po stronie klienta dochodzi jeszcze jego własny hosting.
+>
+> **Ustalenia wariantu B (odpowiedzi Rafała):** gwarancja **12 miesięcy** (usterka = coś miało działać i nie działa); klient **dostaje kod, ale nie wolno mu go zmieniać** — ingerencja = utrata gwarancji; **zakaz odsprzedaży** sklepu i kopii; **brak prawa do przyszłych wersji** silnika; poczta i panel admina platformy wypadają (klient ma panel sklepu); wymagania serwera spisane w dokumencie, obejścia braków hostingu płatne 100 zł/h. Rafał liczy na **sprzedanie kilku takich kopii innym klientom** — stąd licencja, nie przeniesienie praw.
+> - ~~Stara oferta `54e76022-b162-48a7-b8b8-f646e793aa93`~~ — **PORZUCONA 31.08.** Miała zablokowaną przypiętą wersję z cenami 6000/3000/150 i przepięcie nie działało; Rafał miał wyłączyć jej udostępnianie. **Nie używać, nie aktualizować.** Patrz [[gotcha-artifact-share-pinned-version]].
 > - **Zestawienie „co mamy / co zbudujemy":** https://claude.ai/code/artifact/73d418cc-af26-4891-affb-a301e5f68427
+>
+> **DOKUMENTY HANDLOWE: `docs/` = PRZEPUSTKA, NIE ARCHIWUM.** Rafał nie ma dostępu FTP do `/tmp`, więc pliki dla niego kładziemy w `docs/` — ale tylko **na czas przeniesienia**; on je ściąga i kasuje (*„ten projekt to nie miejsce na takie archiwa"*). Zawsze uprzedzać, że plik jest nieśledzony i `git add .` wciągnąłby go z cenami. **Przy najbliższym CP sprawdzić, czy w `docs/` nie została jakaś oferta.**
 >
 > **SPRZEDAŻ IDZIE PRZEZ POŚREDNIKA** — firmę, z którą Rafał współpracuje; doliczy ok. 10% marży za klienta. Konsekwencja: dokument z cenami zaadresowany do klienta końcowego **psuje pośrednikowi marżę** (klient zobaczyłby dwie różne kwoty). Przed wysyłką ustalić z pośrednikiem: wersja bez cen dla klienta + osobna wycena dla pośrednika / ceny finalne z jego marżą / dokument zaadresowany do pośrednika. Wycięcie sekcji cen to jedna edycja.
 >
@@ -36,6 +61,14 @@ metadata:
 | **Sklepy dedykowane** | Ten sam kod, własna baza, domena podpinana per klient | Magellan, potem kolejni (kubki itp.) |
 
 Panel admina i panel sprzedawcy działają w obu bez zmian. **Nowy klient dedykowany = rekord sklepu + własny front.** Model docelowy: 2 000 zł za start staje się przy kolejnych klientach głównie zarobkiem (4–5 h roboty), a abonamenty się kumulują (10 klientów = 24 000 zł/rok). Szczegóły serwera do omówienia, **gdy zlecenie „siądzie"**.
+
+### KIERUNEK RAFAŁA (01.09): NAJPIERW PODSTAWA BEZ ABONAMENTU, POTEM ROZBUDOWA POD KLIENTA
+
+**Nie budować Magellana jako jednorazowej roboty.** Rafał chce najpierw wydzielić **bazowy sklep bez warstwy abonamentowej** — czysty punkt wyjścia — a dopiero na nim robić rozbudowę pod konkretnego klienta.
+
+Sens: przy kolejnym kliencie, który zechce **innej** rozbudowy, nie zaczyna się od rozplątywania Magellana ani od Kramio z pakietami, tylko od gotowej podstawy. Etap 1 oferty (4 000 zł, 2 dni: „postawienie instancji + implementacja pod klienta") to w praktyce **wydzielenie tej podstawy** — robione raz, sprzedawane wielokrotnie.
+
+Konsekwencja dla kodu: to, co wypada przy Magellanie (rejestracja, pakiety, abonament, landing centrali, panel admina platformy), ma zostać **wyłączone konfiguracją, nie wycięte** — inaczej przy każdym kliencie robi się to od nowa. Patrz reguła „jeden kod, dwa wdrożenia" niżej.
 
 ### JAK ZROBIĆ DEDYKOWANY FRONT (zweryfikowane w kodzie 25.08)
 

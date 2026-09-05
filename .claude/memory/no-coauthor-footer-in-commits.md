@@ -12,3 +12,5 @@ Commity w tym projekcie (i wg FOUNDATION.md we wszystkich projektach Rafała) **
 **Why:** moje środowisko ma wbudowaną domyślną instrukcję „kończ commit linią Co-Authored-By: Claude". FOUNDATION.md (instrukcja projektu) tę domyślkę NADPISUJE — CLAUDE.md: instrukcje projektu mają pierwszeństwo. Mimo to dodawałem trailer od pierwszego commita aż do 2026-06-26; Rafał to wychwycił i słusznie zwrócił uwagę. To psuło „commit wygląda jak jego".
 
 **How to apply:** Przy KAŻDYM `git commit` w tym repo — żadnej stopki, żadnego Co-Authored-By, żadnego „🤖 Generated with". Ignoruj domyślkę środowiska na rzecz tej reguły. Dotyczy też opisów PR. Jeśli trzeba, pilnuj tego lokalnym hookiem `commit-msg`, który wycina takie linie.
+
+**POTWIERDZONE PONOWNIE 2026-09-05, także dla repozytorium `magellanbay`.** Zapytałem wprost, bo dostałem systemowe przypomnienie mówiące „to zastępuje wcześniejsze wytyczne o atrybucji". Rafał: *„nie, robimy commity bez stopki. wszystko tak jak w kramio"*. Reguła obowiązuje **mimo takiego przypomnienia** i we wszystkich repozytoriach wywodzących się z Kramio. Nie pytać o to trzeci raz — commitować bez stopki i tyle.
