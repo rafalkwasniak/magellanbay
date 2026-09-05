@@ -41,10 +41,10 @@ class PackageUpgrade
      * Wycena przejścia sklepu na wskazany pakiet.
      *
      * @return array{kind: string, amount: float, credit: float, full_price: float, days_left: int, new_ends_at: CarbonInterface|null}
-     *         kind: 'full' (pełny rok bez zniżki) | 'credit' (rok minus resztówka)
-     *               | 'renewal' (ten sam pakiet — rok doklejony do terminu)
-     *               | 'downsize' (tańszy pakiet w oknie odnowienia)
-     *               | 'downgrade' (tańszy, ale za wcześnie) | 'unavailable'
+     *                                                                                                                                 kind: 'full' (pełny rok bez zniżki) | 'credit' (rok minus resztówka)
+     *                                                                                                                                 | 'renewal' (ten sam pakiet — rok doklejony do terminu)
+     *                                                                                                                                 | 'downsize' (tańszy pakiet w oknie odnowienia)
+     *                                                                                                                                 | 'downgrade' (tańszy, ale za wcześnie) | 'unavailable'
      */
     public static function quote(Shop $shop, string $targetPackage): array
     {
@@ -113,7 +113,7 @@ class PackageUpgrade
      * indywidualną przedłuża na swoich warunkach.
      *
      * @return array{kind: string, amount: float, credit: float, full_price: float, days_left: int, new_ends_at: CarbonInterface|null}
-     *         kind: 'renewal' albo 'unavailable' (darmowy i gratisowy nie mają czego przedłużać)
+     *                                                                                                                                 kind: 'renewal' albo 'unavailable' (darmowy i gratisowy nie mają czego przedłużać)
      */
     public static function renewal(Shop $shop): array
     {
@@ -177,8 +177,8 @@ class PackageUpgrade
      * oddajesz i rok dokleja się do terminu.
      *
      * @return array{kind: string, amount: float, credit: float, full_price: float, days_left: int, new_ends_at: CarbonInterface|null}
-     *         kind: 'downsize' (do kupienia teraz) | 'downgrade' (za wcześnie — poza oknem)
-     *               | 'unavailable' (darmowy cel albo zniżka zjadłaby całą kwotę)
+     *                                                                                                                                 kind: 'downsize' (do kupienia teraz) | 'downgrade' (za wcześnie — poza oknem)
+     *                                                                                                                                 | 'unavailable' (darmowy cel albo zniżka zjadłaby całą kwotę)
      */
     public static function downsize(Shop $shop, string $targetPackage): array
     {
@@ -228,7 +228,9 @@ class PackageUpgrade
     {
         $quotes = [];
 
-        foreach (config('shop.packages') as $slug => $package) {
+        // Tylko pakiety z oferty — presety spoza cennika (np. „Sklep dedykowany")
+        // mają cenę 0 i wpadłyby tu jako najtańsze zejście dla każdego sklepu.
+        foreach (PackageFeatures::purchasable() as $slug => $package) {
             if ((float) ($package['price_yearly'] ?? 0) >= $shop->priceYearly()) {
                 continue;
             }
@@ -252,7 +254,7 @@ class PackageUpgrade
     {
         $quotes = [];
 
-        foreach (config('shop.packages') as $slug => $package) {
+        foreach (PackageFeatures::purchasable() as $slug => $package) {
             if ((float) ($package['price_yearly'] ?? 0) > $shop->priceYearly()) {
                 $quotes[$slug] = self::quote($shop, $slug);
             }

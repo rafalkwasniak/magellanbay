@@ -86,12 +86,20 @@ return [
     | (20 MB), bo zdjęcia z telefonu bywają duże, a i tak zmniejszamy je do WebP i
     | oryginał wyrzucamy — limit chroni tylko przed skrajnościami/pamięcią GD.
     |
+    | `max_per_product` = ile zdjęć można wgrać do jednego produktu. NIE jest to
+    | uprawnienie pakietu, tylko próg techniczny — dlatego siedzi tu, a nie w
+    | `packages`. Świadomie zostawiamy górną granicę zamiast „bez limitu":
+    | walidacja tablicy bez ograniczenia to otwarte drzwi na wgranie kilkuset
+    | plików naraz i wyczerpanie pamięci przez GD. Sklep dedykowany podnosi tę
+    | wartość w `.env`, zamiast jej usuwać.
+    |
     */
 
     'product_images' => [
         'max_side' => (int) env('PRODUCT_IMAGE_MAX_SIDE', 1600),
         'quality' => (int) env('PRODUCT_IMAGE_QUALITY', 82),
         'max_upload_kb' => 20480, // 20 MB
+        'max_per_product' => (int) env('PRODUCT_IMAGE_MAX_PER_PRODUCT', 8),
     ],
 
     /*
@@ -235,6 +243,43 @@ return [
             'entitlements' => [
                 'max_products' => 240,
                 'ai_weekly_limit' => 800,
+                'online_payments' => true,
+                'courier_shipping' => true,
+                'invoices' => true,
+                'ga_analytics' => true,
+                'order_editing' => true,
+                'discount_codes' => true,
+                'bulk_mail' => true,
+            ],
+        ],
+
+        /*
+         * Sklep dedykowany — wdrożenie u jednego klienta, na jego serwerze.
+         *
+         * Nie jest pakietem w sensie handlowym: `available => false` trzyma go
+         * poza cennikiem i poza ekranem zmiany pakietu, bo nikt go nie kupuje.
+         * Przypisujemy go ręcznie przy wdrożeniu (`assignPackage('dedicated')`)
+         * razem z `comped = true` na sklepie.
+         *
+         * DWA ZABEZPIECZENIA, ŻE NIC NIE WYGAŚNIE, celowo niezależne:
+         *   1. `comped` — Shop::subscriptionActive() zwraca true od razu,
+         *   2. `price_yearly => 0` — pakiet bez opłaty nie ma jak wygasnąć.
+         * Gdyby ktoś kiedyś zdjął `comped`, sklep dalej działa.
+         *
+         * LIMITY TO DUŻE LICZBY, NIE `null`. Każdy odbiorca robi
+         * `(int) $shop->entitlement(...)`, a `(int) null` daje 0 — przy zerze
+         * ProductLimitLock zablokowałby sklep już na pierwszym produkcie.
+         * Milion produktów i sto tysięcy zadań AI to w praktyce brak limitu,
+         * a arytmetyka zostaje bezpieczna.
+         */
+        'dedicated' => [
+            'name' => 'Sklep dedykowany',
+            'order' => 99,
+            'price_yearly' => 0,
+            'available' => false,
+            'entitlements' => [
+                'max_products' => 1000000,
+                'ai_weekly_limit' => 100000,
                 'online_payments' => true,
                 'courier_shipping' => true,
                 'invoices' => true,

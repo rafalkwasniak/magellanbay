@@ -92,7 +92,12 @@ class PackageController extends Controller
         $shop = $request->user()->shop;
 
         abort_if($shop === null, 404);
-        abort_unless(array_key_exists($package, config('shop.packages')), 404);
+
+        // Tylko pakiety Z OFERTY. `config('shop.packages')` zawiera także presety
+        // spoza cennika („Sklep dedykowany" — cena 0, wszystko włączone), więc
+        // samo sprawdzenie klucza pozwoliłoby sprzedawcy wysłać ich slug wprost
+        // z formularza i wziąć komplet funkcji za darmo.
+        abort_unless(array_key_exists($package, PackageFeatures::purchasable()), 404);
 
         // Twarda bramka: bez danych do faktury nie przyjmujemy płatności.
         if (! $shop->canBeInvoicedForPackage()) {

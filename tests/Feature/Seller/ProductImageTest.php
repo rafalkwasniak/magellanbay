@@ -50,7 +50,16 @@ class ProductImageTest extends TestCase
     {
         Storage::fake('public');
         [$seller, $product] = $this->sellerProduct();
-        foreach (range(1, 8) as $i) {
+
+        // Próg bierzemy z konfiguracji, a nie wpisujemy liczbą: sklep dedykowany
+        // podnosi go w `.env` do stu, więc test na sztywne osiem przestałby
+        // sprawdzać REGUŁĘ, a zaczął sprawdzać wartość akurat wpisaną w kodzie.
+        // Ustawiamy własną, niską — test jest wtedy szybki i niezależny od tego,
+        // jak skonfigurowano środowisko, w którym akurat leci.
+        config()->set('shop.product_images.max_per_product', 3);
+        $limit = (int) config('shop.product_images.max_per_product');
+
+        foreach (range(1, $limit) as $i) {
             $product->images()->create(['path' => "products/{$product->id}/{$i}.jpg", 'position' => $i]);
         }
 
@@ -60,7 +69,7 @@ class ProductImageTest extends TestCase
             ])
             ->assertStatus(422);
 
-        $this->assertSame(8, $product->images()->count());
+        $this->assertSame($limit, $product->images()->count());
     }
 
     public function test_reorder_sets_positions(): void
@@ -80,7 +89,7 @@ class ProductImageTest extends TestCase
     public function test_other_shop_cannot_reorder(): void
     {
         [$seller] = $this->sellerProduct();
-        $foreign = \App\Models\Product::factory()->create();
+        $foreign = Product::factory()->create();
         $image = $foreign->images()->create(['path' => 'products/x.jpg', 'position' => 0]);
 
         $this->actingAs($seller)

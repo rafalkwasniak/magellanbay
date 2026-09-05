@@ -11,12 +11,15 @@ use Illuminate\Http\Request;
 
 /**
  * Zdjęcia produktu: dodawanie (z optymalizacją), ustawianie głównego i usuwanie.
- * Wszystko scope'owane do produktu sklepu zalogowanego sprzedawcy. Limit 8 zdjęć.
+ * Wszystko scope'owane do produktu sklepu zalogowanego sprzedawcy.
+ *
+ * Limit zdjęć czytamy z `shop.product_images.max_per_product`, a nie ze stałej:
+ * to próg techniczny (pamięć GD przy wgrywaniu paczki), nie uprawnienie pakietu.
+ * Sklep dedykowany podnosi go w `.env`. Ta sama wartość rządzi walidacją przy
+ * TWORZENIU produktu (ProductRequest) — tu chodzi o galerię na edycji.
  */
 class ProductImageController extends Controller
 {
-    private const MAX_IMAGES = 8;
-
     public function store(Request $request, Product $product, ProductImageService $images): JsonResponse
     {
         $this->authorizeProduct($request, $product);
@@ -33,8 +36,10 @@ class ProductImageController extends Controller
 
         $files = $request->file('images', []);
 
-        if ($product->images()->count() + count($files) > self::MAX_IMAGES) {
-            return response()->json(['message' => 'Produkt może mieć maksymalnie '.self::MAX_IMAGES.' zdjęć.'], 422);
+        $maxImages = (int) config('shop.product_images.max_per_product');
+
+        if ($product->images()->count() + count($files) > $maxImages) {
+            return response()->json(['message' => 'Produkt może mieć maksymalnie '.$maxImages.' zdjęć.'], 422);
         }
 
         $position = (int) $product->images()->max('position');

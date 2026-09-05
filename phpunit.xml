@@ -32,5 +32,23 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <!--
+            Bramka platformy (opłaty za pakiety Kramio). Wartość zastępcza, bo
+            testy nie wychodzą do sieci — pilnuje tego Http::preventStrayRequests().
+            Bez tego wpisu ekran „Mój pakiet" nie renderuje przycisków zakupu i
+            przedłużenia (PackageController: `filled(...api_key)`), więc pięć
+            testów pada na świeżej instalacji bez naszego `.env` — a przyczyna
+            wygląda wtedy na błąd w kodzie, nie na brak konfiguracji.
+        -->
+        <env name="PAYNOW_PLATFORM_API_KEY" value="test-platform-api-key"/>
+        <env name="PAYNOW_PLATFORM_SIGNATURE_KEY" value="test-platform-signature-key"/>
+        <!--
+            Kopie zapasowe WŁĄCZONE w testach. Sprawdzamy nimi wyłącznie to, czy
+            zadania są zarejestrowane w harmonogramie — nic się nie wykonuje.
+            Wpis jest tu, bo instalacja robocza czy dedykowana bywa uruchamiana
+            z `BACKUP_ENABLED=false`, a wtedy cztery testy harmonogramu padają
+            z powodu konfiguracji środowiska, nie z powodu kodu.
+        -->
+        <env name="BACKUP_ENABLED" value="true"/>
     </php>
 </phpunit>

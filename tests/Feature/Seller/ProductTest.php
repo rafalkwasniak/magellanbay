@@ -155,12 +155,18 @@ class ProductTest extends TestCase
         }
     }
 
-    public function test_create_rejects_more_than_eight_images(): void
+    public function test_create_rejects_more_images_than_the_limit(): void
     {
         Storage::fake('public');
         [$seller] = $this->sellerWithShop();
+
+        // Próg z konfiguracji, nie z liczby w kodzie — sklep dedykowany podnosi
+        // go w `.env`, a test ma sprawdzać REGUŁĘ, nie akurat wpisaną wartość.
+        config()->set('shop.product_images.max_per_product', 3);
+        $limit = (int) config('shop.product_images.max_per_product');
+
         $images = [];
-        for ($i = 0; $i < 9; $i++) {
+        for ($i = 0; $i <= $limit; $i++) {
             $images[] = UploadedFile::fake()->image("p{$i}.jpg", 400, 400);
         }
 

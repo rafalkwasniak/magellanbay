@@ -22,6 +22,30 @@ use App\Models\Shop;
 class PackageFeatures
 {
     /**
+     * Pakiety, które MOŻNA KUPIĆ — czyli te bez `available => false`.
+     *
+     * Cennik zawiera także pozycje, które nie są ofertą handlową: „Sklep
+     * dedykowany" to preset uprawnień przypisywany ręcznie przy wdrożeniu u
+     * klienta na jego serwerze, z ceną 0 i wszystkim włączonym. Gdyby wchodził
+     * do zestawień na równi z resztą, byłby ZAWSZE najtańszym pakietem z każdą
+     * funkcją — landing pokazałby czwartą kolumnę za 0 zł, a każdy ekran
+     * zamknięty pakietem namawiałby na „Sklep dedykowany za darmo".
+     *
+     * Wszystko, co pokazujemy kupującemu albo z czego pozwalamy mu wybierać,
+     * ma przechodzić przez tę metodę. Konsola admina czyta cennik wprost, bo
+     * musi widzieć również presety spoza oferty.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    public static function purchasable(): array
+    {
+        return array_filter(
+            config('shop.packages'),
+            static fn (array $package): bool => ($package['available'] ?? true) !== false,
+        );
+    }
+
+    /**
      * NAJTAŃSZY pakiet zawierający daną funkcję — do zachęt na zablokowanych
      * ekranach („Kody rabatowe w pakiecie Pawilon, 1500 zł/rok").
      *
@@ -36,7 +60,7 @@ class PackageFeatures
     {
         $found = null;
 
-        foreach (config('shop.packages') as $key => $package) {
+        foreach (self::purchasable() as $key => $package) {
             if (($package['entitlements'][$entitlement] ?? false) !== true) {
                 continue;
             }
@@ -63,7 +87,7 @@ class PackageFeatures
         $packages = [];
         $previous = null;
 
-        foreach (config('shop.packages') as $key => $package) {
+        foreach (self::purchasable() as $key => $package) {
             $labels = self::labels($package['entitlements']);
             $features = [];
 

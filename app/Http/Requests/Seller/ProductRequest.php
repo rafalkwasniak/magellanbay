@@ -8,6 +8,7 @@ use App\Services\HtmlSanitizer;
 use App\Services\SlugService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 /**
  * Walidacja produktu (krok podstawowy — bez zdjęć i tagów). Cena podawana
@@ -71,7 +72,7 @@ class ProductRequest extends FormRequest
             // zostawiamy zapas na roboczy zapis sprzedawcy.
             'meta_description' => ['nullable', 'string', 'max:255'],
             // Zdjęcia dodawane przy TWORZENIU produktu (na edycji galeria działa przez AJAX).
-            'images' => ['nullable', 'array', 'max:8'],
+            'images' => ['nullable', 'array', 'max:'.config('shop.product_images.max_per_product')],
             'images.*' => ['image', 'mimes:jpeg,jpg,png,webp', 'max:'.config('shop.product_images.max_upload_kb')],
         ];
     }
@@ -82,9 +83,9 @@ class ProductRequest extends FormRequest
      * wyróżnienia ponad sufit), a nie odznaczanie. Na edycji pomijamy sam produkt,
      * żeby ponowny zapis już-wyróżnionego nie liczył go podwójnie.
      */
-    public function withValidator(\Illuminate\Validation\Validator $validator): void
+    public function withValidator(Validator $validator): void
     {
-        $validator->after(function (\Illuminate\Validation\Validator $validator): void {
+        $validator->after(function (Validator $validator): void {
             if (! $this->boolean('show_on_homepage')) {
                 return;
             }
@@ -134,7 +135,7 @@ class ProductRequest extends FormRequest
         return [
             'price_gross.numeric' => 'Podaj cenę liczbą, np. 49,99.',
             'stock.required_if' => 'Podaj stan magazynowy lub wyłącz kontrolę stanu.',
-            'images.max' => 'Możesz dodać maksymalnie 8 zdjęć.',
+            'images.max' => 'Możesz dodać maksymalnie '.config('shop.product_images.max_per_product').' zdjęć.',
             'images.*.image' => 'Każdy plik musi być obrazem (PNG, JPG lub WebP).',
             'images.*.mimes' => 'Dozwolone formaty zdjęć: PNG, JPG, WebP.',
             'images.*.max' => 'Zdjęcie może mieć maksymalnie '.(int) (config('shop.product_images.max_upload_kb') / 1024).' MB.',

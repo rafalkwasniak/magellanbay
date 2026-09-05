@@ -9,8 +9,13 @@ use Tests\TestCase;
 /**
  * Cennik na stronie głównej: karta pakietu wyróżnia to, co DOCHODZI względem
  * pakietu niżej, żeby kupujący nie musiał porównywać trzech kolumn linijka po
- * linijce. Lista bierze się z `config('shop.packages')`, więc nie może
+ * linijce. Lista bierze się z `PackageFeatures::purchasable()`, więc nie może
  * rozjechać się z tym, co sklep faktycznie dostaje.
+ *
+ * Świadomie `purchasable()`, a nie `config('shop.packages')`: cennik zawiera
+ * też presety spoza oferty (np. „Sklep dedykowany"), których na landingu być
+ * NIE MA. Iteracja po surowym configu wymagałaby ich na stronie i kazałaby nam
+ * pokazać kupującym pakiet, którego nie sprzedajemy.
  */
 class LandingPackagesTest extends TestCase
 {
@@ -115,7 +120,7 @@ class LandingPackagesTest extends TestCase
 
         $html = $this->get('/')->assertOk()->getContent();
 
-        foreach (config('shop.packages') as $package) {
+        foreach (PackageFeatures::purchasable() as $package) {
             $yearly = (int) $package['price_yearly'];
 
             if ($yearly === 0) {
@@ -196,7 +201,7 @@ class LandingPackagesTest extends TestCase
         // w cenniku, a nie odkrywać dopiero po wejściu w ścianę.
         $html = $this->get('/')->assertOk()->getContent();
 
-        foreach (config('shop.packages') as $package) {
+        foreach (PackageFeatures::purchasable() as $package) {
             $this->assertStringContainsString(
                 'Korekta AI: '.$package['entitlements']['ai_weekly_limit'].' zadań tygodniowo',
                 $html,
