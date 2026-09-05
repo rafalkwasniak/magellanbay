@@ -36,6 +36,7 @@ use App\Http\Controllers\Seller\DashboardController as SellerDashboard;
 use App\Http\Controllers\Seller\DiscountCodeController;
 use App\Http\Controllers\Seller\IntegrationController;
 use App\Http\Controllers\Seller\LicensorController;
+use App\Http\Controllers\Seller\OptionGroupController;
 use App\Http\Controllers\Seller\OrderController;
 use App\Http\Controllers\Seller\PackageController;
 use App\Http\Controllers\Seller\PageController;
@@ -407,6 +408,15 @@ Route::middleware(['auth', 'role:seller', 'ensure.consents'])
         Route::get('/wiadomosci/{bulkMailing}/edycja', [BulkMailingController::class, 'edit'])->name('mailings.edit');
         Route::post('/wiadomosci/{bulkMailing}', [BulkMailingController::class, 'update'])->name('mailings.update');
         Route::post('/wiadomosci/{bulkMailing}/usun', [BulkMailingController::class, 'destroy'])->name('mailings.destroy');
+
+        // Grupy opcji — biblioteka personalizacji sklepu. Definiuje się je RAZ
+        // i przypina do wielu produktów.
+        Route::get('/personalizacja', [OptionGroupController::class, 'index'])->name('options.index');
+        Route::get('/personalizacja/nowa', [OptionGroupController::class, 'create'])->name('options.create');
+        Route::post('/personalizacja', [OptionGroupController::class, 'store'])->name('options.store');
+        Route::get('/personalizacja/{optionGroup}/edycja', [OptionGroupController::class, 'edit'])->name('options.edit');
+        Route::post('/personalizacja/{optionGroup}', [OptionGroupController::class, 'update'])->name('options.update');
+        Route::post('/personalizacja/{optionGroup}/usun', [OptionGroupController::class, 'destroy'])->name('options.destroy');
 
         // Kartoteka licencjodawców — firm inkasujących opłatę za użycie swojego
         // znaku. Kasowanie ograniczone do wpisów nieużywanych (patrz kontroler):
