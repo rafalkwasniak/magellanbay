@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Enums\DeliveryMethod;
+use App\Enums\OptionGroupKind;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\SaleUnit;
@@ -10,6 +11,7 @@ use App\Enums\VatRate;
 use App\Models\Product;
 use App\Models\Shop;
 use App\Services\SlugService;
+use App\Support\ProductConfiguration;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -86,14 +88,16 @@ class DemoSeeder extends Seeder
         DB::transaction(function () use ($shop): void {
             $products = $this->createProducts($shop);
             $this->createTags($shop, $products);
-            $this->createOrders($shop, $products);
+            $config = $this->createPersonalisation($shop, $products);
+            $this->createOrders($shop, $products, $config);
         });
 
         $this->command?->newLine();
         $this->command?->info('Dane pokazowe dodane do sklepu: '.$shop->name);
         $this->command?->line('  Produkty:   '.count(self::PRODUCTS).' (bez zdjęć — te wgrywa się w panelu)');
         $this->command?->line('  Tagi:       '.count(self::TAGS));
-        $this->command?->line('  Zamówienia: 2');
+        $this->command?->line('  Zamówienia: 3 (jedno z personalizacją, jedno z licencjami)');
+        $this->command?->line('  Grupy opcji: 4, licencjodawcy: 2');
         $this->command?->newLine();
         $this->command?->warn('PAMIĘTAJ: te dane muszą zniknąć przed przekazaniem sklepu klientowi.');
         $this->command?->newLine();
@@ -144,6 +148,102 @@ class DemoSeeder extends Seeder
     }
 
     /**
+     * Personalizacja i licencjodawcy — dokładnie ten układ, który opisał klient.
+     *
+     * Awers: logotyp organizatora (opłata licencyjna, bez kosztu wykonania).
+     * Rewers: grawer — grafika ALBO własny tekst, nigdy oba. Koszt wykonania
+     * siedzi na grupie, opłata licencyjna przy konkretnej grafice.
+     *
+     * Dwie grafiki tego samego partnera są tu CELOWO: dzięki nim demo pokazuje
+     * regułę „nie sumujemy, liczy się wyższa" na żywym zamówieniu, a nie tylko
+     * w teście.
+     *
+     * @param  list<Product>  $products
+     * @return array<string, mixed>
+     */
+    private function createPersonalisation(Shop $shop, array $products): array
+    {
+        $bieg = $shop->licensors()->create([
+            'name' => 'Bieg Gdański',
+            'contact_email' => 'licencje@bieggdanski.example',
+            'agreement_reference' => 'UM/2026/014',
+        ]);
+
+        $pzla = $shop->licensors()->create([
+            'name' => 'Polski Związek Lekkiej Atletyki',
+            'contact_email' => 'znak@pzla.example',
+            'agreement_reference' => 'UM/2026/031',
+        ]);
+
+        // Awers — logotyp z licencją, bez kosztu wykonania.
+        $logotyp = $shop->optionGroups()->create([
+            'name' => 'Logotyp na awersie',
+            'kind' => OptionGroupKind::Choice,
+            'hint' => 'Nieobowiązkowy. Za użycie znaku organizatora doliczamy opłatę licencyjną.',
+            'position' => 0,
+        ]);
+        $logoBiegu = $logotyp->choices()->create([
+            'label' => 'Bieg Gdański 2026', 'licensor_id' => $bieg->id, 'licence_fee_gross' => 5.00, 'position' => 0,
+        ]);
+        $logotyp->choices()->create([
+            'label' => 'PZLA', 'licensor_id' => $pzla->id, 'licence_fee_gross' => 7.00, 'position' => 1,
+        ]);
+
+        // Rewers, wariant graficzny — koszt wykonania na grupie.
+        $grawerGrafika = $shop->optionGroups()->create([
+            'name' => 'Grawer — grafika',
+            'kind' => OptionGroupKind::Choice,
+            'hint' => 'Wybierz grafikę z naszej biblioteki.',
+            'surcharge_gross' => 15.00,
+            'position' => 1,
+        ]);
+        $trasaBiegu = $grawerGrafika->choices()->create([
+            'label' => 'Trasa Biegu Gdańskiego', 'licensor_id' => $bieg->id, 'licence_fee_gross' => 8.00, 'position' => 0,
+        ]);
+        $grawerGrafika->choices()->create([
+            'label' => 'Kompas', 'surcharge_gross' => 3.00, 'position' => 1,
+        ]);
+
+        // Rewers, wariant tekstowy — wyklucza się z graficznym.
+        $grawerTekst = $shop->optionGroups()->create([
+            'name' => 'Grawer — własny tekst',
+            'kind' => OptionGroupKind::Text,
+            'hint' => 'Zamiast grafiki możemy wygrawerować Twój tekst.',
+            'surcharge_gross' => 15.00,
+            'excludes_group_id' => $grawerGrafika->id,
+            'position' => 2,
+        ]);
+        $grawerTekst->fields()->create(['label' => 'Tekst', 'max_length' => 24, 'position' => 0]);
+        $grawerTekst->fields()->create(['label' => 'Data', 'max_length' => 10, 'required' => false, 'position' => 1]);
+
+        // Nadruk imienia — najprostsza formatka, ta „pod kubek z imieniem".
+        $nadruk = $shop->optionGroups()->create([
+            'name' => 'Nadruk imienia',
+            'kind' => OptionGroupKind::Text,
+            'hint' => 'Wpisz imię, które nadrukujemy na froncie.',
+            'surcharge_gross' => 10.00,
+            'required' => true,
+            'position' => 3,
+        ]);
+        $imie = $nadruk->fields()->create(['label' => 'Imię', 'max_length' => 12, 'position' => 0]);
+
+        // Produkty personalizowane (indeksy z self::PRODUCTS, flaga `true`).
+        foreach ([6, 7, 8] as $index) {
+            $products[$index]->optionGroups()->attach($nadruk);
+        }
+        $products[9]->optionGroups()->attach([$logotyp->id, $grawerGrafika->id, $grawerTekst->id]);
+
+        return [
+            'nadruk' => $nadruk,
+            'imie' => $imie,
+            'logotyp' => $logotyp,
+            'logoBiegu' => $logoBiegu,
+            'grawerGrafika' => $grawerGrafika,
+            'trasaBiegu' => $trasaBiegu,
+        ];
+    }
+
+    /**
      * @param  list<Product>  $products
      */
     private function createTags(Shop $shop, array $products): void
@@ -191,15 +291,38 @@ class DemoSeeder extends Seeder
      *
      * @param  list<Product>  $products
      */
-    private function createOrders(Shop $shop, array $products): void
+    private function createOrders(Shop $shop, array $products, array $config): void
     {
+        /*
+         * Pierwsze zamówienie niesie PERSONALIZACJĘ, żeby panel pokazywał to,
+         * co sprzedawca naprawdę zobaczy: „2 × Magnes" bez imienia jest
+         * zamówieniem, którego nie da się wykonać.
+         *
+         * Uwaga z treści zamówienia zniknęła — imię stoi teraz w polu, a nie
+         * w prośbie wpisanej przez klienta w komentarzu. O to w tym module chodzi.
+         */
         $this->createOrder($shop, OrderStatus::New, 'Anna', 'Wiśniewska', [
-            [$products[0], 2],
-            [$products[6], 1],
-        ], 'Proszę o nadruk imienia „Zosia" na magnesie personalizowanym.');
+            [$products[0], 2, []],
+            [$products[6], 1, [
+                $config['nadruk']->id => ['fields' => [$config['imie']->id => 'Zosia']],
+            ]],
+        ], null);
 
         $this->createOrder($shop, OrderStatus::Completed, 'Marek', 'Zieliński', [
-            [$products[10], 1],
+            [$products[10], 1, []],
+        ], null);
+
+        /*
+         * Trzecie zamówienie pokazuje REGUŁĘ LICENCJI na żywym przykładzie:
+         * logotyp Biegu Gdańskiego na awersie (5 zł) i jego grafika na rewersie
+         * (8 zł). Ten sam partner dwa razy, więc naliczamy 8 zł, nie 13 —
+         * i widać to w rozbiciu ceny pozycji.
+         */
+        $this->createOrder($shop, OrderStatus::Paid, 'Piotr', 'Lewandowski', [
+            [$products[9], 1, [
+                $config['logotyp']->id => ['choice' => $config['logoBiegu']->id],
+                $config['grawerGrafika']->id => ['choice' => $config['trasaBiegu']->id],
+            ]],
         ], null);
     }
 
@@ -216,9 +339,21 @@ class DemoSeeder extends Seeder
     ): void {
         $deliveryCost = 15.99;
 
+        /*
+         * Ceny jednostkowe liczymy z ROZBICIA, tą samą metodą co OrderService.
+         * Wpisane tu osobno rozjechałyby się z aplikacją przy pierwszej zmianie
+         * regul — a demo, ktore pokazuje inne kwoty niz sklep, jest gorsze niz
+         * brak demo.
+         */
+        $prices = [];
         $itemsTotal = 0.0;
-        foreach ($lines as [$product, $quantity]) {
-            $itemsTotal += (float) $product->price_gross * $quantity;
+
+        foreach ($lines as $i => [$product, $quantity, $config]) {
+            $breakdown = ProductConfiguration::breakdown($product, $config);
+            $unit = round(array_sum(array_column($breakdown, 'amount')), 2);
+
+            $prices[$i] = ['unit' => $unit, 'breakdown' => $breakdown];
+            $itemsTotal += $unit * $quantity;
         }
 
         $gross = round($itemsTotal + $deliveryCost, 2);
@@ -250,16 +385,32 @@ class DemoSeeder extends Seeder
             'note' => $note,
         ]);
 
-        foreach ($lines as [$product, $quantity]) {
-            $order->items()->create([
+        foreach ($lines as $i => [$product, $quantity, $config]) {
+            $unit = $prices[$i]['unit'];
+
+            $item = $order->items()->create([
                 'product_id' => $product->id,
                 'name' => $product->name,
-                'unit_price_gross' => $product->price_gross,
+                'personalisation' => ProductConfiguration::describe($product, $config) ?: null,
+                'configuration' => $config ?: null,
+                'unit_price_gross' => $unit,
+                'personalisation_surcharge_gross' => ProductConfiguration::surcharge($product, $config),
                 'vat_rate' => $product->vat_rate,
                 'quantity' => $quantity,
                 'sale_unit' => $product->sale_unit,
-                'line_total_gross' => round((float) $product->price_gross * $quantity, 2),
+                'line_total_gross' => round($unit * $quantity, 2),
             ]);
+
+            foreach ($prices[$i]['breakdown'] as $position => $component) {
+                $item->components()->create([
+                    'kind' => $component['kind'],
+                    'label' => $component['label'],
+                    'licensor_id' => $component['licensor_id'],
+                    'licensor_name' => $component['licensor_name'],
+                    'unit_amount_gross' => $component['amount'],
+                    'position' => $position,
+                ]);
+            }
         }
     }
 }

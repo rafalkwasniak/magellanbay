@@ -85,6 +85,42 @@ class OrderItem extends Model
     }
 
     /**
+     * Personalizacja pozycji jako pary „etykieta → wartość", gotowe do
+     * wyświetlenia. Pusta tablica, gdy pozycja nie była personalizowana.
+     *
+     * Czyta MIGAWKĘ z chwili zakupu, nie katalog — zamówienie sprzed miesiąca
+     * ma nadal mówić, co wykonano, także gdy sprzedawca zdążył przemianować
+     * albo skasować grupę opcji.
+     *
+     * @return list<array{label: string, value: string}>
+     */
+    public function personalisationLines(): array
+    {
+        return is_array($this->personalisation) ? $this->personalisation : [];
+    }
+
+    public function isPersonalised(): bool
+    {
+        return $this->personalisationLines() !== [];
+    }
+
+    /**
+     * Personalizacja w jednej linii — do miejsc, w których nie ma miejsca na
+     * listę: mail, wiersz wykazu, arkusz produkcyjny.
+     *
+     * Bez tego zamówienie na „2 × Magnes" nie mówi, jakie imiona wygrawerować,
+     * a sprzedawca musi wchodzić w szczegóły każdej pozycji, żeby w ogóle
+     * wiedzieć, co zrobić.
+     */
+    public function personalisationSummary(string $separator = ' · '): string
+    {
+        return implode($separator, array_map(
+            fn (array $line): string => $line['label'].': '.$line['value'],
+            $this->personalisationLines()
+        ));
+    }
+
+    /**
      * Ilość, za którą klient nadal płaci: kupiona minus zwrócona. To z niej liczą
      * się kwoty zamówienia, faktura i statystyki — `quantity` zostaje migawką
      * zakupu, więc widać, ile było pierwotnie.

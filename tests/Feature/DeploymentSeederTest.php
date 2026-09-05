@@ -6,6 +6,8 @@ use App\Enums\ShopStatus;
 use App\Enums\UserRole;
 use App\Models\EmailMessage;
 use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\OrderItemComponent;
 use App\Models\Page;
 use App\Models\Product;
 use App\Models\Shop;
@@ -416,7 +418,12 @@ class DeploymentSeederTest extends TestCase
 
         $this->assertSame(12, $shop->products()->count());
         $this->assertSame(5, $shop->tags()->count());
-        $this->assertSame(2, $shop->orders()->count());
+        $this->assertSame(3, $shop->orders()->count());
+
+        // Personalizacja: cztery grupy opcji i dwóch licencjodawców. Bez nich
+        // demo nie pokazuje tego, co w tym sklepie jest najważniejsze.
+        $this->assertSame(4, $shop->optionGroups()->count());
+        $this->assertSame(2, $shop->licensors()->count());
 
         // Promowane na głównej nie mogą przekroczyć sufitu z configu — demo ma
         // pokazywać stan osiągalny w panelu, nie taki, którego panel zabrania.
@@ -441,6 +448,41 @@ class DeploymentSeederTest extends TestCase
 
         $this->assertGreaterThan(0, $excluded);
         $this->assertLessThan(Product::query()->count(), $excluded);
+    }
+
+    /**
+     * Demo musi pokazywać regułę licencji na ŻYWYM zamówieniu, nie tylko
+     * w teście: logotyp Biegu Gdańskiego (5 zł) i jego grafika (8 zł) na jednym
+     * magnesie to jeden partner dwa razy, więc naliczamy 8 zł, nie 13.
+     */
+    public function test_demo_shows_the_licence_rule_on_a_real_order(): void
+    {
+        $this->deploymentConfig();
+        $this->seedDeployment();
+        $this->seed(DemoSeeder::class);
+
+        $licencje = OrderItemComponent::query()->licences()->get();
+
+        $this->assertCount(1, $licencje);
+        $this->assertSame('8.00', $licencje->first()->unit_amount_gross);
+        $this->assertSame('Bieg Gdański', $licencje->first()->licensor_name);
+    }
+
+    /**
+     * Zamówienie z personalizacją musi nieść imię — inaczej panel pokazuje
+     * „1 × Magnes" i sprzedawca nie wie, co wygrawerować.
+     */
+    public function test_demo_order_carries_the_personalisation(): void
+    {
+        $this->deploymentConfig();
+        $this->seedDeployment();
+        $this->seed(DemoSeeder::class);
+
+        $item = OrderItem::query()
+            ->whereNotNull('personalisation')
+            ->firstOrFail();
+
+        $this->assertStringContainsString('Zosia', $item->personalisationSummary());
     }
 
     /**

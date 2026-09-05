@@ -778,7 +778,26 @@ class OrderMailer
         // z kwotą na dole. Historia zwrotów jest w panelu, nie tutaj.
         return $order->items
             ->filter(fn ($item): bool => $item->effectiveQuantity() > 0)
-            ->map(fn ($item): string => '• '.$item->sale_unit->formatQuantity($item->effectiveQuantity()).' × '.$item->name.' — '.Money::pln($item->line_total_gross))
+            ->map(function ($item): string {
+                $line = '• '.$item->sale_unit->formatQuantity($item->effectiveQuantity())
+                    .' × '.$item->name.' — '.Money::pln($item->line_total_gross);
+
+                /*
+                 * PERSONALIZACJA W TEJ SAMEJ LINII, nie osobnym wierszem.
+                 *
+                 * Ten mail dostaje kupujący ORAZ sprzedawca (powiadomienie
+                 * o zamówieniu) — i to jest jedyne miejsce, w którym sprzedawca
+                 * widzi zamówienie, zanim otworzy panel. Bez tego czyta
+                 * „2 × Magnes" i nie wie, jakie imiona wygrawerować.
+                 *
+                 * Kupującemu służy tak samo: potwierdzenie ma pozwolić wyłapać
+                 * literówkę w imieniu, DOPÓKI da się ją jeszcze poprawić —
+                 * produkt personalizowany jest wyłączony z prawa odstąpienia.
+                 */
+                $personalizacja = $item->personalisationSummary();
+
+                return $personalizacja !== '' ? $line.' ('.$personalizacja.')' : $line;
+            })
             ->values()
             ->all();
     }
