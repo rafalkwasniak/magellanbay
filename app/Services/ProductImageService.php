@@ -3,10 +3,10 @@
 namespace App\Services;
 
 use App\Models\Product;
+use App\Support\ImageOptimizer;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use RuntimeException;
 
 /**
  * Optymalizacja i zapis zdjęć produktu. Skaluje dłuższy bok do `shop.product_images.max_side`
@@ -31,36 +31,18 @@ class ProductImageService
     }
 
     /**
-     * Skaluje i koduje obraz do WebP, zwraca binarną zawartość pliku.
+     * Skaluje i koduje obraz do WebP.
+     *
+     * Sama obróbka mieszka w `App\Support\ImageOptimizer` — używa jej także
+     * biblioteka grafik do graweru. Tutaj zostają tylko PARAMETRY właściwe
+     * zdjęciom produktu.
      */
     private function optimize(UploadedFile $file): string
     {
-        $source = @imagecreatefromstring((string) file_get_contents($file->getRealPath()));
-        if ($source === false) {
-            throw new RuntimeException('Nie udało się odczytać obrazu.');
-        }
-
-        $maxSide = (int) config('shop.product_images.max_side', 1600);
-        $width = imagesx($source);
-        $height = imagesy($source);
-        $scale = min(1.0, $maxSide / max($width, $height));
-        $newWidth = max(1, (int) round($width * $scale));
-        $newHeight = max(1, (int) round($height * $scale));
-
-        $canvas = imagecreatetruecolor($newWidth, $newHeight);
-        imagealphablending($canvas, false);
-        imagesavealpha($canvas, true);
-        imagecopyresampled($canvas, $source, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
-
-        $quality = (int) config('shop.product_images.quality', 82);
-
-        ob_start();
-        imagewebp($canvas, null, $quality);
-        $binary = (string) ob_get_clean();
-
-        imagedestroy($source);
-        imagedestroy($canvas);
-
-        return $binary;
+        return ImageOptimizer::toWebp(
+            $file,
+            (int) config('shop.product_images.max_side', 1600),
+            (int) config('shop.product_images.quality', 82),
+        );
     }
 }

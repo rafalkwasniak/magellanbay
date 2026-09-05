@@ -120,26 +120,49 @@
 
         <aside class="lg:col-span-4">
             <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
-                <h2 class="font-semibold text-stone-900">Zawartość grupy</h2>
+                <h2 class="font-semibold text-stone-900">Jak to zobaczy klient</h2>
                 @if ($group->exists)
                     <p class="mt-2 text-sm leading-relaxed text-stone-500">
-                        @if ($group->isText())
-                            Pola do wypełnienia: <span class="font-medium tabular-nums text-stone-700">{{ $group->fields->count() }}</span>
+                        Nad {{ $group->isText() ? 'polami' : 'siatką z podglądem' }} pokaże się nazwa grupy
+                        @if ($group->hint)
+                            i Twoja podpowiedź.
                         @else
-                            Pozycji w bibliotece: <span class="font-medium tabular-nums text-stone-700">{{ $group->choices->count() }}</span>
+                            — możesz dodać pod nią jedno zdanie wyjaśnienia.
                         @endif
                     </p>
-                    <p class="mt-3 text-xs leading-relaxed text-stone-500">
-                        Zarządzanie {{ $group->isText() ? 'polami' : 'biblioteką' }} dokładamy w następnym kroku.
-                        Do tego czasu grupa działa, ale zawartość ustawiam po Twojej stronie ja.
-                    </p>
+                    @if ((float) $group->surcharge_gross > 0)
+                        <p class="mt-3 text-sm leading-relaxed text-stone-500">
+                            Skorzystanie z tej grupy doda do ceny
+                            <span class="font-medium text-stone-700">{{ \App\Support\Money::pln($group->surcharge_gross) }}</span>,
+                            widoczne w rozbiciu jako osobna pozycja.
+                        </p>
+                    @endif
                 @else
                     <p class="mt-2 text-sm leading-relaxed text-stone-500">
-                        Najpierw utwórz grupę, potem dodasz do niej pola albo pozycje biblioteki.
+                        Najpierw utwórz grupę, potem dodasz do niej {{ 'pola albo pozycje biblioteki' }}.
                         Sama grupa jeszcze nic nie robi — pusta jest pytaniem bez odpowiedzi.
                     </p>
                 @endif
             </div>
         </aside>
     </form>
+
+    @if ($group->exists)
+        {{-- ZAWARTOŚĆ GRUPY — osobny formularz, bo zapisuje się osobno.
+
+             Wiersze wysyłamy w jednym żądaniu: sprzedawca układa formatkę jak
+             listę (poprawia dwa limity, przestawia kolejność, dopisuje trzecie
+             pole) i chce zobaczyć efekt raz. Kolejność bierze się z KOLEJNOŚCI
+             WIERSZY w formularzu, więc nie ma osobnego pola „pozycja" do
+             wypełniania ręcznie. --}}
+        <div class="mt-6 grid gap-6 lg:grid-cols-12">
+            <div class="lg:col-span-8">
+                @if ($group->isText())
+                    @include('seller.options._fields', ['group' => $group])
+                @else
+                    @include('seller.options._choices', ['group' => $group, 'licensors' => $licensors])
+                @endif
+            </div>
+        </div>
+    @endif
 </x-layouts.panel>

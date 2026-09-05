@@ -48,6 +48,7 @@ class OptionGroupController extends Controller
             'group' => new OptionGroup(['required' => false, 'surcharge_gross' => 0]),
             'others' => $shop->optionGroups()->get(),
             'kinds' => OptionGroupKind::cases(),
+            'licensors' => $shop->licensors()->active()->get(),
         ]);
     }
 
@@ -73,6 +74,10 @@ class OptionGroupController extends Controller
             'group' => $optionGroup->load(['fields', 'choices.licensor']),
             'others' => $request->user()->shop->optionGroups()->whereKeyNot($optionGroup->id)->get(),
             'kinds' => OptionGroupKind::cases(),
+            // Do wyboru przy grafice — tylko partnerzy AKTYWNI. Wygaszony
+            // zostaje na pozycjach, ktore juz go maja, ale nie da sie go
+            // przypisac na nowo.
+            'licensors' => $request->user()->shop->licensors()->active()->get(),
         ]);
     }
 

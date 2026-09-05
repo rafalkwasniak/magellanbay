@@ -36,6 +36,7 @@ use App\Http\Controllers\Seller\DashboardController as SellerDashboard;
 use App\Http\Controllers\Seller\DiscountCodeController;
 use App\Http\Controllers\Seller\IntegrationController;
 use App\Http\Controllers\Seller\LicensorController;
+use App\Http\Controllers\Seller\OptionContentController;
 use App\Http\Controllers\Seller\OptionGroupController;
 use App\Http\Controllers\Seller\OrderController;
 use App\Http\Controllers\Seller\PackageController;
@@ -417,6 +418,11 @@ Route::middleware(['auth', 'role:seller', 'ensure.consents'])
         Route::get('/personalizacja/{optionGroup}/edycja', [OptionGroupController::class, 'edit'])->name('options.edit');
         Route::post('/personalizacja/{optionGroup}', [OptionGroupController::class, 'update'])->name('options.update');
         Route::post('/personalizacja/{optionGroup}/usun', [OptionGroupController::class, 'destroy'])->name('options.destroy');
+
+        // Zawartosc grupy zapisujemy JEDNYM zadaniem — sprzedawca uklada formatke
+        // jak liste i chce zobaczyc efekt raz, a nie po kazdym polu z osobna.
+        Route::post('/personalizacja/{optionGroup}/pola', [OptionContentController::class, 'saveFields'])->name('options.fields');
+        Route::post('/personalizacja/{optionGroup}/biblioteka', [OptionContentController::class, 'saveChoices'])->name('options.choices');
 
         // Kartoteka licencjodawców — firm inkasujących opłatę za użycie swojego
         // znaku. Kasowanie ograniczone do wpisów nieużywanych (patrz kontroler):
