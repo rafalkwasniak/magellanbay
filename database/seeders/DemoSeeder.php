@@ -150,7 +150,7 @@ class DemoSeeder extends Seeder
     /**
      * Personalizacja i licencjodawcy — dokładnie ten układ, który opisał klient.
      *
-     * Awers: logotyp organizatora (opłata licencyjna, bez kosztu wykonania).
+     * Awers: logotyp organizatora siedzi NA PRODUKCIE (licencja), nie w opcjach.
      * Rewers: grawer — grafika ALBO własny tekst, nigdy oba. Koszt wykonania
      * siedzi na grupie, opłata licencyjna przy konkretnej grafice.
      *
@@ -175,19 +175,14 @@ class DemoSeeder extends Seeder
             'agreement_reference' => 'UM/2026/031',
         ]);
 
-        // Awers — logotyp z licencją, bez kosztu wykonania.
-        $logotyp = $shop->optionGroups()->create([
-            'name' => 'Logotyp na awersie',
-            'kind' => OptionGroupKind::Choice,
-            'hint' => 'Nieobowiązkowy. Za użycie znaku organizatora doliczamy opłatę licencyjną.',
-            'position' => 0,
-        ]);
-        $logoBiegu = $logotyp->choices()->create([
-            'label' => 'Bieg Gdański 2026', 'licensor_id' => $bieg->id, 'licence_fee_gross' => 5.00, 'position' => 0,
-        ]);
-        $logotyp->choices()->create([
-            'label' => 'PZLA', 'licensor_id' => $pzla->id, 'licence_fee_gross' => 7.00, 'position' => 1,
-        ]);
+        /*
+         * LOGOTYP AWERSU NALEŻY DO PRODUKTU, nie do wyboru kupującego —
+         * wprost ze specyfikacji („tablica produktów … nr firmy do której
+         * dowiązana jest ewentualna licencja na logotyp"). Magnes JUŻ ma
+         * logotyp; klient wybiera wyłącznie grawerkę na rewersie.
+         */
+        $products[9]->update(['licensor_id' => $bieg->id, 'licence_fee_gross' => 5.00]);
+        $products[8]->update(['licensor_id' => $pzla->id, 'licence_fee_gross' => 7.00]);
 
         // Rewers, wariant graficzny — koszt wykonania na grupie.
         $grawerGrafika = $shop->optionGroups()->create([
@@ -221,7 +216,9 @@ class DemoSeeder extends Seeder
             'name' => 'Nadruk imienia',
             'kind' => OptionGroupKind::Text,
             'hint' => 'Wpisz imię, które nadrukujemy na froncie.',
-            'surcharge_gross' => 10.00,
+            // ZERO — specyfikacja mówi wprost, że koszt personalizacji awersu
+            // jest zawarty w cenie produktu i NIE JEST wykazywany osobno.
+            'surcharge_gross' => 0,
             'required' => true,
             'position' => 3,
         ]);
@@ -231,13 +228,11 @@ class DemoSeeder extends Seeder
         foreach ([6, 7, 8] as $index) {
             $products[$index]->optionGroups()->attach($nadruk);
         }
-        $products[9]->optionGroups()->attach([$logotyp->id, $grawerGrafika->id, $grawerTekst->id]);
+        $products[9]->optionGroups()->attach([$grawerGrafika->id, $grawerTekst->id]);
 
         return [
             'nadruk' => $nadruk,
             'imie' => $imie,
-            'logotyp' => $logotyp,
-            'logoBiegu' => $logoBiegu,
             'grawerGrafika' => $grawerGrafika,
             'trasaBiegu' => $trasaBiegu,
         ];
@@ -313,14 +308,13 @@ class DemoSeeder extends Seeder
         ], null);
 
         /*
-         * Trzecie zamówienie pokazuje REGUŁĘ LICENCJI na żywym przykładzie:
-         * logotyp Biegu Gdańskiego na awersie (5 zł) i jego grafika na rewersie
-         * (8 zł). Ten sam partner dwa razy, więc naliczamy 8 zł, nie 13 —
-         * i widać to w rozbiciu ceny pozycji.
+         * Trzecie zamówienie pokazuje REGUŁĘ LICENCJI na żywym przykładzie —
+         * to jest przykład 4 ze specyfikacji klienta. Licencja logotypu awersu
+         * siedzi NA PRODUKCIE (5 zł), licencja grafiki graweru przy pozycji
+         * biblioteki (8 zł), a partner jest ten sam. Naliczamy 8 zł, nie 13.
          */
         $this->createOrder($shop, OrderStatus::Paid, 'Piotr', 'Lewandowski', [
             [$products[9], 1, [
-                $config['logotyp']->id => ['choice' => $config['logoBiegu']->id],
                 $config['grawerGrafika']->id => ['choice' => $config['trasaBiegu']->id],
             ]],
         ], null);

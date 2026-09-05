@@ -291,12 +291,31 @@ final class ProductConfiguration
             'amount' => round((float) $product->price_gross, 2),
         ]];
 
+        /*
+         * LICENCJA ZA LOGOTYP AWERSU należy do PRODUKTU, nie do wyboru
+         * kupującego — magnes już go ma („metalowy magnes z oficjalnym logotypem
+         * 7 Maraton Wałbrzych"). Zbieramy ją razem z licencjami grawerki, bo
+         * podlegają wspólnej regule: przykład 4 ze specyfikacji to 25 zł za
+         * logotyp awersu i 40 zł za grafikę graweru TEGO SAMEGO organizatora,
+         * czyli 40 zł, a nie 65.
+         */
+        $fees = [];
+
+        if ((float) $product->licence_fee_gross > 0) {
+            $fees[] = [
+                'kind' => PriceComponentKind::Licence,
+                'label' => 'Logotyp'.($product->licensor ? ' — '.$product->licensor->name : ''),
+                'licensor_id' => $product->licensor_id,
+                'licensor_name' => $product->licensor?->name,
+                'amount' => round((float) $product->licence_fee_gross, 2),
+            ];
+        }
+
         if ($configuration === []) {
-            return $components;
+            return array_merge($components, LicenceFees::reduce($fees));
         }
 
         $groups = $product->optionGroups()->with(['choices.licensor'])->get()->keyBy('id');
-        $fees = [];
 
         foreach ($configuration as $groupId => $answer) {
             $group = $groups->get((int) $groupId);

@@ -420,10 +420,17 @@ class DeploymentSeederTest extends TestCase
         $this->assertSame(5, $shop->tags()->count());
         $this->assertSame(3, $shop->orders()->count());
 
-        // Personalizacja: cztery grupy opcji i dwóch licencjodawców. Bez nich
-        // demo nie pokazuje tego, co w tym sklepie jest najważniejsze.
-        $this->assertSame(4, $shop->optionGroups()->count());
+        /*
+         * TRZY grupy opcji, nie cztery: logotyp awersu przestał być wyborem
+         * kupującego i siedzi na produkcie (licencja), zgodnie ze specyfikacją.
+         * Zostają formatka nadruku oraz grawer graficzny i tekstowy.
+         */
+        $this->assertSame(3, $shop->optionGroups()->count());
         $this->assertSame(2, $shop->licensors()->count());
+
+        // Licencja logotypu na PRODUKCIE — bez niej przykład 4 ze specyfikacji
+        // nie ma jak zaistnieć w demie.
+        $this->assertSame(2, $shop->products()->whereNotNull('licensor_id')->count());
 
         // Promowane na głównej nie mogą przekroczyć sufitu z configu — demo ma
         // pokazywać stan osiągalny w panelu, nie taki, którego panel zabrania.

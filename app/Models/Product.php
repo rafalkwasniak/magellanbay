@@ -27,6 +27,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'name', 'slug', 'description', 'price_gross', 'vat_rate',
     'track_stock', 'stock', 'sale_unit', 'is_active', 'show_on_homepage',
     'withdrawal_excluded', 'meta_description', 'meta_description_manual',
+    'licensor_id', 'licence_fee_gross',
 ])]
 class Product extends Model
 {
@@ -51,6 +52,7 @@ class Product extends Model
             'auto_hidden_at' => 'datetime',
             'show_on_homepage' => 'boolean',
             'stock' => 'decimal:2',
+            'licence_fee_gross' => 'decimal:2',
         ];
     }
 
@@ -109,6 +111,23 @@ class Product extends Model
     public function storefrontPath(): string
     {
         return '/produkt/'.$this->id.'-'.$this->slug;
+    }
+
+    /**
+     * Licencjodawca logotypu na AWERSIE produktu.
+     *
+     * Wprost ze specyfikacji: „tablica produktów … nr firmy do której dowiązana
+     * jest ewentualna licencja na logotyp, koszt ewentualnej licencji".
+     *
+     * Kupujący NIE WYBIERA tego logotypu — magnes już go ma. Wybór dotyczy
+     * wyłącznie grawerki na rewersie. Opłata wchodzi do tej samej reguły co
+     * licencja grafiki graweru: suma po firmach, maksimum wewnątrz jednej.
+     *
+     * @return BelongsTo<Licensor, $this>
+     */
+    public function licensor(): BelongsTo
+    {
+        return $this->belongsTo(Licensor::class);
     }
 
     /**
