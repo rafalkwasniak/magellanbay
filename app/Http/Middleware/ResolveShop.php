@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\Shop;
 use App\Services\SubdomainAvailability;
 use App\Support\Central;
+use App\Support\Mode;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -27,6 +28,23 @@ class ResolveShop
 
     public function handle(Request $request, Closure $next): Response
     {
+        // TRYB DEDYKOWANY: nie ma subdomeny ani parametru `{shop}` — sklep jest
+        // jeden i to on obsługuje całą domenę. Cała reszta tej metody dotyczy
+        // rozstrzygania, KTÓRY sklep, więc tutaj po prostu nie ma czego
+        // rozstrzygać. Karencja przed usunięciem też nie ma zastosowania: ekran
+        // zlecający usunięcie jest w tym trybie zamknięty, a `shops:purge` nie
+        // trafia do harmonogramu.
+        if (Mode::dedicated()) {
+            $shop = Shop::query()->first();
+
+            abort_if($shop === null, 503, 'Sklep nie został jeszcze skonfigurowany.');
+
+            $request->attributes->set('shop', $shop);
+            view()->share('shop', $shop);
+
+            return $next($request);
+        }
+
         $slug = (string) $request->route('shop');
 
         // `www` to druga nazwa centrali, nie sklep. Bez tego wpada we wzorzec

@@ -50,8 +50,14 @@
         </form>
     </div>
 
-    <p class="mt-6 text-center text-sm text-stone-500">
-        Nie masz jeszcze sklepu?
-        <a href="{{ route('register') }}" class="font-semibold text-amber-700 hover:text-amber-800">Załóż za darmo</a>
-    </p>
+    {{-- Zachęta do założenia sklepu tylko w Kramio. W sklepie dedykowanym trasa
+         `register` w ogóle nie istnieje (routes/web.php), więc `route()` rzuciłby
+         wyjątek i wywrócił ekran logowania właściciela — czyli jedyne wejście do
+         panelu. Sam tekst też nie miałby sensu: to jest jego sklep. --}}
+    @if (\App\Support\Mode::saas())
+        <p class="mt-6 text-center text-sm text-stone-500">
+            Nie masz jeszcze sklepu?
+            <a href="{{ route('register') }}" class="font-semibold text-amber-700 hover:text-amber-800">Załóż za darmo</a>
+        </p>
+    @endif
 </x-layouts.guest>

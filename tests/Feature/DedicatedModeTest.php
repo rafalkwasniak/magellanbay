@@ -43,15 +43,24 @@ class DedicatedModeTest extends TestCase
         return [$user, $shop];
     }
 
-    public function test_seller_registration_is_closed(): void
+    public function test_seller_registration_is_not_registered_at_all(): void
     {
         // Konto właściciela zakłada seeder wdrożeniowy. Otwarty formularz
         // wysyłający maile aktywacyjne na dowolny adres byłby tu wyłącznie
         // ryzykiem — i to takim, które kosztuje reputację serwera pocztowego.
-        $this->dedicated();
+        //
+        // Sprawdzamy REJESTRACJĘ TRAS, nie odpowiedź serwera: tych tras w trybie
+        // dedykowanym po prostu nie ma. Zamknięcie ich middlewarem nie
+        // wystarczyło — adres `/rejestracja` należy się klientowi sklepu, a
+        // definicja centrali stoi wyżej w pliku i cicho nadpisywała storefront.
+        $routes = $this->routesIn(Mode::DEDICATED);
 
-        $this->get(route('register'))->assertNotFound();
-        $this->post(route('register.store'), [])->assertNotFound();
+        foreach (['register', 'register.store', 'register.confirmation', 'register.resend'] as $name) {
+            $this->assertArrayNotHasKey($name, $routes);
+        }
+
+        // Adres przejmuje rejestracja KLIENTA — i to ona ma tam odpowiadać.
+        $this->assertSame('rejestracja', $routes['storefront.register'] ?? null);
     }
 
     public function test_seller_registration_stays_open_in_kramio(): void
@@ -177,18 +186,127 @@ class DedicatedModeTest extends TestCase
         $this->assertStringContainsString('shops:purge', $output);
     }
 
+    public function test_storefront_takes_over_the_main_domain(): void
+    {
+        // W Kramio sklep siedzi na subdomenie, a `/` należy do landingu
+        // platformy. W sklepie dedykowanym jest odwrotnie: `/` to strona główna
+        // SKLEPU, a landing w ogóle nie jest rejestrowany — trasa zamknięta
+        // middlewarem i tak przechwyciłaby adres, bo Laravel bierze pierwszą
+        // pasującą.
+        $routes = $this->routesIn(Mode::DEDICATED);
+
+        $this->assertSame('/', $routes['storefront.home'] ?? null);
+        $this->assertArrayNotHasKey('sitemap', $routes, 'Mapa strony centrali nie może przechwycić adresu sklepu.');
+        $this->assertArrayNotHasKey('robots', $routes, 'robots.txt centrali nie może przechwycić adresu sklepu.');
+        $this->assertArrayNotHasKey('register', $routes, 'Rejestracja sprzedawcy nadpisałaby rejestrację klienta.');
+    }
+
+    public function test_owner_login_moves_under_the_panel_prefix(): void
+    {
+        // Jeden host znaczy, że `/logowanie` może należeć tylko do jednego z
+        // dwóch logowań. Dostaje je KLIENT — to jego sklep. Właściciel wchodzi
+        // tam, gdzie i tak mieszka jego panel.
+        //
+        // Nazwy `login` i `logout` MUSZĄ przetrwać: woła je siedem widoków oraz
+        // mechanizm przekierowania gościa w Laravelu.
+        $routes = $this->routesIn(Mode::DEDICATED);
+
+        $this->assertSame('sprzedawca/logowanie', $routes['login'] ?? null);
+        $this->assertSame('sprzedawca/wyloguj', $routes['logout'] ?? null);
+        $this->assertSame('logowanie', $routes['storefront.login'] ?? null);
+        $this->assertSame('rejestracja', $routes['storefront.register'] ?? null);
+    }
+
+    public function test_kramio_keeps_the_central_addresses(): void
+    {
+        $routes = $this->routesIn(Mode::SAAS);
+
+        $this->assertSame('logowanie', $routes['login'] ?? null);
+        $this->assertSame('wyloguj', $routes['logout'] ?? null);
+        $this->assertSame('rejestracja', $routes['register'] ?? null);
+        $this->assertSame('sitemap.xml', $routes['sitemap'] ?? null);
+    }
+
+    public function test_no_two_routes_share_an_address_in_dedicated_mode(): void
+    {
+        // Storefront traci ograniczenie domeny, więc jego 39 tras ląduje w tej
+        // samej puli co trasy centrali. Para metoda+adres jest w Laravelu
+        // kluczem: zderzenie nie jest błędem, tylko CICHYM nadpisaniem — jedna
+        // trasa znika razem ze swoją nazwą. Tak właśnie zniknęło `login` przy
+        // pierwszym podejściu i panel przestał się otwierać.
+        $duplicates = $this->duplicateAddressesIn(Mode::DEDICATED);
+
+        $this->assertSame([], $duplicates, 'Adresy nie mogą się dublować: '.implode(', ', $duplicates));
+    }
+
+    /**
+     * Mapa `nazwa trasy => adres` z osobnego procesu, w zadanym trybie.
+     *
+     * @return array<string, string>
+     */
+    private function routesIn(string $mode): array
+    {
+        $json = $this->artisanIn($mode, 'route:list --json');
+        $routes = json_decode($json, true) ?? [];
+        $map = [];
+
+        foreach ($routes as $route) {
+            if (($route['name'] ?? null) !== null) {
+                $map[$route['name']] = $route['uri'];
+            }
+        }
+
+        return $map;
+    }
+
+    /**
+     * Adresy (metoda + URI) obsadzone więcej niż raz.
+     *
+     * @return list<string>
+     */
+    private function duplicateAddressesIn(string $mode): array
+    {
+        $routes = json_decode($this->artisanIn($mode, 'route:list --json'), true) ?? [];
+        $seen = [];
+        $duplicates = [];
+
+        foreach ($routes as $route) {
+            $key = $route['method'].' '.$route['uri'];
+
+            if (isset($seen[$key])) {
+                $duplicates[$key] = true;
+            }
+
+            $seen[$key] = true;
+        }
+
+        return array_keys($duplicates);
+    }
+
     /**
      * Lista zaplanowanych zadań z osobnego procesu, w zadanym trybie.
      */
     private function artisanScheduleIn(string $mode): string
     {
-        $command = sprintf(
-            'cd %s && SHOP_MODE=%s %s artisan schedule:list 2>&1',
+        return $this->artisanIn($mode, 'schedule:list');
+    }
+
+    /**
+     * Uruchamia komendę artisana w OSOBNYM PROCESIE, z zadanym trybem.
+     *
+     * Trasy i zadania cykliczne rejestrują się przy starcie aplikacji, czyli
+     * zanim test zdąży cokolwiek przestawić przez `config()->set()`. Różnice
+     * między trybami widać więc dopiero w świeżo wystartowanym procesie —
+     * inaczej sprawdzalibyśmy konfigurację, a nie rzeczywistą rejestrację.
+     */
+    private function artisanIn(string $mode, string $command): string
+    {
+        return (string) shell_exec(sprintf(
+            'cd %s && SHOP_MODE=%s %s artisan %s 2>&1',
             escapeshellarg(base_path()),
             escapeshellarg($mode),
             escapeshellarg(PHP_BINARY),
-        );
-
-        return (string) shell_exec($command);
+            $command,
+        ));
     }
 }

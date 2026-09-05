@@ -57,6 +57,7 @@ use App\Http\Controllers\Storefront\PaymentController as StorefrontPayment;
 use App\Http\Controllers\Storefront\ProductController as StorefrontProduct;
 use App\Http\Controllers\Storefront\RegisterController as StorefrontRegister;
 use App\Http\Controllers\Storefront\UnsubscribeController as StorefrontUnsubscribe;
+use App\Support\Mode;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -74,9 +75,16 @@ use Illuminate\Support\Facades\Route;
 | centrala odpowiada na każdym hoście, który nie jest subdomeną sklepu.
 */
 
-Route::get('/', function () {
-    return view('welcome');
-});
+// Strona główna PLATFORMY (landing z cennikiem). W trybie dedykowanym nie jest
+// rejestrowana w ogóle, a nie tylko zamykana middlewarem — adres `/` musi tam
+// trafić do strony głównej SKLEPU, a Laravel wybiera pierwszą pasującą trasę.
+// Zamknięta 404 przechwyciłaby `/` i sklep nie miałby jak się pokazać.
+// Trasa nie ma nazwy, więc nic jej nie woła przez `route()`.
+if (Mode::saas()) {
+    Route::get('/', function () {
+        return view('welcome');
+    });
+}
 
 // Zapis decyzji o ciasteczkach. Zwykły formularz, nie żądanie w tle: storefront
 // celowo nie ładuje JavaScriptu, a po zgodzie i tak trzeba przeładować stronę,
@@ -92,9 +100,22 @@ Route::post('/zgoda-cookies', [CookieConsentController::class, 'store'])->name('
 | Jedno wejście logowania; po zalogowaniu przekierowanie zależne od roli
 | (UserRole::homeRoute()).
 */
-Route::get('/logowanie', [AuthController::class, 'create'])->name('login');
-Route::post('/logowanie', [AuthController::class, 'store'])->name('login.attempt');
-Route::post('/wyloguj', [AuthController::class, 'destroy'])->middleware('auth')->name('logout');
+// PREFIKS LOGOWANIA DO PANELU.
+//
+// W Kramio centrala i sklepy siedzą na osobnych hostach, więc `/logowanie`
+// znaczy co innego na każdym z nich i nic się nie zderza. W sklepie dedykowanym
+// jest jeden host, a adres `/logowanie` należy się KLIENTOWI SKLEPU — to jego
+// sklep i jego konto. Właściciel przenosi się pod `/sprzedawca/logowanie`,
+// czyli tam, gdzie i tak mieszka cały jego panel.
+//
+// NAZWY TRAS (`login`, `logout`) zostają bez zmian — woła je siedem widoków
+// oraz mechanizm przekierowania gościa w Laravelu. Gdyby zniknęły, aplikacja
+// wywracałaby się przy każdej próbie wejścia na chroniony adres.
+$panelPrefix = Mode::dedicated() ? '/sprzedawca' : '';
+
+Route::get($panelPrefix.'/logowanie', [AuthController::class, 'create'])->name('login');
+Route::post($panelPrefix.'/logowanie', [AuthController::class, 'store'])->name('login.attempt');
+Route::post($panelPrefix.'/wyloguj', [AuthController::class, 'destroy'])->middleware('auth')->name('logout');
 
 // Odzyskiwanie hasła. Prośba o link jest dławiona per IP: ten formularz wysyła
 // maila na podany adres, więc bez limitu byłby drugą — obok rejestracji —
@@ -111,25 +132,31 @@ Route::post('/nowe-haslo', [PasswordResetController::class, 'update'])
 // Rejestracja sprzedawcy (nowe konta otrzymują rolę 'seller'). Konto powstaje
 // bez hasła — sprzedawca dostaje mailem link do jego ustawienia.
 //
-// `saas`: w sklepie dedykowanym rejestracji NIE MA. Konto właściciela zakłada
-// seeder wdrożeniowy, a otwarty formularz wysyłający maile na dowolny adres
-// byłby tam wyłącznie ryzykiem. AKTYWACJA (niżej) zostaje — to nią właściciel
-// ustawia pierwsze hasło.
-Route::get('/rejestracja', [RegisterController::class, 'create'])
-    ->middleware(['saas', 'registration.open'])
-    ->name('register');
-// Limit per IP: ten formularz wysyła maila aktywacyjnego na DOWOLNY podany
-// adres, więc bez dławika jest gotowym narzędziem do zalewania cudzej skrzynki
-// naszym kosztem — reputacyjnym. Progi: config/security.php.
-Route::post('/rejestracja', [RegisterController::class, 'store'])
-    ->middleware(['saas', 'throttle:register', 'registration.open'])
-    ->name('register.store');
-Route::view('/rejestracja/potwierdzenie', 'auth.registered')
-    ->middleware('saas')
-    ->name('register.confirmation');
-Route::post('/rejestracja/wyslij-ponownie', [ResendActivationController::class, 'store'])
-    ->middleware(['saas', 'throttle:5,1'])
-    ->name('register.resend');
+// W sklepie dedykowanym rejestracji sprzedawcy NIE MA i tych tras nie
+// rejestrujemy w ogóle — nie wystarczy zamknąć ich middlewarem. Adres
+// `/rejestracja` należy się tam KLIENTOWI sklepu, a Laravel wiąże trasę z parą
+// metoda+adres: definicja centrali stoi wyżej w pliku, więc nadpisałaby
+// storefront i rejestracja klienta przestałaby istnieć. Cicho, bo strona
+// wyglądałaby normalnie — tylko formularz prowadziłby donikąd.
+//
+// Nazwa `register` znika razem z trasami, dlatego odnośnik „Załóż za darmo" na
+// ekranie logowania jest w tym trybie schowany (resources/views/auth/login.blade.php).
+// AKTYWACJA (niżej) zostaje — to nią właściciel ustawia pierwsze hasło.
+if (Mode::saas()) {
+    Route::get('/rejestracja', [RegisterController::class, 'create'])
+        ->middleware('registration.open')
+        ->name('register');
+    // Limit per IP: ten formularz wysyła maila aktywacyjnego na DOWOLNY podany
+    // adres, więc bez dławika jest gotowym narzędziem do zalewania cudzej skrzynki
+    // naszym kosztem — reputacyjnym. Progi: config/security.php.
+    Route::post('/rejestracja', [RegisterController::class, 'store'])
+        ->middleware(['throttle:register', 'registration.open'])
+        ->name('register.store');
+    Route::view('/rejestracja/potwierdzenie', 'auth.registered')->name('register.confirmation');
+    Route::post('/rejestracja/wyslij-ponownie', [ResendActivationController::class, 'store'])
+        ->middleware('throttle:5,1')
+        ->name('register.resend');
+}
 
 // Aktywacja konta (ustawienie pierwszego hasła + danych) — token brokera 'activation', 24 h.
 Route::get('/aktywacja/{token}', [ActivationController::class, 'create'])->name('activation.show');
@@ -451,109 +478,125 @@ Route::middleware('auth')->group(function () {
 | sedno podziału „inne domeny → inne kontrolery". Grupa łapie tylko hosty
 | {label}.{central_domain}, więc centrala (bez subdomeny) działa jak dotąd.
 */
-Route::domain('{shop}.'.config('tenancy.central_domain'))
-    ->middleware(['tenant', 'record.traffic'])
-    ->group(function () {
-        // Mapa strony i robots.txt sklepu. MUSZĄ być tutaj, a nie wśród tras
-        // centrali: trasa bez ograniczenia domeny pasuje do KAŻDEGO hosta, więc
-        // zdefiniowana wyżej w pliku przechwyciłaby też subdomeny i każdy sklep
-        // serwowałby mapę centrali. Odpowiedniki centrali stoją na SAMYM KOŃCU
-        // pliku, już za tą grupą — kolejność rejestracji jest tu jedynym
-        // rozstrzygnięciem i dlatego pilnuje jej test.
-        Route::get('/sitemap.xml', [SitemapController::class, 'storefront'])->name('storefront.sitemap');
-        Route::get('/robots.txt', [RobotsController::class, 'storefront'])->name('storefront.robots');
+// TRYB DEDYKOWANY: te same trasy, ale BEZ ograniczenia domeny — sklep jest
+// jeden i mieszka wprost na domenie klienta, więc `{shop}` nie ma skąd wziąć
+// wartości (ResolveShop bierze wtedy jedyny sklep w instalacji).
+//
+// Definicja tras siedzi w JEDNYM domknięciu i jest rejestrowana raz. Rozpisanie
+// tych 39 tras w dwóch gałęziach `if` gwarantowałoby, że za pół roku będą się
+// różnić — a rozjazd między trybami jest tu najdroższym możliwym błędem.
+$storefrontRoutes = function () {
+    // Mapa strony i robots.txt sklepu. MUSZĄ być tutaj, a nie wśród tras
+    // centrali: trasa bez ograniczenia domeny pasuje do KAŻDEGO hosta, więc
+    // zdefiniowana wyżej w pliku przechwyciłaby też subdomeny i każdy sklep
+    // serwowałby mapę centrali. Odpowiedniki centrali stoją na SAMYM KOŃCU
+    // pliku, już za tą grupą — kolejność rejestracji jest tu jedynym
+    // rozstrzygnięciem i dlatego pilnuje jej test.
+    Route::get('/sitemap.xml', [SitemapController::class, 'storefront'])->name('storefront.sitemap');
+    Route::get('/robots.txt', [RobotsController::class, 'storefront'])->name('storefront.robots');
 
-        Route::get('/', [StorefrontHome::class, 'show'])->name('storefront.home');
-        Route::get('/produkty', [StorefrontProduct::class, 'index'])->name('storefront.products');
-        Route::get('/produkt/{product}', [StorefrontProduct::class, 'show'])->name('storefront.product');
-        // Landing działu „Informacje" → 302 na pierwszą podstronę (lewe menu
-        // przejmuje dalszą nawigację). PRZED wildcardem, by nie wpadł w {page}.
-        Route::get('/informacje', [StorefrontPage::class, 'index'])->name('storefront.information');
-        // Wirtualna „O sklepie" (treść z shop.description) — PRZED wildcardem, by
-        // stały slug nie wpadł w /informacje/{page} (który szuka strony po id).
-        Route::get('/informacje/'.config('pages.about.slug'), [StorefrontPage::class, 'about'])->name('storefront.about');
-        // Nasza Polityka prywatności renderowana w motywie sklepu, jako ostatnia
-        // pozycja działu „Informacje". Stały slug PRZED wildcardem {page}.
-        Route::get('/informacje/'.config('pages.privacy.slug'), [StorefrontPage::class, 'privacy'])->name('storefront.privacy');
-        Route::get('/informacje/{page}', [StorefrontPage::class, 'show'])->name('storefront.page');
-        // Stary adres → 301 na nowy kanoniczny (przeniesienie na stałe).
-        Route::redirect('/polityka-prywatnosci', '/informacje/'.config('pages.privacy.slug'), 301);
-        Route::get('/koszyk', [StorefrontCart::class, 'show'])->name('storefront.cart');
-        Route::get('/kasa', [StorefrontCheckout::class, 'show'])->name('storefront.checkout');
-        Route::get('/kasa/dziekujemy', [StorefrontCheckout::class, 'confirmation'])->name('storefront.checkout.confirmation');
+    Route::get('/', [StorefrontHome::class, 'show'])->name('storefront.home');
+    Route::get('/produkty', [StorefrontProduct::class, 'index'])->name('storefront.products');
+    Route::get('/produkt/{product}', [StorefrontProduct::class, 'show'])->name('storefront.product');
+    // Landing działu „Informacje" → 302 na pierwszą podstronę (lewe menu
+    // przejmuje dalszą nawigację). PRZED wildcardem, by nie wpadł w {page}.
+    Route::get('/informacje', [StorefrontPage::class, 'index'])->name('storefront.information');
+    // Wirtualna „O sklepie" (treść z shop.description) — PRZED wildcardem, by
+    // stały slug nie wpadł w /informacje/{page} (który szuka strony po id).
+    Route::get('/informacje/'.config('pages.about.slug'), [StorefrontPage::class, 'about'])->name('storefront.about');
+    // Nasza Polityka prywatności renderowana w motywie sklepu, jako ostatnia
+    // pozycja działu „Informacje". Stały slug PRZED wildcardem {page}.
+    Route::get('/informacje/'.config('pages.privacy.slug'), [StorefrontPage::class, 'privacy'])->name('storefront.privacy');
+    Route::get('/informacje/{page}', [StorefrontPage::class, 'show'])->name('storefront.page');
+    // Stary adres → 301 na nowy kanoniczny (przeniesienie na stałe).
+    Route::redirect('/polityka-prywatnosci', '/informacje/'.config('pages.privacy.slug'), 301);
+    Route::get('/koszyk', [StorefrontCart::class, 'show'])->name('storefront.cart');
+    Route::get('/kasa', [StorefrontCheckout::class, 'show'])->name('storefront.checkout');
+    Route::get('/kasa/dziekujemy', [StorefrontCheckout::class, 'confirmation'])->name('storefront.checkout.confirmation');
 
-        // Strona płatności zamówienia (token = zaszyfrowany id zamówienia). Jedno
-        // miejsce dla wszystkich linków „dokończ płatność": mail, „Moje konto",
-        // powrót z Paynow, ekran podziękowania. Działa bez logowania.
-        Route::get('/platnosc/{token}', [StorefrontPayment::class, 'show'])->name('storefront.payment.show');
-        Route::post('/platnosc/{token}', [StorefrontPayment::class, 'pay'])->name('storefront.payment.pay');
+    // Strona płatności zamówienia (token = zaszyfrowany id zamówienia). Jedno
+    // miejsce dla wszystkich linków „dokończ płatność": mail, „Moje konto",
+    // powrót z Paynow, ekran podziękowania. Działa bez logowania.
+    Route::get('/platnosc/{token}', [StorefrontPayment::class, 'show'])->name('storefront.payment.show');
+    Route::post('/platnosc/{token}', [StorefrontPayment::class, 'pay'])->name('storefront.payment.pay');
 
-        // Odstąpienie od umowy (14 dni) — publiczny formularz pod tym samym
-        // tokenem zamówienia co płatność. Bez logowania, bo ustawa wymaga, by
-        // złożenie oświadczenia było łatwe. Throttle chroni przed wysypem
-        // zgłoszeń z jednego linku, nie przed klientem (limit jest hojny).
-        // Wypis z korespondencji seryjnej — podpisany link ze stopki mailingu,
-        // bez logowania. Samo wejście wypisuje (zgoda ma być odwoływalna równie
-        // łatwo, jak udzielona); POST obok przywraca zgodę klikniętą omyłkowo.
-        // Link NIE wygasa: mail sprzed roku musi dać się odsubskrybować.
-        Route::get('/wypisz-sie/{customer}', [StorefrontUnsubscribe::class, 'show'])
-            ->middleware('signed')->name('storefront.unsubscribe');
-        Route::post('/wypisz-sie/{customer}/przywroc', [StorefrontUnsubscribe::class, 'restore'])
-            ->middleware('signed')->name('storefront.unsubscribe.restore');
+    // Odstąpienie od umowy (14 dni) — publiczny formularz pod tym samym
+    // tokenem zamówienia co płatność. Bez logowania, bo ustawa wymaga, by
+    // złożenie oświadczenia było łatwe. Throttle chroni przed wysypem
+    // zgłoszeń z jednego linku, nie przed klientem (limit jest hojny).
+    // Wypis z korespondencji seryjnej — podpisany link ze stopki mailingu,
+    // bez logowania. Samo wejście wypisuje (zgoda ma być odwoływalna równie
+    // łatwo, jak udzielona); POST obok przywraca zgodę klikniętą omyłkowo.
+    // Link NIE wygasa: mail sprzed roku musi dać się odsubskrybować.
+    Route::get('/wypisz-sie/{customer}', [StorefrontUnsubscribe::class, 'show'])
+        ->middleware('signed')->name('storefront.unsubscribe');
+    Route::post('/wypisz-sie/{customer}/przywroc', [StorefrontUnsubscribe::class, 'restore'])
+        ->middleware('signed')->name('storefront.unsubscribe.restore');
 
-        Route::get('/zwrot/{token}', [StorefrontOrderReturn::class, 'show'])->name('storefront.return.show');
-        Route::post('/zwrot/{token}', [StorefrontOrderReturn::class, 'store'])
-            ->middleware('throttle:10,1')->name('storefront.return.store');
+    Route::get('/zwrot/{token}', [StorefrontOrderReturn::class, 'show'])->name('storefront.return.show');
+    Route::post('/zwrot/{token}', [StorefrontOrderReturn::class, 'store'])
+        ->middleware('throttle:10,1')->name('storefront.return.store');
 
-        /*
-        |----------------------------------------------------------------------
-        | Konta klientów (guard `customer`, w obrębie sklepu)
-        |----------------------------------------------------------------------
-        | Rejestracja bez hasła → podpisany link aktywacyjny mailem → ustawienie
-        | hasła + przypięcie wcześniejszych zamówień + auto-login. Logowanie i
-        | wylogowanie scope'owane do sklepu. Aktywacja pod `signed` (link z maila).
-        */
-        Route::get('/rejestracja', [StorefrontRegister::class, 'create'])->name('storefront.register');
-        Route::post('/rejestracja', [StorefrontRegister::class, 'store'])
-            ->middleware('throttle:10,1')->name('storefront.register.store');
-        Route::get('/rejestracja/potwierdzenie', [StorefrontRegister::class, 'registered'])
-            ->name('storefront.register.confirmation');
+    /*
+    |----------------------------------------------------------------------
+    | Konta klientów (guard `customer`, w obrębie sklepu)
+    |----------------------------------------------------------------------
+    | Rejestracja bez hasła → podpisany link aktywacyjny mailem → ustawienie
+    | hasła + przypięcie wcześniejszych zamówień + auto-login. Logowanie i
+    | wylogowanie scope'owane do sklepu. Aktywacja pod `signed` (link z maila).
+    */
+    Route::get('/rejestracja', [StorefrontRegister::class, 'create'])->name('storefront.register');
+    Route::post('/rejestracja', [StorefrontRegister::class, 'store'])
+        ->middleware('throttle:10,1')->name('storefront.register.store');
+    Route::get('/rejestracja/potwierdzenie', [StorefrontRegister::class, 'registered'])
+        ->name('storefront.register.confirmation');
 
-        Route::get('/aktywacja/{customer}', [StorefrontActivation::class, 'create'])
-            ->middleware('signed')->name('storefront.activation');
-        Route::post('/aktywacja/{customer}', [StorefrontActivation::class, 'store'])
-            ->middleware('signed')->name('storefront.activation.store');
+    Route::get('/aktywacja/{customer}', [StorefrontActivation::class, 'create'])
+        ->middleware('signed')->name('storefront.activation');
+    Route::post('/aktywacja/{customer}', [StorefrontActivation::class, 'store'])
+        ->middleware('signed')->name('storefront.activation.store');
 
-        // Odzyskiwanie hasła klienta. Link jest PODPISANY i niesie identyfikator
-        // konta, bo konta są per sklep — ten sam e-mail bywa kontem u wielu
-        // sprzedawców i token szukany po samym adresie trafiłby w cudze.
-        Route::get('/nie-pamietam-hasla', [StorefrontPasswordReset::class, 'create'])
-            ->name('storefront.password.request');
-        Route::post('/nie-pamietam-hasla', [StorefrontPasswordReset::class, 'store'])
-            ->middleware('throttle:password_reset')->name('storefront.password.email');
-        Route::get('/nowe-haslo/{customer}', [StorefrontPasswordReset::class, 'edit'])
-            ->middleware('signed')->name('storefront.password.reset');
-        Route::post('/nowe-haslo/{customer}', [StorefrontPasswordReset::class, 'update'])
-            ->middleware('signed')->name('storefront.password.update');
+    // Odzyskiwanie hasła klienta. Link jest PODPISANY i niesie identyfikator
+    // konta, bo konta są per sklep — ten sam e-mail bywa kontem u wielu
+    // sprzedawców i token szukany po samym adresie trafiłby w cudze.
+    Route::get('/nie-pamietam-hasla', [StorefrontPasswordReset::class, 'create'])
+        ->name('storefront.password.request');
+    Route::post('/nie-pamietam-hasla', [StorefrontPasswordReset::class, 'store'])
+        ->middleware('throttle:password_reset')->name('storefront.password.email');
+    Route::get('/nowe-haslo/{customer}', [StorefrontPasswordReset::class, 'edit'])
+        ->middleware('signed')->name('storefront.password.reset');
+    Route::post('/nowe-haslo/{customer}', [StorefrontPasswordReset::class, 'update'])
+        ->middleware('signed')->name('storefront.password.update');
 
-        Route::get('/logowanie', [StorefrontAuth::class, 'create'])->name('storefront.login');
-        Route::post('/logowanie', [StorefrontAuth::class, 'store'])
-            ->middleware('throttle:10,1')->name('storefront.login.attempt');
-        Route::post('/wyloguj', [StorefrontAuth::class, 'destroy'])->name('storefront.logout');
+    Route::get('/logowanie', [StorefrontAuth::class, 'create'])->name('storefront.login');
+    Route::post('/logowanie', [StorefrontAuth::class, 'store'])
+        ->middleware('throttle:10,1')->name('storefront.login.attempt');
+    Route::post('/wyloguj', [StorefrontAuth::class, 'destroy'])->name('storefront.logout');
 
-        // Moje konto — tylko zalogowany klient (guard `customer`): historia
-        // zamówień, dane profilu, zmiana hasła, usunięcie konta (RODO).
-        Route::middleware('auth.customer')->prefix('moje-konto')->name('storefront.account.')->group(function () {
-            Route::get('/', [StorefrontAccount::class, 'index'])->name('index');
-            Route::get('/zamowienia', [StorefrontAccount::class, 'orders'])->name('orders');
-            Route::get('/zamowienia/{order}', [StorefrontAccount::class, 'order'])->name('order');
-            Route::get('/dane', [StorefrontAccount::class, 'edit'])->name('edit');
-            Route::post('/dane', [StorefrontAccount::class, 'update'])->name('update');
-            Route::post('/zgody', [StorefrontAccount::class, 'consents'])->name('consents');
-            Route::post('/haslo', [StorefrontAccount::class, 'password'])->name('password');
-            Route::post('/usun', [StorefrontAccount::class, 'destroy'])->name('destroy');
-        });
+    // Moje konto — tylko zalogowany klient (guard `customer`): historia
+    // zamówień, dane profilu, zmiana hasła, usunięcie konta (RODO).
+    Route::middleware('auth.customer')->prefix('moje-konto')->name('storefront.account.')->group(function () {
+        Route::get('/', [StorefrontAccount::class, 'index'])->name('index');
+        Route::get('/zamowienia', [StorefrontAccount::class, 'orders'])->name('orders');
+        Route::get('/zamowienia/{order}', [StorefrontAccount::class, 'order'])->name('order');
+        Route::get('/dane', [StorefrontAccount::class, 'edit'])->name('edit');
+        Route::post('/dane', [StorefrontAccount::class, 'update'])->name('update');
+        Route::post('/zgody', [StorefrontAccount::class, 'consents'])->name('consents');
+        Route::post('/haslo', [StorefrontAccount::class, 'password'])->name('password');
+        Route::post('/usun', [StorefrontAccount::class, 'destroy'])->name('destroy');
     });
+};
+
+if (Mode::dedicated()) {
+    // Sklep na domenie głównej. Trasy centrali, które by z nim kolidowały, są
+    // w tym trybie zamknięte middlewarem `saas` albo w ogóle nierejestrowane
+    // (strona główna platformy) — patrz góra pliku.
+    Route::middleware(['tenant', 'record.traffic'])->group($storefrontRoutes);
+} else {
+    Route::domain('{shop}.'.config('tenancy.central_domain'))
+        ->middleware(['tenant', 'record.traffic'])
+        ->group($storefrontRoutes);
+}
 
 /*
 |--------------------------------------------------------------------------
@@ -568,5 +611,13 @@ Route::domain('{shop}.'.config('tenancy.central_domain'))
 | `robots.txt` działa tylko dopóki NIE MA pliku `public/robots.txt` — .htaccess
 | oddaje istniejące pliki z pominięciem Laravela.
 */
-Route::get('/sitemap.xml', [SitemapController::class, 'central'])->name('sitemap');
-Route::get('/robots.txt', [RobotsController::class, 'central'])->name('robots');
+// W sklepie dedykowanym nie ma centrali, więc nie ma też jej mapy strony ani
+// robots.txt — te adresy należą się SKLEPOWI. Trasy centrali stoją w pliku ZA
+// grupą storefrontu, więc nadpisałyby jego wersje i Google indeksowałby mapę
+// platformy zamiast katalogu produktów. Usterka byłaby cicha: adres
+// odpowiadałby poprawnym XML-em, tylko nie tym, co trzeba.
+// Żaden widok nie woła nazw `sitemap` ani `robots`, więc mogą zniknąć.
+if (Mode::saas()) {
+    Route::get('/sitemap.xml', [SitemapController::class, 'central'])->name('sitemap');
+    Route::get('/robots.txt', [RobotsController::class, 'central'])->name('robots');
+}
