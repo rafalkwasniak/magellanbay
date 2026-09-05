@@ -111,7 +111,9 @@
                  ich tutaj NIE zapisuje się do sklepu — trafia wyłącznie do
                  regulaminu. Adres rejestrowy, zwrotów i kontaktowy bywają trzema
                  różnymi rzeczami i sprzedawca ma prawo je rozróżnić. --}}
-            @if ($page->exists && $page->is_system)
+            @php($polityka = $page->slug === config('pages.privacy.slug'))
+
+            @if ($page->exists && $page->is_system && ! $polityka)
                 @php($kreator = session('terms_wizard'))
                 <div class="rounded-3xl border border-amber-200 bg-amber-50 p-6">
                     @if ($kreator || $errors->any())
@@ -213,6 +215,95 @@
 
                     <p class="mt-3 text-xs leading-relaxed text-stone-500">
                         To wzór do uzupełnienia i sprawdzenia, a nie gotowy dokument. Publikujesz go jako własny regulamin i odpowiadasz za jego treść.
+                    </p>
+                </div>
+            @endif
+
+            {{-- KREATOR POLITYKI PRYWATNOŚCI — bliźniak powyższego.
+
+                 Pól jest mniej, bo polityka opisuje głównie infrastrukturę:
+                 odbiorców danych wyliczamy z WŁĄCZONYCH integracji sklepu,
+                 więc pytamy tylko o to, czego nie da się odczytać — kto jest
+                 administratorem i jak się z nim skontaktować. --}}
+            @if ($page->exists && $page->is_system && $polityka)
+                @php($kreator = session('privacy_wizard'))
+                <div class="rounded-3xl border border-amber-200 bg-amber-50 p-6">
+                    @if ($kreator || $errors->any())
+                        @php($w = fn (string $pole) => old($pole, $kreator[$pole] ?? ($page->terms_answers[$pole] ?? '')))
+                        <h2 class="font-semibold text-stone-900">Wzór polityki prywatności</h2>
+
+                        @unless (\App\Support\SellerPrivacy::holdsPlaceholder($page->content))
+                            <p class="mt-2 rounded-2xl bg-white px-4 py-3 text-sm text-amber-900">
+                                W edytorze jest już Twój tekst — wzór go zastąpi. <span class="font-medium">Nic nie zostanie zapisane</span>,
+                                dopóki nie klikniesz „Zapisz zmiany".
+                            </p>
+                        @endunless
+
+                        <p class="mt-3 text-sm leading-relaxed text-stone-600">
+                            Pytamy tylko o to, czego nie wiemy. Resztę — jakie dane zbiera sklep, komu je przekazuje
+                            i jak długo je trzyma — <span class="font-medium text-stone-700">wypełnimy z ustawień Twojego sklepu</span>.
+                        </p>
+
+                        <form method="POST" action="{{ route('seller.pages.privacy.insert', $page) }}" class="mt-4 space-y-4" novalidate data-validate>
+                            @csrf
+
+                            @foreach ([
+                                ['seller_name', 'Kto odpowiada za dane', 'Nazwa firmy albo imię i nazwisko. To administrator danych.', true],
+                                ['nip', 'NIP', 'Zostaw puste przy działalności nierejestrowanej.', false],
+                                ['address', 'Adres', 'Klient ma prawo wiedzieć, dokąd napisać w sprawie swoich danych.', true],
+                                ['email', 'E-mail', 'Tędy idą żądania dostępu, sprostowania i usunięcia danych.', true],
+                                ['phone', 'Telefon', 'Nieobowiązkowy.', false],
+                            ] as [$pole, $etykieta, $podpowiedz, $wymagane])
+                                <div>
+                                    <label for="p-{{ $pole }}" class="block text-sm font-medium text-stone-700">{{ $etykieta }}</label>
+                                    <input id="p-{{ $pole }}" name="{{ $pole }}" type="text" value="{{ $w($pole) }}"
+                                        @if ($wymagane) required data-msg-required="To pole wchodzi wprost do polityki — bez niego dokument miałby lukę." @endif
+                                        class="mt-1 block w-full rounded-2xl border border-amber-200 bg-white px-4 py-2.5 text-sm shadow-sm transition focus:border-amber-400 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
+                                    <p class="mt-1 text-xs text-stone-500">{{ $podpowiedz }}</p>
+                                    @error($pole)
+                                        <p class="mt-1 text-sm text-rose-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                            @endforeach
+
+                            {{-- Mówimy wprost, co z tego wyjdzie: polityka wymienia WYŁĄCZNIE
+                                 realnie włączone integracje. To nie jest ograniczenie wzoru,
+                                 tylko warunek jego prawdziwości — dokument mówiący o operatorze
+                                 płatności w sklepie bez płatności kłamie o cudzych danych. --}}
+                            <p class="rounded-2xl bg-white px-4 py-3 text-xs leading-relaxed text-stone-600">
+                                Wzór wymieni tylko te firmy, którym Twój sklep faktycznie przekazuje dane — przewoźnika,
+                                operatora płatności, system faktur. Po włączeniu kolejnej integracji
+                                <span class="font-medium text-stone-700">wstaw wzór ponownie</span>, żeby polityka nadal mówiła prawdę.
+                            </p>
+
+                            <div class="flex flex-wrap gap-2">
+                                <button type="submit"
+                                    class="inline-flex items-center rounded-full bg-amber-600 px-4 py-1.5 text-sm font-medium text-white shadow-sm transition hover:bg-amber-700">
+                                    Wstaw wzór do edytora
+                                </button>
+                                <a href="{{ route('seller.pages.edit', $page) }}"
+                                    class="inline-flex items-center rounded-full border border-stone-200 bg-white px-4 py-1.5 text-sm font-medium text-stone-600 transition hover:bg-stone-50">
+                                    Nie, wróć
+                                </a>
+                            </div>
+                        </form>
+                    @else
+                        <h2 class="font-semibold text-stone-900">Nie masz polityki prywatności?</h2>
+                        <p class="mt-2 text-sm leading-relaxed text-stone-600">
+                            Przygotujemy wzór opisujący Twój sklep — jakie dane zbiera, komu je przekazuje i jak długo trzyma.
+                            Zapytamy tylko o to, czego nie wiemy.
+                        </p>
+                        <form method="POST" action="{{ route('seller.pages.privacy', $page) }}" class="mt-4">
+                            @csrf
+                            <button type="submit"
+                                class="inline-flex rounded-2xl bg-gradient-to-br from-amber-500 to-rose-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-rose-500/20 transition hover:brightness-105">
+                                Wstaw wzór polityki
+                            </button>
+                        </form>
+                    @endif
+
+                    <p class="mt-3 text-xs leading-relaxed text-stone-500">
+                        To wzór do uzupełnienia i sprawdzenia, a nie gotowy dokument. Publikujesz go jako własną politykę i odpowiadasz za jej treść.
                     </p>
                 </div>
             @endif

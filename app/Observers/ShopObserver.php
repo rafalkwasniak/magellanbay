@@ -5,11 +5,12 @@ namespace App\Observers;
 use App\Jobs\GenerateSeoDescription;
 use App\Jobs\GenerateShopOgImage;
 use App\Models\Shop;
+use App\Support\Mode;
 
 /**
- * Zakłada nowemu sklepowi stronę systemową Regulamin (nieusuwalną). Szkielet
- * treści bierzemy z config/pages.php — sprzedawca uzupełnia go pod swój sklep.
- * `is_system` ustawiamy jawnie, bo nie jest mass-assignable na modelu Page.
+ * Zakłada nowemu sklepowi strony systemowe (nieusuwalne): Regulamin zawsze,
+ * a w trybie dedykowanym także Politykę prywatności. Szkielet treści bierzemy
+ * z config/pages.php — właściciel uzupełnia go pod swój sklep.
  *
  * Pilnuje też grafiki sklepu do social mediów: przerysowuje ją, gdy zmieni się
  * cokolwiek, co na niej widać (nazwa, logo, kolory motywu).
@@ -30,19 +31,46 @@ class ShopObserver
 
     public function created(Shop $shop): void
     {
-        $regulamin = config('pages.regulamin');
+        $this->systemPage($shop, config('pages.regulamin'), 0);
 
+        /*
+         * POLITYKA PRYWATNOŚCI TYLKO W TRYBIE DEDYKOWANYM.
+         *
+         * W Kramio pod adresem polityki renderuje się NASZ dokument: platforma
+         * jest tam podmiotem przetwarzającym i to ona opisuje, co dzieje się
+         * z danymi. W sklepie dedykowanym platformy nie ma — właściciel jest
+         * administratorem danych i gospodarzem serwera naraz, więc polityka
+         * musi być jego, edytowalna w panelu jak każda inna strona.
+         *
+         * Bez tego sklep klienta publikował pod tym adresem dokument cudzego
+         * podmiotu (albo pustkę, gdy dokumentu platformy nie wgrano), a odnośnik
+         * do niego `informationMenu()` dokleja w nagłówku i stopce ZAWSZE.
+         */
+        if (Mode::dedicated()) {
+            $this->systemPage($shop, config('pages.privacy'), 1);
+        }
+
+        GenerateShopOgImage::dispatch($shop);
+    }
+
+    /**
+     * Strona systemowa — nieusuwalna, od razu opublikowana, ze szkieletem treści
+     * z `config/pages.php`. `is_system` ustawiamy jawnie, bo nie jest
+     * mass-assignable na modelu Page.
+     *
+     * @param  array{title: string, slug: string, content: string}  $definicja
+     */
+    private function systemPage(Shop $shop, array $definicja, int $position): void
+    {
         $page = $shop->pages()->make([
-            'title' => $regulamin['title'],
-            'slug' => $regulamin['slug'],
-            'content' => $regulamin['content'],
-            'position' => 0,
+            'title' => $definicja['title'],
+            'slug' => $definicja['slug'],
+            'content' => $definicja['content'],
+            'position' => $position,
             'published' => true,
         ]);
         $page->is_system = true;
         $page->save();
-
-        GenerateShopOgImage::dispatch($shop);
     }
 
     /**

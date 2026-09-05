@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Seller;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Seller\PageRequest;
+use App\Http\Requests\Seller\SellerPrivacyRequest;
 use App\Http\Requests\Seller\SellerTermsRequest;
 use App\Models\Page;
+use App\Support\SellerPrivacy;
 use App\Support\SellerTerms;
 use Illuminate\Contracts\Support\Renderable;
 use Illuminate\Http\JsonResponse;
@@ -190,6 +192,50 @@ class PageController extends Controller
                 'terms_template_version' => SellerTerms::VERSION,
             ])
             ->with('success', 'Wzór wstawiony do edytora. Przeczytaj go i zapisz — dopiero zapis publikuje regulamin w Twoim sklepie.');
+    }
+
+    /**
+     * Otwiera kreator POLITYKI PRYWATNOŚCI — bliźniak `termsWizard()`.
+     *
+     * Osobna para akcji zamiast jednej „uniwersalnej": oba dokumenty pytają
+     * o co innego (polityka nie potrzebuje terminu wysyłki ani towarów bez
+     * prawa zwrotu), mają osobne reguły walidacji i osobne wersje wzoru.
+     * Sklejenie ich w jedno oznaczałoby warunki „jeśli to polityka" w każdym
+     * z tych miejsc.
+     */
+    public function privacyWizard(Request $request, Page $page): RedirectResponse
+    {
+        $this->authorizePage($request, $page);
+        abort_unless($page->is_system, 404);
+
+        return redirect()
+            ->route('seller.pages.edit', $page)
+            ->with('privacy_wizard', SellerPrivacy::defaults($request->user()->shop, $page));
+    }
+
+    /**
+     * Wstawia wypełniony wzór polityki do EDYTORA — bez zapisu treści.
+     *
+     * Ta sama ostrożność co przy regulaminie: podstrona systemowa jest zawsze
+     * opublikowana, więc zapis treści oznaczałby publikację dokumentu prawnego
+     * w imieniu właściciela, zanim ten go przeczyta. Odbijamy przez
+     * `withInput()`; publikuje dopiero „Zapisz".
+     */
+    public function insertPrivacy(SellerPrivacyRequest $request, Page $page): RedirectResponse
+    {
+        $this->authorizePage($request, $page);
+        abort_unless($page->is_system, 404);
+
+        $dane = $request->safe()->only(array_keys(SellerPrivacy::POLA));
+        $page->forceFill(['terms_answers' => $dane])->save();
+
+        return redirect()
+            ->route('seller.pages.edit', $page)
+            ->withInput([
+                'content' => SellerPrivacy::render($request->user()->shop, $dane),
+                'terms_template_version' => SellerPrivacy::VERSION,
+            ])
+            ->with('success', 'Wzór wstawiony do edytora. Przeczytaj go i zapisz — dopiero zapis publikuje politykę w Twoim sklepie.');
     }
 
     /**

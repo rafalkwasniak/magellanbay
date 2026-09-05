@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Enums\LegalDocumentType;
+use App\Models\LegalDocument;
 use App\Models\Shop;
 use App\Models\User;
 use App\Support\Mode;
@@ -281,6 +283,66 @@ class DedicatedModeTest extends TestCase
         }
 
         return array_keys($duplicates);
+    }
+
+    /**
+     * KTO JEST ADMINISTRATOREM DANYCH — najpoważniejsza różnica prawna między
+     * trybami, a przez chwilę niewidoczna gołym okiem.
+     *
+     * W Kramio pod adresem polityki stoi dokument PLATFORMY: operator jest
+     * podmiotem przetwarzającym i to on opisuje, co dzieje się z danymi.
+     * W sklepie dedykowanym platformy nie ma — dokument platformy wskazywałby
+     * klientom Magellana OBCĄ firmę jako administratora ich danych, a odnośnik
+     * do niego `informationMenu()` dokleja w nagłówku i stopce zawsze.
+     *
+     * Trasy rejestrują się przy starcie aplikacji (tryb z phpunit.xml = Kramio),
+     * więc adres wołamy subdomenowy — przestawiamy tylko tryb, bo rozstrzyga on
+     * o ŹRÓDLE TREŚCI w kontrolerze, a nie o adresie.
+     */
+    public function test_privacy_policy_comes_from_the_platform_in_saas(): void
+    {
+        $shop = Shop::factory()->active()->create();
+
+        // Dokument platformy w bazie już jest (migracja danych), więc go
+        // NADPISUJEMY — wstawienie drugiego v1 łamie unikat (type, version).
+        LegalDocument::updateOrCreate(
+            ['type' => LegalDocumentType::Privacy, 'version' => 1],
+            ['content' => '<div>Politykę wydaje operator platformy.</div>', 'published_at' => now()],
+        );
+
+        $this->get($this->storefront($shop).$shop->privacyPath())
+            ->assertOk()
+            ->assertSee('Politykę wydaje operator platformy');
+    }
+
+    public function test_privacy_policy_comes_from_the_shop_when_dedicated(): void
+    {
+        $this->dedicated();
+
+        // Sklep tworzymy PO przestawieniu trybu — stronę systemową zakłada
+        // ShopObserver w chwili zapisu.
+        $shop = Shop::factory()->active()->create();
+
+        // Dokument platformy w bazie już jest (migracja danych), więc go
+        // NADPISUJEMY — wstawienie drugiego v1 łamie unikat (type, version).
+        LegalDocument::updateOrCreate(
+            ['type' => LegalDocumentType::Privacy, 'version' => 1],
+            ['content' => '<div>Politykę wydaje operator platformy.</div>', 'published_at' => now()],
+        );
+
+        $shop->pages()
+            ->where('slug', config('pages.privacy.slug'))
+            ->update(['content' => '<div>Administratorem danych jest Magellan Bay.</div>']);
+
+        $this->get($this->storefront($shop).$shop->privacyPath())
+            ->assertOk()
+            ->assertSee('Administratorem danych jest Magellan Bay')
+            ->assertDontSee('operator platformy');
+    }
+
+    private function storefront(Shop $shop): string
+    {
+        return 'http://'.$shop->slug.'.'.config('tenancy.central_domain');
     }
 
     /**

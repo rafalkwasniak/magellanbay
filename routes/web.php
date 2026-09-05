@@ -424,6 +424,13 @@ Route::middleware(['auth', 'role:seller', 'ensure.consents'])
         Route::post('/informacje/{page}/wzor', [PageController::class, 'termsWizard'])->name('pages.terms');
         Route::post('/informacje/{page}/wzor/wstaw', [PageController::class, 'insertTerms'])->name('pages.terms.insert');
 
+        // Wzór polityki prywatności — ta sama para akcji, osobny dokument.
+        // Trasy istnieją w obu trybach, bo strona systemowa „Polityka
+        // prywatności" powstaje tylko w dedykowanym, a bez strony i tak nie ma
+        // ich jak wywołać (`abort_unless($page->is_system)`).
+        Route::post('/informacje/{page}/wzor-polityki', [PageController::class, 'privacyWizard'])->name('pages.privacy');
+        Route::post('/informacje/{page}/wzor-polityki/wstaw', [PageController::class, 'insertPrivacy'])->name('pages.privacy.insert');
+
         // Produkty (edycja/usuwanie przez POST — FOUNDATION sek. 5).
         Route::get('/produkty', [ProductController::class, 'index'])->name('products.index');
         Route::get('/produkty/nowy', [ProductController::class, 'create'])->name('products.create');

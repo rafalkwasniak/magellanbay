@@ -523,6 +523,15 @@ class Shop extends Model
         }
 
         foreach ($this->pages()->published()->get() as $page) {
+            // Politykę pomijamy w pętli i doklejamy niżej pod jej STAŁYM adresem.
+            // W trybie dedykowanym jest ona zwykłą stroną systemową sklepu, więc
+            // bez tego warunku pojawiłaby się w menu DWA RAZY — raz jako strona,
+            // raz jako doklejana pozycja. W Kramio takiej strony nie ma i warunek
+            // nie robi nic.
+            if ($page->slug === config('pages.privacy.slug')) {
+                continue;
+            }
+
             $items[] = ['label' => $page->title, 'url' => $page->storefrontPath()];
         }
 

@@ -106,6 +106,19 @@ return [
     'privacy' => [
         'slug' => 'polityka-prywatnosci',
         'title' => 'Polityka prywatności',
+
+        /*
+         * `content` jest używane WYŁĄCZNIE w trybie dedykowanym, gdzie polityka
+         * przestaje być dokumentem platformy i staje się stroną systemową
+         * sklepu — dokładnie jak Regulamin. W Kramio ta wartość leży odłogiem,
+         * bo pod tym adresem renderuje się nasz własny dokument.
+         */
+        'content' => '<div>Polityka prywatności naszego sklepu jest właśnie w przygotowaniu. '
+            .'Chcemy opisać w niej dokładnie, co dzieje się z Twoimi danymi — '
+            .'zanim poprosimy Cię o jakiekolwiek. Dziękujemy za cierpliwość.<br><br></div>'
+            .'<div>Polityka wyjaśnia, jakie dane zbieramy przy zakupach i zakładaniu konta, '
+            .'po co ich potrzebujemy, jak długo je przechowujemy i komu je przekazujemy — '
+            .'a także z jakich praw możesz wobec nas skorzystać.</div>',
     ],
 
     /*

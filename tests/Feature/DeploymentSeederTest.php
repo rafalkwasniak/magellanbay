@@ -156,20 +156,44 @@ class DeploymentSeederTest extends TestCase
     }
 
     /**
-     * Strona „Regulamin" powstaje z obserwatora sklepu, nie z seedera — i ma
+     * Strony systemowe powstają z obserwatora sklepu, nie z seedera — i mają
      * powstać także tutaj. Gdyby seeder omijał obserwatora (np. wstawiając
-     * wiersz zapytaniem), sklep klienta ruszyłby bez nieusuwalnej strony
-     * systemowej i nikt by tego nie zauważył aż do pierwszej reklamacji.
+     * wiersz zapytaniem), sklep klienta ruszyłby bez nieusuwalnych dokumentów
+     * i nikt by tego nie zauważył aż do pierwszej reklamacji.
+     *
+     * W trybie dedykowanym są DWIE: regulamin i polityka prywatności. Polityka
+     * jest tu dokumentem SKLEPU, bo nie ma platformy, która mogłaby opisać
+     * przetwarzanie danych za właściciela.
      */
-    public function test_system_terms_page_is_created_with_the_shop(): void
+    public function test_system_pages_are_created_with_the_shop(): void
     {
         $this->deploymentConfig();
         $this->seedDeployment();
 
-        $page = Page::query()->sole();
+        $slugi = Page::query()->where('is_system', true)->pluck('slug')->all();
 
-        $this->assertSame(config('pages.regulamin.slug'), $page->slug);
-        $this->assertTrue((bool) $page->is_system);
+        $this->assertEqualsCanonicalizing([
+            config('pages.regulamin.slug'),
+            config('pages.privacy.slug'),
+        ], $slugi);
+
+        $this->assertSame(2, Page::query()->count());
+    }
+
+    /**
+     * Obie strony są opublikowane od razu — inaczej sklep miałby w menu odnośnik
+     * prowadzący w pustkę. Treścią jest na starcie zaślepka, którą właściciel
+     * podmienia wzorem z kreatora.
+     */
+    public function test_system_pages_start_published_with_a_placeholder(): void
+    {
+        $this->deploymentConfig();
+        $this->seedDeployment();
+
+        foreach (Page::query()->where('is_system', true)->get() as $page) {
+            $this->assertTrue((bool) $page->published);
+            $this->assertNotEmpty($page->content);
+        }
     }
 
     public function test_slug_is_derived_from_shop_name_when_not_given(): void

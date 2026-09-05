@@ -61,6 +61,7 @@
 - [Text truncation](text-truncation-preserve-words.md) · [Email outbox + cron](email-outbox-cron-pattern.md)
 
 ## Gotchas techniczne
+- [Tryb dedykowany: resztki po platformie](gotcha-dedicated-mode-platform-leftovers.md) — **kod nie wywala się, tylko MÓWI NIEPRAWDĘ.** Trafione 3× w jednej sesji.
 - [Artefakt udostępnia PRZYPIĘTĄ wersję](gotcha-artifact-share-pinned-version.md) — **republish jej NIE zmienia; każda zmiana = NOWY artefakt.**
 - [TESTY NIGDY nie strzelają do API](tests-never-hit-real-apis.md) — INCYDENT 30.07: ~46 realnych faktur. `preventStrayRequests()` nigdy nie zdejmować.
 - [TESTY NIGDY nie ruszają plików produkcji](tests-never-touch-production-files.md) — INCYDENT 04.08. GOTCHA: `Storage::fake()` gubi `url`.

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Storefront;
 use App\Enums\LegalDocumentType;
 use App\Http\Controllers\Controller;
 use App\Models\LegalDocument;
+use App\Support\Mode;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -56,19 +57,43 @@ class PageController extends Controller
     }
 
     /**
-     * Polityka prywatności — treść należy do Kramio (administrator danych), ale
-     * renderujemy ją W MOTYWIE sklepu, żeby wizualnie spinała się z resztą
-     * storefrontu. Treść jest NASZA (Kramio, administrator danych), ale wpięta w
-     * dział „Informacje" jako ostatnia pozycja (menu skorupy + stopka), pod
-     * adresem /informacje/{slug}. Zawsze dostępna (strona prawna) — bez bramki
-     * „już wkrótce".
+     * Polityka prywatności pod stałym adresem /informacje/polityka-prywatnosci.
+     *
+     * Renderowana zawsze w MOTYWIE sklepu i zawsze dostępna (to strona prawna —
+     * bez bramki „już wkrótce"), jako ostatnia pozycja działu „Informacje".
+     *
+     * DWA ŹRÓDŁA TREŚCI, zależnie od tego, KTO jest administratorem danych:
+     *
+     * - Kramio: dokument PLATFORMY. Sklep działa na cudzej infrastrukturze,
+     *   operator jest podmiotem przetwarzającym i to on opisuje, co się z danymi
+     *   dzieje. Sprzedawca nie ma jak tego opisać ani za to odpowiadać.
+     *
+     * - Sklep dedykowany: strona systemowa SKLEPU. Nie ma platformy ani
+     *   powierzenia — właściciel jest administratorem i gospodarzem serwera
+     *   naraz. Dokument platformy byłby tu polityką cudzego podmiotu, wskazującą
+     *   klientom obcą firmę jako administratora ich danych.
      */
     public function privacy(Request $request): View
     {
+        $shop = $request->attributes->get('shop');
+
+        if (Mode::dedicated()) {
+            $page = $shop->pages()
+                ->where('slug', config('pages.privacy.slug'))
+                ->where('is_system', true)
+                ->first();
+
+            return view('storefront.privacy', [
+                'shop' => $shop,
+                'title' => config('pages.privacy.title'),
+                'content' => $page?->published ? $page->content : null,
+            ]);
+        }
+
         return view('storefront.privacy', [
-            'shop' => $request->attributes->get('shop'),
+            'shop' => $shop,
             'title' => 'Polityka prywatności',
-            'document' => LegalDocument::current(LegalDocumentType::Privacy),
+            'content' => LegalDocument::current(LegalDocumentType::Privacy)?->content,
         ]);
     }
 
