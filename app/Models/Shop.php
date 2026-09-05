@@ -106,6 +106,17 @@ class Shop extends Model
     }
 
     /**
+     * Grupy opcji sklepu — definiowane raz, przypinane do wielu produktów.
+     * To biblioteka sprzedawcy, nie właściwość pojedynczego produktu.
+     *
+     * @return HasMany<OptionGroup, $this>
+     */
+    public function optionGroups(): HasMany
+    {
+        return $this->hasMany(OptionGroup::class)->ordered();
+    }
+
+    /**
      * @return HasMany<Tag, $this>
      */
     public function tags(): HasMany

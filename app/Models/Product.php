@@ -120,6 +120,35 @@ class Product extends Model
     }
 
     /**
+     * Grupy opcji przypięte do produktu — bloki pytań zadawane przy zakupie
+     * (formatka do wpisania, biblioteka do wyboru).
+     *
+     * Kolejność z `position` grupy, nie z pivota: ten sam „Nadruk" ma stać
+     * w tym samym miejscu na każdej karcie produktu, bo kupujący uczy się
+     * układu, a nie zapamiętuje go osobno dla każdego magnesu.
+     *
+     * @return BelongsToMany<OptionGroup, $this>
+     */
+    public function optionGroups(): BelongsToMany
+    {
+        return $this->belongsToMany(OptionGroup::class)
+            ->orderBy('option_groups.position')
+            ->orderBy('option_groups.id');
+    }
+
+    /**
+     * Czy produkt w ogóle jest personalizowany.
+     *
+     * Osobna metoda, a nie `optionGroups()->isNotEmpty()` rozsiane po widokach:
+     * karta produktu, koszyk i arkusz produkcyjny pytają o to samo, a pytanie
+     * „czy trzeba pokazać formularz" jest inne niż „ile jest grup".
+     */
+    public function isPersonalised(): bool
+    {
+        return $this->optionGroups()->exists();
+    }
+
+    /**
      * Pozycje zamówień, w których ten produkt wystąpił. Relacja historyczna —
      * pozycja niesie własną migawkę nazwy i ceny, a `product_id` służy do
      * powiązania z katalogiem (bestsellery w analityce, flaga zwrotów art. 38).
