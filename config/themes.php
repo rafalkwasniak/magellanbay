@@ -516,6 +516,86 @@ return [
             ],
         ],
 
+        /*
+        |----------------------------------------------------------------------
+        | Biały port — szablon wdrożeń dedykowanych
+        |----------------------------------------------------------------------
+        |
+        | Powstał dla Magellan Bay (magnesy podróżnicze), ale nazwany i napisany
+        | GENERYCZNIE, bo ma być punktem wyjścia dla kolejnych sklepów „na
+        | własnym serwerze". Nazwa klienta w slugu szablonu oznaczałaby, że
+        | następny dostaje wygląd nazwany po kimś obcym.
+        |
+        | Skąd te kolory: z serwisu klienta (40latidopiachu.pl). Pomarańcz
+        | #E95A0B robi tam linki, pasek górny i podświetlenie menu — to kolor,
+        | z którym klient żyje. My bierzemy go PRZYCIEMNIONEGO o jeden ton:
+        | #E95A0B ma na bieli kontrast 3,54:1, czyli za mało dla zwykłego tekstu
+        | (WCAG AA wymaga 4,5:1) — ani jako kolor linku, ani jako tło przycisku
+        | z białym napisem. #C04A09 ma ten sam odcień (21°), tylko niżej
+        | w jasności: na oko nadal jego pomarańcz, a przestaje być problemem
+        | dostępności. Pozostałe palety to jego kolory uzupełniające, tak samo
+        | doprowadzone do progu czytelności.
+        |
+        | CZYM RÓŻNI SIĘ OD RODZINY KRAMIO — bo o to chodziło:
+        |   - `surface` to CZYSTA BIEL, nie kremowa stone-50;
+        |   - `ink` jest CIEPŁY (#1F1A17), nie neutralnie szary. Idzie w odcień
+        |     marki, więc boxy (mieszanka `ink` w `surface`) wychodzą ciepłe,
+        |     a nie stalowe;
+        |   - BEZ FAKTURY na pasku. Markiza, kropki i paski to metafora KRAMU —
+        |     dokładnie ta osobowość, od której ten sklep ma uciec.
+        */
+        'white_harbour' => [
+            'name' => 'Biały port',
+            'description' => 'Czysta biel, ciepła czerń i jeden mocny akcent. Spokojny i przewiewny — treść i zdjęcia są na wierzchu, wygląd schodzi im z drogi.',
+            'order' => 9,
+            // Wyżej niż 4 z globalnego domyślnego: na czystej bieli box musi się
+            // odciąć wyraźniej niż na kremowym tle starych szablonów.
+            'card_mix' => 5,
+            // `brand_tint` (12%), nie `brand` (30%): pasek ma zostać BIAŁY
+            // z nutą marki, tak jak na stronie klienta. Kolor pracuje na
+            // przyciskach, cenie i linkach, a nie na tle nagłówka.
+            'chrome' => 'brand_tint',
+            'default_palette' => 'sunset',
+            'palettes' => [
+                'sunset' => [
+                    'name' => 'Zachód słońca',
+                    'tokens' => [
+                        'brand' => '#C04A09',   // 4,97:1 na bieli
+                        'brand_ink' => '#FFFFFF',
+                        'surface' => '#FFFFFF',
+                        'ink' => '#1F1A17',
+                    ],
+                ],
+                'ocean' => [
+                    'name' => 'Ocean',
+                    'tokens' => [
+                        'brand' => '#1F6E9E',   // 5,55:1
+                        'brand_ink' => '#FFFFFF',
+                        'surface' => '#FFFFFF',
+                        'ink' => '#161B1F',
+                    ],
+                ],
+                'terracotta' => [
+                    'name' => 'Terakota',
+                    'tokens' => [
+                        'brand' => '#A94A41',   // 5,61:1
+                        'brand_ink' => '#FFFFFF',
+                        'surface' => '#FFFFFF',
+                        'ink' => '#1F1817',
+                    ],
+                ],
+                'graphite' => [
+                    'name' => 'Grafit',
+                    'tokens' => [
+                        'brand' => '#3B3330',   // 12,34:1 — wariant monochromatyczny,
+                        'brand_ink' => '#FFFFFF', // pod logotyp w skali szarości
+                        'surface' => '#FFFFFF',
+                        'ink' => '#1C1917',
+                    ],
+                ],
+            ],
+        ],
+
     ],
 
     // Slug szablonu domyślnego — przypisywany nowym sklepom (spójne z kolumną

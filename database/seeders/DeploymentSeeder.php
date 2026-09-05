@@ -148,6 +148,8 @@ class DeploymentSeeder extends Seeder
             'building_number' => (string) $config['company']['building_number'],
             'apartment_number' => (string) $config['company']['apartment_number'],
             'default_vat_rate' => VatRate::from((string) $config['sales']['default_vat_rate']),
+            'template' => $this->template($config),
+            'theme' => ['palette' => (string) $config['appearance']['palette']],
         ]);
 
         /*
@@ -248,6 +250,30 @@ class DeploymentSeeder extends Seeder
             'shipping_days' => '[LICZBA_DNI]',
             'withdrawal_exclusions' => '',
         ];
+    }
+
+    /**
+     * Szablon wyglądu — z twardym sprawdzeniem, że w ogóle istnieje.
+     *
+     * Literówka w `DEPLOY_TEMPLATE` nie wywaliłaby niczego: `Shop::themeTokens()`
+     * spadłby na szablon domyślny i klient dostałby wygląd rodziny Kramio,
+     * przekonany, że tak ma być. Lepiej zatrzymać wdrożenie na jednym czytelnym
+     * błędzie niż oddać sklep w cudzych barwach.
+     *
+     * @param  array<string, mixed>  $config
+     */
+    private function template(array $config): string
+    {
+        $slug = (string) $config['appearance']['template'];
+
+        if (config("themes.templates.{$slug}") === null) {
+            throw new RuntimeException(
+                "Nieznany szablon wygladu: {$slug}. Sprawdz DEPLOY_TEMPLATE — "
+                .'dostepne sa klucze z config/themes.php.'
+            );
+        }
+
+        return $slug;
     }
 
     /**

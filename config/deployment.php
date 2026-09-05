@@ -86,6 +86,20 @@ return [
     ],
 
     /*
+     * Wygląd startowy: szablon i paleta z `config/themes.php`.
+     *
+     * Domyślny szablon aplikacji (`themes.default_template`) należy do rodziny
+     * Kramio i jest sensowny dla sprzedawcy z ulicy, który dopiero wybiera sobie
+     * skórę. Klient dedykowany płaci za sklep, który od pierwszego uruchomienia
+     * wygląda na jego — nie za ekran wyboru. Właściciel może to potem zmienić
+     * w panelu („Charakter sklepu"), ale START ma być gotowy.
+     */
+    'appearance' => [
+        'template' => env('DEPLOY_TEMPLATE', 'white_harbour'),
+        'palette' => env('DEPLOY_PALETTE', 'sunset'),
+    ],
+
+    /*
      * Pakiet wdrożeniowy: bez limitów, wszystkie funkcje otwarte, nigdy nie
      * wygasa (patrz config/shop.php → packages.dedicated). Wpisany na sztywno,
      * bo w sklepie dedykowanym nie ma innego wyboru — a `.env` z możliwością

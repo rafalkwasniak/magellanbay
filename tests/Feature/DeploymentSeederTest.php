@@ -59,6 +59,8 @@ class DeploymentSeederTest extends TestCase
         config()->set('deployment.company.building_number', '12');
         config()->set('deployment.company.apartment_number', '');
         config()->set('deployment.sales.default_vat_rate', '23');
+        config()->set('deployment.appearance.template', 'white_harbour');
+        config()->set('deployment.appearance.palette', 'sunset');
         config()->set('deployment.package', 'dedicated');
     }
 
@@ -285,6 +287,38 @@ class DeploymentSeederTest extends TestCase
         $this->seedDeployment();
 
         $this->assertSame(1, Shop::query()->count());
+    }
+
+    /**
+     * Klient dedykowany płaci za sklep, który od pierwszego uruchomienia wygląda
+     * na jego — nie za ekran wyboru skóry. Szablon domyślny aplikacji należy do
+     * rodziny Kramio i byłby tu widocznym śladem po platformie.
+     */
+    public function test_shop_starts_with_the_deployment_appearance(): void
+    {
+        $this->deploymentConfig();
+        $this->seedDeployment();
+
+        $shop = Shop::query()->sole();
+
+        $this->assertSame('white_harbour', $shop->template);
+        $this->assertSame('#C04A09', $shop->themeTokens()['brand']);
+        $this->assertSame('#FFFFFF', $shop->themeTokens()['surface']);
+    }
+
+    /**
+     * Literówka w nazwie szablonu nie wywaliłaby niczego — sklep spadłby na
+     * szablon domyślny i klient dostałby cudze barwy, przekonany, że tak ma być.
+     */
+    public function test_it_refuses_an_unknown_appearance_template(): void
+    {
+        $this->deploymentConfig();
+        config()->set('deployment.appearance.template', 'nie-ma-takiego');
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Nieznany szablon');
+
+        $this->seedDeployment();
     }
 
     public function test_it_refuses_to_run_without_owner_email(): void
