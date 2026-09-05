@@ -202,6 +202,108 @@
                     </div>
                 </div>
 
+                {{-- PERSONALIZACJA — które pytania zadamy kupującemu przy tym produkcie.
+
+                     Grupy definiuje się raz dla całego sklepu (Personalizacja
+                     w menu), tu tylko wybiera. Na liście są WYŁĄCZNIE grupy
+                     gotowe: pusta grupa byłaby pytaniem bez odpowiedzi, a przy
+                     „obowiązkowa" zablokowałaby zakup. --}}
+                <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                    <h2 class="font-semibold text-stone-900">Personalizacja</h2>
+                    <p class="mt-1 text-sm text-stone-500">O co zapytamy klienta, zanim doda ten produkt do koszyka.</p>
+
+                    @php($chosenGroups = collect(old('option_groups', $product->exists ? $product->optionGroups->pluck('id')->all() : []))->map(fn ($id) => (int) $id))
+
+                    @if ($optionGroups->isEmpty())
+                        <p class="mt-5 rounded-2xl border border-dashed border-stone-300 bg-white/60 px-4 py-3 text-sm text-stone-500">
+                            Nie masz jeszcze żadnej gotowej grupy opcji.
+                            <a href="{{ route('seller.options.index') }}" class="font-medium text-amber-700 underline decoration-amber-300 underline-offset-2">Utwórz ją w Personalizacji</a>
+                            — grupa bez pól albo bez ani jednej dostępnej pozycji nie pojawia się na tej liście.
+                        </p>
+                    @else
+                        <div class="mt-5 space-y-3">
+                            @foreach ($optionGroups as $group)
+                                <label class="flex items-start gap-3 rounded-2xl border border-stone-200 bg-white/80 p-4 text-sm text-stone-600 shadow-sm">
+                                    <input type="checkbox" name="option_groups[]" value="{{ $group->id }}" class="mt-0.5 shrink-0"
+                                        @checked($chosenGroups->contains($group->id))>
+                                    <span class="min-w-0">
+                                        <span class="font-medium text-stone-800">{{ $group->name }}</span>
+                                        <span class="ml-2 text-xs text-stone-400">
+                                            {{ $group->isText() ? $group->fields->count().' pól do wypełnienia' : $group->choices->where('is_active', true)->count().' pozycji do wyboru' }}{{ $group->required ? ', obowiązkowa' : '' }}
+                                        </span>
+                                        @if (filled($group->hint))
+                                            <span class="mt-1 block text-xs text-stone-400">{{ $group->hint }}</span>
+                                        @endif
+                                        @if ((float) $group->surcharge_gross > 0)
+                                            <span class="mt-1 block text-xs text-stone-500">Dopłata za samo włączenie opcji: {{ number_format((float) $group->surcharge_gross, 2, ',', ' ') }} zł</span>
+                                        @endif
+                                    </span>
+                                </label>
+                            @endforeach
+                        </div>
+                        @error('option_groups')
+                            <p class="mt-2 text-sm text-rose-600">{{ $message }}</p>
+                        @enderror
+                        @error('option_groups.*')
+                            <p class="mt-2 text-sm text-rose-600">{{ $message }}</p>
+                        @enderror
+                    @endif
+                </div>
+
+                {{-- LICENCJA ZA LOGOTYP — opłata należna partnerowi za samo użycie
+                     jego znaku na tym produkcie, niezależnie od tego, co klient
+                     wybierze na rewersie.
+
+                     Opłata bez wskazanego partnera to pieniądze należne nikomu,
+                     więc przy kwocie większej od zera partner jest wymagany. --}}
+                <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                    <h2 class="font-semibold text-stone-900">Licencja za logotyp</h2>
+                    <p class="mt-1 text-sm text-stone-500">Opłata za znak na awersie — doliczana do ceny i rozliczana z partnerem.</p>
+
+                    <div class="mt-5 grid grid-cols-12 gap-5">
+                        <div class="col-span-12 sm:col-span-6">
+                            <label for="licensor_id" class="block text-sm font-medium text-stone-700">Partner licencyjny</label>
+                            <select id="licensor_id" name="licensor_id"
+                                class="mt-1.5 block w-full rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
+                                <option value="">— bez licencji —</option>
+                                @foreach ($licensors as $licensor)
+                                    <option value="{{ $licensor->id }}" @selected((int) old('licensor_id', $product->licensor_id) === $licensor->id)>{{ $licensor->name }}</option>
+                                @endforeach
+                                {{-- Wygaszony partner znika z wyboru, ale nie może zniknąć
+                                     z produktu, który już go ma — inaczej zapis formularza
+                                     po cichu zerwałby przypisanie. --}}
+                                @if ($product->licensor_id && ! $licensors->contains('id', $product->licensor_id))
+                                    <option value="{{ $product->licensor_id }}" @selected((int) old('licensor_id', $product->licensor_id) === (int) $product->licensor_id)>{{ $product->licensor?->name }} (wygaszony)</option>
+                                @endif
+                            </select>
+                            @error('licensor_id')
+                                <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div class="col-span-12 sm:col-span-6">
+                            <label for="licence_fee_gross" class="block text-sm font-medium text-stone-700">Opłata licencyjna</label>
+                            <div class="relative mt-1.5">
+                                <input id="licence_fee_gross" name="licence_fee_gross" type="text" inputmode="decimal"
+                                    value="{{ old('licence_fee_gross', number_format((float) $product->licence_fee_gross, 2, ',', '')) }}"
+                                    class="block w-full rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 pr-12 text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
+                                <span class="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm text-stone-400">zł</span>
+                            </div>
+                            @error('licence_fee_gross')
+                                <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </div>
+
+                    <p class="mt-4 text-xs leading-relaxed text-stone-400">
+                        Dwie opłaty <span class="font-medium text-stone-600">tego samego</span> partnera na jednym produkcie nie sumują się —
+                        liczy się wyższa. Opłaty <span class="font-medium text-stone-600">różnych</span> partnerów sumują się zwyczajnie.
+                        @if ($licensors->isEmpty() && ! $product->licensor_id)
+                            Partnerów dodajesz w <a href="{{ route('seller.licensors.index') }}" class="font-medium text-amber-700 underline decoration-amber-300 underline-offset-2">Partnerach licencyjnych</a>.
+                        @endif
+                    </p>
+                </div>
+
                 {{-- Widoczność --}}
                 <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
                     <h2 class="font-semibold text-stone-900">Widoczność</h2>

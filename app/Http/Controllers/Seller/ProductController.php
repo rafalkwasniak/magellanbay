@@ -2,16 +2,20 @@
 
 namespace App\Http\Controllers\Seller;
 
+use App\Enums\SaleUnit;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Seller\ProductRequest;
+use App\Models\OptionGroup;
 use App\Models\Product;
 use App\Services\ProductImageService;
 use App\Services\SlugService;
 use App\Services\TagNormalizer;
 use App\Support\MetaDescription;
 use Illuminate\Contracts\Support\Renderable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 
 /**
  * Zarządzanie produktami sklepu (krok podstawowy: bez zdjęć i tagów). Wszystko
@@ -76,6 +80,11 @@ class ProductController extends Controller
             'defaultVat' => $this->defaultVat($request),
             'defaultSaleUnit' => $this->defaultSaleUnit($request),
             'homepage' => $this->homepageInfo($request),
+            // Biblioteka personalizacji sklepu. Grupy PUSTE odsiewamy: przypieta
+            // pusta grupa to pytanie bez odpowiedzi, a przy „obowiazkowa"
+            // zablokowalaby zakup calkiem.
+            'optionGroups' => $this->readyOptionGroups($request),
+            'licensors' => $request->user()->shop?->licensors()->active()->get() ?? collect(),
             // Nowy produkt nie ma kontekstu listy do odtworzenia.
             'listQuery' => [],
         ]);
@@ -89,6 +98,7 @@ class ProductController extends Controller
 
         $product = $request->user()->shop->products()->create($this->data($request));
         $this->syncTags($product, $request);
+        $this->syncOptionGroups($product, $request);
 
         // Zdjęcia wybrane przy tworzeniu — zapis w kolejności dodania (0,1,2,…).
         foreach ($request->file('images', []) as $position => $file) {
@@ -111,6 +121,11 @@ class ProductController extends Controller
             'defaultVat' => $this->defaultVat($request),
             'defaultSaleUnit' => $this->defaultSaleUnit($request),
             'homepage' => $this->homepageInfo($request),
+            // Biblioteka personalizacji sklepu. Grupy PUSTE odsiewamy: przypieta
+            // pusta grupa to pytanie bez odpowiedzi, a przy „obowiazkowa"
+            // zablokowalaby zakup calkiem.
+            'optionGroups' => $this->readyOptionGroups($request),
+            'licensors' => $request->user()->shop?->licensors()->active()->get() ?? collect(),
             // Kontekst listy (filtry + sort + strona) z query stringa — do odtworzenia
             // „Wróć do listy" i akcji zapisu, żeby wrócić na tę samą, przefiltrowaną stronę.
             'listQuery' => $this->listQuery($request),
@@ -123,6 +138,7 @@ class ProductController extends Controller
 
         $product->update($this->data($request));
         $this->syncTags($product, $request);
+        $this->syncOptionGroups($product, $request);
 
         // Zachowujemy pełny kontekst listy (filtry + sort + strona), z którego przyszedł
         // sprzedawca — akcja formularza niesie go w query stringu.
@@ -153,7 +169,7 @@ class ProductController extends Controller
      */
     private function data(ProductRequest $request): array
     {
-        $data = $request->safe()->except(['tags', 'images']);
+        $data = $request->safe()->except(['tags', 'images', 'option_groups']);
         $data['stock'] = $data['track_stock'] ? ($data['stock'] ?? 0) : null;
 
         // Opis SEO wpisany ręcznie należy do sprzedawcy — znacznik pilnuje, żeby
@@ -163,7 +179,7 @@ class ProductController extends Controller
         $data = array_merge($data, MetaDescription::fields($data['meta_description'] ?? null));
 
         // Stan na sztuki to liczba całkowita; na wagę zostaje ułamkiem (2,50 kg).
-        if ($data['stock'] !== null && ($data['sale_unit'] ?? 'piece') === \App\Enums\SaleUnit::Piece->value) {
+        if ($data['stock'] !== null && ($data['sale_unit'] ?? 'piece') === SaleUnit::Piece->value) {
             $data['stock'] = (int) round((float) $data['stock']);
         }
 
@@ -174,6 +190,43 @@ class ProductController extends Controller
      * Parsuje tagi z pola (po przecinku), tworzy brakujące w obrębie sklepu
      * (deduplikacja po slug) i przypina do produktu.
      */
+    /**
+     * Grupy opcji przypiete do produktu.
+     *
+     * `sync()`, nie `attach()`: odznaczenie w formularzu ma ODPIAC grupe, a nie
+     * zostawic ja po cichu. Odpiecie nie rusza samej grupy — ta zyje dalej
+     * w bibliotece sklepu i moze byc przypieta do innych produktow.
+     */
+    /**
+     * Grupy GOTOWE do przypiecia — z pytaniem, na ktore da sie odpowiedziec.
+     *
+     * Grupa bez pol albo bez ani jednej aktywnej pozycji biblioteki wyswietla
+     * sie w kasie jako pusty blok, a oznaczona jako obowiazkowa BLOKUJE ZAKUP.
+     * Lepiej nie dac jej przypiac, niz pozwolic zepsuc produkt jednym
+     * kliknieciem.
+     *
+     * @return Collection<int, OptionGroup>
+     */
+    private function readyOptionGroups(Request $request): Collection
+    {
+        $shop = $request->user()->shop;
+
+        if ($shop === null) {
+            return collect();
+        }
+
+        return $shop->optionGroups()
+            ->with(['fields', 'choices'])
+            ->get()
+            ->filter(fn ($group) => $group->isReady())
+            ->values();
+    }
+
+    private function syncOptionGroups(Product $product, ProductRequest $request): void
+    {
+        $product->optionGroups()->sync($request->validated('option_groups') ?? []);
+    }
+
     private function syncTags(Product $product, ProductRequest $request): void
     {
         $shop = $product->shop;
@@ -280,7 +333,7 @@ class ProductController extends Controller
      * Nakłada aktywne filtry na zapytanie o produkty. Szukanie po nazwie i opisie
      * (znaki specjalne LIKE ekranowane); tag po dokładnej nazwie (z podpowiedzi).
      *
-     * @param  \Illuminate\Database\Eloquent\Builder<\App\Models\Product>  $query
+     * @param  Builder<Product>  $query
      * @param  array{cena_od: float|null, cena_do: float|null, szukaj: string, tag: string}  $f
      */
     private function applyFilters($query, array $f): void

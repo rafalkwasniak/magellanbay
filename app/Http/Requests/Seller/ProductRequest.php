@@ -35,6 +35,11 @@ class ProductRequest extends FormRequest
             'withdrawal_excluded' => $this->boolean('withdrawal_excluded'),
             'is_active' => $this->boolean('is_active'),
             'show_on_homepage' => $this->boolean('show_on_homepage'),
+            // Oplata licencyjna za logotyp AWERSU — nalezy do produktu, bo
+            // kupujacy jej nie wybiera (specyfikacja: „nr firmy do ktorej
+            // dowiazana jest ewentualna licencja na logotyp").
+            'licence_fee_gross' => str_replace([' ', "\u{a0}", ','], ['', '', '.'], trim((string) $this->input('licence_fee_gross'))) ?: '0',
+            'licensor_id' => $this->input('licensor_id') ?: null,
         ];
 
         // Stan może być ułamkowy przy sprzedaży na wagę (2,50 kg) — przecinek na kropkę.
@@ -55,6 +60,8 @@ class ProductRequest extends FormRequest
      */
     public function rules(): array
     {
+        $shopId = $this->user()->shop->id;
+
         return [
             'name' => ['required', 'string', 'max:255'],
             'slug' => ['required', 'string'],
@@ -74,6 +81,26 @@ class ProductRequest extends FormRequest
             // Zdjęcia dodawane przy TWORZENIU produktu (na edycji galeria działa przez AJAX).
             'images' => ['nullable', 'array', 'max:'.config('shop.product_images.max_per_product')],
             'images.*' => ['image', 'mimes:jpeg,jpg,png,webp', 'max:'.config('shop.product_images.max_upload_kb')],
+
+            /*
+             * Grupy opcji przypiete do produktu. Musza nalezec do TEGO sklepu —
+             * inaczej podrzucony identyfikator doklejalby cudza personalizacje.
+             */
+            'option_groups' => ['nullable', 'array'],
+            'option_groups.*' => [Rule::exists('option_groups', 'id')->where('shop_id', $shopId)],
+
+            'licence_fee_gross' => ['numeric', 'min:0', 'max:99999.99'],
+
+            /*
+             * OPLATA BEZ PARTNERA TO PIENIADZE NALEZNE NIKOMU. Doliczylaby sie
+             * do ceny, kupujacy by ja zaplacil, a rozliczenie nie mialoby komu
+             * jej wyplacic — i nikt by tego nie zauwazyl, bo suma sie zgadza.
+             */
+            'licensor_id' => [
+                Rule::requiredIf(fn (): bool => (float) $this->input('licence_fee_gross') > 0),
+                'nullable',
+                Rule::exists('licensors', 'id')->where('shop_id', $shopId),
+            ],
         ];
     }
 
