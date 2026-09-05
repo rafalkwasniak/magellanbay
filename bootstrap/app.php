@@ -3,11 +3,13 @@
 use App\Http\Middleware\AuthenticateCustomer;
 use App\Http\Middleware\EnsureConsentsAreCurrent;
 use App\Http\Middleware\EnsureRegistrationIsOpen;
+use App\Http\Middleware\EnsureSaasMode;
 use App\Http\Middleware\EnsureUserHasRole;
 use App\Http\Middleware\RecordStorefrontTraffic;
 use App\Http\Middleware\ResolveShop;
 use App\Http\Middleware\SecurityHeaders;
 use App\Services\DiscordErrorReporter;
+use Illuminate\Auth\Middleware\Authenticate;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -27,7 +29,21 @@ return Application::configure(basePath: dirname(__DIR__))
             'record.traffic' => RecordStorefrontTraffic::class,
             'auth.customer' => AuthenticateCustomer::class,
             'registration.open' => EnsureRegistrationIsOpen::class,
+            // Trasy warstwy platformy — nieobecne w sklepie dedykowanym.
+            'saas' => EnsureSaasMode::class,
         ]);
+
+        // `saas` musi wykonać się PRZED uwierzytelnianiem, a kolejność wypisana
+        // przy trasie tego nie gwarantuje: Laravel sortuje middleware według
+        // własnej listy priorytetów, na której `Authenticate` jest, a nasze nie.
+        // Bez tego wpisu `/administrator/panel` w sklepie dedykowanym najpierw
+        // odsyła do logowania (302), a zalogowanemu sprzedawcy pokazuje 403 —
+        // czyli w obu przypadkach potwierdza, że taki adres istnieje. Ma
+        // odpowiadać 404, niezależnie od tego, czy i jako kto ktoś jest zalogowany.
+        $middleware->prependToPriorityList(
+            before: Authenticate::class,
+            prepend: EnsureSaasMode::class,
+        );
 
         // Nagłówki bezpieczeństwa na KAŻDEJ odpowiedzi webowej — centrala i
         // wszystkie storefronty naraz (config/security.php).

@@ -275,6 +275,12 @@
                  (zagnieżdżony formularz jest nieprawidłowym HTML-em i psuje
                  zapis danych sklepu). Sam link, bez pola i przycisku: właściwe
                  potwierdzenie z rachunkiem strat czeka na osobnym ekranie. --}}
+            {{-- Tylko w Kramio: to wyjście z USŁUGI, potrzebne sprzedawcy, który
+                 rezygnuje z platformy. Właściciel sklepu dedykowanego kasuje go,
+                 kasując pliki i bazę — a ten przycisk uruchamiałby u niego
+                 `shops:purge`, czyli jedyną komendę potrafiącą usunąć sklep razem
+                 z całą historią sprzedaży. --}}
+            @if (\App\Support\Mode::saas())
             <div class="mt-6 rounded-3xl border border-rose-200 bg-white/70 p-6 backdrop-blur">
                 <h2 class="font-semibold text-rose-900">Usunięcie sklepu</h2>
                 <p class="mt-2 max-w-xl text-sm text-stone-600">
@@ -286,6 +292,7 @@
                     Chcę usunąć sklep
                 </a>
             </div>
+            @endif
         </div>
 
         {{-- Kolumna pomocnicza: treści opisowe --}}

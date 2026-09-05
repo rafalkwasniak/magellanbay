@@ -110,18 +110,25 @@ Route::post('/nowe-haslo', [PasswordResetController::class, 'update'])
 
 // Rejestracja sprzedawcy (nowe konta otrzymują rolę 'seller'). Konto powstaje
 // bez hasła — sprzedawca dostaje mailem link do jego ustawienia.
+//
+// `saas`: w sklepie dedykowanym rejestracji NIE MA. Konto właściciela zakłada
+// seeder wdrożeniowy, a otwarty formularz wysyłający maile na dowolny adres
+// byłby tam wyłącznie ryzykiem. AKTYWACJA (niżej) zostaje — to nią właściciel
+// ustawia pierwsze hasło.
 Route::get('/rejestracja', [RegisterController::class, 'create'])
-    ->middleware('registration.open')
+    ->middleware(['saas', 'registration.open'])
     ->name('register');
 // Limit per IP: ten formularz wysyła maila aktywacyjnego na DOWOLNY podany
 // adres, więc bez dławika jest gotowym narzędziem do zalewania cudzej skrzynki
 // naszym kosztem — reputacyjnym. Progi: config/security.php.
 Route::post('/rejestracja', [RegisterController::class, 'store'])
-    ->middleware(['throttle:register', 'registration.open'])
+    ->middleware(['saas', 'throttle:register', 'registration.open'])
     ->name('register.store');
-Route::view('/rejestracja/potwierdzenie', 'auth.registered')->name('register.confirmation');
+Route::view('/rejestracja/potwierdzenie', 'auth.registered')
+    ->middleware('saas')
+    ->name('register.confirmation');
 Route::post('/rejestracja/wyslij-ponownie', [ResendActivationController::class, 'store'])
-    ->middleware('throttle:5,1')
+    ->middleware(['saas', 'throttle:5,1'])
     ->name('register.resend');
 
 // Aktywacja konta (ustawienie pierwszego hasła + danych) — token brokera 'activation', 24 h.
@@ -136,8 +143,11 @@ Route::post('/aktywacja', [ActivationController::class, 'store'])
 Route::post('/platnosci/paynow/webhook', PaynowWebhookController::class)->name('payments.paynow.webhook');
 
 // Webhooki opłat za PAKIETY Kramio (konto platformy) — osobna trasa, bo podpis
-// weryfikuje klucz platformy z `.env`, nie klucz sklepu.
+// weryfikuje klucz platformy z `.env`, nie klucz sklepu. W sklepie dedykowanym
+// nie ma pakietów ani konta platformy, więc trasa jest zamknięta.
+// UWAGA: webhook Paynow SKLEPU (wyżej) zostaje — to nim płacą kupujący.
 Route::post('/platnosci/paynow/pakiety/webhook', PackagePaymentWebhookController::class)
+    ->middleware('saas')
     ->name('payments.paynow.packages.webhook');
 
 /*
@@ -188,7 +198,16 @@ Route::post('/zglos-tresc', [ContentReportController::class, 'store'])
 | Panel administratora (rola: admin)
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'role:admin'])
+// `saas`: konsola administratora to narzędzie OPERATORA PLATFORMY — sklepy
+// innych sprzedawców, ich konta, przychód z pakietów, zgłoszenia DSA. Przy
+// jednym kliencie nie ma czym zarządzać, a właściciel ma dostać wyłącznie panel
+// swojego sklepu. Rola `admin` zostaje w kodzie na wejście serwisowe, tylko bez
+// ekranów.
+// `saas` PRZED `auth` i `role`: kolejność decyduje o tym, co zobaczy odwiedzający.
+// Po `role:admin` zalogowany sprzedawca dostałby 403 — „to tu jest, ale nie dla
+// ciebie" — czyli potwierdzenie, że pod spodem siedzi platforma. Tak dostaje 404,
+// niezależnie od tego, czy i jako kto jest zalogowany.
+Route::middleware(['saas', 'auth', 'role:admin'])
     ->prefix('administrator')
     ->name('administrator.')
     ->group(function () {
@@ -279,9 +298,17 @@ Route::middleware(['auth', 'role:seller', 'ensure.consents'])
 
         // Usunięcie własnego sklepu (RODO). Osobny ekran z rachunkiem strat;
         // zlecenie ustawia karencję i gasi storefront, kasuje `shops:purge`.
-        Route::get('/usun-sklep', [ShopDeletionController::class, 'show'])->name('deletion.show');
-        Route::post('/usun-sklep', [ShopDeletionController::class, 'store'])->name('deletion.store');
-        Route::post('/usun-sklep/cofnij', [ShopDeletionController::class, 'cancel'])->name('deletion.cancel');
+        //
+        // `saas`: to funkcja PLATFORMY, chroniąca sprzedawcę przed własnym
+        // kliknięciem i dająca mu wyjście z usługi. Klient na własnym serwerze
+        // kasuje sklep, kasując pliki i bazę — a zostawienie tego ekranu daje
+        // przycisk, który po siedmiu dniach uruchamia `shops:purge` i usuwa
+        // sklep razem z całą historią sprzedaży.
+        Route::middleware('saas')->group(function () {
+            Route::get('/usun-sklep', [ShopDeletionController::class, 'show'])->name('deletion.show');
+            Route::post('/usun-sklep', [ShopDeletionController::class, 'store'])->name('deletion.store');
+            Route::post('/usun-sklep/cofnij', [ShopDeletionController::class, 'cancel'])->name('deletion.cancel');
+        });
 
         // Wygląd sklepu (logo, kolor przewodni, szablon motywu). Edycja przez POST.
         Route::get('/wyglad', [AppearanceController::class, 'edit'])->name('appearance.edit');
@@ -319,9 +346,13 @@ Route::middleware(['auth', 'role:seller', 'ensure.consents'])
         // `payments.paynow.packages.webhook`). Zdanie „zakup dojdzie osobno"
         // wisiało tu długo po tym, jak zakup powstał — i raz wprowadziło
         // asystenta w błąd przy planowaniu. Nie wracać do niego.
-        Route::get('/pakiet', [PackageController::class, 'show'])->name('package.show');
+        //
+        // `saas`: sklep dedykowany jest opłacony jednorazowo i nie ma pakietu
+        // do oglądania, kupowania ani przedłużania.
+        Route::get('/pakiet', [PackageController::class, 'show'])
+            ->middleware('saas')->name('package.show');
         Route::post('/pakiet/kup/{package}', [PackageController::class, 'purchase'])
-            ->middleware('throttle:10,1')->name('package.purchase');
+            ->middleware(['saas', 'throttle:10,1'])->name('package.purchase');
 
         // Kartoteka klientów — we wszystkich pakietach. Identyfikatorem jest
         // ADRES E-MAIL, bo klient bez konta (gość) nie ma `id`; `where` na

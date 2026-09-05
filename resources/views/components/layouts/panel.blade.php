@@ -45,7 +45,13 @@
         ] : [
             ['label' => 'Pulpit', 'route' => 'seller.dashboard', 'icon' => '🏠'],
             ['label' => 'Mój sklep', 'route' => 'seller.shop.edit', 'icon' => '🛍️'],
-            ['label' => 'Mój pakiet', 'route' => 'seller.package.show', 'icon' => '✨'],
+            // „Mój pakiet" tylko w Kramio — sklep dedykowany jest opłacony
+            // jednorazowo i nie ma czego oglądać ani przedłużać. Trasa i tak
+            // odpowiada wtedy 404 (middleware `saas`), ale odnośnik prowadzący
+            // w pustkę wygląda jak usterka, a nie jak decyzja.
+            ...(\App\Support\Mode::saas()
+                ? [['label' => 'Mój pakiet', 'route' => 'seller.package.show', 'icon' => '✨']]
+                : []),
             ['label' => 'Produkty', 'route' => 'seller.products.index', 'active' => 'seller.products.*', 'icon' => '🏷️'],
             ['label' => 'Zamówienia', 'route' => 'seller.orders.index', 'active' => 'seller.orders.*', 'icon' => '📦', 'badge' => (int) ($user->shop?->unseen_orders_count ?? 0)],
             ['label' => 'Klienci', 'route' => 'seller.customers.index', 'active' => 'seller.customers.*', 'icon' => '👥'],

@@ -4,6 +4,30 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Tryb pracy aplikacji
+    |--------------------------------------------------------------------------
+    |
+    | 'saas'      — Kramio: wielu sprzedawców, rejestracja, pakiety, abonament,
+    |               landing platformy, konsola administratora, subdomeny.
+    | 'dedicated' — sklep JEDNEGO klienta, na jego serwerze i jego domenie.
+    |               Warstwa platformy jest wtedy niewidoczna: nie ma rejestracji,
+    |               cennika, ekranu „Mój pakiet" ani konsoli admina, a właściciel
+    |               dostaje wyłącznie panel swojego sklepu.
+    |
+    | WYŁĄCZAMY, NIE WYCINAMY. Kod platformy zostaje w repozytorium, bo ten sam
+    | silnik obsługuje oba tryby — dzięki temu poprawka robi się raz, a kolejny
+    | klient dedykowany to nowe wdrożenie, nie nowy projekt. Wycięcie
+    | wielonajemczości (`shop_id` w każdej tabeli) byłoby tygodniami pracy w
+    | ścieżce pieniędzy przy zysku, którego klient i tak nie widzi.
+    |
+    | Trybu NIE zmienia się na działającej instalacji.
+    |
+    */
+
+    'mode' => env('SHOP_MODE', 'saas'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Województwa (PL)
     |--------------------------------------------------------------------------
     |

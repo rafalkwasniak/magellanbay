@@ -100,6 +100,12 @@
                     @php($aiPct = $aiLimit > 0 ? min(100, (int) round($aiUsed / $aiLimit * 100)) : 0)
                     @php($endsAt = $shop->subscription_ends_at)
                     @php($daysLeft = $endsAt !== null && ! $shop->comped && $shop->priceYearly() > 0 ? (int) now()->startOfDay()->diffInDays($endsAt->copy()->startOfDay(), false) : null)
+                    {{-- Cała sekcja pakietu i pasków wykorzystania tylko w Kramio.
+                         W sklepie dedykowanym limity są symboliczne (milion
+                         produktów), więc pasek postępu pokazywałby zawsze zero i
+                         sugerował ograniczenie, którego nie ma. Nazwa pakietu i
+                         termin abonamentu też nie mają tam adresata. --}}
+                    @if (\App\Support\Mode::saas())
                     <div class="mt-6 w-full text-left">
                         {{-- HR oddzielający sekcję pakietu od danych sklepu --}}
                         <div class="mx-auto w-4/5 border-t border-rose-200"></div>
@@ -145,16 +151,19 @@
                             <div class="h-full min-w-[0.5rem] rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600 transition-all duration-500" style="width: {{ $aiPct }}%"></div>
                         </div>
                     </div>
+                    @endif
 
                     <div class="mt-5 flex flex-wrap items-center justify-center gap-2">
                         <a href="{{ route('seller.shop.edit') }}"
                             class="inline-flex rounded-2xl border border-stone-200 bg-white/70 px-5 py-2.5 text-sm font-semibold text-stone-700 transition hover:bg-white">
                             Edytuj sklep
                         </a>
-                        <a href="{{ route('seller.package.show') }}"
-                            class="inline-flex rounded-2xl border border-stone-200 bg-white/70 px-5 py-2.5 text-sm font-semibold text-stone-700 transition hover:bg-white">
-                            Mój pakiet
-                        </a>
+                        @if (\App\Support\Mode::saas())
+                            <a href="{{ route('seller.package.show') }}"
+                                class="inline-flex rounded-2xl border border-stone-200 bg-white/70 px-5 py-2.5 text-sm font-semibold text-stone-700 transition hover:bg-white">
+                                Mój pakiet
+                            </a>
+                        @endif
                     </div>
                 </div>
             @else

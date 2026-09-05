@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\Mode;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -35,7 +36,14 @@ Schedule::command('shipments:refresh --deliveries')->hourly()->withoutOverlappin
 // Abonamenty: przypomnienia przed terminem i zamek po karencji. Raz na dobę o
 // świcie — maile idą przez outbox, więc godzina jest tylko chwilą, w której
 // wpadają do kolejki. Komenda jest idempotentna, więc powtórka nic nie psuje.
-Schedule::command('subscriptions:check')->dailyAt('06:10')->withoutOverlapping();
+//
+// Sklep dedykowany nie ma abonamentu (`comped`, pakiet za 0 zł), więc komenda
+// nie miałaby czego znaleźć. Nie rejestrujemy jej mimo to: harmonogram ma
+// mówić prawdę o tym, co ta instalacja robi, a nie liczyć na to, że komenda
+// sama nic nie zrobi.
+if (Mode::saas()) {
+    Schedule::command('subscriptions:check')->dailyAt('06:10')->withoutOverlapping();
+}
 
 // Kopia zapasowa: baza + zdjęcia + .env do katalogu poza domeną. Nocą, z dala
 // od komend abonamentowych; przebieg trwa sekundy, więc limit procesów konta
@@ -61,4 +69,14 @@ if (config('backup.enabled')) {
 
 // Usuwanie sklepów: kasuje te po karencji i zwalnia adresy po kwarantannie.
 // Tuż po abonamentach, bo obie komendy są dobowe i nie mają na siebie wpływu.
-Schedule::command('shops:purge')->dailyAt('06:20')->withoutOverlapping();
+//
+// W sklepie dedykowanym NIE REJESTRUJEMY jej wcale, i to jest ważniejsze niż
+// przy `subscriptions:check`. To jedyna komenda w całym harmonogramie, która
+// kasuje sklep razem z historią sprzedaży. Ekran zlecający usunięcie jest w
+// tym trybie zamknięty (routes/web.php), więc nie ma jej co uruchamiać — ale
+// gdyby kiedykolwiek jakiś sklep miał ustawione `deletion_scheduled_at`,
+// nieobecność tej komendy jest ostatnią barierą między pomyłką a bezpowrotną
+// utratą danych klienta.
+if (Mode::saas()) {
+    Schedule::command('shops:purge')->dailyAt('06:20')->withoutOverlapping();
+}

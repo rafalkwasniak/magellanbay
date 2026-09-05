@@ -19,6 +19,17 @@
     </source>
     <php>
         <env name="APP_ENV" value="testing"/>
+        <!--
+            Suita opisuje KRAMIO — pełną platformę. Wpis jest tu, bo instalacja
+            dedykowana ma w swoim `.env` `SHOP_MODE=dedicated`, a bez wymuszenia
+            wartość wyciekłaby do testów i setki asercji zaczęłyby sprawdzać
+            sklep jednego klienta zamiast platformy.
+
+            Zachowania trybu dedykowanego testujemy JAWNIE, ustawiając
+            `config()->set('shop.mode', Mode::DEDICATED)` w konkretnym teście —
+            patrz Tests\Feature\DedicatedModeTest.
+        -->
+        <env name="SHOP_MODE" value="saas"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
