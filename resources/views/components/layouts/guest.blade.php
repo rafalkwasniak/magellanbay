@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ ($title ?? 'Logowanie') . ' · ' . config('app.name') }}</title>
-    <link rel="icon" type="image/png" sizes="512x512" href="{{ asset('images/kramio-icon.png') }}">
+    <link rel="icon" type="image/png" sizes="512x512" href="{{ asset(config('brand.icon')) }}">
     <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
 
     <x-google-verification :code="config('services.google.site_verification')" />
@@ -35,7 +35,7 @@
                      strona wolnej subdomeny — `url('/')` prowadziłoby wtedy
                      z powrotem na tę samą subdomenę, a nie do Kramio. --}}
                 <a href="{{ \App\Support\Central::url('/') }}" class="mb-6 flex items-center justify-center transition hover:opacity-80" title="Strona główna {{ config('app.name') }}">
-                    <img src="{{ asset('images/kramio-logo.png') }}" alt="{{ config('app.name') }} — twój sklep w 15 minut" class="h-12 w-auto">
+                    <img src="{{ asset(config('brand.logo')) }}" alt="{{ config('app.name') }} logo" class="h-12 w-auto">
                 </a>
 
                 {{ $slot }}

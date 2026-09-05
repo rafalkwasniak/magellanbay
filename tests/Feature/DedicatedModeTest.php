@@ -284,6 +284,45 @@ class DedicatedModeTest extends TestCase
     }
 
     /**
+     * `Shop::host()` buduje adres sklepu dla maili o zamówieniu, linku do
+     * formularza zwrotu, linku do płatności, mapy strony, webhooka Paynow
+     * i podpisu na grafice OG.
+     *
+     * W trybie dedykowanym sklep stoi na domenie GŁÓWNEJ, więc doklejenie sluga
+     * dawało adres, pod którym nic nie odpowiada („magellan.magellan.kwasniak.org").
+     * Usterka była niewidoczna na ekranach — wychodziła dopiero przy pierwszym
+     * prawdziwym zamówieniu, w mailu do klienta.
+     */
+    public function test_shop_host_is_the_main_domain_without_subdomain(): void
+    {
+        $shop = Shop::factory()->create(['slug' => 'magellan', 'domain' => null]);
+
+        $this->dedicated();
+        $this->assertSame(config('tenancy.central_domain'), $shop->host());
+    }
+
+    public function test_shop_host_keeps_the_subdomain_in_saas(): void
+    {
+        $shop = Shop::factory()->create(['slug' => 'magellan', 'domain' => null]);
+
+        $this->assertSame('magellan.'.config('tenancy.central_domain'), $shop->host());
+    }
+
+    /**
+     * Własna domena wygrywa w OBU trybach — jest jawnym ustawieniem sklepu,
+     * a nie skutkiem ubocznym trybu pracy aplikacji.
+     */
+    public function test_explicit_domain_wins_in_both_modes(): void
+    {
+        $shop = Shop::factory()->create(['slug' => 'magellan', 'domain' => 'magellanbay.pl']);
+
+        $this->assertSame('magellanbay.pl', $shop->host());
+
+        $this->dedicated();
+        $this->assertSame('magellanbay.pl', $shop->host());
+    }
+
+    /**
      * Lista zaplanowanych zadań z osobnego procesu, w zadanym trybie.
      */
     private function artisanScheduleIn(string $mode): string

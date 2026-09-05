@@ -58,7 +58,7 @@ class MailBranding
         return [
             'name' => config('app.name'),
             'glyph' => '◐',             // fallback marki Kramio, gdyby logo_url opróżniono
-            'logo_url' => asset('images/kramio-logo.png'),
+            'logo_url' => asset(config('brand.logo')),
             'brand' => '#f59e0b',       // amber-500 — przycisk/akcent (płaski, dawniej gradient amber→rose)
             'brand_ink' => '#ffffff',   // tekst na kolorze brand (np. na przycisku)
             'accent' => '#b45309',      // amber-700 — linki

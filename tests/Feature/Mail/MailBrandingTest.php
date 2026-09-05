@@ -20,7 +20,9 @@ class MailBrandingTest extends TestCase
         $this->assertSame('#f59e0b', $brand['brand']);
         // Logo platformy jako absolutny URL — maile nie widzą ścieżek względnych.
         $this->assertStringStartsWith('http', $brand['logo_url']);
-        $this->assertStringContainsString('images/kramio-logo.png', $brand['logo_url']);
+        // Ścieżka z configu, nie wpisana tu ponownie — inaczej test przechodziłby
+        // dalej po podmianie marki, opisując logo, którego już nie ma.
+        $this->assertStringContainsString(config('brand.logo'), $brand['logo_url']);
         // Gradient wycofany — paleta jest płaska.
         $this->assertArrayNotHasKey('gradient_from', $brand);
         $this->assertArrayNotHasKey('gradient_to', $brand);

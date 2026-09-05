@@ -70,7 +70,7 @@
          iOS ignoruje przezroczystość i podkłada CZARNE tło, więc zaokrąglone
          rogi ikonki wyszłyby czarnymi narożnikami. Plik 180×180 jest już
          spłaszczony na kremowej płytce — iOS sam nadaje mu swoje rogi. --}}
-    <link rel="icon" type="image/png" sizes="512x512" href="{{ asset('images/kramio-icon.png') }}">
+    <link rel="icon" type="image/png" sizes="512x512" href="{{ asset(config('brand.icon')) }}">
     <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
 
     <x-google-verification :code="$siteVerification" />

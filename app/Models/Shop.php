@@ -13,6 +13,7 @@ use App\Observers\ShopObserver;
 use App\Services\PhoneService;
 use App\Support\Color;
 use App\Support\Excerpt;
+use App\Support\Mode;
 use Carbon\CarbonInterface;
 use Database\Factories\ShopFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -305,7 +306,27 @@ class Shop extends Model
      */
     public function host(): string
     {
-        return $this->domain ?: $this->slug.'.'.config('tenancy.central_domain');
+        if ($this->domain) {
+            return $this->domain;
+        }
+
+        /*
+         * W SKLEPIE DEDYKOWANYM NIE MA SUBDOMENY — storefront stoi na domenie
+         * głównej (krok 3 przeróbki). Bez tego warunku sklejalibyśmy tu slug
+         * z domeną i zwracali adres, pod którym nic nie odpowiada
+         * („magellan.magellan.kwasniak.org").
+         *
+         * To nie jest kosmetyka jednego napisu w panelu: `host()` buduje adres
+         * w mailu o zamówieniu, link do formularza zwrotu, link do płatności,
+         * bazowy adres mapy strony, adres webhooka Paynow i podpis na grafice
+         * OG. W trybie dedykowanym każdy z nich prowadziłby donikąd — a klient
+         * zobaczyłby to dopiero przy pierwszym prawdziwym zamówieniu.
+         */
+        if (Mode::dedicated()) {
+            return (string) config('tenancy.central_domain');
+        }
+
+        return $this->slug.'.'.config('tenancy.central_domain');
     }
 
     /**

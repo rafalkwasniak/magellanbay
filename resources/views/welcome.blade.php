@@ -11,7 +11,7 @@
     <title>{{ $metaTitle }}</title>
     <meta name="description" content="{{ $metaDescription }}">
     <link rel="canonical" href="{{ url('/') }}">
-    <link rel="icon" type="image/png" sizes="512x512" href="{{ asset('images/kramio-icon.png') }}">
+    <link rel="icon" type="image/png" sizes="512x512" href="{{ asset(config('brand.icon')) }}">
     <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
 
     {{-- Open Graph: tak wygląda link do kramio.pl wklejony na Facebooka czy
@@ -54,7 +54,7 @@
             {{-- Nawigacja --}}
             <header class="flex items-center justify-between py-6">
                 <a href="{{ url('/') }}" class="inline-flex items-center">
-                    <img src="{{ asset('images/kramio-logo.png') }}" alt="{{ config('app.name') }} — twój sklep w 15 minut" class="h-12 w-auto">
+                    <img src="{{ asset(config('brand.logo')) }}" alt="{{ config('app.name') }} logo" class="h-12 w-auto">
                 </a>
                 <nav class="flex items-center gap-2 sm:gap-4">
                     <a href="#funkcje" class="hidden text-sm font-medium text-stone-500 transition hover:text-stone-800 sm:inline">Możliwości</a>
@@ -371,7 +371,7 @@
             <footer class="border-t border-stone-200/70 py-10">
                 <div class="flex flex-col items-center justify-between gap-6 sm:flex-row">
                     <a href="{{ url('/') }}" class="inline-flex items-center">
-                        <img src="{{ asset('images/kramio-logo.png') }}" alt="{{ config('app.name') }} — twój sklep w 15 minut" class="h-9 w-auto">
+                        <img src="{{ asset(config('brand.logo')) }}" alt="{{ config('app.name') }} logo" class="h-9 w-auto">
                     </a>
                     <nav class="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-stone-500">
                         <a href="{{ route('register') }}" class="transition hover:text-stone-800">Załóż sklep</a>

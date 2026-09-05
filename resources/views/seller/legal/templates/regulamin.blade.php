@@ -200,7 +200,15 @@
 <ol>
     <li>Administratorem danych osobowych Klientów jest Sprzedawca wskazany w §1.</li>
     <li>Dane przetwarzane są w celu realizacji Zamówień, obsługi reklamacji i zwrotów, prowadzenia dokumentacji księgowej oraz — jeżeli Klient wyrazi na to zgodę — wysyłki informacji handlowych.</li>
-    <li>Sklep działa na platformie Kramio, której operator przetwarza dane w imieniu Sprzedawcy jako podmiot przetwarzający. Zasady przetwarzania opisuje Polityka prywatności dostępna w Sklepie.</li>
+    @if (\App\Support\Mode::saas())
+        {{-- W sklepie dedykowanym NIE MA platformy ani podmiotu przetwarzającego:
+             właściciel sklepu jest administratorem i gospodarzem infrastruktury
+             naraz. Zdanie o Kramio byłoby tam wprost nieprawdziwe — i było,
+             dopóki stało tu bezwarunkowo. --}}
+        <li>Sklep działa na platformie Kramio, której operator przetwarza dane w imieniu Sprzedawcy jako podmiot przetwarzający. Zasady przetwarzania opisuje Polityka prywatności dostępna w Sklepie.</li>
+    @else
+        <li>Szczegółowe zasady przetwarzania danych — cele, podstawy prawne, okresy przechowywania i odbiorców — opisuje Polityka prywatności dostępna w Sklepie.</li>
+    @endif
     <li>Klientowi przysługuje prawo dostępu do danych, ich sprostowania, usunięcia, ograniczenia przetwarzania, przenoszenia, sprzeciwu oraz cofnięcia zgody, a także prawo wniesienia skargi do Prezesa Urzędu Ochrony Danych Osobowych.</li>
 </ol>
 

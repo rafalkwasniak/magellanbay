@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ ($title ?? 'Panel') . ' · ' . config('app.name') }}</title>
-    <link rel="icon" type="image/png" sizes="512x512" href="{{ asset('images/kramio-icon.png') }}">
+    <link rel="icon" type="image/png" sizes="512x512" href="{{ asset(config('brand.icon')) }}">
     <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
 
     {{-- Google Analytics ŚWIADOMIE tu nie ma — to nie przeoczenie.
@@ -81,7 +81,7 @@
                 {{-- Nagłówek marki o wysokości h-16 — zrównuje logo z nagłówkiem strony,
                      a treść poniżej z głównym boxem po prawej. --}}
                 <div class="flex h-16 shrink-0 items-center gap-2 px-4">
-                    <img src="{{ asset('images/kramio-logo.png') }}" alt="{{ config('app.name') }} — twój sklep w 15 minut" class="h-9 w-auto">
+                    <img src="{{ asset(config('brand.logo')) }}" alt="{{ config('app.name') }} logo" class="h-9 w-auto">
                     <span class="ml-auto rounded-full bg-white/70 px-2 py-0.5 text-[11px] font-medium text-stone-500">{{ $area }}</span>
                 </div>
 
@@ -210,7 +210,7 @@
         <aside data-mobile-nav-panel
             class="absolute left-0 top-0 flex h-full w-72 max-w-[85%] -translate-x-full flex-col bg-stone-50 shadow-xl transition-transform duration-300 ease-out">
             <div class="flex h-16 shrink-0 items-center gap-2 px-4">
-                <img src="{{ asset('images/kramio-logo.png') }}" alt="{{ config('app.name') }} — twój sklep w 15 minut" class="h-9 w-auto">
+                <img src="{{ asset(config('brand.logo')) }}" alt="{{ config('app.name') }} logo" class="h-9 w-auto">
                 <span class="ml-auto rounded-full bg-white/70 px-2 py-0.5 text-[11px] font-medium text-stone-500">{{ $area }}</span>
                 <button type="button" data-mobile-nav-close aria-label="Zamknij menu"
                     class="rounded-lg p-1.5 text-stone-400 transition hover:bg-stone-200 hover:text-stone-700">
