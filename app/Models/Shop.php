@@ -117,6 +117,17 @@ class Shop extends Model
     }
 
     /**
+     * Kartoteka licencjodawców — firm inkasujących opłatę za użycie znaku
+     * lub grafiki. Widoczna wyłącznie dla sprzedawcy.
+     *
+     * @return HasMany<Licensor, $this>
+     */
+    public function licensors(): HasMany
+    {
+        return $this->hasMany(Licensor::class)->orderBy('name');
+    }
+
+    /**
      * @return HasMany<Tag, $this>
      */
     public function tags(): HasMany

@@ -231,7 +231,12 @@ class OrderService
              * pozycję w całości, zamiast zostawiać osierocony wiersz „grawer"
              * po zwróconym magnesie.
              */
-            $unitPrice = round((float) $product->price_gross + $surcharge, 2);
+            // Rozbicie liczymy RAZ i z niego bierzemy cenę jednostkową, zamiast
+            // sumować osobno. Inaczej „ile klient zapłacił" i „z czego to się
+            // składa" mogłyby się rozjechać o grosz — a to jest dokładnie ten
+            // rozjazd, którego nikt nie zauważy do rozliczenia z partnerem.
+            $breakdown = ProductConfiguration::breakdown($product, $configuration);
+            $unitPrice = round(array_sum(array_column($breakdown, 'amount')), 2);
 
             [$lineGross] = $this->totals->lineAmounts($unitPrice, $quantity, $product->vat_rate);
             $itemsGross += $lineGross;
@@ -257,6 +262,8 @@ class OrderService
                 'quantity' => $quantity,
                 'sale_unit' => $product->sale_unit->value,
                 'line_total_gross' => $lineGross,
+                // Zdejmowane przed zapisem pozycji — patrz pętla niżej.
+                'components' => $breakdown,
             ];
 
             if ($product->track_stock && $product->stock !== null) {
@@ -319,7 +326,34 @@ class OrderService
             'note' => $data['note'] ?? null,
         ]);
 
-        $order->items()->createMany($itemRows);
+        /*
+         * ROZBICIE CENY zapisujemy razem z pozycją, wiersz po wierszu.
+         *
+         * Nie da się tego dołożyć później: składniki niosą MIGAWKĘ etykiety
+         * i nazwy licencjodawcy z chwili zakupu, a te po miesiącu mogą już nie
+         * istnieć. To z tych wierszy powstaje odpowiedź na pytanie „ile sztuk
+         * sprzedano z logo Biegu Gdańskiego i ile im się należy".
+         *
+         * `createMany()` zamienione na pętlę, bo potrzebujemy identyfikatora
+         * pozycji, żeby dopiąć do niej składniki.
+         */
+        foreach ($itemRows as $index => $row) {
+            $components = $row['components'] ?? [];
+            unset($row['components']);
+
+            $item = $order->items()->create($row);
+
+            foreach ($components as $position => $component) {
+                $item->components()->create([
+                    'kind' => $component['kind'],
+                    'label' => $component['label'],
+                    'licensor_id' => $component['licensor_id'],
+                    'licensor_name' => $component['licensor_name'],
+                    'unit_amount_gross' => $component['amount'],
+                    'position' => $position,
+                ]);
+            }
+        }
 
         // Sumy z jednego źródła (OrderTotals) — identycznie jak przy edycji zamówienia.
         $this->totals->recalculate($order->load('items'));

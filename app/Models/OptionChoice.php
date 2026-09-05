@@ -15,15 +15,30 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * produkcyjny, reklamacja i zwrot muszą wiedzieć, co dokładnie zamówiono.
  * Ta sama zasada co przy produktach (`deleted_at`, nie `DELETE`).
  */
-#[Fillable(['label', 'image_path', 'surcharge_gross', 'is_active', 'position'])]
+#[Fillable(['label', 'image_path', 'surcharge_gross', 'licensor_id', 'licence_fee_gross', 'is_active', 'position'])]
 class OptionChoice extends Model
 {
     protected function casts(): array
     {
         return [
             'surcharge_gross' => 'decimal:2',
+            'licence_fee_gross' => 'decimal:2',
             'is_active' => 'boolean',
         ];
+    }
+
+    /**
+     * Partner, któremu należy się opłata za tę pozycję.
+     *
+     * `licence_fee_gross` jest ODDZIELNE od `surcharge_gross`, bo rządzi nim inna
+     * arytmetyka: dopłaty się sumują, opłaty licencyjne podlegają regule „suma
+     * po firmach, maksimum wewnątrz jednej" (patrz App\Support\LicenceFees).
+     *
+     * @return BelongsTo<Licensor, $this>
+     */
+    public function licensor(): BelongsTo
+    {
+        return $this->belongsTo(Licensor::class);
     }
 
     /**

@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Enums\PriceComponentKind;
 use App\Models\OptionGroup;
 use App\Models\Product;
 
@@ -228,12 +229,50 @@ final class ProductConfiguration
      */
     public static function surcharge(Product $product, array $configuration): float
     {
-        if ($configuration === []) {
-            return 0.0;
+        $sum = 0.0;
+
+        foreach (self::breakdown($product, $configuration) as $component) {
+            if ($component['kind'] !== PriceComponentKind::Product) {
+                $sum += $component['amount'];
+            }
         }
 
-        $groups = $product->optionGroups()->with('choices')->get()->keyBy('id');
-        $sum = 0.0;
+        return round($sum, 2);
+    }
+
+    /**
+     * ROZBICIE CENY JEDNOSTKOWEJ na składniki — „cena z czterech części".
+     *
+     * Zwraca listę gotową do pokazania kupującemu i do zapisania na pozycji
+     * zamówienia (`order_item_components`). Pierwszym wierszem jest zawsze sam
+     * produkt, więc suma kwot równa się cenie jednostkowej — to niezmiennik,
+     * którego pilnuje test. Rozbicie nie jest ozdobnikiem obok ceny, tylko jej
+     * rozwinięciem.
+     *
+     * OPŁATY LICENCYJNE PRZECHODZĄ PRZEZ REGUŁĘ: suma po firmach, maksimum
+     * wewnątrz jednej. Odrzucona opłata nie pojawia się w rozbiciu wcale —
+     * pokazywanie kupującemu pozycji „0,00 zł, bo tę licencję już policzyliśmy"
+     * byłoby wyjaśnianiem naszej księgowości komuś, kto chce kupić magnes.
+     *
+     * @param  array<int, mixed>  $configuration
+     * @return list<array{kind: PriceComponentKind, label: string, licensor_id: int|null, licensor_name: string|null, amount: float}>
+     */
+    public static function breakdown(Product $product, array $configuration): array
+    {
+        $components = [[
+            'kind' => PriceComponentKind::Product,
+            'label' => $product->name,
+            'licensor_id' => null,
+            'licensor_name' => null,
+            'amount' => round((float) $product->price_gross, 2),
+        ]];
+
+        if ($configuration === []) {
+            return $components;
+        }
+
+        $groups = $product->optionGroups()->with(['choices.licensor'])->get()->keyBy('id');
+        $fees = [];
 
         foreach ($configuration as $groupId => $answer) {
             $group = $groups->get((int) $groupId);
@@ -242,15 +281,53 @@ final class ProductConfiguration
                 continue;
             }
 
-            $sum += (float) $group->surcharge_gross;
+            // Koszt skorzystania z grupy — wykonanie nadruku albo graweru.
+            if ((float) $group->surcharge_gross > 0) {
+                $components[] = [
+                    'kind' => PriceComponentKind::Option,
+                    'label' => $group->name,
+                    'licensor_id' => null,
+                    'licensor_name' => null,
+                    'amount' => round((float) $group->surcharge_gross, 2),
+                ];
+            }
 
-            if (isset($answer['choice'])) {
-                $choice = $group->choices->firstWhere('id', (int) $answer['choice']);
-                $sum += $choice !== null ? (float) $choice->surcharge_gross : 0.0;
+            if (! isset($answer['choice'])) {
+                continue;
+            }
+
+            $choice = $group->choices->firstWhere('id', (int) $answer['choice']);
+
+            if ($choice === null) {
+                continue;
+            }
+
+            // Dopłata za konkretną pozycję biblioteki — koszt sprzedawcy,
+            // sumuje się zwyczajnie.
+            if ((float) $choice->surcharge_gross > 0) {
+                $components[] = [
+                    'kind' => PriceComponentKind::Option,
+                    'label' => $group->name.' — '.$choice->label,
+                    'licensor_id' => null,
+                    'licensor_name' => null,
+                    'amount' => round((float) $choice->surcharge_gross, 2),
+                ];
+            }
+
+            // Opłata licencyjna — zbierana OSOBNO, bo dopiero po zebraniu
+            // wszystkich da się zastosować regułę.
+            if ((float) $choice->licence_fee_gross > 0) {
+                $fees[] = [
+                    'kind' => PriceComponentKind::Licence,
+                    'label' => $choice->label.($choice->licensor ? ' — '.$choice->licensor->name : ''),
+                    'licensor_id' => $choice->licensor_id,
+                    'licensor_name' => $choice->licensor?->name,
+                    'amount' => round((float) $choice->licence_fee_gross, 2),
+                ];
             }
         }
 
-        return round($sum, 2);
+        return array_merge($components, LicenceFees::reduce($fees));
     }
 
     /**

@@ -70,6 +70,21 @@ class OrderItem extends Model
     }
 
     /**
+     * Rozbicie ceny jednostkowej na składniki — produkt, personalizacja, opłaty
+     * licencyjne. „Cena z czterech części" rozpisana na wiersze.
+     *
+     * NIEZMIENNIK: suma `unit_amount_gross` składników równa się
+     * `unit_price_gross` pozycji. Rozbicie jest rozwinięciem ceny, nie notatką
+     * obok niej — i to właśnie z tych wierszy powstają rozliczenia z partnerami.
+     *
+     * @return HasMany<OrderItemComponent, $this>
+     */
+    public function components(): HasMany
+    {
+        return $this->hasMany(OrderItemComponent::class)->orderBy('position');
+    }
+
+    /**
      * Ilość, za którą klient nadal płaci: kupiona minus zwrócona. To z niej liczą
      * się kwoty zamówienia, faktura i statystyki — `quantity` zostaje migawką
      * zakupu, więc widać, ile było pierwotnie.
