@@ -176,6 +176,83 @@ class PersonalisationFormTest extends TestCase
     }
 
     /**
+     * BIBLIOTEKA Z GRAFIKAMI POKAZUJE PODGLĄD, nie listę rozwijaną.
+     *
+     * Klient wybiera grafikę z biblioteki i płaci za nią opłatę licencyjną.
+     * Wybór czegoś, czego się nie widzi, jest absurdem — a zapłacenie licencji
+     * za coś niewidocznego tym bardziej. W specyfikacji nie ma o tym słowa, bo
+     * jest to zbyt oczywiste, żeby pisać (uwaga Rafała, 05.09).
+     */
+    public function test_a_library_with_graphics_shows_previews(): void
+    {
+        $shop = Shop::factory()->sellable()->create();
+        $product = Product::factory()->create([
+            'shop_id' => $shop->id, 'is_active' => true, 'track_stock' => false,
+        ]);
+
+        $group = $shop->optionGroups()->create(['name' => 'Grawer', 'kind' => OptionGroupKind::Choice]);
+        $group->choices()->create([
+            'label' => 'Kotwica', 'image_path' => 'option-choices/kotwica.png', 'surcharge_gross' => 20.00,
+        ]);
+        $product->optionGroups()->attach($group);
+
+        Livewire::test(AddToCart::class, ['product' => $product->fresh()])
+            ->assertSee('option-choices/kotwica.png', false)
+            // Grupa nieobowiązkowa musi dać się pominąć także w siatce.
+            ->assertSee('Bez tej opcji')
+            ->assertDontSee('nie, dziękuję');
+    }
+
+    /**
+     * Biblioteka BEZ grafik zostaje listą rozwijaną. Siatka pustych kafelków
+     * z kreską udawałaby podgląd, którego nie ma.
+     */
+    public function test_a_library_without_graphics_stays_a_dropdown(): void
+    {
+        $shop = Shop::factory()->sellable()->create();
+        $product = Product::factory()->create([
+            'shop_id' => $shop->id, 'is_active' => true, 'track_stock' => false,
+        ]);
+
+        $group = $shop->optionGroups()->create(['name' => 'Wariant', 'kind' => OptionGroupKind::Choice]);
+        $group->choices()->create(['label' => 'Srebrny', 'surcharge_gross' => 5.00]);
+        $product->optionGroups()->attach($group);
+
+        Livewire::test(AddToCart::class, ['product' => $product->fresh()])
+            ->assertSee('nie, dziękuję')
+            ->assertDontSee('Bez tej opcji');
+    }
+
+    /**
+     * Do ZAMÓWIENIA idzie sama etykieta, nie ścieżka do pliku — właściciel wie,
+     * o którą grafikę chodzi, a arkusz produkcyjny bierze plik po
+     * identyfikatorze pozycji biblioteki.
+     */
+    public function test_only_the_label_travels_to_the_cart(): void
+    {
+        $shop = Shop::factory()->sellable()->create();
+        $product = Product::factory()->create([
+            'shop_id' => $shop->id, 'is_active' => true, 'track_stock' => false,
+        ]);
+
+        $group = $shop->optionGroups()->create(['name' => 'Grawer', 'kind' => OptionGroupKind::Choice]);
+        $choice = $group->choices()->create([
+            'label' => 'Kotwica', 'image_path' => 'option-choices/kotwica.png', 'surcharge_gross' => 20.00,
+        ]);
+        $product->optionGroups()->attach($group);
+
+        Livewire::test(AddToCart::class, ['product' => $product->fresh()])
+            ->set('config.'.$group->id.'.choice', $choice->id)
+            ->call('add')
+            ->assertHasNoErrors();
+
+        $line = app(CartService::class)->lines($shop->id)->first();
+
+        $this->assertSame('Kotwica', $line['personalisation'][0]['value']);
+        $this->assertSame($choice->id, $line['configuration'][$group->id]['choice']);
+    }
+
+    /**
      * „Grawer to grafika ALBO tekst" — kupujący ma usłyszeć, co zrobić, a nie
      * zobaczyć nieruchomy przycisk.
      */

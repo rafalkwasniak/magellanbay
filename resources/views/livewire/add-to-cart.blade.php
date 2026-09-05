@@ -17,7 +17,7 @@
          Osobna flaga, NIE `compact`: tamta steruje wyglądem przycisku i jest
          włączona także na karcie produktu. --}}
     @if ($withOptions && $groups->isNotEmpty())
-        <div class="mb-5 space-y-5">
+        <div class="mb-8 space-y-5">
             @foreach ($groups as $group)
                 <fieldset>
                     <legend class="text-sm font-semibold">
@@ -31,14 +31,68 @@
                     @endif
 
                     @if ($group->isChoice())
-                        <select wire:model.live="config.{{ $group->id }}.choice"
-                            class="st-border mt-2 block w-full rounded-xl border bg-transparent px-4 py-2.5 text-sm focus:outline-none">
-                            <option value="">— nie, dziękuję —</option>
-                            @foreach ($group->choices->where('is_active', true) as $choice)
-                                @php($dodatek = (float) $choice->surcharge_gross + (float) $choice->licence_fee_gross)
-                                <option value="{{ $choice->id }}">{{ $choice->label }}@if ($dodatek > 0) (+{{ \App\Support\Money::pln($dodatek) }})@endif</option>
-                            @endforeach
-                        </select>
+                        @php($dostepne = $group->choices->where('is_active', true))
+                        @php($zGrafika = $dostepne->contains(fn ($c) => filled($c->image_path)))
+
+                        @if ($zGrafika)
+                            {{-- SIATKA Z PODGLĄDEM, nie lista rozwijana.
+
+                                 Klient wybiera grafikę Z BIBLIOTEKI i płaci za nią
+                                 opłatę licencyjną. Wybór czegoś, czego się nie widzi,
+                                 jest absurdem — a zapłacenie licencji za coś
+                                 niewidocznego tym bardziej. Do zamówienia i tak idzie
+                                 sama etykieta; właściciel wie, o którą grafikę chodzi.
+
+                                 Kontener SCROLLUJE SIĘ w pionie: biblioteka może mieć
+                                 pięć pozycji albo pięćdziesiąt, a rozwijana na całą
+                                 wysokość zepchnęłaby przycisk zakupu pod zgięcie. --}}
+                            <div class="mt-2" style="max-height:20rem;overflow-y:auto;padding-right:.25rem">
+                                <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                                    @php($wybrane = (string) ($config[$group->id]['choice'] ?? ''))
+
+                                    @unless ($group->required)
+                                        <label class="st-border flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border p-3 text-center text-xs transition hover:brightness-95"
+                                            @if ($wybrane === '') style="outline:2px solid var(--brand);outline-offset:-1px" @endif>
+                                            <input type="radio" class="sr-only"
+                                                wire:model.live="config.{{ $group->id }}.choice" value="">
+                                            <span class="flex h-16 w-full items-center justify-center opacity-40">—</span>
+                                            <span class="font-medium">Bez tej opcji</span>
+                                        </label>
+                                    @endunless
+
+                                    @foreach ($dostepne as $choice)
+                                        @php($dodatek = (float) $choice->surcharge_gross + (float) $choice->licence_fee_gross)
+                                        <label class="st-border flex cursor-pointer flex-col items-center gap-1 rounded-xl border p-3 text-center text-xs transition hover:brightness-95"
+                                            @if ($wybrane === (string) $choice->id) style="outline:2px solid var(--brand);outline-offset:-1px" @endif>
+                                            <input type="radio" class="sr-only"
+                                                wire:model.live="config.{{ $group->id }}.choice" value="{{ $choice->id }}">
+                                            @if ($choice->imageUrl())
+                                                <img src="{{ $choice->imageUrl() }}" alt="{{ $choice->label }}"
+                                                    class="h-16 w-full rounded-lg object-contain" loading="lazy">
+                                            @else
+                                                <span class="flex h-16 w-full items-center justify-center opacity-40">—</span>
+                                            @endif
+                                            <span class="font-medium break-words">{{ $choice->label }}</span>
+                                            @if ($dodatek > 0)
+                                                <span class="opacity-70">+{{ \App\Support\Money::pln($dodatek) }}</span>
+                                            @endif
+                                        </label>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @else
+                            {{-- Biblioteka bez grafik — lista rozwijana wystarczy.
+                                 Siatka pustych kafelków z kreską udawałaby podgląd,
+                                 którego nie ma. --}}
+                            <select wire:model.live="config.{{ $group->id }}.choice"
+                                class="st-border mt-2 block w-full rounded-xl border bg-transparent px-4 py-2.5 text-sm focus:outline-none">
+                                <option value="">— nie, dziękuję —</option>
+                                @foreach ($dostepne as $choice)
+                                    @php($dodatek = (float) $choice->surcharge_gross + (float) $choice->licence_fee_gross)
+                                    <option value="{{ $choice->id }}">{{ $choice->label }}@if ($dodatek > 0) (+{{ \App\Support\Money::pln($dodatek) }})@endif</option>
+                                @endforeach
+                            </select>
+                        @endif
                         @error('config.'.$group->id.'.choice')
                             <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
                         @enderror
@@ -99,6 +153,10 @@
         </div>
     @endif
 
+    {{-- Odstęp nad przyciskiem. Bez niego ostatnia podpowiedź pod polem („Imię —
+         do 12 znaków") stykała się z „Do koszyka" i całość czytała się jak jeden
+         sklejony blok. Odstęp DOKŁADAMY TYLKO wtedy, gdy formularz się pokazał —
+         przy zwykłym produkcie przycisk ma zostać tam, gdzie był. --}}
     @php($pad = $compact ? 'px-5 py-2.5' : 'px-8 py-3')
 
     @if ($needsCard)

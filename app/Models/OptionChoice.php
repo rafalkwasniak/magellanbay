@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Pozycja biblioteki — jedna grafika albo wariant do wyboru, z własną dopłatą.
@@ -47,6 +48,26 @@ class OptionChoice extends Model
     public function group(): BelongsTo
     {
         return $this->belongsTo(OptionGroup::class, 'option_group_id');
+    }
+
+    /**
+     * Adres podglądu grafiki — ta sama konwencja co przy zdjęciach produktu
+     * (`ProductImage::url()`), bo to ten sam dysk i ten sam sposób serwowania.
+     *
+     * DLACZEGO PODGLĄD W OGÓLE JEST POTRZEBNY: klient wybiera grafikę
+     * Z BIBLIOTEKI i płaci za nią opłatę licencyjną. Wybór grafiki, której się
+     * nie widzi, jest absurdem — a zapłacenie licencji za coś niewidocznego
+     * tym bardziej. W specyfikacji nie ma o tym słowa, bo jest to zbyt
+     * oczywiste, żeby pisać (uwaga Rafała, 05.09).
+     *
+     * Do ZAMÓWIENIA i tak idzie sama etykieta: właściciel wie, o którą grafikę
+     * chodzi, a arkusz produkcyjny bierze plik po identyfikatorze pozycji.
+     */
+    public function imageUrl(): ?string
+    {
+        return blank($this->image_path)
+            ? null
+            : Storage::disk('public')->url($this->image_path);
     }
 
     /**
