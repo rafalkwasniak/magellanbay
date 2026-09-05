@@ -164,10 +164,18 @@ class Seo
      * Obrazek stron PLATFORMY (landing, logowanie, regulamin) — jeden stały
      * plik z `config/seo.php`, nie generowana karta sklepu. Adres absolutny,
      * bo Facebook nie rozwiąże ścieżki względnej.
+     *
+     * NULL, gdy grafiki nie ustawiono — i to jest poprawny stan, nie usterka.
+     * We wdrożeniu dedykowanym karta platformy nie ma czego pokazywać, dopóki
+     * klient nie dostarczy własnej: podstawienie NASZEJ oznaczałoby, że link do
+     * jego sklepu wrzucony na Facebooka wyświetla się z cudzą marką. Lepszy brak
+     * karty (serwis pokaże sam adres) niż karta obcej firmy.
      */
-    public static function platformImage(): string
+    public static function platformImage(): ?string
     {
-        return asset(config('seo.og_image'));
+        $path = trim((string) config('seo.og_image'));
+
+        return $path !== '' ? asset($path) : null;
     }
 
     /**

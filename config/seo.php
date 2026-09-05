@@ -7,18 +7,30 @@ return [
     | Grafika centrali do social mediów
     |--------------------------------------------------------------------------
     |
-    | Karta 1200×630, którą Facebook i Messenger pokazują przy linku do
-    | kramio.pl. Storefronty sprzedawców mają własne, generowane grafiki
-    | (App\Services\OgImageGenerator) — ta dotyczy WYŁĄCZNIE stron platformy.
+    | Karta 1200×630, którą Facebook i Messenger pokazują przy linku do stron
+    | PLATFORMY — landingu, logowania, dokumentów. Sam storefront ma własną,
+    | generowaną z marki sklepu (App\Services\OgImageGenerator) i ta wartość
+    | jej nie dotyczy.
     |
-    | Ścieżka względem katalogu `public/`. Nazwa pliku zawiera losowy ciąg
-    | celowo: Facebook trzyma pobraną grafikę w swoim cache'u nawet kilka
-    | tygodni, więc nowa wersja MUSI mieć nową nazwę, żeby serwisy zobaczyły
-    | zmianę. Podmieniając grafikę, wgraj plik pod nową nazwą i zmień tę linię.
+    | Ścieżka względem katalogu `public/`.
     |
     */
 
-    'og_image' => 'images/og-kramio-2026-08.jpg',
+    /*
+     * PUSTE = brak karty, i to jest poprawny stan wdrożenia.
+     *
+     * Dopóki klient nie dostarczy własnej grafiki, nie podstawiamy tu żadnej.
+     * Cudza karta znaczyłaby, że link do jego sklepu wrzucony na Facebooka
+     * wyświetla się z NASZĄ marką — a to gorsze niż brak obrazka, bo wygląda
+     * na pomyłkę właściciela, nie na brak materiału. Bez wartości widoki nie
+     * wypisują `og:image` w ogóle (pusty atrybut serwisy czytają jak zepsuty
+     * plik) i pokazują sam adres.
+     *
+     * Grafikę wgrywa się do `public/images/` POD NOWĄ NAZWĄ i wpisuje ją do
+     * `SEO_OG_IMAGE` — Facebook trzyma pobraną wersję tygodniami, więc ta sama
+     * nazwa nie doczeka się odświeżenia. Wymiar: 1200 × 630.
+     */
+    'og_image' => env('SEO_OG_IMAGE') ?: null,
 
     /*
     |--------------------------------------------------------------------------

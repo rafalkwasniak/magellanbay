@@ -17,10 +17,16 @@
     <meta property="og:title" content="{{ $metaTitle }}">
     <meta property="og:url" content="{{ url()->current() }}">
     <meta property="og:locale" content="pl_PL">
-    <meta property="og:image" content="{{ \App\Support\Seo::platformImage() }}">
-    <meta property="og:image:width" content="1200">
-    <meta property="og:image:height" content="630">
-    <meta name="twitter:card" content="summary_large_image">
+    {{-- Bez ustawionej grafiki NIE wypisujemy pustego `og:image` — serwisy
+         traktują je jak zepsuty obrazek. Wtedy pokażą sam adres, i o to chodzi:
+         lepiej brak karty niż karta z cudzą marką. Wraz z obrazkiem znika
+         `twitter:card`, bo „duża karta" bez grafiki nie ma czego powiększyć. --}}
+    @if ($ogImage = \App\Support\Seo::platformImage())
+        <meta property="og:image" content="{{ $ogImage }}">
+        <meta property="og:image:width" content="1200">
+        <meta property="og:image:height" content="630">
+        <meta name="twitter:card" content="summary_large_image">
+    @endif
 
     <x-google-verification :code="config('services.google.site_verification')" />
     <x-google-analytics :id="config('services.google.analytics_id')" />

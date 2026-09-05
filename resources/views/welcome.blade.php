@@ -23,11 +23,16 @@
     <meta property="og:description" content="{{ $metaDescription }}">
     <meta property="og:url" content="{{ url('/') }}">
     <meta property="og:locale" content="pl_PL">
-    <meta property="og:image" content="{{ \App\Support\Seo::platformImage() }}">
-    <meta property="og:image:width" content="1200">
-    <meta property="og:image:height" content="630">
-    <meta property="og:image:alt" content="{{ config('app.name') }} — twój sklep online">
-    <meta name="twitter:card" content="summary_large_image">
+    {{-- Patrz komentarz w components/layouts/public.blade.php: pusty `og:image`
+         to dla serwisów zepsuty obrazek, więc przy braku grafiki nie wypisujemy
+         go wcale. --}}
+    @if ($ogImage = \App\Support\Seo::platformImage())
+        <meta property="og:image" content="{{ $ogImage }}">
+        <meta property="og:image:width" content="1200">
+        <meta property="og:image:height" content="630">
+        <meta property="og:image:alt" content="{{ config('app.name') }} — twój sklep online">
+        <meta name="twitter:card" content="summary_large_image">
+    @endif
 
     <x-google-verification :code="config('services.google.site_verification')" />
     <x-google-analytics :id="config('services.google.analytics_id')" />

@@ -10,6 +10,8 @@ use App\Models\Product;
 use App\Models\Shop;
 use App\Models\User;
 use App\Support\Mode;
+use App\Support\SellerPrivacy;
+use App\Support\SellerTerms;
 use Database\Seeders\DemoSeeder;
 use Database\Seeders\DeploymentSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -181,19 +183,55 @@ class DeploymentSeederTest extends TestCase
     }
 
     /**
-     * Obie strony są opublikowane od razu — inaczej sklep miałby w menu odnośnik
-     * prowadzący w pustkę. Treścią jest na starcie zaślepka, którą właściciel
-     * podmienia wzorem z kreatora.
+     * Strony systemowe są ZAWSZE opublikowane, a odnośniki do nich stoją
+     * w nagłówku i stopce od pierwszego dnia. Wybór nie brzmi więc „szkic czy
+     * publikacja", tylko „co klient publikuje, zanim usiądzie do dokumentów".
+     * Wzór bije zaślepkę „w przygotowaniu" w obie strony.
      */
-    public function test_system_pages_start_published_with_a_placeholder(): void
+    public function test_system_pages_are_filled_with_the_real_templates(): void
     {
         $this->deploymentConfig();
         $this->seedDeployment();
 
-        foreach (Page::query()->where('is_system', true)->get() as $page) {
-            $this->assertTrue((bool) $page->published);
-            $this->assertNotEmpty($page->content);
-        }
+        $regulamin = Page::query()->where('slug', config('pages.regulamin.slug'))->sole();
+        $polityka = Page::query()->where('slug', config('pages.privacy.slug'))->sole();
+
+        $this->assertTrue((bool) $regulamin->published);
+        $this->assertTrue((bool) $polityka->published);
+
+        // Nie zaślepka — realna treść dokumentu.
+        $this->assertStringNotContainsString('w przygotowaniu', $regulamin->content);
+        $this->assertStringNotContainsString('w przygotowaniu', $polityka->content);
+        $this->assertStringContainsString('Prawo odstąpienia', $regulamin->content);
+        $this->assertStringContainsString('Administratorem Twoich danych', $polityka->content);
+
+        // Wersja wzoru zapisana — bez niej po poprawkach prawnika nie ustalimy,
+        // kto ma starą.
+        $this->assertSame(SellerTerms::VERSION, $regulamin->terms_template_version);
+        $this->assertSame(SellerPrivacy::VERSION, $polityka->terms_template_version);
+    }
+
+    /**
+     * Dane firmowe z `.env` wchodzą wprost do dokumentów, a czego nie ma —
+     * zostaje widoczną luką. Wzór z pustym miejscem po nazwie sprzedawcy
+     * czytałby się jak usterka; `[NAZWA_SPRZEDAWCY]` czyta się jak zadanie.
+     */
+    public function test_documents_use_env_data_and_mark_what_is_missing(): void
+    {
+        $this->deploymentConfig();
+        config()->set('deployment.company.company_name', '');
+        config()->set('deployment.company.nip', '');
+
+        $this->seedDeployment();
+
+        $polityka = Page::query()->where('slug', config('pages.privacy.slug'))->sole();
+
+        $this->assertStringContainsString('[NAZWA_SPRZEDAWCY]', $polityka->content);
+        // NIP też jest luką, mimo że w kreatorze pusty NIP znaczy „działalność
+        // nierejestrowana". Tam pustkę wybrał człowiek, tu po prostu nikt nie
+        // wypełnił zmiennej — a to za mało, by stwierdzić cudzy status prawny.
+        $this->assertStringContainsString('[NIP]', $polityka->content);
+        $this->assertStringContainsString('Gdańsk', $polityka->content);
     }
 
     public function test_slug_is_derived_from_shop_name_when_not_given(): void

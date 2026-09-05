@@ -9,6 +9,8 @@ use App\Models\Shop;
 use App\Models\User;
 use App\Services\SlugService;
 use App\Support\Mode;
+use App\Support\SellerPrivacy;
+use App\Support\SellerTerms;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Password;
@@ -163,12 +165,89 @@ class DeploymentSeeder extends Seeder
         $shop->comped = true;
         $shop->assignPackage((string) $config['package']);
 
+        $this->fillLegalPages($shop, $config);
+
         // Sklep zostaje SZKICEM. Publikacja to decyzja właściciela — po wgraniu
         // produktów i uzupełnieniu dokumentów, nie w chwili zakładania bazy.
         // Do tego czasu storefront jest widoczny tylko dla zalogowanego
         // właściciela (podgląd szkicu).
 
         return $shop;
+    }
+
+    /**
+     * Wypełnia strony systemowe wzorami regulaminu i polityki prywatności.
+     *
+     * DLACZEGO OD RAZU, A NIE ZOSTAWIĆ ZAŚLEPKI: strony systemowe są zawsze
+     * OPUBLIKOWANE, a odnośniki do nich stoją w nagłówku i stopce od pierwszego
+     * dnia. Wybór nie brzmi więc „szkic czy publikacja", tylko „co klient
+     * publikuje, zanim usiądzie do dokumentów" — zaślepka „w przygotowaniu"
+     * czy wzór z widocznymi lukami. Wzór jest lepszy w obie strony: klientowi
+     * pokazuje, co ma uzupełnić, a jego kupującym mówi choć część prawdy.
+     *
+     * @param  array<string, mixed>  $config
+     */
+    private function fillLegalPages(Shop $shop, array $config): void
+    {
+        $dane = $this->legalAnswers($config);
+
+        $this->fillPage($shop, config('pages.regulamin.slug'), SellerTerms::render($shop, $dane), SellerTerms::VERSION);
+        $this->fillPage($shop, config('pages.privacy.slug'), SellerPrivacy::render($shop, $dane), SellerPrivacy::VERSION);
+    }
+
+    private function fillPage(Shop $shop, string $slug, string $content, int $version): void
+    {
+        $page = $shop->pages()->where('slug', $slug)->first();
+
+        // Strona powstaje w ShopObserver. Gdyby jej nie było (np. polityka
+        // w trybie SaaS), po prostu nie ma czego wypełniać.
+        $page?->forceFill([
+            'content' => $content,
+            'terms_template_version' => $version,
+        ])->save();
+    }
+
+    /**
+     * Odpowiedzi do wzorów: wartość z `.env` albo WIDOCZNA LUKA.
+     *
+     * Luki wypisujemy jako [WIELKIE_LITERY_W_NAWIASACH], bo dokument powstaje
+     * tu ZA klienta, zanim poda dane firmowe — a szukanie niewypełnionych
+     * miejsc w kilkunastu tysiącach znaków bez oznaczenia jest polowaniem
+     * na igłę. Nawiasy kwadratowe, nie klamry: klamra to składnia Blade.
+     *
+     * NIP-a też oznaczamy luką, choć w kreatorze pusty NIP znaczy „działalność
+     * nierejestrowana". Różnica jest w tym, KTO odpowiedział: tam człowiek
+     * świadomie zostawił pole puste, tutaj po prostu nikt go nie wypełnił.
+     * Napisanie w cudzym regulaminie „działalność nierejestrowana" na podstawie
+     * pustej zmiennej środowiskowej byłoby zmyśleniem faktu prawnego.
+     *
+     * @param  array<string, mixed>  $config
+     * @return array<string, string>
+     */
+    private function legalAnswers(array $config): array
+    {
+        $albo = function (string $wartosc, string $etykieta): string {
+            return trim($wartosc) !== '' ? trim($wartosc) : '['.$etykieta.']';
+        };
+
+        $adres = $albo(
+            trim((string) $config['company']['street'].' '
+                .$config['company']['building_number'].', '
+                .$config['company']['postal_code'].' '
+                .$config['company']['city'], ' ,'),
+            'ADRES_SIEDZIBY'
+        );
+
+        return [
+            'seller_name' => $albo((string) $config['company']['company_name'], 'NAZWA_SPRZEDAWCY'),
+            'nip' => $albo((string) $config['company']['nip'], 'NIP'),
+            'address' => $adres,
+            'email' => $albo((string) $config['shop']['contact_email'], 'ADRES_EMAIL'),
+            'phone' => $albo((string) $config['shop']['contact_phone'], 'TELEFON'),
+            'return_address' => $adres,
+            'shipping_days' => '[LICZBA_DNI]',
+            'withdrawal_exclusions' => '',
+        ];
     }
 
     /**
