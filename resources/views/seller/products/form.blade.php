@@ -202,6 +202,69 @@
                     </div>
                 </div>
 
+                {{-- KATALOG — miejsce produktu na każdej z osi podziału.
+
+                     Osie są niezależne: ten sam magnes jest jednocześnie
+                     „Kamieniem", „Biegiem" i „Rzymem". Oś jednokrotna dostaje
+                     listę wyboru, wielokrotna — checkboxy; jedno i drugie
+                     wynika z `config/catalog.php`, nie z tego widoku. --}}
+                <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                    <h2 class="font-semibold text-stone-900">Katalog</h2>
+                    <p class="mt-1 text-sm text-stone-500">Którymi drogami kupujący ma trafić do tego produktu.</p>
+
+                    @php($chosenCategories = collect(old('categories', $product->exists ? $product->categories->groupBy('axis')->map(fn ($set) => $set->pluck('id')->all())->all() : [])))
+
+                    <div class="mt-5 space-y-6">
+                        @foreach ($axes as $axis)
+                            @php($rows = $categoryRows[$axis->key()] ?? [])
+                            @php($picked = collect((array) ($chosenCategories[$axis->key()] ?? []))->map(fn ($id) => (int) $id))
+
+                            <div>
+                                <p class="text-sm font-medium text-stone-700">{{ $axis->label() }}</p>
+
+                                @if ($rows === [])
+                                    <p class="mt-2 text-xs text-stone-400">
+                                        Ten podział jest pusty —
+                                        <a href="{{ route('seller.categories.index', $axis->segment()) }}" class="font-medium text-amber-700 underline decoration-amber-300 underline-offset-2">ułóż go w Katalogu</a>.
+                                    </p>
+                                @elseif ($axis->multiple())
+                                    <div class="mt-2 grid gap-1.5 sm:grid-cols-2">
+                                        @foreach ($rows as $row)
+                                            <label class="flex items-start gap-2 text-sm text-stone-600"
+                                                style="padding-left: {{ $row['depth'] * 18 }}px">
+                                                <input type="checkbox" name="categories[{{ $axis->key() }}][]" value="{{ $row['category']->id }}"
+                                                    class="mt-0.5 shrink-0" @checked($picked->contains($row['category']->id))>
+                                                <span>{{ $row['category']->name }}</span>
+                                            </label>
+                                        @endforeach
+                                    </div>
+                                @else
+                                    <select name="categories[{{ $axis->key() }}]"
+                                        class="mt-1.5 block w-full rounded-2xl border border-stone-200 bg-white/80 px-4 py-3 text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
+                                        <option value="">— nie przypisano —</option>
+                                        @foreach ($rows as $row)
+                                            <option value="{{ $row['category']->id }}" @selected($picked->contains($row['category']->id))>
+                                                {{ str_repeat('— ', $row['depth']) }}{{ $row['category']->name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                @endif
+
+                                @error('categories.'.$axis->key())
+                                    <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+                        @endforeach
+                    </div>
+
+                    @error('categories')
+                        <p class="mt-2 text-sm text-rose-600">{{ $message }}</p>
+                    @enderror
+                    @error('category_ids.*')
+                        <p class="mt-2 text-sm text-rose-600">{{ $message }}</p>
+                    @enderror
+                </div>
+
                 {{-- PERSONALIZACJA — które pytania zadamy kupującemu przy tym produkcie.
 
                      Grupy definiuje się raz dla całego sklepu (Personalizacja

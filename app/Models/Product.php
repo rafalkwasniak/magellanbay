@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Collection;
 
 /**
  * Produkt sklepu. Cena `price_gross` jest brutto; netto i kwotę VAT wyliczamy
@@ -136,6 +137,43 @@ class Product extends Model
     public function tags(): BelongsToMany
     {
         return $this->belongsToMany(Tag::class);
+    }
+
+    /**
+     * Kategorie ze WSZYSTKICH osi naraz. Osobne osie wyciąga `categoriesOn()`.
+     *
+     * @return BelongsToMany<Category, $this>
+     */
+    public function categories(): BelongsToMany
+    {
+        return $this->belongsToMany(Category::class)
+            ->orderBy('categories.position')
+            ->orderBy('categories.name');
+    }
+
+    /**
+     * Kategorie produktu na jednej osi — „w jakim jest rodzaju", „w jakich
+     * tematykach". Karta produktu i okruszki pytają zawsze o jedną oś.
+     *
+     * @return Collection<int, Category>
+     */
+    public function categoriesOn(string $axis): Collection
+    {
+        return $this->relationLoaded('categories')
+            ? $this->categories->where('axis', $axis)->values()
+            : $this->categories()->where('axis', $axis)->get();
+    }
+
+    /**
+     * Rodzaj produktu — oś jednokrotna, więc jeden węzeł albo nic.
+     *
+     * Osobna metoda, bo „seria", której sprzedaż da się wstrzymać, to właśnie
+     * ten węzeł; wołanie `categoriesOn('kind')->first()` w pięciu miejscach
+     * prosiłoby się o pomyłkę.
+     */
+    public function kind(): ?Category
+    {
+        return $this->categoriesOn('kind')->first();
     }
 
     /**

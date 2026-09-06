@@ -6,6 +6,7 @@ use App\Enums\SaleUnit;
 use App\Enums\VatRate;
 use App\Services\HtmlSanitizer;
 use App\Services\SlugService;
+use App\Support\CatalogAxis;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -41,6 +42,25 @@ class ProductRequest extends FormRequest
             'licence_fee_gross' => str_replace([' ', "\u{a0}", ','], ['', '', '.'], trim((string) $this->input('licence_fee_gross'))) ?: '0',
             'licensor_id' => $this->input('licensor_id') ?: null,
         ];
+
+        /*
+         * Kategorie przychodzą osobno dla każdej osi, a oś jednokrotna przysyła
+         * SKALAR, nie tablicę. Sprowadzamy wszystko do list, a dodatkowo do
+         * płaskiego `category_ids` — reguła `exists` nie ma jak sprawdzić
+         * struktury, która raz jest wartością, a raz tablicą.
+         */
+        $categories = [];
+        foreach ((array) $this->input('categories', []) as $axis => $chosen) {
+            $categories[$axis] = collect(is_array($chosen) ? $chosen : [$chosen])
+                ->filter(fn ($id): bool => filled($id))
+                ->map(fn ($id): int => (int) $id)
+                ->unique()
+                ->values()
+                ->all();
+        }
+
+        $merge['categories'] = $categories;
+        $merge['category_ids'] = array_values(array_unique(array_merge(...array_values($categories) ?: [[]])));
 
         // Stan może być ułamkowy przy sprzedaży na wagę (2,50 kg) — przecinek na kropkę.
         if ($this->filled('stock')) {
@@ -101,7 +121,26 @@ class ProductRequest extends FormRequest
                 'nullable',
                 Rule::exists('licensors', 'id')->where('shop_id', $shopId),
             ],
+
+            /*
+             * Kategorie katalogu, os po osi: `categories[kind]` to pojedynczy
+             * wybor, `categories[theme][]` i `categories[geo][]` — wiele.
+             * Znormalizowane do plaskiej listy w `prepareForValidation`, bo
+             * regula walidacji nie ma jak przyjac raz skalara, raz tablicy.
+             */
+            'category_ids' => ['array'],
+            'category_ids.*' => [Rule::exists('categories', 'id')->where('shop_id', $shopId)],
         ];
+    }
+
+    /**
+     * Kategorie zgłoszone dla jednej osi — po normalizacji zawsze lista.
+     *
+     * @return list<int>
+     */
+    public function categoriesFor(string $axis): array
+    {
+        return array_values(array_map('intval', (array) ($this->input('categories.'.$axis) ?? [])));
     }
 
     /**
@@ -112,6 +151,8 @@ class ProductRequest extends FormRequest
      */
     public function withValidator(Validator $validator): void
     {
+        $validator->after(fn (Validator $validator) => $this->checkCategories($validator));
+
         $validator->after(function (Validator $validator): void {
             if (! $this->boolean('show_on_homepage')) {
                 return;
@@ -137,6 +178,59 @@ class ProductRequest extends FormRequest
                 );
             }
         });
+    }
+
+    /**
+     * Kategorie muszą stać na tej osi, na której je zgłoszono, a oś jednokrotna
+     * przyjmuje najwyżej jedną.
+     *
+     * `exists` sprawdza tylko, że węzeł należy do sklepu — nie widzi, czy
+     * „Rzym" przyszedł jako geografia, czy podrzucony jako rodzaj. Bez tego
+     * podmieniony identyfikator wpisałby produkt do złej osi, a katalog
+     * mówiłby nieprawdę, nie wywalając się.
+     */
+    private function checkCategories(Validator $validator): void
+    {
+        $shop = $this->user()?->shop;
+
+        if ($shop === null) {
+            return;
+        }
+
+        $chosen = (array) $this->input('categories', []);
+        $ids = collect($chosen)->flatten()->unique()->all();
+
+        if ($ids === []) {
+            return;
+        }
+
+        $axes = $shop->categories()->whereKey($ids)->pluck('axis', 'id');
+
+        foreach ($chosen as $axisKey => $selected) {
+            $axis = CatalogAxis::find((string) $axisKey);
+
+            if ($axis === null) {
+                $validator->errors()->add('categories', 'Nieznany podział katalogu.');
+
+                continue;
+            }
+
+            if (! $axis->multiple() && count($selected) > 1) {
+                $validator->errors()->add(
+                    'categories.'.$axisKey,
+                    'Podział „'.$axis->label().'" przyjmuje tylko jedną pozycję.',
+                );
+            }
+
+            foreach ($selected as $id) {
+                if (($axes[$id] ?? null) !== $axis->key()) {
+                    $validator->errors()->add(
+                        'categories.'.$axisKey,
+                        'Wybrana pozycja nie należy do podziału „'.$axis->label().'".',
+                    );
+                }
+            }
+        }
     }
 
     /**

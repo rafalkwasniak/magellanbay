@@ -136,6 +136,21 @@ class Shop extends Model
     }
 
     /**
+     * Kategorie katalogu — wszystkie osie razem, rozróżniane kolumną `axis`.
+     *
+     * Tagi zostają obok i robią co innego: są płaską, swobodną etykietą
+     * dopisywaną przy produkcie, a kategoria to miejsce w katalogu, do którego
+     * prowadzi własny adres. Sprzedawca dopisuje tagi w locie, a kategorie
+     * układa raz i rzadko rusza.
+     *
+     * @return HasMany<Category, $this>
+     */
+    public function categories(): HasMany
+    {
+        return $this->hasMany(Category::class)->ordered();
+    }
+
+    /**
      * Strony tekstowe sklepu („Informacje") — Regulamin i strony sprzedawcy.
      * Jedna wspólna kolejność (position) dla menu i stopki.
      *

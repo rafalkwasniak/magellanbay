@@ -29,6 +29,7 @@ use App\Http\Controllers\RobotsController;
 use App\Http\Controllers\Seller\AnalyticsController;
 use App\Http\Controllers\Seller\AppearanceController;
 use App\Http\Controllers\Seller\BulkMailingController;
+use App\Http\Controllers\Seller\CategoryController;
 use App\Http\Controllers\Seller\CompanyLookupController;
 use App\Http\Controllers\Seller\ContentReportController as SellerContentReportController;
 use App\Http\Controllers\Seller\CustomerController;
@@ -61,6 +62,7 @@ use App\Http\Controllers\Storefront\PaymentController as StorefrontPayment;
 use App\Http\Controllers\Storefront\ProductController as StorefrontProduct;
 use App\Http\Controllers\Storefront\RegisterController as StorefrontRegister;
 use App\Http\Controllers\Storefront\UnsubscribeController as StorefrontUnsubscribe;
+use App\Support\CatalogAxis;
 use App\Support\Mode;
 use Illuminate\Support\Facades\Route;
 
@@ -423,6 +425,17 @@ Route::middleware(['auth', 'role:seller', 'ensure.consents'])
         // jak liste i chce zobaczyc efekt raz, a nie po kazdym polu z osobna.
         Route::post('/personalizacja/{optionGroup}/pola', [OptionContentController::class, 'saveFields'])->name('options.fields');
         Route::post('/personalizacja/{optionGroup}/biblioteka', [OptionContentController::class, 'saveChoices'])->name('options.choices');
+
+        // Katalog w kilku niezaleznych osiach (rodzaj / tematyka / geografia).
+        // JEDEN komplet tras na wszystkie — os przychodzi segmentem adresu,
+        // nieznany segment to 404. Cala os zapisuje sie jednym zadaniem, bo
+        // geografia to kilkaset pozycji, a nie piec.
+        Route::get('/katalog', fn () => redirect()->route(
+            'seller.categories.index',
+            CatalogAxis::all()->first()?->segment() ?? 'rodzaj'
+        ))->name('categories.home');
+        Route::get('/katalog/{axis}', [CategoryController::class, 'index'])->name('categories.index');
+        Route::post('/katalog/{axis}', [CategoryController::class, 'save'])->name('categories.save');
 
         // Kartoteka licencjodawców — firm inkasujących opłatę za użycie swojego
         // znaku. Kasowanie ograniczone do wpisów nieużywanych (patrz kontroler):

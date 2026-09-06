@@ -53,6 +53,7 @@
                 ? [['label' => 'Mój pakiet', 'route' => 'seller.package.show', 'icon' => '✨']]
                 : []),
             ['label' => 'Produkty', 'route' => 'seller.products.index', 'active' => 'seller.products.*', 'icon' => '🏷️'],
+            ['label' => 'Katalog', 'route' => 'seller.categories.home', 'active' => 'seller.categories.*', 'icon' => '🗂️'],
             ['label' => 'Zamówienia', 'route' => 'seller.orders.index', 'active' => 'seller.orders.*', 'icon' => '📦', 'badge' => (int) ($user->shop?->unseen_orders_count ?? 0)],
             ['label' => 'Klienci', 'route' => 'seller.customers.index', 'active' => 'seller.customers.*', 'icon' => '👥'],
             ['label' => 'Kody rabatowe', 'route' => 'seller.discounts.index', 'active' => 'seller.discounts.*', 'icon' => '🎟️'],

@@ -5,11 +5,13 @@ namespace App\Http\Controllers\Seller;
 use App\Enums\SaleUnit;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Seller\ProductRequest;
+use App\Models\Category;
 use App\Models\OptionGroup;
 use App\Models\Product;
 use App\Services\ProductImageService;
 use App\Services\SlugService;
 use App\Services\TagNormalizer;
+use App\Support\CatalogAxis;
 use App\Support\MetaDescription;
 use Illuminate\Contracts\Support\Renderable;
 use Illuminate\Database\Eloquent\Builder;
@@ -85,6 +87,9 @@ class ProductController extends Controller
             // zablokowalaby zakup calkiem.
             'optionGroups' => $this->readyOptionGroups($request),
             'licensors' => $request->user()->shop?->licensors()->active()->get() ?? collect(),
+            // Katalog: osie z configu + drzewa wezlow do zaznaczenia.
+            'axes' => CatalogAxis::all(),
+            'categoryRows' => $this->categoryRows($request),
             // Nowy produkt nie ma kontekstu listy do odtworzenia.
             'listQuery' => [],
         ]);
@@ -99,6 +104,7 @@ class ProductController extends Controller
         $product = $request->user()->shop->products()->create($this->data($request));
         $this->syncTags($product, $request);
         $this->syncOptionGroups($product, $request);
+        $this->syncCategories($product, $request);
 
         // Zdjęcia wybrane przy tworzeniu — zapis w kolejności dodania (0,1,2,…).
         foreach ($request->file('images', []) as $position => $file) {
@@ -126,6 +132,9 @@ class ProductController extends Controller
             // zablokowalaby zakup calkiem.
             'optionGroups' => $this->readyOptionGroups($request),
             'licensors' => $request->user()->shop?->licensors()->active()->get() ?? collect(),
+            // Katalog: osie z configu + drzewa wezlow do zaznaczenia.
+            'axes' => CatalogAxis::all(),
+            'categoryRows' => $this->categoryRows($request),
             // Kontekst listy (filtry + sort + strona) z query stringa — do odtworzenia
             // „Wróć do listy" i akcji zapisu, żeby wrócić na tę samą, przefiltrowaną stronę.
             'listQuery' => $this->listQuery($request),
@@ -139,6 +148,7 @@ class ProductController extends Controller
         $product->update($this->data($request));
         $this->syncTags($product, $request);
         $this->syncOptionGroups($product, $request);
+        $this->syncCategories($product, $request);
 
         // Zachowujemy pełny kontekst listy (filtry + sort + strona), z którego przyszedł
         // sprzedawca — akcja formularza niesie go w query stringu.
@@ -169,7 +179,7 @@ class ProductController extends Controller
      */
     private function data(ProductRequest $request): array
     {
-        $data = $request->safe()->except(['tags', 'images', 'option_groups']);
+        $data = $request->safe()->except(['tags', 'images', 'option_groups', 'categories', 'category_ids']);
         $data['stock'] = $data['track_stock'] ? ($data['stock'] ?? 0) : null;
 
         // Opis SEO wpisany ręcznie należy do sprzedawcy — znacznik pilnuje, żeby
@@ -225,6 +235,49 @@ class ProductController extends Controller
     private function syncOptionGroups(Product $product, ProductRequest $request): void
     {
         $product->optionGroups()->sync($request->validated('option_groups') ?? []);
+    }
+
+    /**
+     * Kategorie ze wszystkich osi naraz.
+     *
+     * `sync` na plaskiej liscie, a nie os po osi: pivot nie wie o osiach, wiec
+     * synchronizacja jednej osi z osobna skasowalaby przypisania pozostalych.
+     */
+    /**
+     * Wezly katalogu sklepu, spłaszczone per os — do zaznaczenia na formularzu.
+     *
+     * Jedno zapytanie na caly katalog: geografia liczona w setkach wezlow
+     * zabilaby ekran, gdyby kazda os pytala baze osobno.
+     *
+     * @return array<string, list<array{category: Category, depth: int}>>
+     */
+    private function categoryRows(Request $request): array
+    {
+        $shop = $request->user()->shop;
+
+        if ($shop === null) {
+            return [];
+        }
+
+        $all = $shop->categories()->get();
+        $rows = [];
+
+        foreach (CatalogAxis::keys() as $axis) {
+            $rows[$axis] = Category::flatten($all->where('axis', $axis));
+        }
+
+        return $rows;
+    }
+
+    private function syncCategories(Product $product, ProductRequest $request): void
+    {
+        $ids = [];
+
+        foreach (CatalogAxis::keys() as $axis) {
+            $ids = array_merge($ids, $request->categoriesFor($axis));
+        }
+
+        $product->categories()->sync(array_values(array_unique($ids)));
     }
 
     private function syncTags(Product $product, ProductRequest $request): void
