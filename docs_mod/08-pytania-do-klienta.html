@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Magellan Bay — pytania i materiały</title>
+<style>
+    :root {
+        --ink: #1c1917; --muted: #57534e; --line: #e7e5e4; --bg: #fafaf9;
+        --accent: #b45309; --ok: #15803d; --warn: #b91c1c;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink);
+        font: 16px/1.65 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .page { max-width: 860px; margin: 0 auto; padding: 48px 28px 80px; }
+
+    header { border-bottom: 3px solid var(--ink); padding-bottom: 20px; margin-bottom: 32px; }
+    h1 { margin: 0 0 6px; font-size: 30px; letter-spacing: -0.02em; }
+    .lead { margin: 0; color: var(--muted); font-size: 17px; }
+
+    h2 { margin: 46px 0 14px; font-size: 22px; letter-spacing: -0.01em;
+        padding-bottom: 8px; border-bottom: 2px solid var(--line); }
+    h3 { margin: 30px 0 8px; font-size: 17px; }
+    h4 { margin: 18px 0 6px; font-size: 15px; }
+    p { margin: 0 0 12px; }
+    ul, ol { margin: 0 0 14px; padding-left: 22px; }
+    li { margin-bottom: 6px; }
+
+    .box { border: 1px solid var(--line); background: #fff; border-radius: 10px; padding: 18px 20px; margin: 16px 0; }
+    .box.warn { border-left: 5px solid var(--warn); }
+    .box.ok { border-left: 5px solid var(--ok); }
+    .box.note { border-left: 5px solid var(--accent); }
+    .box > :last-child { margin-bottom: 0; }
+    .box h3, .box h4 { margin-top: 0; }
+
+    .q { background: #fff; border: 1px solid var(--line); border-left: 5px solid var(--accent);
+        border-radius: 10px; padding: 16px 20px; margin: 14px 0 24px; }
+    .q > :last-child { margin-bottom: 0; }
+    .q p:first-child { font-weight: 600; }
+    .q ol, .q ul { margin-bottom: 0; }
+
+    table { width: 100%; border-collapse: collapse; margin: 14px 0 18px; font-size: 15px; }
+    th, td { border: 1px solid var(--line); padding: 9px 11px; text-align: left; vertical-align: top; }
+    th { background: #f5f5f4; font-weight: 600; }
+
+    code { font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 14px;
+        background: #f5f5f4; padding: 1px 6px; border-radius: 4px; }
+
+    .tag { display: inline-block; font-size: 12px; font-weight: 700; padding: 2px 9px;
+        border-radius: 20px; vertical-align: middle; margin-left: 6px; }
+    .tag-a { background: #fee2e2; color: var(--warn); }
+    .tag-b { background: #f5f5f4; color: var(--muted); }
+
+    footer { margin-top: 56px; border-top: 1px solid var(--line); padding-top: 16px;
+        color: var(--muted); font-size: 14px; }
+
+    @media print {
+        body { background: #fff; }
+        .page { padding: 0; max-width: none; }
+        h2 { page-break-after: avoid; }
+        .box, .q, table { page-break-inside: avoid; }
+    }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+    <h1>Pytania i materiały</h1>
+    <p class="lead">Kilka rzeczy do rozstrzygnięcia i lista tego, czego od Państwa potrzebujemy.</p>
+</header>
+
+<div class="box note">
+    <p>
+        Wszystko, o co pytamy, <strong>działa już w sklepie</strong>. Pytamy nie dlatego, że czegoś brakuje,
+        tylko dlatego, że w kilku miejscach opis był niejednoznaczny albo milczał — i przyjęliśmy założenie.
+    </p>
+    <p style="margin-bottom:0">
+        Każde z tych założeń siedzi w jednym miejscu i <strong>da się je zmienić bez przebudowy sklepu</strong>.
+        Jeśli któreś jest nie po Państwa myśli, wystarczy powiedzieć.
+    </p>
+</div>
+
+<h2>Część A. Pytania <span class="tag tag-a">czekamy na odpowiedź</span></h2>
+
+<h3>A1. Sprzeczność w przykładzie 3</h3>
+<p>
+    W opisie przykładowego zakupu nr 3 (ramka 3D z formatką, bez grawerki i licencji) treść mówi, że produkt
+    <strong>kosztuje w sklepie 15 zł</strong>, wyliczenie podaje <strong>+ 20 zł za produkt</strong>,
+    a suma końcowa to <strong>20 zł</strong>.
+</p>
+<p>Przyjęliśmy <strong>20 zł</strong> — kwotę użytą w wyliczeniu i w sumie.</p>
+<div class="q">
+    <p>Która kwota jest właściwa?</p>
+    <p style="margin-bottom:0">
+        To nie wpływa na działanie sklepu — chcemy tylko mieć pewność, że dobrze rozumiemy model cenowy.
+    </p>
+</div>
+
+<h3>A2. Czy logotyp na awersie bywa wybierany przez klienta?</h3>
+<p>
+    Dziś <strong>licencja logotypu awersu jest cechą produktu</strong>: przy magnesie wpisuje się, czyj znak
+    na nim jest i ile kosztuje licencja. Kupujący tego nie wybiera — magnes po prostu ten znak ma.
+</p>
+<p>
+    Wynika to wprost z opisu („nr firmy, do której dowiązana jest <em>ewentualna</em> licencja na logotyp"),
+    ale słowo „ewentualna" da się czytać dwojako.
+</p>
+<div class="q">
+    <p>Czy zdarza się magnes, na którym to <strong>kupujący wybiera</strong>, czyj logotyp ma być na awersie?</p>
+    <p style="margin-bottom:0">Jeśli tak — to inny mechanizm i trzeba go dołożyć.</p>
+</div>
+
+<h3>A3. Jak wygląda praca w pracowni?</h3>
+<p>
+    To jedyna funkcja, której opis nie zawierał wcale. Dopisaliśmy ją, bo bez niej zamówienia na
+    personalizowany towar nie da się wykonać.
+</p>
+<p>
+    <strong>Zrobiliśmy świadomie najmniejszą wersję:</strong> wydruk jednego zamówienia — co, ile sztuk,
+    jaki nadruk, jaka grawerka. Bez cen, bo arkusz może iść do podwykonawcy. Tekst do wykonania
+    powiększony i wyraźny, żeby nie pomylić „l" z „1".
+</p>
+<div class="q">
+    <p>Trzy pytania:</p>
+    <ol>
+        <li>Czy grawerkę i nadruk wykonują Państwo sami, czy zlecają na zewnątrz?</li>
+        <li>Czy potrzebne jest <strong>zbiorcze</strong> zestawienie — np. „wszystkie grawerki do zrobienia dziś,
+            pogrupowane po grafice" — czy kartka przy zamówieniu wystarcza?</li>
+        <li>Czy arkusz ma zawierać dane kupującego, czy ma zostać anonimowy?</li>
+    </ol>
+    <p style="margin-bottom:0">
+        Nie zgadywaliśmy, bo kształt takiego zestawienia zależy w całości od organizacji pracy —
+        a zbudowanie niewłaściwego to strata czasu po obu stronach.
+    </p>
+</div>
+
+<h3>A4. Rozliczenia z partnerami — pięć przyjętych zasad</h3>
+<p>Moduł liczy, komu i ile należy się za dany miesiąc. Przyjęliśmy:</p>
+<table>
+    <tr><th style="width:38%">Zasada</th><th>Jak jest dziś</th></tr>
+    <tr><td>Co wchodzi do rozliczenia</td><td>wszystkie zamówienia <strong>poza anulowanymi</strong></td></tr>
+    <tr><td>Zamówienia jeszcze nieopłacone</td><td>wchodzą do kwoty, ale są <strong>wykazane osobno</strong></td></tr>
+    <tr><td>Zwrot towaru</td><td><strong>odejmuje</strong> — oddany magnes nie generuje opłaty</td></tr>
+    <tr><td>Okres</td><td>po <strong>dacie złożenia</strong> zamówienia</td></tr>
+    <tr><td>Kwoty</td><td><strong>brutto</strong></td></tr>
+</table>
+<div class="q">
+    <p>Trzy pytania:</p>
+    <ol>
+        <li>Czy partnerowi płacą Państwo za zamówienia <strong>zapłacone</strong>, czy za <strong>złożone</strong>?
+            Dziś pokazujemy obie liczby i decyzja należy do Państwa — ale jeśli zasada jest stała, możemy ją wpisać na stałe.</li>
+        <li>Czy rozliczenie ma iść <strong>miesięcznie</strong>, czy w innym rytmie (kwartał, po zakończeniu wydarzenia)?</li>
+        <li>Czy w zestawieniu dla partnera ma być widoczna <strong>nazwa produktu</strong>, czy tylko liczba sztuk i kwota?</li>
+    </ol>
+</div>
+
+<h3>A5. Reguła „nie sumujemy, liczy się wyższa"</h3>
+<p>
+    Zrobiliśmy tak, jak w opisie: <strong>dwie opłaty tej samej firmy</strong> na jednym produkcie nie sumują się
+    (liczy się wyższa), a opłaty <strong>różnych firm</strong> sumują się normalnie.
+</p>
+<div class="q">
+    <p style="margin-bottom:0">
+        Czy przy <strong>trzech</strong> opłatach tej samej firmy również liczy się tylko najwyższa?
+        Tak to działa — chcemy potwierdzić, że o to chodziło.
+    </p>
+</div>
+
+<h3>A6. Limity długości tekstów</h3>
+<p>
+    Limity znaków w personalizacji ustawiają Państwo sami, przy każdym polu. Ale kilka limitów systemowych
+    zostało na wartościach domyślnych i wypada je przejrzeć na prawdziwym katalogu: długość opisu produktu,
+    długość opisu sklepu, liczba produktów wyróżnionych na stronie głównej.
+</p>
+<div class="q">
+    <p style="margin-bottom:0">
+        Czy po wgraniu katalogu mogą Państwo dać znać, gdyby któryś z tych limitów okazał się za ciasny?
+    </p>
+</div>
+
+<h3>A7. Zwroty produktów personalizowanych</h3>
+<p>
+    Produkty wykonane na indywidualne zamówienie są <strong>wyłączone z prawa odstąpienia</strong>
+    (art. 38 pkt 3 ustawy o prawach konsumenta) — magnes z cudzym imieniem nie nadaje się do odsprzedaży.
+    Jest to w regulaminie, a przy każdym produkcie można to zaznaczyć osobno.
+</p>
+<div class="q">
+    <p style="margin-bottom:0">
+        Czy <strong>wszystkie</strong> personalizowane magnesy mają być wyłączone ze zwrotu, czy tylko część?
+    </p>
+</div>
+
+<h2>Część B. Materiały <span class="tag tag-b">czekamy na pliki</span></h2>
+
+<h3>B1. Logo</h3>
+<p>
+    Sklep działa dziś na <strong>logo roboczym</strong> — złożonym naprędce z samej nazwy, żeby coś stało
+    w nagłówku i w mailach. Nie jest to propozycja graficzna, tylko zapełnienie miejsca.
+</p>
+<table>
+    <tr><th style="width:34%">Najlepiej</th><td>plik wektorowy: <code>SVG</code>, <code>AI</code>, <code>EPS</code> albo <code>PDF</code></td></tr>
+    <tr><th>Wystarczy</th><td><code>PNG</code> o szerokości minimum 1000 px, na <strong>przezroczystym tle</strong></td></tr>
+    <tr><th>Przyda się także</th><td>wersja pozioma (do nagłówka) i sam znak bez napisu (do ikony w karcie przeglądarki)</td></tr>
+</table>
+<div class="q">
+    <p style="margin-bottom:0">
+        Jeśli logo dopiero powstaje albo go nie ma — proszę powiedzieć. Możemy przygotować propozycję,
+        ale wtedy tym bardziej przydadzą się przykłady z punktu B2.
+    </p>
+</div>
+
+<h3>B2. Kolory — najprościej przez przykłady</h3>
+<p>
+    O wyglądzie najtrudniej rozmawia się przymiotnikami. „Elegancko", „nowocześnie", „ciepło" znaczy dla
+    każdego co innego i zwykle wychodzi to dopiero po pierwszej wersji, kiedy poprawki są już drogie.
+</p>
+<div class="q">
+    <p>Prosimy o wskazanie <strong>trzech do pięciu stron albo sklepów</strong>, których wygląd się Państwu podoba.</p>
+    <p>Nie muszą sprzedawać magnesów ani nawet niczego sprzedawać. Chodzi o kolory, krój pisma i ogólne wrażenie.</p>
+    <p style="margin-bottom:0">
+        Najbardziej pomaga, gdy przy każdym linku pada zdanie <strong>dlaczego</strong>: „podoba mi się, że jest jasno
+        i spokojnie", „lubię te ciemne zdjęcia", „dobrze widać produkt". Jedno zdanie mówi więcej niż cała paleta kolorów.
+    </p>
+</div>
+<div class="box">
+    <p style="margin-bottom:0">
+        <strong>Przydaje się też wskazanie odwrotne:</strong> jedna–dwie strony, które się Państwu
+        <strong>nie</strong> podobają. To zwykle oszczędza całą rundę poprawek.
+    </p>
+</div>
+<div class="box note">
+    <p style="margin-bottom:0">
+        Przykłady traktujemy jako <strong>inspirację, nie wzór do odwzorowania</strong>. Sklep ma wyglądać jak Państwa,
+        a nie jak czyjś — chodzi o kierunek, nie o kopię.
+    </p>
+</div>
+
+<h3>B3. Dane firmy</h3>
+<p>
+    W stopce, mailach, regulaminie i polityce prywatności stoją dziś <strong>znaczniki w nawiasach
+    kwadratowych</strong> — <code>[NAZWA FIRMY]</code>, <code>[NIP]</code>, <code>[ADRES]</code>. Napisaliśmy je
+    tak celowo, żeby dało się je wyłapać wzrokiem i żeby żaden nie został przeoczony.
+</p>
+<p><strong>Potrzebujemy:</strong> pełna nazwa działalności, adres, NIP, REGON (jeśli jest), adres e-mail do kontaktu, telefon (jeśli ma być publiczny), numer konta do przelewów.</p>
+
+<h3>B4. Karta sklepu na Facebooku</h3>
+<p>
+    Grafika pokazywana przy udostępnieniu linku jest dziś <strong>wyłączona</strong> — żeby nie wystawiać
+    obrazka, który nie jest Państwa.
+</p>
+<div class="q">
+    <p style="margin-bottom:0">
+        Generujemy ją z logo, czy dostarczą Państwo własną? (Zalecany rozmiar: 1200 × 630 px.)
+    </p>
+</div>
+
+<h3>B5. Katalog</h3>
+<p>
+    W sklepie stoją dziś <strong>przykładowe podziały</strong> — 5 rodzajów, 6 tematyk i 10 pozycji geografii
+    z zagnieżdżeniem (Europa → Polska → Gdańsk). To materiał poglądowy, żeby było widać, jak katalog działa.
+</p>
+<div class="q">
+    <p>Potrzebujemy prawdziwych list. Przy geografii dochodzą dwa pytania:</p>
+    <ul>
+        <li>Jak głęboko schodzimy — kontynent → kraj → miasto, czy od razu miasta?</li>
+        <li>Porządkujemy alfabetycznie, czy w kolejności ustalonej ręcznie?</li>
+    </ul>
+</div>
+
+<h3>B6. Dokumenty prawne</h3>
+<p>
+    Regulamin i polityka prywatności są napisane i czekają na weryfikację. Prosimy o przejrzenie —
+    zwłaszcza fragmentów o zwrotach, dostawie i danych firmy.
+</p>
+
+<h2>Czego nie pytamy, bo jest zrobione</h2>
+
+<div class="box ok">
+    <p style="margin-bottom:0">
+        Formatki nadruku z limitami znaków · grawerka z biblioteki grafik albo własny tekst klienta ·
+        wykluczanie się grawerki graficznej i tekstowej · cena składana z czterech części, każda widoczna
+        przy zamawianiu · koszyk rozpoznający konfigurację · kartoteka partnerów · katalog w trzech
+        niezależnych podziałach · wstrzymanie sprzedaży całej serii z komunikatem · strony z produktami
+        jednej firmy · rozliczenia z partnerami z arkuszem do pobrania · arkusz produkcyjny ·
+        koszyk, płatności i dostawa InPostem · konta klientów · zwroty · zgoda na ciasteczka · mapa strony.
+    </p>
+</div>
+
+<footer>
+    <p style="margin-bottom:4px">
+        Odpowiedzi nie trzeba dawać naraz — każda z osobna od razu coś odblokowuje.
+        Najbardziej przydałyby się <strong>A3</strong> (praca w pracowni) i <strong>B2</strong> (przykłady kolorystyki).
+    </p>
+    <p style="margin-bottom:0">Dokument opisuje stan sklepu na 6 września 2026.</p>
+</footer>
+
+</div>
+</body>
+</html>
