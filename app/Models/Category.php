@@ -79,6 +79,21 @@ class Category extends Model
         $query->whereNull('parent_id');
     }
 
+    /**
+     * Kanoniczny adres kategorii na storefroncie: /geografia/rzym.
+     *
+     * ADRES NIE NIESIE HIERARCHII — „Rzym" stoi pod `/geografia/rzym`, a nie
+     * pod `/geografia/wlochy/rzym`. Przeniesienie Rzymu z Włoch do Europy jest
+     * poprawką w panelu, a nie przeprowadzką całego adresu, po której padają
+     * rozesłane linki i pozycja w wyszukiwarce. Ścieżkę pokazujemy okruszkami.
+     *
+     * Względny, jak przy produkcie: storefront to jeden host.
+     */
+    public function storefrontPath(): string
+    {
+        return '/'.($this->axis()?->segment() ?? 'katalog').'/'.$this->slug;
+    }
+
     public function axis(): ?CatalogAxis
     {
         return CatalogAxis::find($this->axis);

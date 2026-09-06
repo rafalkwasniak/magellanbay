@@ -559,6 +559,16 @@ $storefrontRoutes = function () {
     Route::get('/', [StorefrontHome::class, 'show'])->name('storefront.home');
     Route::get('/produkty', [StorefrontProduct::class, 'index'])->name('storefront.products');
     Route::get('/produkt/{product}', [StorefrontProduct::class, 'show'])->name('storefront.product');
+
+    // Strony kategorii — po jednej trasie na os z `config/catalog.php`.
+    // Segment jest CZESCIA sciezki (/geografia/rzym), wiec os nie musi byc
+    // zgadywana: przychodzi w `defaults`. Adres NIE niesie hierarchii, zeby
+    // przeniesienie wezla pod innego rodzica nie bylo przeprowadzka adresu.
+    foreach (CatalogAxis::all() as $catalogAxis) {
+        Route::get('/'.$catalogAxis->segment().'/{category}', [StorefrontProduct::class, 'category'])
+            ->defaults('axis', $catalogAxis->key())
+            ->name('storefront.category.'.$catalogAxis->key());
+    }
     // Landing działu „Informacje" → 302 na pierwszą podstronę (lewe menu
     // przejmuje dalszą nawigację). PRZED wildcardem, by nie wpadł w {page}.
     Route::get('/informacje', [StorefrontPage::class, 'index'])->name('storefront.information');

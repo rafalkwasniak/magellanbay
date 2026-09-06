@@ -78,6 +78,26 @@
                     </div>
                 @endif
 
+                {{-- Miejsce produktu w katalogu — po jednej grupie na oś.
+                     Osobno od tagów, bo to co innego: tag jest luźną etykietą,
+                     kategoria miejscem z własną stroną i własnym adresem. --}}
+                @if (count($productCategories ?? []))
+                    <div class="st-card st-border mt-8 rounded-3xl border p-6 text-left">
+                        <h2 class="st-brand st-box-title">W katalogu</h2>
+                        @foreach ($productCategories as $panel)
+                            <div class="mt-4">
+                                <p class="text-xs uppercase tracking-wide opacity-60">{{ $panel['label'] }}</p>
+                                <div class="mt-2 flex flex-wrap gap-2">
+                                    @foreach ($panel['items'] as $node)
+                                        <a href="{{ $node->storefrontPath() }}"
+                                            class="st-border rounded-full border px-3 py-1 text-sm transition hover:opacity-80">{{ $node->name }}</a>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+
                 {{-- Tagi w kaflu jak na wykazie (Filtruj). --}}
                 @if (count($productTags))
                     <div class="st-card st-border mt-8 rounded-3xl border p-6 text-left">

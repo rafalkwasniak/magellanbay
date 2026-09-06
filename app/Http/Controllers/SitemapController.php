@@ -6,6 +6,7 @@ use App\Enums\LegalDocumentType;
 use App\Models\Shop;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Carbon;
 
 /**
  * Mapy stron (`sitemap.xml`) — jedna klasa na OBA konteksty, bo pytanie jest
@@ -75,6 +76,29 @@ class SitemapController extends Controller
             ];
         }
 
+        /*
+         * Strony kategorii. Do mapy wchodzą TYLKO te, które coś pokazują —
+         * kategoria bez produktów jest pustą stroną, a zapraszanie do niej
+         * Google psuje ocenę całego sklepu.
+         *
+         * Liczymy po gałęzi, nie po samym węźle: „Włochy" bez własnych
+         * produktów, ale z pełnym „Rzymem" pod spodem, są stroną z treścią.
+         */
+        foreach ($shop->categories()->get() as $category) {
+            $hasProducts = $shop->products()
+                ->where('is_active', true)
+                ->whereHas('categories', fn ($q) => $q->whereIn('categories.id', $category->branchIds()))
+                ->exists();
+
+            if ($hasProducts) {
+                $urls[] = [
+                    'loc' => $base.$category->storefrontPath(),
+                    'lastmod' => $category->updated_at,
+                    'priority' => '0.6',
+                ];
+            }
+        }
+
         $urls[] = ['loc' => $base.'/informacje', 'priority' => '0.4'];
 
         // `informationMenu()` to jedno źródło pozycji „Informacje" dla nagłówka,
@@ -91,7 +115,7 @@ class SitemapController extends Controller
      * Blade: XML nie znosi przypadkowej białej znaku przed deklaracją, a Blade
      * łatwo taki dokłada (jedna pusta linia w szablonie psuje cały plik).
      *
-     * @param  list<array{loc: string, lastmod?: \Illuminate\Support\Carbon|null, priority?: string}>  $urls
+     * @param  list<array{loc: string, lastmod?: Carbon|null, priority?: string}>  $urls
      */
     private function xml(array $urls): Response
     {
