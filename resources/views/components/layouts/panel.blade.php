@@ -61,6 +61,7 @@
             ['label' => 'Analityka', 'route' => 'seller.analytics.index', 'icon' => '📊'],
             ['label' => 'Personalizacja', 'route' => 'seller.options.index', 'active' => 'seller.options.*', 'icon' => '✍️'],
             ['label' => 'Partnerzy', 'route' => 'seller.licensors.index', 'active' => 'seller.licensors.*', 'icon' => '🤝'],
+            ['label' => 'Rozliczenia', 'route' => 'seller.settlements.index', 'active' => 'seller.settlements.*', 'icon' => '🧾'],
             ['label' => 'Informacje', 'route' => 'seller.pages.index', 'active' => 'seller.pages.*', 'icon' => '📄'],
             // Zgłoszenia treści bezprawnych trafiają do właściciela WYŁĄCZNIE
             // w sklepie dedykowanym — w Kramio rozpatruje je platforma, a trasy

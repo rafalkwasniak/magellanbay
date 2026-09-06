@@ -44,6 +44,7 @@ use App\Http\Controllers\Seller\PackageController;
 use App\Http\Controllers\Seller\PageController;
 use App\Http\Controllers\Seller\ProductController;
 use App\Http\Controllers\Seller\ProductImageController;
+use App\Http\Controllers\Seller\SettlementController;
 use App\Http\Controllers\Seller\ShipmentPickupController;
 use App\Http\Controllers\Seller\ShopDeletionController;
 use App\Http\Controllers\Seller\ShopProfileController;
@@ -452,6 +453,12 @@ Route::middleware(['auth', 'role:seller', 'ensure.consents'])
         Route::post('/partnerzy/{licensor}', [LicensorController::class, 'update'])->name('licensors.update');
         Route::post('/partnerzy/{licensor}/przelacz', [LicensorController::class, 'toggle'])->name('licensors.toggle');
         Route::post('/partnerzy/{licensor}/usun', [LicensorController::class, 'destroy'])->name('licensors.destroy');
+
+        // Rozliczenia z partnerami — komu i ile nalezy sie za dany miesiac.
+        // Arkusz .xlsx generujemy sami (App\Support\Xlsx): projekt ma trzy
+        // zaleznosci produkcyjne i nie doklada czwartej dla jednego raportu.
+        Route::get('/rozliczenia', [SettlementController::class, 'index'])->name('settlements.index');
+        Route::get('/rozliczenia/arkusz', [SettlementController::class, 'download'])->name('settlements.download');
 
         // Zgłoszenia treści bezprawnych — TYLKO w sklepie dedykowanym.
         //
