@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Magellan Bay — produkty, personalizacja i katalog</title>
+<style>
+    :root {
+        --ink: #1c1917; --muted: #57534e; --line: #e7e5e4; --bg: #fafaf9;
+        --accent: #b45309; --ok: #15803d; --warn: #b91c1c;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink);
+        font: 16px/1.65 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .page { max-width: 880px; margin: 0 auto; padding: 48px 28px 80px; }
+
+    header { border-bottom: 3px solid var(--ink); padding-bottom: 20px; margin-bottom: 32px; }
+    h1 { margin: 0 0 6px; font-size: 30px; letter-spacing: -0.02em; }
+    .lead { margin: 0; color: var(--muted); font-size: 17px; }
+
+    h2 { margin: 46px 0 14px; font-size: 22px; letter-spacing: -0.01em;
+        padding-bottom: 8px; border-bottom: 2px solid var(--line); }
+    h3 { margin: 26px 0 8px; font-size: 17px; }
+    h4 { margin: 18px 0 6px; font-size: 15px; }
+    p { margin: 0 0 12px; }
+    ul, ol { margin: 0 0 14px; padding-left: 22px; }
+    li { margin-bottom: 6px; }
+
+    .box { border: 1px solid var(--line); background: #fff; border-radius: 10px; padding: 18px 20px; margin: 16px 0; }
+    .box.warn { border-left: 5px solid var(--warn); }
+    .box.ok { border-left: 5px solid var(--ok); }
+    .box.note { border-left: 5px solid var(--accent); }
+    .box > :last-child { margin-bottom: 0; }
+    .box h3, .box h4 { margin-top: 0; }
+
+    table { width: 100%; border-collapse: collapse; margin: 14px 0 18px; font-size: 15px; }
+    th, td { border: 1px solid var(--line); padding: 9px 11px; text-align: left; vertical-align: top; }
+    th { background: #f5f5f4; font-weight: 600; }
+    td.num { text-align: right; white-space: nowrap; }
+
+    code, .path { font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 14px;
+        background: #f5f5f4; padding: 1px 6px; border-radius: 4px; }
+    .path { white-space: nowrap; }
+
+    .step { display: flex; gap: 14px; margin-bottom: 16px; }
+    .num-badge { flex: 0 0 28px; height: 28px; border-radius: 50%; background: var(--ink); color: #fff;
+        display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; }
+    .step > div:last-child { flex: 1; }
+    .step p { margin: 0 0 6px; }
+
+    .flow { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 20px; margin: 18px 0; }
+    .flow ol { counter-reset: f; list-style: none; padding: 0; margin: 0; }
+    .flow li { counter-increment: f; padding: 10px 0 10px 44px; position: relative; border-bottom: 1px dashed var(--line); margin: 0; }
+    .flow li:last-child { border-bottom: 0; padding-bottom: 0; }
+    .flow li::before { content: counter(f); position: absolute; left: 0; top: 10px;
+        width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: #fff;
+        display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; }
+    .flow strong { display: block; }
+    .flow span { color: var(--muted); font-size: 15px; }
+
+    .why { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 4px 20px; margin: 16px 0; }
+    .why dt { font-weight: 600; margin-top: 16px; }
+    .why dd { margin: 4px 0 16px; color: var(--muted); }
+    .why dd strong { color: var(--ink); }
+
+    footer { margin-top: 56px; border-top: 1px solid var(--line); padding-top: 16px; color: var(--muted); font-size: 14px; }
+
+    @media print {
+        body { background: #fff; }
+        .page { padding: 0; max-width: none; }
+        h2 { page-break-after: avoid; }
+        .box, .step, table, .flow li { page-break-inside: avoid; }
+    }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+    <h1>Produkty, personalizacja i katalog</h1>
+    <p class="lead">Jak dodać magnes tak, żeby dał się kupić i wykonać. Dokument dla właściciela.</p>
+</header>
+
+<div class="box warn">
+    <h3>Najważniejsze zdanie w tym dokumencie</h3>
+    <p>
+        <strong>Kolejność ma znaczenie.</strong> Jeśli zaczną Państwo od dodania produktu, formularz pokaże
+        puste listy: nie będzie czego wybrać w Katalogu, nie będzie żadnej personalizacji do przypięcia
+        ani partnera do wskazania. Łatwo wtedy uznać, że coś jest zepsute.
+    </p>
+    <p style="margin-bottom:0">
+        Nic nie jest zepsute — te listy <strong>buduje się wcześniej</strong>, w trzech osobnych miejscach.
+        Robi się to raz, a potem korzysta przy każdym kolejnym produkcie.
+    </p>
+</div>
+
+<h2>Mapa: cztery ekrany, jeden produkt</h2>
+
+<p>Magnes w tym sklepie składa się z rzeczy przygotowanych w czterech miejscach panelu:</p>
+
+<div class="flow">
+    <ol>
+        <li>
+            <strong>Katalog</strong>
+            <span>Rodzaje, tematyki, geografia — trzy niezależne podziały, po których klienci szukają.
+            Buduje się raz, na początku.</span>
+        </li>
+        <li>
+            <strong>Partnerzy</strong>
+            <span>Firmy, których logotypy Państwo umieszczają: organizatorzy biegów, kluby, stowarzyszenia.
+            Dopisuje się w miarę podpisywania umów.</span>
+        </li>
+        <li>
+            <strong>Personalizacja</strong>
+            <span>Pytania, które zadamy kupującemu: pola do wpisania (imię, rok) i biblioteki do wyboru
+            (grafiki graweru). Definiuje się raz i przypina do setek magnesów.</span>
+        </li>
+        <li>
+            <strong>Produkty</strong>
+            <span>Dopiero tutaj powstaje magnes — i tu zaznacza się, co z powyższych go dotyczy.</span>
+        </li>
+    </ol>
+</div>
+
+<p>
+    Punkty 1–3 to <strong>przygotowanie</strong>. Zajmuje jedno popołudnie i potem się do niego nie wraca
+    poza dopisywaniem nowych pozycji. Punkt 4 powtarza się przy każdym produkcie i trwa kilka minut.
+</p>
+
+<h2>Krok 1. Katalog — trzy podziały</h2>
+
+<p>Menu: <strong>Katalog</strong> — <span class="path">/sprzedawca/katalog</span></p>
+
+<p>
+    Ten sam magnes stoi jednocześnie we wszystkich trzech podziałach. To nie są szufladki, z których trzeba
+    wybrać jedną — to trzy różne drogi, którymi kupujący do niego trafia.
+</p>
+
+<table>
+    <tr><th style="width:20%">Podział</th><th style="width:26%">Przykłady</th><th>Zasady</th></tr>
+    <tr>
+        <td><strong>Rodzaje</strong></td>
+        <td>Magnes mały, Kamień, Metalowy token</td>
+        <td><strong>Produkt należy do jednego rodzaju.</strong> To jego linia produkcyjna, nie cecha opisowa. Tylko tutaj można wstrzymać sprzedaż całej serii (punkt 6).</td>
+    </tr>
+    <tr>
+        <td><strong>Tematyki</strong></td>
+        <td>Biegi, UNESCO, Flagi państw</td>
+        <td>Produkt może być w kilku naraz. Magnes z Koloseum jest jednocześnie „UNESCO" i „Zabytkami".</td>
+    </tr>
+    <tr>
+        <td><strong>Geografia</strong></td>
+        <td>Europa → Włochy → Rzym</td>
+        <td>Produkt może być w kilku, a pozycje <strong>zagnieżdżają się do trzech poziomów</strong>. Magnes przypięty do Rzymu widać także we Włoszech i w Europie.</td>
+    </tr>
+</table>
+
+<h3>Jak dodać pozycję</h3>
+<p>
+    Zakładki u góry przełączają podział. Ostatni wiersz na liście jest zawsze pusty — to nim dodaje się
+    kolejną pozycję. Wpisać nazwę, ewentualnie kolejność, i kliknąć <strong>Zapisz podział</strong>.
+    Cała lista zapisuje się naraz, więc można poprawić dziesięć pozycji i zapisać raz.
+</p>
+<p>
+    Przy geografii dochodzi pole <strong>Wewnątrz</strong> — wskazuje pozycję nadrzędną. „Rzym" wewnątrz
+    „Włoch", „Włochy" wewnątrz „Europy".
+</p>
+<p>
+    Pole <strong>Opis w sklepie</strong> (zwinięte) to kilka zdań, które pojawią się na stronie tej kategorii.
+    Warto wypełnić przy ważniejszych działach — czyta je klient i wyszukiwarka.
+</p>
+
+<div class="box note">
+    <h4>Adres kategorii nie zmienia się razem z nazwą</h4>
+    <p style="margin-bottom:0">
+        Poprawka literówki w nazwie <strong>nie przenosi kategorii pod inny adres</strong>. Zrobiliśmy tak celowo:
+        gdyby adres szedł za nazwą, każda korekta unieważniałaby rozesłane linki i kasowała pozycję strony
+        w wyszukiwarce.
+    </p>
+</div>
+
+<div class="box warn">
+    <h4>Czego nie da się zrobić</h4>
+    <p style="margin-bottom:0">
+        <strong>Nie da się usunąć pozycji, która ma coś pod sobą.</strong> Usunięcie „Włoch" zabrałoby ze sobą
+        „Rzym" i „Wenecję" — cicho i bez odwrotu. Trzeba najpierw przenieść je wyżej albo usunąć osobno.
+    </p>
+</div>
+
+<h2>Krok 2. Partnerzy licencyjni</h2>
+
+<p>Menu: <strong>Partnerzy</strong> — <span class="path">/sprzedawca/partnerzy</span></p>
+
+<p>
+    Partner to firma, której znak Państwo umieszczają i która bierze za to opłatę: organizator maratonu,
+    klub, stowarzyszenie. Wystarczy <strong>nazwa</strong> — reszta (osoba kontaktowa, e-mail, numer umowy,
+    notatki) jest opcjonalna i przydaje się przy rozliczeniach.
+</p>
+
+<div class="box note">
+    <h4>Co z tych danych jest publiczne</h4>
+    <p>
+        <strong>Publiczna jest tylko nazwa</strong> i lista produktów z tym znakiem — pod adresem
+        <span class="path">/partner/nazwa-partnera</span>. Partner dostaje jeden link, który może rozesłać
+        swoim uczestnikom.
+    </p>
+    <p style="margin-bottom:0">
+        <strong>Nigdy nie są publiczne:</strong> osoba kontaktowa, e-mail, numer umowy, notatki ani stawki.
+        To zostaje w panelu.
+    </p>
+</div>
+
+<p>
+    Partnera, z którym umowa się skończyła, <strong>wygasza się, a nie kasuje</strong> (przycisk przy wpisie).
+    Wygaszony znika z list wyboru i traci publiczną stronę, ale zostaje w rozliczeniach — bo pieniądze
+    sprzed roku nadal komuś się należały.
+</p>
+
+<h2>Krok 3. Personalizacja</h2>
+
+<p>Menu: <strong>Personalizacja</strong> — <span class="path">/sprzedawca/personalizacja</span></p>
+
+<p>
+    To najbardziej rozbudowana część i warto poświęcić jej chwilę. <strong>Grupa opcji</strong> to jeden
+    „blok pytań" zadawany kupującemu. Definiuje się ją raz dla całego sklepu i przypina do wielu produktów —
+    zmiana limitu znaków poprawia wtedy sto magnesów naraz, a nie sto razy jeden.
+</p>
+
+<h3>Dwa rodzaje grup</h3>
+
+<table>
+    <tr><th style="width:26%">Rodzaj</th><th>Co robi klient</th><th style="width:30%">Przykład</th></tr>
+    <tr>
+        <td><strong>Pola do wpisania</strong></td>
+        <td>Wpisuje własny tekst w przygotowane pola, każde z limitem znaków.</td>
+        <td>„Imię — do 12 znaków", „Rok — 4 znaki"</td>
+    </tr>
+    <tr>
+        <td><strong>Wybór z biblioteki</strong></td>
+        <td>Wskazuje jedną pozycję z listy, z podglądem grafiki.</td>
+        <td>Grafiki do wygrawerowania: logo biegu, trasa, herb</td>
+    </tr>
+</table>
+
+<h3>Ustawienia grupy</h3>
+
+<dl class="why">
+    <dt>Nazwa grupy</dt>
+    <dd>Widzi ją klient nad blokiem pytań. Na przykład <strong>„Nadruk imienia"</strong> albo <strong>„Grawer — grafika"</strong>.</dd>
+
+    <dt>Podpowiedź dla klienta</dt>
+    <dd>Jedno zdanie pod nazwą. Dobre miejsce, żeby uprzedzić: <em>„Tekst wykonujemy dokładnie tak, jak wpisany — proszę sprawdzić pisownię"</em>.</dd>
+
+    <dt>Dopłata za wykonanie</dt>
+    <dd>
+        Kwota doliczana, gdy klient <strong>w ogóle skorzysta</strong> z tej grupy — niezależnie od tego, co wybierze.
+        To Państwa koszt pracy: rozgrzanie grawerki, ustawienie maszyny.
+        <br><strong>Uwaga:</strong> to co innego niż dopłata przy pojedynczej pozycji biblioteki i co innego niż opłata licencyjna.
+    </dd>
+
+    <dt>Wymagana</dt>
+    <dd>Zaznaczona — klient <strong>nie doda produktu do koszyka</strong>, dopóki nie wypełni tej grupy. Bez zaznaczenia grupa jest propozycją, którą można pominąć.</dd>
+
+    <dt>Wyklucza się z grupą</dt>
+    <dd>
+        Wskazuje grupę, której <strong>nie da się wybrać jednocześnie</strong> z tą. Dokładnie ten przypadek, o którym
+        mowa w specyfikacji: grawer może być <strong>albo</strong> grafiką, <strong>albo</strong> własnym tekstem — nigdy obiema naraz.
+        <br>Wystarczy ustawić to po jednej stronie; działa w obie.
+    </dd>
+</dl>
+
+<h3>Zawartość grupy — drugi ekran</h3>
+
+<p>
+    Po utworzeniu grupy trafiają Państwo <strong>od razu do jej zawartości</strong>, bo sama grupa jeszcze nic nie robi:
+    dopóki nie ma pól albo pozycji, jest pustym pytaniem.
+</p>
+
+<h4>Jeśli grupa to „Pola do wpisania"</h4>
+<table>
+    <tr><th style="width:26%">Pole</th><th>Znaczenie</th></tr>
+    <tr><td><strong>Etykieta</strong></td><td>Nazwa pola widoczna dla klienta i <strong>drukowana na arkuszu produkcyjnym</strong>: „Imię", „Rok", „Czas".</td></tr>
+    <tr><td><strong>Limit znaków</strong></td><td>Ile liter wchodzi na produkt. Wynika z fizyki magnesu, nie z widzimisię. Dłuższy tekst zostanie <strong>odrzucony przy dodawaniu do koszyka</strong>, a nie po cichu przycięty — magnes z uciętym imieniem to rzecz, której klient nie może zwrócić.</td></tr>
+    <tr><td><strong>Podpowiedź w polu</strong></td><td>Szary przykład w pustym polu. Nieobowiązkowe.</td></tr>
+    <tr><td><strong>Wymagane</strong></td><td>Czy to konkretne pole musi być wypełnione.</td></tr>
+</table>
+
+<h4>Jeśli grupa to „Wybór z biblioteki"</h4>
+<table>
+    <tr><th style="width:26%">Pole</th><th>Znaczenie</th></tr>
+    <tr><td><strong>Nazwa</strong></td><td>To, co widzi klient i co trafia do zamówienia: „Trasa Biegu Gdańskiego".</td></tr>
+    <tr><td><strong>Grafika</strong></td><td>Obrazek pokazywany klientowi przy wyborze. <strong>Warto dodać zawsze</strong> — kupujący ma widzieć, za co płaci. Zdjęcia są automatycznie przeskalowywane i czyszczone z danych EXIF.</td></tr>
+    <tr><td><strong>Dopłata</strong></td><td>Koszt tej konkretnej pozycji. Dolicza się do ceny i <strong>zostaje u Państwa</strong>.</td></tr>
+    <tr><td><strong>Opłata licencyjna</strong></td><td>Kwota należna partnerowi za użycie jego znaku. Dolicza się do ceny i <strong>trafia do rozliczeń</strong>.</td></tr>
+    <tr><td><strong>Partner</strong></td><td>Komu należy się powyższa opłata. Bez wskazania partnera opłata byłaby pieniędzmi należnymi nikomu.</td></tr>
+    <tr><td><strong>Dostępna w sklepie</strong></td><td>Odznaczenie <strong>wygasza</strong> pozycję: znika z wyboru, ale zostaje w zamówieniach, które już ją niosą.</td></tr>
+</table>
+
+<div class="box warn">
+    <h4>Pozycji biblioteki nie da się skasować — i tak ma być</h4>
+    <p style="margin-bottom:0">
+        Zamówienie sprzed miesiąca wskazuje wybraną grafikę. Skasowanie pozycji zabrałoby <strong>plik do
+        wygrawerowania</strong>: zamówienie nadal mówiłoby „Trasa Biegu", ale nie dałoby się go wykonać.
+        Dlatego pozycje się <strong>wygasza</strong> — znikają z wyboru, zostają w historii.
+    </p>
+</div>
+
+<h2>Krok 4. Dodanie produktu</h2>
+
+<p>Menu: <strong>Produkty</strong> → <strong>Dodaj produkt</strong></p>
+
+<p>Formularz ma siedem sekcji. Cztery są zwyczajne, trzy są nowe i dedykowane dla tego sklepu.</p>
+
+<h3>Sekcje zwyczajne</h3>
+<table>
+    <tr><th style="width:26%">Sekcja</th><th>Co tam jest</th></tr>
+    <tr><td><strong>Dane produktu</strong></td><td>Nazwa, opis, tagi. Tagi to luźne etykiety — co innego niż kategorie.</td></tr>
+    <tr><td><strong>Zdjęcia</strong></td><td>Do ośmiu; pierwsze jest główne, kolejność zmienia się przeciąganiem. Dostępne po zapisaniu produktu.</td></tr>
+    <tr><td><strong>Cena i dostępność</strong></td><td>Cena <strong>brutto</strong> (netto i VAT liczymy sami), stan magazynowy, jednostka.</td></tr>
+    <tr><td><strong>Widoczność</strong></td><td>Czy produkt jest aktywny i czy pokazuje się na stronie głównej.</td></tr>
+</table>
+
+<h3>Sekcja „Katalog"</h3>
+<p>
+    Trzy podziały z kroku 1. <strong>Rodzaj</strong> to lista wyboru (jeden), <strong>Tematyka</strong>
+    i <strong>Geografia</strong> to zaznaczane pola (dowolna liczba). Jeśli któryś podział jest pusty,
+    zobaczą Państwo odnośnik prowadzący prosto do jego uzupełnienia.
+</p>
+
+<h3>Sekcja „Personalizacja"</h3>
+<p>
+    Lista grup z kroku 3 — wystarczy zaznaczyć te, które dotyczą tego magnesu. Przy każdej widać,
+    ile ma pól albo pozycji i czy jest obowiązkowa.
+</p>
+
+<div class="box note">
+    <p style="margin-bottom:0">
+        <strong>Na liście są tylko grupy gotowe</strong> — mające co najmniej jedno pole albo jedną dostępną pozycję.
+        Pusta grupa wyglądałaby w sklepie jak usterka, a oznaczona jako obowiązkowa <strong>zablokowałaby zakup
+        całkowicie</strong>. Dlatego nie pozwalamy jej przypiąć.
+    </p>
+</div>
+
+<h3>Sekcja „Licencja za logotyp"</h3>
+<p>
+    Dotyczy znaku na <strong>awersie</strong> — tego, który magnes ma na stałe i którego kupujący nie wybiera.
+    Wskazują Państwo partnera i kwotę opłaty.
+</p>
+<ul>
+    <li><strong>Opłata większa od zera wymaga partnera.</strong> Opłata bez wskazanego partnera to pieniądze, których nie da się z nikim rozliczyć.</li>
+    <li><strong>Partner bez opłaty przechodzi.</strong> Barter, patronat, znak własnej marki — to normalne umowy.</li>
+</ul>
+
+<h2>Krok 5. Co widzi klient — cena z czterech części</h2>
+
+<p>
+    Na karcie produktu, <strong>w chwili wybierania opcji</strong>, klient widzi rosnące rozbicie ceny. Nie dopiero
+    w koszyku — od razu, przy każdym kliknięciu.
+</p>
+
+<h3>Przykład ze specyfikacji</h3>
+<table>
+    <tr><th>Składnik</th><th style="width:22%">Kwota</th><th>Skąd się bierze</th></tr>
+    <tr><td>Magnes metalowy</td><td class="num">49,00 zł</td><td>Cena produktu</td></tr>
+    <tr><td>Logotyp 7. Maratonu Wałbrzych</td><td class="num">25,00 zł</td><td>Licencja awersu — sekcja „Licencja za logotyp"</td></tr>
+    <tr><td>Grawer</td><td class="num">10,00 zł</td><td>Dopłata za wykonanie — ustawienie grupy</td></tr>
+    <tr><td>Logo w grawerze</td><td class="num">0,00 zł</td><td>Licencja pozycji biblioteki (tu bezpłatna)</td></tr>
+    <tr><th>Razem</th><th class="num">84,00 zł</th><th></th></tr>
+</table>
+
+<div class="box note">
+    <h4>Reguła, o którą Państwo prosili</h4>
+    <p style="margin-bottom:0">
+        Gdy na jednym magnesie wystąpią <strong>dwie opłaty tej samej firmy</strong> — logotyp na awersie
+        i jej grafika w grawerze — <strong>nie sumują się. Liczy się wyższa.</strong> Opłaty
+        <strong>różnych</strong> firm sumują się normalnie. Sklep liczy to sam, nie trzeba nic ustawiać.
+    </p>
+</div>
+
+<h2>Krok 6. Wstrzymanie sprzedaży serii</h2>
+
+<p>Menu: <strong>Katalog</strong> → zakładka <strong>Rodzaje</strong> → rozwinięcie <em>Sprzedaż serii</em></p>
+
+<p>
+    Jeśli skończy się materiał albo trzeba przerwać wykonywanie całej linii, można <strong>jednym przyciskiem
+    wstrzymać sprzedaż całego rodzaju</strong>. Można podać datę wznowienia i własny komunikat.
+</p>
+<ul>
+    <li><strong>Produkty zostają widoczne</strong> — opis, zdjęcia i adres bez zmian, żeby nie stracić pozycji w wyszukiwarce. Znika tylko możliwość kupienia.</li>
+    <li><strong>Znika także z koszyków</strong>, w których już leżały — z komunikatem dla klienta.</li>
+    <li><strong>Po dacie wznowienia sprzedaż wraca sama.</strong> Nie trzeba o niczym pamiętać.</li>
+</ul>
+<p>Wstrzymać można tylko <strong>Rodzaj</strong>. Tematyka i geografia są wielokrotne — magnes stojący w dwóch tematykach byłby jednocześnie wstrzymany i dostępny.</p>
+
+<h2>„Zrobiłem, a nie widać" — najczęstsze przypadki</h2>
+
+<dl class="why">
+    <dt>Dodałem grupę personalizacji, ale nie ma jej na liście przy produkcie</dt>
+    <dd>Grupa jest <strong>pusta</strong>. Trzeba wejść w nią i dodać pola albo pozycje biblioteki. Grupa bez zawartości nie da się przypiąć — celowo.</dd>
+
+    <dt>Dodałem pozycję do biblioteki, a klient jej nie widzi</dt>
+    <dd>Prawdopodobnie jest <strong>odznaczone „Dostępna w sklepie"</strong>. Wygaszone pozycje znikają z wyboru.</dd>
+
+    <dt>Utworzyłem kategorię, ale nie ma jej w sklepie</dt>
+    <dd>Kategoria <strong>bez produktów się nie pokazuje</strong> w filtrach ani w mapie strony. Filtr prowadzący do pustej strony jest gorszy niż jego brak. Wystarczy przypiąć pierwszy produkt.</dd>
+
+    <dt>Dodałem partnera, ale jego strona zwraca błąd</dt>
+    <dd>Partner jest <strong>wygaszony</strong> albo <strong>nie ma jeszcze żadnego produktu</strong> ze swoim znakiem.</dd>
+
+    <dt>Na liście produktów nie ma przycisku „Do koszyka"</dt>
+    <dd>Albo sklep <strong>nie ma włączonej metody dostawy lub płatności</strong> (patrz dokument o uruchomieniu), albo <strong>seria jest wstrzymana</strong>.</dd>
+
+    <dt>Na kaflu w wykazie jest „Wybierz opcje" zamiast „Do koszyka"</dt>
+    <dd>Tak ma być. Produkt <strong>z personalizacją</strong> wymaga wypełnienia formularza, a w siatce produktów nie ma na niego miejsca — przycisk prowadzi na kartę produktu.</dd>
+
+    <dt>Zmieniłem nazwę kategorii, a adres został stary</dt>
+    <dd>Tak ma być — <strong>adres nie idzie za nazwą</strong>, żeby nie unieważniać rozesłanych linków.</dd>
+
+    <dt>Klient wybrał grawer graficzny i tekstowy naraz</dt>
+    <dd>To niemożliwe, jeśli grupy mają ustawione <strong>„Wyklucza się z grupą"</strong>. Warto sprawdzić, czy to ustawienie jest.</dd>
+</dl>
+
+<h2>Ściągawka: nowy produkt w pięciu minutach</h2>
+
+<div class="step"><div class="num-badge">1</div><div>
+    <p><strong>Produkty → Dodaj produkt.</strong> Nazwa, opis, cena brutto, stan.</p>
+</div></div>
+<div class="step"><div class="num-badge">2</div><div>
+    <p><strong>Katalog:</strong> wybrać rodzaj, zaznaczyć tematyki i miejsca.</p>
+</div></div>
+<div class="step"><div class="num-badge">3</div><div>
+    <p><strong>Personalizacja:</strong> zaznaczyć grupy, które dotyczą tego magnesu.</p>
+</div></div>
+<div class="step"><div class="num-badge">4</div><div>
+    <p><strong>Licencja:</strong> jeśli na awersie jest cudzy znak — wskazać partnera i kwotę.</p>
+</div></div>
+<div class="step"><div class="num-badge">5</div><div>
+    <p><strong>Zapisać</strong>, dodać zdjęcia, a potem <strong>otworzyć produkt w sklepie</strong> i przejść zakup na sobie — to jedyny sposób, żeby zobaczyć dokładnie to, co zobaczy klient.</p>
+</div></div>
+
+<div class="box ok">
+    <h3>Co dzieje się po zamówieniu</h3>
+    <p style="margin-bottom:0">
+        Wpisany tekst i wybrana grafika <strong>zostają zapisane przy zamówieniu na stałe</strong> — późniejsza zmiana
+        w bibliotece czy w cenniku niczego w nich nie ruszy. Z ekranu zamówienia można wydrukować
+        <strong>arkusz produkcyjny</strong>: kartkę z tym, co trzeba wykonać, bez cen, z tekstem powiększonym
+        i wyraźnym, żeby nie pomylić „l" z „1".
+    </p>
+</div>
+
+<footer>
+    <p style="margin-bottom:4px">
+        <strong>W razie wątpliwości</strong> — proszę pisać. Pierwszy produkt można też dodać razem, ekran po ekranie.
+    </p>
+    <p style="margin-bottom:0">Dokument opisuje stan sklepu na 6 września 2026.</p>
+</footer>
+
+</div>
+</body>
+</html>
