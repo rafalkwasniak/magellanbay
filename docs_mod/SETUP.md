@@ -94,6 +94,34 @@ Potem wejść na stronę główną, kartę produktu i panel po zalogowaniu.
 
 ---
 
+## Dostęp serwisowy po przekazaniu sklepu
+
+**Sklep ma dokładnie jednego właściciela** (`shops.owner_id`, relacja jeden-do-jednego),
+a konsola administratora jest w trybie dedykowanym wyłączona (404). Nie ma więc
+drugiego konta, którym da się wejść do panelu klienta — i nie jest to
+przeoczenie, tylko konsekwencja tego, że klient nie ma widzieć warstwy platformy.
+
+Gdy klient zmieni hasło, a my musimy wejść (awaria, prośba o pomoc), hasło
+ustawia się z konsoli serwera:
+
+```bash
+cd /ścieżka/do/sklepu
+/opt/alt/php85/usr/bin/php artisan tinker --execute="
+App\Models\User::where('email','ADRES@KLIENTA')
+  ->first()->forceFill(['password' => bcrypt('NOWE_HASLO')])->save();
+echo 'gotowe';"
+```
+
+**Klient to zauważy** — jego hasło przestanie działać, więc trzeba mu podać nowe.
+Dlatego robimy to w uzgodnieniu z nim, a nie po cichu.
+
+Gdyby kiedyś trzeba było stałego, niewidocznego dostępu (albo klient poprosił
+o konto dla pracownika), właściwym rozwiązaniem jest **osobny moduł dodatkowych
+użytkowników sklepu** — nie przełączanie `owner_id` tam i z powrotem, bo każde
+takie przełączenie to ryzyko zostawienia sklepu w złym stanie.
+
+---
+
 ## Zanim to trafi do klienta
 
 - [ ] `.env` uzupełniony, `APP_DEBUG=false`
