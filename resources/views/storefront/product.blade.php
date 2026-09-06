@@ -98,6 +98,22 @@
                     </div>
                 @endif
 
+                {{-- Partner licencyjny awersu: nazwa i droga do reszty jego
+                     produktów. Kupujący, który przyszedł po magnes z jednego
+                     biegu, zwykle biega w kilku. --}}
+                @if ($productLicensor ?? null)
+                    <div class="st-card st-border mt-8 rounded-3xl border p-6 text-left">
+                        <h2 class="st-brand st-box-title">Licencja</h2>
+                        <p class="mt-3 text-sm opacity-80">
+                            Logotyp <span class="font-medium">{{ $productLicensor->name }}</span> użyty na podstawie licencji.
+                        </p>
+                        <a href="{{ $productLicensor->storefrontPath() }}"
+                            class="st-border mt-3 inline-block rounded-full border px-4 py-1.5 text-sm transition hover:opacity-80">
+                            Wszystkie produkty {{ $productLicensor->name }}
+                        </a>
+                    </div>
+                @endif
+
                 {{-- Tagi w kaflu jak na wykazie (Filtruj). --}}
                 @if (count($productTags))
                     <div class="st-card st-border mt-8 rounded-3xl border p-6 text-left">

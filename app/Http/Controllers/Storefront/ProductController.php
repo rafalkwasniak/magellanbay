@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Storefront;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Models\Licensor;
 use App\Support\CatalogAxis;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
@@ -70,13 +71,39 @@ class ProductController extends Controller
     }
 
     /**
+     * Publiczna strona partnera licencyjnego — wszystkie produkty, na których
+     * jest jego znak.
+     *
+     * Wprost ze specyfikacji („ekran prezentujący wszystkie produkty tylko
+     * wybranej firmy"). Sens jest sprzedażowy: organizator biegu dostaje jeden
+     * link i rozsyła go uczestnikom.
+     *
+     * WYGASZONY PARTNER NIE MA STRONY. Wygaszenie znaczy „już z nimi nie
+     * pracujemy" — strona zostałaby ofertą opartą na nieobowiązującej umowie.
+     * Historia rozliczeń tego nie dotyczy: ta żyje w zamówieniach.
+     */
+    public function partner(Request $request, string $partner): View
+    {
+        $shop = $request->attributes->get('shop');
+
+        $licensor = $shop->licensors()
+            ->active()
+            ->where('slug', $partner)
+            ->first();
+
+        abort_if($licensor === null, 404);
+
+        return $this->listing($request, null, $licensor);
+    }
+
+    /**
      * Wykaz produktów: wspólny dla /produkty i dla stron kategorii.
      *
      * `$node` niepuste zawęża zbiór do CAŁEJ GAŁĘZI węzła — „Włochy" pokazują
      * też magnesy przypięte wyłącznie do „Rzymu". Bez tego wyższy poziom
      * hierarchii byłby pusty i wyglądałby jak usterka, a nie jak decyzja.
      */
-    private function listing(Request $request, ?Category $node): View
+    private function listing(Request $request, ?Category $node, ?Licensor $licensor = null): View
     {
         $shop = $request->attributes->get('shop');
 
@@ -109,6 +136,16 @@ class ProductController extends Controller
             $filtered->whereHas('categories', fn ($q) => $q->whereIn('categories.id', $node->branchIds()));
         }
 
+        /*
+         * Produkty partnera to znak z OBU stron magnesu: logotyp awersu wpisany
+         * na stałe w produkt ORAZ grafika graweru z jego logo, którą kupujący
+         * może wybrać. Partner pytający „gdzie w tym sklepie jest mój znak"
+         * ma na myśli jedno i drugie.
+         */
+        if ($licensor !== null) {
+            $filtered->whereIn('id', $licensor->products()->select('products.id'));
+        }
+
         // Gęstość wykazu (kolumny + ile na stronę) skalowana do wielkości katalogu,
         // liczonej z CAŁEGO sklepu — nie ze zbioru po filtrze, żeby układ nie „pływał".
         $density = $shop->listingDensity();
@@ -119,7 +156,7 @@ class ProductController extends Controller
             ->paginate($density['per_page'])
             ->withQueryString();
 
-        $base = $node?->storefrontPath() ?? '/produkty';
+        $base = $licensor?->storefrontPath() ?? $node?->storefrontPath() ?? '/produkty';
         $query = ['sortowanie' => $sortKey, 'tagi' => $selected->all(), 'kategorie' => $picked];
 
         return view('storefront.products', [
@@ -133,6 +170,7 @@ class ProductController extends Controller
             'clearUrl' => $this->listUrl($base, ['sortowanie' => $sortKey]),
             // Kontekst kategorii: nagłówek, opis, okruszki i zejście niżej.
             'category' => $node,
+            'licensor' => $licensor,
             'crumbs' => $node?->path() ?? [],
             'children' => $node?->children ?? collect(),
             'axisPanels' => $this->axisPanels($shop, $filtered->clone(), $picked, $node, $sortKey, $selected, $base),
@@ -384,7 +422,7 @@ class ProductController extends Controller
         $shop = $request->attributes->get('shop');
 
         $model = $shop->products()
-            ->with(['images', 'priceHistory', 'tags', 'categories'])
+            ->with(['images', 'priceHistory', 'tags', 'categories', 'licensor'])
             ->find((int) $product);
 
         abort_if($model === null, 404);
@@ -423,6 +461,11 @@ class ProductController extends Controller
                 ->filter(fn (array $panel): bool => $panel['items'] !== [])
                 ->values()
                 ->all(),
+            // Partner licencyjny AWERSU — tylko nazwa i link do jego strony.
+            // Stawka zostaje w kartotece: kupujący widzi kwote w rozbiciu ceny,
+            // ale warunki umowy to nie jego sprawa. Wygaszonego nie linkujemy,
+            // bo jego strona i tak odpowiada 404.
+            'productLicensor' => $model->licensor?->is_active ? $model->licensor : null,
         ]);
     }
 

@@ -67,6 +67,15 @@
                                     <a href="{{ route('seller.licensors.edit', $licensor) }}"
                                         class="rounded-xl border border-stone-200 bg-white px-3 py-1.5 text-sm font-medium text-stone-700 transition hover:bg-stone-100">Edytuj</a>
 
+                                    {{-- Strona partnera jest PUBLICZNA — sprzedawca musi
+                                         o tym wiedzieć, zanim dopisze do kartoteki firmę,
+                                         z którą dopiero negocjuje. Wygaszony partner strony
+                                         nie ma, więc i odnośnika nie pokazujemy. --}}
+                                    @if ($licensor->is_active)
+                                        <a href="{{ 'https://'.$shop->host().$licensor->storefrontPath() }}" target="_blank" rel="noopener"
+                                            class="rounded-xl border border-stone-200 bg-white px-3 py-1.5 text-sm font-medium text-stone-700 transition hover:bg-stone-100">Strona partnera ↗</a>
+                                    @endif
+
                                     <form method="POST" action="{{ route('seller.licensors.toggle', $licensor) }}">
                                         @csrf
                                         <button type="submit"

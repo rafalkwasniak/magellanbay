@@ -565,6 +565,11 @@ $storefrontRoutes = function () {
     Route::get('/produkty', [StorefrontProduct::class, 'index'])->name('storefront.products');
     Route::get('/produkt/{product}', [StorefrontProduct::class, 'show'])->name('storefront.product');
 
+    // Publiczna strona partnera licencyjnego — wszystkie produkty z jego
+    // znakiem. Ze specyfikacji: „ekran prezentujacy wszystkie produkty tylko
+    // wybranej firmy". Wygaszony partner strony nie ma (404).
+    Route::get('/partner/{partner}', [StorefrontProduct::class, 'partner'])->name('storefront.partner');
+
     // Strony kategorii — po jednej trasie na os z `config/catalog.php`.
     // Segment jest CZESCIA sciezki (/geografia/rzym), wiec os nie musi byc
     // zgadywana: przychodzi w `defaults`. Adres NIE niesie hierarchii, zeby

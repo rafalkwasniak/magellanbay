@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Seller;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Seller\LicensorRequest;
 use App\Models\Licensor;
+use App\Models\Shop;
 use Illuminate\Contracts\Support\Renderable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 /**
  * Kartoteka licencjodawców — firm inkasujących opłatę za użycie swojego znaku
@@ -31,6 +33,7 @@ class LicensorController extends Controller
         abort_if($shop === null, 404);
 
         return view('seller.licensors.index', [
+            'shop' => $shop,
             'licensors' => $shop->licensors()
                 ->withCount(['choices', 'components'])
                 ->get(),
@@ -46,9 +49,32 @@ class LicensorController extends Controller
 
     public function store(LicensorRequest $request): RedirectResponse
     {
-        $request->user()->shop->licensors()->create($request->validated());
+        $shop = $request->user()->shop;
+
+        /*
+         * Slug liczymy RAZ, przy utworzeniu, i nie ruszamy go przy zmianie
+         * nazwy. To adres publicznej strony partnera — link, który organizator
+         * biegu rozsyła swoim uczestnikom. Poprawka literówki w kartotece nie
+         * może go unieważnić.
+         */
+        $shop->licensors()->create($request->validated() + [
+            'slug' => $this->uniqueSlug($shop, (string) $request->validated('name')),
+        ]);
 
         return redirect()->route('seller.licensors.index')->with('success', 'Partner dodany do kartoteki.');
+    }
+
+    private function uniqueSlug(Shop $shop, string $name): string
+    {
+        $base = Str::slug($name) ?: 'partner';
+        $slug = $base;
+        $n = 2;
+
+        while ($shop->licensors()->where('slug', $slug)->exists()) {
+            $slug = $base.'-'.$n++;
+        }
+
+        return $slug;
     }
 
     public function edit(Request $request, Licensor $licensor): Renderable

@@ -2,18 +2,22 @@
      `$category` niepuste znaczy, że stoimy na stronie jednego podziału:
      zmienia się nagłówek, okruszki i opis, ale filtrowanie jest to samo. --}}
 @php($isCategory = ($category ?? null) !== null)
+@php($isPartner = ($licensor ?? null) !== null)
 
 <x-layouts.storefront :shop="$shop"
-    :title="$isCategory ? $category->name : 'Produkty'"
-    :description="$isCategory
-        ? ($category->description ? \Illuminate\Support\Str::limit(strip_tags($category->description), 155) : $category->name.' — produkty w sklepie '.$shop->name)
-        : \App\Support\Seo::listingDescription($shop)">
+    :title="$isPartner ? $licensor->name : ($isCategory ? $category->name : 'Produkty')"
+    :description="$isPartner
+        ? 'Produkty z logotypem '.$licensor->name.' w sklepie '.$shop->name.'.'
+        : ($isCategory
+            ? ($category->description ? \Illuminate\Support\Str::limit(strip_tags($category->description), 155) : $category->name.' — produkty w sklepie '.$shop->name)
+            : \App\Support\Seo::listingDescription($shop))">
     <div class="mx-auto max-w-6xl px-6 pt-10">
         {{-- Okruszki niosą hierarchię, której NIE MA w adresie: „Rzym" mieszka
              pod /geografia/rzym, żeby przeniesienie go pod innego rodzica nie
              było przeprowadzką adresu. Ścieżkę pokazujemy tutaj. --}}
         <x-storefront.breadcrumbs :items="array_merge(
             [['label' => $shop->name, 'url' => '/'], ['label' => 'Produkty', 'url' => '/produkty']],
+            $isPartner ? [['label' => $licensor->name]] : [],
             collect($crumbs ?? [])->map(fn ($node) => [
                 'label' => $node->name,
                 'url' => $node->id === ($category?->id) ? null : $node->storefrontPath(),
@@ -21,8 +25,19 @@
         )" />
 
         <h1 class="st-brand mt-4 font-serif text-4xl leading-tight tracking-tight sm:text-5xl">
-            {{ $isCategory ? $category->name : 'Produkty' }}
+            {{ $isPartner ? $licensor->name : ($isCategory ? $category->name : 'Produkty') }}
         </h1>
+
+        {{-- Strona partnera mówi WPROST, czym jest. Kupujący, który trafił tu
+             z linku od organizatora biegu, ma od razu wiedzieć, że nie jest
+             na stronie tego organizatora, tylko w sklepie, który ma jego znak
+             na licencji. --}}
+        @if ($isPartner)
+            <p class="mt-4 max-w-2xl opacity-80">
+                Produkty z logotypem <span class="font-medium">{{ $licensor->name }}</span>, oferowane na podstawie
+                udzielonej nam licencji. Część ceny każdego z nich trafia do właściciela znaku.
+            </p>
+        @endif
 
         {{-- Sprzedaż serii wstrzymana. Dział zostaje widoczny razem z produktami:
              wracają za tydzień, a wygaszenie strony kosztowałoby pozycję
