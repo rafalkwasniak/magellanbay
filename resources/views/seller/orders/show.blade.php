@@ -4,6 +4,17 @@
     <div class="grid gap-6 lg:grid-cols-12">
         {{-- Główna kolumna: pozycje + podsumowanie --}}
         <div class="space-y-6 lg:col-span-8">
+            {{-- Arkusz produkcyjny nad pozycjami, bo to pierwsza rzecz robiona
+                 z nowym zamówieniem na personalizowany towar: wydrukować i wziąć
+                 do pracowni. Otwiera się w nowej karcie — sprzedawca zostaje
+                 w zamówieniu, które właśnie obsługuje. --}}
+            <div class="flex justify-end">
+                <a href="{{ route('seller.orders.worksheet', $order) }}" target="_blank" rel="noopener"
+                    class="rounded-2xl border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-700 shadow-sm transition hover:bg-stone-100">
+                    Arkusz produkcyjny ↗
+                </a>
+            </div>
+
             <livewire:seller.order-editor :order="$order" />
 
             {{-- Zwroty tuż pod pozycjami: to one wyjaśniają, czemu kwoty zamówienia

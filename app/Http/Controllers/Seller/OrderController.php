@@ -9,6 +9,7 @@ use App\Models\Shop;
 use App\Services\Shipping\CourierPickup;
 use App\Services\Shipping\ShipxClient;
 use Illuminate\Contracts\Support\Renderable;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
@@ -130,6 +131,30 @@ class OrderController extends Controller
     }
 
     /**
+     * Arkusz produkcyjny — kartka do położenia obok magnesu.
+     *
+     * TO NAJMNIEJSZA RZECZ, KTÓRA MA SENS, i tak jest zamierzone. Klient nie
+     * opisał tego modułu ani jednym zdaniem (dopisaliśmy go do zakresu sami,
+     * bo bez niego zamówienia na personalizowany towar nie da się wykonać),
+     * a kształt zbiorczego zestawienia zależy w całości od tego, jak
+     * zorganizowana jest jego pracownia — czy grawer robi sam, czy zleca.
+     *
+     * Wydruk jednego zamówienia przydaje się w obu tych światach i nie tworzy
+     * ŻADNYCH nowych danych: wszystko stoi już w migawce pozycji. Gdy klient
+     * powie, czego naprawdę potrzebuje, wyrzucamy jeden widok, a nie moduł.
+     *
+     * BEZ CEN — patrz komentarz w widoku.
+     */
+    public function worksheet(Request $request, Order $order): Renderable
+    {
+        $this->authorizeOrder($request, $order);
+
+        return view('seller.orders.worksheet', [
+            'order' => $order->load(['items', 'shop']),
+        ]);
+    }
+
+    /**
      * Tylko własne zamówienia sklepu zalogowanego sprzedawcy.
      */
     private function authorizeOrder(Request $request, Order $order): void
@@ -142,7 +167,7 @@ class OrderController extends Controller
      * (paginacja + osobne agregaty), więc za każdym razem budujemy je od nowa.
      *
      * @param  array{status: string, data_od: string, data_do: string, kwota_od: float|null, kwota_do: float|null, produkt: int|null}  $filters
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany<Order, Shop>
+     * @return HasMany<Order, Shop>
      */
     private function filteredOrders(Shop $shop, array $filters)
     {
@@ -174,7 +199,7 @@ class OrderController extends Controller
      * Nakłada aktywne filtry na zapytanie. Daty po dacie utworzenia (włącznie);
      * kwota po wartości brutto; produkt po pozycji zamówienia z danym product_id.
      *
-     * @param  \Illuminate\Database\Eloquent\Relations\HasMany<Order, Shop>  $query
+     * @param  HasMany<Order, Shop>  $query
      * @param  array{status: string, data_od: string, data_do: string, kwota_od: float|null, kwota_do: float|null, produkt: int|null}  $f
      */
     private function applyFilters($query, array $f): void
@@ -224,7 +249,7 @@ class OrderController extends Controller
      * sklepu (nazwa = migawka z pozycji). Osierocone (product_id NULL po twardym
      * usunięciu produktu) nie wchodzą.
      *
-     * @return array<int, string>  [product_id => nazwa]
+     * @return array<int, string> [product_id => nazwa]
      */
     private function productOptions(Shop $shop): array
     {

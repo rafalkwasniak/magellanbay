@@ -370,6 +370,11 @@ Route::middleware(['auth', 'role:seller', 'ensure.consents'])
         // ShipX nie ma prawa opuścić backendu. GET, bo to czyste pobranie pliku.
         Route::get('/zamowienia/{order}/etykieta', [OrderController::class, 'label'])->name('orders.label');
 
+        // Arkusz produkcyjny — kartka do polozenia obok magnesu. Swiadomie
+        // najmniejsza rzecz, ktora ma sens: klient nie opisal tego modulu, wiec
+        // nie zgadujemy ksztaltu jego pracowni (patrz kontroler).
+        Route::get('/zamowienia/{order}/arkusz', [OrderController::class, 'worksheet'])->name('orders.worksheet');
+
         // Odbiór kuriera: JEDNO zlecenie na wiele paczek (dopłata jest za
         // przyjazd, nie za paczkę). Osobny ekran, bo to operacja na zbiorze
         // przesyłek, a nie na pojedynczym zamówieniu.
