@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Magellan Bay — uruchomienie sklepu</title>
+<style>
+    :root {
+        --ink: #1c1917;
+        --muted: #57534e;
+        --line: #e7e5e4;
+        --bg: #fafaf9;
+        --accent: #b45309;
+        --ok: #15803d;
+        --warn: #b91c1c;
+    }
+    * { box-sizing: border-box; }
+    body {
+        margin: 0; padding: 0; background: var(--bg); color: var(--ink);
+        font: 16px/1.65 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    .page { max-width: 860px; margin: 0 auto; padding: 48px 28px 80px; }
+
+    header { border-bottom: 3px solid var(--ink); padding-bottom: 20px; margin-bottom: 36px; }
+    h1 { margin: 0 0 6px; font-size: 30px; letter-spacing: -0.02em; }
+    .lead { margin: 0; color: var(--muted); font-size: 17px; }
+
+    h2 {
+        margin: 44px 0 14px; font-size: 22px; letter-spacing: -0.01em;
+        padding-bottom: 8px; border-bottom: 2px solid var(--line);
+    }
+    h3 { margin: 26px 0 8px; font-size: 17px; }
+    p { margin: 0 0 12px; }
+    ul, ol { margin: 0 0 14px; padding-left: 22px; }
+    li { margin-bottom: 6px; }
+
+    .box { border: 1px solid var(--line); background: #fff; border-radius: 10px; padding: 18px 20px; margin: 16px 0; }
+    .box.warn { border-left: 5px solid var(--warn); }
+    .box.ok { border-left: 5px solid var(--ok); }
+    .box.note { border-left: 5px solid var(--accent); }
+    .box p:last-child, .box ul:last-child, .box ol:last-child { margin-bottom: 0; }
+    .box h3 { margin-top: 0; }
+
+    table { width: 100%; border-collapse: collapse; margin: 14px 0 18px; font-size: 15px; }
+    th, td { border: 1px solid var(--line); padding: 9px 11px; text-align: left; vertical-align: top; }
+    th { background: #f5f5f4; font-weight: 600; }
+
+    code, .path {
+        font-family: ui-monospace, "SF Mono", Consolas, monospace; font-size: 14px;
+        background: #f5f5f4; padding: 1px 6px; border-radius: 4px;
+    }
+    .path { white-space: nowrap; }
+
+    .step { display: flex; gap: 14px; margin-bottom: 16px; }
+    .num {
+        flex: 0 0 28px; height: 28px; border-radius: 50%; background: var(--ink); color: #fff;
+        display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700;
+    }
+    .step > div:last-child { flex: 1; }
+    .step p { margin: 0 0 6px; }
+
+    .tag { display: inline-block; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 20px; vertical-align: middle; }
+    .tag-must { background: #fee2e2; color: var(--warn); }
+    .tag-opt { background: #f5f5f4; color: var(--muted); }
+    .tag-done { background: #dcfce7; color: var(--ok); }
+
+    .check td:first-child { width: 34px; text-align: center; font-size: 18px; }
+
+    footer { margin-top: 56px; border-top: 1px solid var(--line); padding-top: 16px; color: var(--muted); font-size: 14px; }
+
+    @media print {
+        body { background: #fff; }
+        .page { padding: 0; max-width: none; }
+        h2 { page-break-after: avoid; }
+        .box, .step, table { page-break-inside: avoid; }
+    }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+    <h1>Magellan Bay — uruchomienie sklepu</h1>
+    <p class="lead">Co trzeba uzupełnić, żeby sklep zaczął sprzedawać. Dokument dla właściciela.</p>
+</header>
+
+<div class="box note">
+    <h3>Zanim zaczniemy — jedna rzecz do wyjaśnienia</h3>
+    <p>
+        Sklep jest <strong>zbudowany i działa</strong>: produkty, personalizacja, koszyk, kasa, katalog,
+        rozliczenia z partnerami. Nie znaczy to jednak, że jest gotowy do przyjmowania pieniędzy.
+    </p>
+    <p>
+        Część rzeczy <strong>możemy zrobić tylko my</strong> (kod, wygląd, funkcje), a część
+        <strong>tylko Państwo</strong> — bo wymaga danych, których nikt poza właścicielem nie ma:
+        numeru konta, NIP-u, kluczy do bramki płatniczej, umowy z InPostem.
+    </p>
+    <p style="margin-bottom:0">
+        Ten dokument mówi dokładnie, czego brakuje i gdzie to wpisać. Zajmie to około godziny,
+        licząc czekanie na konta w Paynow i InPoście.
+    </p>
+</div>
+
+<h2>1. Logowanie do panelu</h2>
+
+<table>
+    <tr><th style="width:34%">Adres panelu</th><td><span class="path">https://magellan.kwasniak.org/sprzedawca/logowanie</span></td></tr>
+    <tr><th>Login</th><td><code>magellan@kwasniak.org</code></td></tr>
+    <tr><th>Hasło</th><td><code>magellan@kwasniak.org</code> &nbsp;(to samo co login)</td></tr>
+</table>
+
+<div class="box warn">
+    <p style="margin-bottom:0">
+        <strong>Proszę zmienić hasło przy pierwszym logowaniu.</strong> Ustawiliśmy je takie same jak adres
+        e-mail wyłącznie po to, żeby dało się je zapamiętać na czas przekazania. Zmiana:
+        awatar w prawym górnym rogu → <strong>Mój profil</strong>.
+    </p>
+</div>
+
+<p>
+    Po lewej stronie jest menu z wszystkimi działami sklepu. W tym dokumencie będziemy się odwoływać
+    do trzech z nich: <strong>Mój sklep</strong>, <strong>Ustawienia</strong> i <strong>Integracje</strong>.
+</p>
+
+<h2>2. Dane firmy i konto bankowe <span class="tag tag-must">WYMAGANE</span></h2>
+
+<p>Menu: <strong>Mój sklep</strong> — <span class="path">/sprzedawca/sklep</span></p>
+
+<p>
+    Te dane wchodzą do <strong>regulaminu, polityki prywatności, stopki sklepu, maili do klientów
+    i faktur</strong>. Dopóki ich nie ma, w dokumentach stoją znaczniki w nawiasach kwadratowych —
+    <code>[NAZWA FIRMY]</code>, <code>[NIP]</code> — celowo widoczne, żeby dało się je wyłapać wzrokiem.
+</p>
+
+<h3>Co trzeba wypełnić</h3>
+
+<table>
+    <tr><th style="width:30%">Sekcja</th><th>Co tam wpisać</th></tr>
+    <tr>
+        <td><strong>Dane kontaktowe</strong></td>
+        <td>E-mail widoczny dla klientów i telefon (jeśli ma być publiczny). Na ten adres idą też powiadomienia o zamówieniach.</td>
+    </tr>
+    <tr>
+        <td><strong>Dane firmowe</strong></td>
+        <td>NIP i pełna nazwa działalności — tak, jak w CEIDG albo KRS. To jest treść regulaminu, więc musi się zgadzać co do znaku.</td>
+    </tr>
+    <tr>
+        <td><strong>Adres sklepu</strong></td>
+        <td>Ulica, numer, kod, miasto, województwo. <strong>Bez pełnego adresu nie zadziała odbiór osobisty</strong> — klient nie miałby dokąd przyjść.</td>
+    </tr>
+    <tr>
+        <td><strong>Dane do przelewu</strong></td>
+        <td>Numer konta, właściciel rachunku, nazwa banku. <strong>Bez numeru konta nie da się włączyć płatności przelewem.</strong></td>
+    </tr>
+</table>
+
+<div class="box">
+    <p style="margin-bottom:0">
+        <strong>Stan na dziś:</strong> wypełniony jest e-mail kontaktowy i miasto.
+        Brakuje <strong>NIP-u, nazwy firmy i numeru konta</strong>.
+    </p>
+</div>
+
+<h2>3. Płatności <span class="tag tag-must">WYMAGANE</span></h2>
+
+<p>Menu: <strong>Ustawienia</strong> → zakładka <strong>Płatności</strong> — <span class="path">/sprzedawca/ustawienia</span></p>
+
+<p>Sklep obsługuje <strong>cztery sposoby zapłaty</strong>. Można włączyć dowolną kombinację.</p>
+
+<table>
+    <tr><th style="width:26%">Sposób</th><th>Co daje</th><th style="width:32%">Czego wymaga</th></tr>
+    <tr>
+        <td><strong>Przelew tradycyjny</strong></td>
+        <td>Klient dostaje dane do przelewu w mailu i płaci ręcznie. Zamówienie czeka na wpłatę.</td>
+        <td>Numeru konta w <strong>Mój sklep → Dane do przelewu</strong>. Bez niego przełącznik nie zadziała.</td>
+    </tr>
+    <tr>
+        <td><strong>Płatności online (Paynow)</strong></td>
+        <td>BLIK, karta, szybki przelew. Klient płaci od razu, zamówienie samo zmienia status na opłacone.</td>
+        <td>Konta w Paynow (mBank) i dwóch kluczy — patrz niżej.</td>
+    </tr>
+    <tr>
+        <td><strong>Płatność przy odbiorze</strong></td>
+        <td>Klient płaci na miejscu, odbierając zamówienie.</td>
+        <td>Tylko włączenia. Ma sens przy odbiorze osobistym.</td>
+    </tr>
+    <tr>
+        <td><strong>Za pobraniem</strong></td>
+        <td>Kurier lub paczkomat pobiera pieniądze przy doręczeniu.</td>
+        <td>Włącza się razem z metodą dostawy (punkt 4), nie tutaj. Wymaga pełnych danych firmowych.</td>
+    </tr>
+</table>
+
+<div class="box warn">
+    <h3>Stan na dziś: sklep przyjmuje wyłącznie „płatność przy odbiorze"</h3>
+    <p style="margin-bottom:0">
+        W praktyce znaczy to, że <strong>klient z drugiego końca Polski nie może nic kupić</strong> —
+        nie ma czym zapłacić za przesyłkę. To pierwsza rzecz do naprawienia: albo włączyć przelew
+        (wystarczy numer konta), albo uruchomić Paynow.
+    </p>
+</div>
+
+<h3>Jak uruchomić płatności online (Paynow)</h3>
+
+<p>
+    Paynow to bramka płatnicza mBanku. Obsługuje BLIK, karty i szybkie przelewy. Pieniądze trafiają
+    na Państwa konto, my nie mamy do nich dostępu ani nie pobieramy prowizji — rozliczenie jest
+    bezpośrednio między Państwem a mBankiem.
+</p>
+
+<div class="step"><div class="num">1</div><div>
+    <p><strong>Założyć konto w Paynow</strong> — <span class="path">paynow.pl</span>. Nie trzeba mieć konta firmowego w mBanku.</p>
+</div></div>
+<div class="step"><div class="num">2</div><div>
+    <p><strong>W panelu Paynow odebrać dwa klucze:</strong> <em>klucz API</em> (Api-Key) i <em>klucz podpisu</em> (Signature-Key).</p>
+</div></div>
+<div class="step"><div class="num">3</div><div>
+    <p><strong>Wpisać je u nas:</strong> menu <strong>Integracje</strong> → sekcja <em>Płatności online (Paynow)</em>.</p>
+</div></div>
+<div class="step"><div class="num">4</div><div>
+    <p><strong>Skopiować adres powiadomień</strong> — pokazujemy go na tym samym ekranie po zapisaniu kluczy — i wkleić w panelu Paynow jako adres webhooka. Bez tego zamówienia nie będą się same oznaczać jako opłacone.</p>
+</div></div>
+<div class="step"><div class="num">5</div><div>
+    <p><strong>Przetestować na środowisku testowym</strong> (przełącznik „sandbox"), a potem odznaczyć go i wpisać klucze produkcyjne.</p>
+</div></div>
+
+<div class="box note">
+    <p style="margin-bottom:0">
+        <strong>Klucze testowe i produkcyjne to różne klucze.</strong> Po przełączeniu z sandboxa na produkcję
+        trzeba wpisać nowe — stare przestaną działać.
+    </p>
+</div>
+
+<h2>4. Wysyłka <span class="tag tag-must">WYMAGANE</span></h2>
+
+<p>Menu: <strong>Ustawienia</strong> → zakładka <strong>Dostawa</strong></p>
+
+<p>Sklep obsługuje <strong>pięć sposobów dostawy</strong>. Przy każdym ustawia się koszt oraz opcjonalnie próg darmowej wysyłki („od 200 zł za darmo").</p>
+
+<table>
+    <tr><th style="width:32%">Sposób</th><th>Uwagi</th></tr>
+    <tr><td><strong>Odbiór osobisty</strong></td><td>Wymaga pełnego adresu sklepu (punkt 2). Klient przychodzi po zamówienie.</td></tr>
+    <tr><td><strong>Kurier</strong></td><td>Zwykła przesyłka kurierska. Koszt ustala właściciel.</td></tr>
+    <tr><td><strong>Paczkomat InPost</strong></td><td>Klient wybiera paczkomat na mapie w trakcie zamawiania.</td></tr>
+    <tr><td><strong>Kurier za pobraniem</strong></td><td>Kurier pobiera pieniądze przy doręczeniu.</td></tr>
+    <tr><td><strong>Paczkomat za pobraniem</strong></td><td>To samo, ale w paczkomacie.</td></tr>
+</table>
+
+<div class="box warn">
+    <p style="margin-bottom:0">
+        <strong>Przesyłki za pobraniem wymagają kompletnych danych firmowych</strong> — nazwy, NIP-u i adresu.
+        InPost odmawia przyjęcia takiej przesyłki, jeśli czegoś brakuje, i robi to dopiero w chwili nadania,
+        gdy klient już zapłacił. Proszę uzupełnić punkt 2, zanim włączą Państwo pobranie.
+    </p>
+</div>
+
+<h3>Dwie rzeczy, które można rozdzielić</h3>
+
+<p>
+    <strong>Oferowanie wysyłki</strong> i <strong>nadawanie przesyłek z panelu</strong> to co innego.
+    Można włączyć „Paczkomat InPost" jako metodę dostawy i nadawać paczki ręcznie w aplikacji InPost —
+    sklep będzie działał.
+</p>
+<p>
+    Integracja z InPostem (menu <strong>Integracje</strong> → <em>Nadawanie przesyłek InPost</em>) dokłada
+    tylko wygodę: nadanie przesyłki jednym kliknięciem z ekranu zamówienia, pobranie etykiety
+    i automatyczne przekazanie numeru do śledzenia klientowi.
+</p>
+
+<h3>Jak uruchomić nadawanie z panelu <span class="tag tag-opt">opcjonalne</span></h3>
+
+<div class="step"><div class="num">1</div><div>
+    <p>Podpisać umowę z InPostem i uzyskać dostęp do <strong>InPost ShipX</strong> (usługa dla firm wysyłających paczki).</p>
+</div></div>
+<div class="step"><div class="num">2</div><div>
+    <p>W panelu InPost odebrać <strong>token dostępowy</strong> i <strong>numer organizacji</strong> (Organization ID).</p>
+</div></div>
+<div class="step"><div class="num">3</div><div>
+    <p>Wpisać je w <strong>Integracje</strong> → <em>Nadawanie przesyłek InPost</em>, przetestować na sandboxie, potem przełączyć na produkcję.</p>
+</div></div>
+
+<div class="box note">
+    <p style="margin-bottom:0">
+        <strong>Uwaga:</strong> sposób nadawania (paczkomat / kurier) ustawia się raz i po nadaniu pierwszej
+        przesyłki <strong>nie da się go zmienić dla tego zamówienia</strong>. To ograniczenie InPostu, nie nasze.
+    </p>
+</div>
+
+<h2>5. Analityka i widoczność w Google <span class="tag tag-opt">zalecane</span></h2>
+
+<p>Menu: <strong>Integracje</strong> — <span class="path">/sprzedawca/integracje</span></p>
+
+<h3>Własna analityka — działa od razu</h3>
+<p>
+    Sklep ma <strong>wbudowaną analitykę</strong> (menu <strong>Analityka</strong>): sprzedaż w czasie,
+    bestsellery, najlepsi klienci, konwersja. Nie wymaga niczego — liczy się sama, z Państwa danych,
+    bez wysyłania czegokolwiek na zewnątrz. Warto zajrzeć tam po pierwszym tygodniu.
+</p>
+
+<h3>Google Analytics <span class="tag tag-opt">opcjonalne</span></h3>
+<div class="step"><div class="num">1</div><div>
+    <p>Założyć konto na <span class="path">analytics.google.com</span> i utworzyć usługę dla adresu sklepu.</p>
+</div></div>
+<div class="step"><div class="num">2</div><div>
+    <p>Skopiować identyfikator — zaczyna się od <code>G-</code> (albo <code>GTM-</code> przy Tag Managerze).</p>
+</div></div>
+<div class="step"><div class="num">3</div><div>
+    <p>Wkleić w <strong>Integracje</strong> → <em>Google Analytics</em> i włączyć przełącznik w <strong>Ustawieniach</strong>.</p>
+</div></div>
+
+<div class="box">
+    <p style="margin-bottom:0">
+        Analityka Google uruchamia się <strong>dopiero po zgodzie klienta na ciasteczka</strong> — tak wymaga prawo.
+        Baner zgody jest w sklepie i działa; dopóki klient nie kliknie „Akceptuję", żaden skrypt się nie ładuje.
+    </p>
+</div>
+
+<h3>Google Search Console <span class="tag tag-opt">zalecane</span></h3>
+<p>
+    To narzędzie pokazuje, na jakie frazy sklep pojawia się w wyszukiwarce. Żeby je uruchomić, Google prosi
+    o potwierdzenie własności strony:
+</p>
+<ol>
+    <li>Wejść na <span class="path">search.google.com/search-console</span> i dodać adres sklepu.</li>
+    <li>Wybrać metodę „znacznik HTML" i skopiować sam kod (zawartość pola <code>content</code>).</li>
+    <li>Wkleić w <strong>Integracje</strong> → <em>Google Search Console</em> i wrócić do Google po potwierdzenie.</li>
+    <li>Na koniec zgłosić mapę strony — jej adres pokazujemy na tym samym ekranie.</li>
+</ol>
+
+<h2>6. Faktury <span class="tag tag-opt">opcjonalne</span></h2>
+
+<p>
+    Sklep umie wystawiać faktury przez <strong>Fakturownię</strong> (<span class="path">fakturownia.pl</span>) —
+    automatycznie po opłaceniu zamówienia albo ręcznie z ekranu zamówienia.
+</p>
+<p>
+    Konfiguracja: konto w Fakturowni → token API z ustawień konta → wpisać w <strong>Integracje</strong> →
+    <em>Fakturownia</em> razem z adresem konta.
+</p>
+
+<div class="box warn">
+    <p style="margin-bottom:0">
+        <strong>Fakturownia nie ma środowiska testowego.</strong> Każde żądanie tworzy prawdziwy dokument
+        w Państwa księgowości. Proszę włączać automatyczne fakturowanie dopiero wtedy, gdy sklep
+        naprawdę sprzedaje.
+    </p>
+</div>
+
+<h2>7. Wygląd i treści <span class="tag tag-opt">gdy będą materiały</span></h2>
+
+<table>
+    <tr><th style="width:30%">Gdzie</th><th>Co można zmienić</th></tr>
+    <tr><td><strong>Wygląd</strong></td><td>Kolor przewodni, charakter sklepu, logo, ikona w karcie przeglądarki.</td></tr>
+    <tr><td><strong>Mój sklep → O sklepie</strong></td><td>Tekst powitalny na stronie głównej.</td></tr>
+    <tr><td><strong>Informacje</strong></td><td>Regulamin, polityka prywatności, dostawa i płatności, kontakt — wszystkie strony tekstowe. <strong>Regulamin i polityka są już napisane i czekają na weryfikację.</strong></td></tr>
+    <tr><td><strong>Katalog</strong></td><td>Podziały produktów: rodzaje, tematyki, geografia. Dziś stoją tam przykłady — do zastąpienia prawdziwymi.</td></tr>
+</table>
+
+<h2>Lista kontrolna</h2>
+
+<p>Sklep sprzedaje w pełni, gdy odhaczone są wszystkie pozycje z pierwszej części:</p>
+
+<table class="check">
+    <tr><th colspan="2">Bez tego sklep nie sprzedaje</th></tr>
+    <tr><td>☐</td><td>Zmienione hasło do panelu</td></tr>
+    <tr><td>☐</td><td>NIP i nazwa firmy — <em>Mój sklep → Dane firmowe</em></td></tr>
+    <tr><td>☐</td><td>Pełny adres — <em>Mój sklep → Adres sklepu</em></td></tr>
+    <tr><td>☐</td><td>Numer konta — <em>Mój sklep → Dane do przelewu</em></td></tr>
+    <tr><td>☐</td><td>Włączona co najmniej jedna płatność <strong>zdalna</strong> (przelew albo Paynow)</td></tr>
+    <tr><td>☐</td><td>Włączona co najmniej jedna metoda dostawy z ustalonym kosztem</td></tr>
+    <tr><td>☐</td><td>Sprawdzony regulamin i polityka prywatności</td></tr>
+    <tr><td>☐</td><td>Zakup testowy od początku do końca — na sobie</td></tr>
+</table>
+
+<table class="check">
+    <tr><th colspan="2">Warto, ale sklep działa i bez tego</th></tr>
+    <tr><td>☐</td><td>Paynow (BLIK i karty — najczęstszy sposób płatności w Polsce)</td></tr>
+    <tr><td>☐</td><td>InPost ShipX — nadawanie przesyłek z panelu</td></tr>
+    <tr><td>☐</td><td>Fakturownia</td></tr>
+    <tr><td>☐</td><td>Google Analytics i Search Console</td></tr>
+    <tr><td>☐</td><td>Logo i kolory marki</td></tr>
+    <tr><td>☐</td><td>Prawdziwe podziały katalogu zamiast przykładowych</td></tr>
+</table>
+
+<div class="box ok">
+    <h3>Co jest już zrobione i nie wymaga Państwa uwagi</h3>
+    <p style="margin-bottom:0">
+        Personalizacja nadruku i grawerki · cena składana z czterech części, każda widoczna przy zamawianiu ·
+        koszyk rozpoznający konfigurację · katalog w trzech niezależnych podziałach · wstrzymanie sprzedaży
+        całej serii · strony partnerów licencyjnych · rozliczenia z partnerami z arkuszem do pobrania ·
+        arkusz produkcyjny do zamówienia · konta klientów · zwroty i odstąpienia · zgoda na ciasteczka ·
+        mapa strony · zgłoszenia treści.
+    </p>
+</div>
+
+<footer>
+    <p style="margin-bottom:4px">
+        <strong>W razie pytań</strong> — proszę pisać. Konfigurację można też przejść razem, ekran po ekranie;
+        zwykle zajmuje to kilkanaście minut, nie licząc zakładania kont w Paynow i InPoście.
+    </p>
+    <p style="margin-bottom:0">Dokument opisuje stan sklepu na 6 września 2026.</p>
+</footer>
+
+</div>
+</body>
+</html>
