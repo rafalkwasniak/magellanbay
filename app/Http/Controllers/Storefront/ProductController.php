@@ -353,7 +353,11 @@ class ProductController extends Controller
 
                 $next = $active
                     ? $chosen->reject(fn (Category $c): bool => $c->id === $category->id)
-                    : $chosen->push($category);
+                    // `concat`, NIE `push`: push mutuje kolekcję w miejscu,
+                    // więc każda kolejna pozycja panelu doklejała się do
+                    // poprzedniej i link do „Polski" prowadził na
+                    // ?geografia=europa,polska, choć nikt nie wybrał Europy.
+                    : $chosen->concat([$category]);
 
                 $items[] = [
                     'name' => str_repeat('· ', $row['depth']).$category->name,

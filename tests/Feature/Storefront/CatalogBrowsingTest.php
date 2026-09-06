@@ -216,6 +216,27 @@ class CatalogBrowsingTest extends TestCase
     }
 
     /**
+     * Każdy odnośnik w panelu opisuje SWÓJ filtr, a nie sumę wszystkich
+     * wypisanych wyżej.
+     *
+     * Pierwsza wersja używała `push`, który mutuje kolekcję w miejscu — więc
+     * link do „Polski" prowadził na `?geografia=europa,polska`, choć nikt nie
+     * wybrał Europy. Testy tego nie widziały, bo sprawdzały wynik filtrowania,
+     * a nie treść odnośników; złapał to dopiero podgląd żywej strony.
+     */
+    public function test_filter_links_do_not_accumulate_earlier_items(): void
+    {
+        $europa = $this->wezel('geo', 'Europa');
+        $polska = $this->wezel('geo', 'Polska', $europa);
+        $this->produkt('Magnes z Polski', [$polska]);
+
+        $this->odwiedz('/produkty')
+            ->assertOk()
+            ->assertSee('/produkty?geografia=polska', false)
+            ->assertDontSee('geografia=europa%2Cpolska', false);
+    }
+
+    /**
      * Filtr prowadzący do pustej strony jest gorszy niż jego brak.
      */
     public function test_dead_filters_are_not_offered(): void
