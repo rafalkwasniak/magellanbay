@@ -174,6 +174,12 @@ class AddToCart extends Component
             return;
         }
 
+        // Wstrzymana seria — komponent nawet nie próbuje. `CartService` też by
+        // odmówił, ale wtedy klikniecie wygladaloby na zepsuty przycisk.
+        if ($product->isSaleSuspended()) {
+            return;
+        }
+
         /*
          * Walidujemy TYLKO produkt z grupami opcji. Przy zwykłym produkcie
          * `rules()` jest puste, a Livewire pusty zestaw reguł traktuje jak ich
@@ -296,6 +302,8 @@ class AddToCart extends Component
          * w koszyku. Przy odpowiedziach jeszcze niekompletnych pokazujemy to,
          * co da się policzyć — czyli sam produkt.
          */
+        $suspension = $product?->suspendedBy();
+
         $config = $product !== null ? ProductConfiguration::normalise($product, $this->config) : null;
         $breakdown = $product !== null
             ? ProductConfiguration::breakdown($product, $config ?? [])
@@ -306,7 +314,10 @@ class AddToCart extends Component
             'stock' => $this->stock,
             'inCart' => $inCart,
             'remaining' => $remaining,
-            'canAdd' => $this->active && (! $limited || $remaining > 0),
+            'canAdd' => $this->active && ! $suspension && (! $limited || $remaining > 0),
+            // Wezel wstrzymujacy sprzedaz — niesie wlasny komunikat i date
+            // wznowienia, wiec przekazujemy CALY, nie samo „true".
+            'suspension' => $suspension,
             'groups' => $groups,
             // Tam, gdzie formularza nie ma (kafel w wykazie), przycisk prowadzi
             // na kartę produktu — inaczej „Do koszyka" nie robiłoby nic.

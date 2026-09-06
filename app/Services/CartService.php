@@ -147,6 +147,15 @@ class CartService
             return;
         }
 
+        /*
+         * Wstrzymana seria nie wchodzi do koszyka. Blokada w widoku sama nie
+         * wystarcza: przycisk znika, ale żądanie da się wysłać — a wstrzymanie
+         * sprzedaży ma znaczyć „nie sprzedajemy", nie „nie pokazujemy".
+         */
+        if ($product->isSaleSuspended()) {
+            return;
+        }
+
         $config = ProductConfiguration::normalise($product, $configuration);
 
         // `null` = konfiguracja odrzucona (brak wymaganego pola, za długi tekst,
@@ -300,6 +309,7 @@ class CartService
         }
 
         $products = Product::where('shop_id', $shopId)
+            ->with('categories')
             ->where('is_active', true)
             ->whereIn('id', array_column($raw, 'product_id'))
             ->get()
@@ -323,6 +333,18 @@ class CartService
                     $notices[] = 'Jeden lub więcej produktów nie jest już dostępnych i został usunięty z koszyka.';
 
                     return null;    // zdjęty/usunięty — wypadnie z koszyka
+                }
+
+                /*
+                 * Sprzedawca mógł wstrzymać serię, gdy pozycja już leżała
+                 * w koszyku. Zamówienie na wstrzymany towar byłoby zamówieniem,
+                 * którego nie da się zrealizować — mówimy to teraz, a nie po
+                 * pobraniu pieniędzy.
+                 */
+                if ($product->isSaleSuspended()) {
+                    $notices[] = 'Sprzedaż produktu „'.$product->name.'" została wstrzymana — pozycja wypadła z koszyka.';
+
+                    return null;
                 }
 
                 $alreadyUsed = $used[$product->id] ?? 0.0;

@@ -16,7 +16,7 @@
 
          Osobna flaga, NIE `compact`: tamta steruje wyglądem przycisku i jest
          włączona także na karcie produktu. --}}
-    @if ($withOptions && $groups->isNotEmpty())
+    @if ($withOptions && $groups->isNotEmpty() && ! $suspension)
         <div class="mb-8 space-y-5">
             @foreach ($groups as $group)
                 <fieldset>
@@ -159,7 +159,27 @@
          przy zwykłym produkcie przycisk ma zostać tam, gdzie był. --}}
     @php($pad = $compact ? 'px-5 py-2.5' : 'px-8 py-3')
 
-    @if ($needsCard)
+    {{-- SPRZEDAŻ SERII WSTRZYMANA. Komunikat, nie zniknięcie: produkt zostaje
+         widoczny (opis, zdjęcia, adres), bo wraca za tydzień i nie ma powodu
+         gasić go w wyszukiwarce. Znika tylko możliwość kupienia. --}}
+    @if ($suspension)
+        @if (! $withOptions)
+            {{-- W siatce produktów stopka kafla ma szerokość przycisku, nie
+                 akapitu. Pełne zdanie z datą czeka na karcie produktu — tutaj
+                 wystarczy powód, dla którego nie ma czego kliknąć.
+
+                 Rozróżnia je `withOptions`, NIE `compact`: ta druga jest
+                 włączona także na karcie produktu i już raz wprowadziła mnie
+                 w błąd przy formularzu personalizacji. --}}
+            <span class="st-border inline-flex items-center justify-center rounded-full border px-4 py-2.5 text-sm font-medium opacity-70">
+                Sprzedaż wstrzymana
+            </span>
+        @else
+            <p class="st-border rounded-2xl border px-4 py-3 text-sm opacity-80">
+                {{ $suspension->suspensionMessage() }}
+            </p>
+        @endif
+    @elseif ($needsCard)
         {{-- Produkt personalizowany na kaflu: wybór jest na karcie, bo tutaj nie
              ma na niego miejsca. Bez tego „Do koszyka" nie robiłoby NIC —
              konfiguracja bez wymaganych pól i tak zostaje odrzucona — i wyglądało

@@ -20,9 +20,17 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  *
  * @property-read string $axis
  */
-#[Fillable(['axis', 'parent_id', 'name', 'slug', 'description', 'position'])]
+#[Fillable(['axis', 'parent_id', 'name', 'slug', 'description', 'position', 'sales_suspended_at', 'sales_resume_on', 'suspension_note'])]
 class Category extends Model
 {
+    protected function casts(): array
+    {
+        return [
+            'sales_suspended_at' => 'datetime',
+            'sales_resume_on' => 'date',
+        ];
+    }
+
     /**
      * @return BelongsTo<Shop, $this>
      */
@@ -77,6 +85,42 @@ class Category extends Model
     public function scopeRoots(Builder $query): void
     {
         $query->whereNull('parent_id');
+    }
+
+    /**
+     * Czy sprzedaż tej serii jest wstrzymana TERAZ.
+     *
+     * WZNOWIENIE DZIEJE SIĘ SAMO: data z przeszłości znaczy, że sprzedaż już
+     * wróciła. Nie ma zadania w tle, które musiałoby ją odwiesić — bo gdyby
+     * takie zadanie nie przeszło, sklep traciłby pieniądze w ciszy, a tu crona
+     * nie ma z rozmysłu (CLAUDE.md sek. 2).
+     *
+     * Brak daty = wstrzymanie bezterminowe, do ręcznego wznowienia.
+     */
+    public function salesSuspended(): bool
+    {
+        if ($this->sales_suspended_at === null) {
+            return false;
+        }
+
+        return $this->sales_resume_on === null || $this->sales_resume_on->isFuture();
+    }
+
+    /**
+     * Zdanie dla kupującego — dlaczego nie da się tego kupić i kiedy wróci.
+     *
+     * Komunikat sprzedawcy ma pierwszeństwo; domyślny mówi to samo własnymi
+     * słowami, żeby wstrzymanie bez wpisanego tekstu nie wyglądało jak usterka.
+     */
+    public function suspensionMessage(): string
+    {
+        if (filled($this->suspension_note)) {
+            return (string) $this->suspension_note;
+        }
+
+        return $this->sales_resume_on !== null
+            ? 'Sprzedaż tej serii jest chwilowo wstrzymana. Wznowienie planujemy '.$this->sales_resume_on->format('d.m.Y').'.'
+            : 'Sprzedaż tej serii jest chwilowo wstrzymana.';
     }
 
     /**

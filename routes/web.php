@@ -436,6 +436,11 @@ Route::middleware(['auth', 'role:seller', 'ensure.consents'])
         ))->name('categories.home');
         Route::get('/katalog/{axis}', [CategoryController::class, 'index'])->name('categories.index');
         Route::post('/katalog/{axis}', [CategoryController::class, 'save'])->name('categories.save');
+        // Wstrzymanie sprzedazy calej serii — jednym klknieciem, wprost ze
+        // specyfikacji klienta. Przycisk siedzi w formularzu osi (`formaction`),
+        // wiec zapisuje przy okazji date wznowienia i komunikat.
+        Route::post('/katalog/{axis}/{category}/sprzedaz', [CategoryController::class, 'toggleSuspension'])
+            ->name('categories.suspension');
 
         // Kartoteka licencjodawców — firm inkasujących opłatę za użycie swojego
         // znaku. Kasowanie ograniczone do wpisów nieużywanych (patrz kontroler):

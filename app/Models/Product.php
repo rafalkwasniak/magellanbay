@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\SaleUnit;
 use App\Enums\VatRate;
 use App\Observers\ProductObserver;
+use App\Support\CatalogAxis;
 use App\Support\OmnibusPrice;
 use Carbon\CarbonInterface;
 use Database\Factories\ProductFactory;
@@ -174,6 +175,44 @@ class Product extends Model
     public function kind(): ?Category
     {
         return $this->categoriesOn('kind')->first();
+    }
+
+    /**
+     * Seria, która wstrzymuje sprzedaż tego produktu — albo `null`.
+     *
+     * Zwraca WĘZEŁ, a nie `true`: żeby powiedzieć kupującemu, co i do kiedy
+     * jest wstrzymane, trzeba mieć skąd wziąć komunikat i datę.
+     *
+     * Pytamy tylko osie, na których wstrzymanie w ogóle ma sens (jednokrotne).
+     * Na osi wielokrotnej produkt bywałby jednocześnie wstrzymany i dostępny.
+     */
+    public function suspendedBy(): ?Category
+    {
+        foreach (CatalogAxis::all() as $axis) {
+            if (! $axis->suspendable()) {
+                continue;
+            }
+
+            foreach ($this->categoriesOn($axis->key()) as $category) {
+                if ($category->salesSuspended()) {
+                    return $category;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Czy produkt wolno teraz kupić.
+     *
+     * JEDNO MIEJSCE NA TĘ ODPOWIEDŹ. Karta produktu, kafel, koszyk i kasa
+     * pytają o to samo — rozsypanie warunku po widokach kończy się tym, że
+     * przycisk znika, a żądanie przechodzi (albo odwrotnie).
+     */
+    public function isSaleSuspended(): bool
+    {
+        return $this->suspendedBy() !== null;
     }
 
     /**

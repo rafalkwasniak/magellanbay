@@ -102,6 +102,17 @@ final class CatalogAxis
     }
 
     /**
+     * Czy da się wstrzymać sprzedaż całego węzła tej osi.
+     *
+     * Wielokrotność wyklucza to z definicji, niezależnie od configu: produkt
+     * stojący w dwóch węzłach naraz byłby jednocześnie wstrzymany i dostępny.
+     */
+    public function suspendable(): bool
+    {
+        return ! $this->multiple() && (bool) ($this->config['suspendable'] ?? false);
+    }
+
+    /**
      * Ile poziomów wolno zagnieździć. Oś płaska ma zawsze jeden.
      */
     public function maxDepth(): int

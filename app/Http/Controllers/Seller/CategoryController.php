@@ -136,6 +136,58 @@ class CategoryController extends Controller
     }
 
     /**
+     * Wstrzymanie i wznowienie sprzedaży całej serii — jednym kliknięciem.
+     *
+     * Przycisk stoi WEWNĄTRZ formularza osi (`formaction`), więc przy okazji
+     * zapisuje wpisaną obok datę wznowienia i komunikat. Sprzedawca wpisuje
+     * powód i klika raz, zamiast zapisywać, a potem wstrzymywać.
+     *
+     * Wznowienie nie kasuje daty ani komunikatu — następne wstrzymanie tej
+     * samej serii zwykle brzmi tak samo, a przepisywanie tego od nowa przy
+     * każdej przerwie w dostawach byłoby karą za korzystanie z funkcji.
+     */
+    public function toggleSuspension(Request $request, string $axis, Category $category): RedirectResponse
+    {
+        $shop = $request->user()->shop;
+        abort_if($shop === null || $category->shop_id !== $shop->id, 404);
+
+        $current = CatalogAxis::bySegment($axis);
+        abort_if($current === null || $current->key() !== $category->axis, 404);
+
+        // Wstrzymanie na osi wielokrotnej nie ma dobrej odpowiedzi: produkt
+        // stojący w dwóch węzłach byłby jednocześnie wstrzymany i dostępny.
+        abort_unless($current->suspendable(), 404);
+
+        /*
+         * Pola są indeksowane identyfikatorem kategorii, bo formularz niesie
+         * CAŁĄ oś: przy wspólnej nazwie przeglądarka wysłałaby wartości ze
+         * wszystkich wierszy, a wygrałby ostatni — sprzedawca wstrzymywałby
+         * jedną serię, wpisując datę z zupełnie innej.
+         */
+        $data = $request->validate([
+            'suspension' => ['array'],
+            'suspension.'.$category->id.'.sales_resume_on' => ['nullable', 'date', 'after_or_equal:today'],
+            'suspension.'.$category->id.'.suspension_note' => ['nullable', 'string', 'max:300'],
+        ], [
+            'suspension.'.$category->id.'.sales_resume_on.after_or_equal' => 'Data wznowienia nie może być w przeszłości — sprzedaż wróciłaby w tej samej chwili.',
+        ]);
+
+        $own = $data['suspension'][$category->id] ?? [];
+
+        $wstrzymana = $category->salesSuspended();
+
+        $category->update([
+            'sales_suspended_at' => $wstrzymana ? null : now(),
+            'sales_resume_on' => $own['sales_resume_on'] ?? null,
+            'suspension_note' => trim((string) ($own['suspension_note'] ?? '')) ?: null,
+        ]);
+
+        return $this->back($current, 'success', $wstrzymana
+            ? 'Sprzedaż serii „'.$category->name.'" wznowiona.'
+            : 'Sprzedaż serii „'.$category->name.'" wstrzymana. Produkty zostają widoczne, ale nie da się ich kupić.');
+    }
+
+    /**
      * Rodzic ze zgłoszenia: `null` = korzeń, `false` = wskazanie niedozwolone.
      *
      * @param  Collection<int, Category>  $existing

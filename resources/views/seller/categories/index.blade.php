@@ -92,6 +92,52 @@
                                     class="mt-2 block w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">{{ old('items.'.$node->id.'.description', $node->description) }}</textarea>
                             </details>
 
+                            {{-- WSTRZYMANIE SPRZEDAŻY CAŁEJ SERII — tylko na osi
+                                 jednokrotnej, gdzie „ta seria" znaczy jedno.
+                                 Przycisk wysyła ten sam formularz na inny adres
+                                 (`formaction`), więc jedno kliknięcie zapisuje
+                                 datę i komunikat, i od razu wstrzymuje. --}}
+                            @if ($axis->suspendable())
+                                <details class="mt-3" @if ($node->salesSuspended()) open @endif>
+                                    <summary class="cursor-pointer text-xs font-medium {{ $node->salesSuspended() ? 'text-rose-600' : 'text-stone-500 hover:text-amber-700' }}">
+                                        {{ $node->salesSuspended() ? 'SPRZEDAŻ WSTRZYMANA' : 'Sprzedaż serii' }}
+                                    </summary>
+
+                                    <div class="mt-2 grid gap-3 sm:grid-cols-12">
+                                        <div class="sm:col-span-4">
+                                            <label class="block text-xs font-medium text-stone-500">Wznowienie</label>
+                                            <input type="date" name="suspension[{{ $node->id }}][sales_resume_on]"
+                                                value="{{ old('suspension.'.$node->id.'.sales_resume_on', $node->sales_resume_on?->format('Y-m-d')) }}"
+                                                class="mt-1 block w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
+                                        </div>
+                                        <div class="sm:col-span-8">
+                                            <label class="block text-xs font-medium text-stone-500">Komunikat dla kupujących</label>
+                                            <input type="text" name="suspension[{{ $node->id }}][suspension_note]" maxlength="300"
+                                                value="{{ old('suspension.'.$node->id.'.suspension_note', $node->suspension_note) }}"
+                                                placeholder="Zostawione puste — napiszemy sami, z datą wznowienia."
+                                                class="mt-1 block w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
+                                        </div>
+                                    </div>
+
+                                    <button type="submit" formaction="{{ route('seller.categories.suspension', [$axis->segment(), $node]) }}"
+                                        class="mt-3 rounded-2xl px-4 py-2 text-sm font-semibold transition {{ $node->salesSuspended()
+                                            ? 'bg-emerald-600 text-white hover:brightness-105'
+                                            : 'border border-rose-300 text-rose-700 hover:bg-rose-50' }}">
+                                        {{ $node->salesSuspended() ? 'Wznów sprzedaż' : 'Wstrzymaj sprzedaż tej serii' }}
+                                    </button>
+
+                                    <p class="mt-2 text-xs leading-relaxed text-stone-500">
+                                        Produkty zostają widoczne — opis, zdjęcia i adres bez zmian, żeby nie stracić ich
+                                        pozycji w wyszukiwarce. Znika tylko możliwość kupienia, także dla tych, którzy mają
+                                        je już w koszyku. Po dacie wznowienia sprzedaż wraca sama.
+                                    </p>
+
+                                    @error('suspension.'.$node->id.'.sales_resume_on')
+                                        <p class="mt-1 text-xs text-rose-600">{{ $message }}</p>
+                                    @enderror
+                                </details>
+                            @endif
+
                             <div class="mt-3 flex flex-wrap items-center gap-4 border-t border-stone-100 pt-3 text-sm">
                                 <span class="text-xs text-stone-400">
                                     /{{ $axis->segment() }}/{{ $node->slug }}

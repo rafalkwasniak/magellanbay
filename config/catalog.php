@@ -23,6 +23,12 @@ return [
     | `multiple`     — czy produkt może należeć do wielu węzłów tej osi
     | `hierarchical` — czy węzły mogą mieć rodziców (Włochy → Rzym)
     | `segment`      — segment adresu: /rodzaj/kamien, /geografia/wlochy/rzym
+    | `suspendable`  — czy da się wstrzymać sprzedaż całego węzła („serii")
+    |
+    | WSTRZYMANIE MA SENS TYLKO NA OSI JEDNOKROTNEJ. Produkt należy wtedy do
+    | dokładnie jednego węzła, więc „ta seria" znaczy jedno. Na osi wielokrotnej
+    | magnes stojący w „Biegach" i w „UNESCO" byłby jednocześnie wstrzymany
+    | i dostępny — pytanie bez dobrej odpowiedzi.
     |
     */
 
@@ -34,6 +40,7 @@ return [
             'segment' => 'rodzaj',
             'multiple' => false,
             'hierarchical' => false,
+            'suspendable' => true,
             'hint' => 'Z czego produkt jest zrobiony — Metalowy Token, Wklejka z ramką, Kamień. Produkt należy do jednego rodzaju, bo to jego linia produkcyjna, a nie cecha opisowa.',
         ],
 

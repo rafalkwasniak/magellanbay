@@ -24,6 +24,16 @@
             {{ $isCategory ? $category->name : 'Produkty' }}
         </h1>
 
+        {{-- Sprzedaż serii wstrzymana. Dział zostaje widoczny razem z produktami:
+             wracają za tydzień, a wygaszenie strony kosztowałoby pozycję
+             w wyszukiwarce, której nie odzyskuje się w tydzień. --}}
+        @if ($isCategory && $category->salesSuspended())
+            <div class="st-border st-card mt-6 rounded-2xl border px-5 py-4">
+                <p class="font-medium">Sprzedaż wstrzymana</p>
+                <p class="mt-1 text-sm opacity-80">{{ $category->suspensionMessage() }}</p>
+            </div>
+        @endif
+
         @if ($isCategory && filled($category->description))
             <div class="st-prose mt-4 max-w-3xl opacity-80">{!! nl2br(e($category->description)) !!}</div>
         @endif
