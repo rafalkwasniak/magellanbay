@@ -36,7 +36,7 @@ class SellerPrivacy
      * gdy zmienia się tylko lista odbiorców danych. To jest właśnie ta zmiana,
      * po której trzeba wiedzieć, kogo poprosić o ponowne wstawienie.
      */
-    public const VERSION = 1;
+    public const VERSION = 2;
 
     /**
      * Pola kreatora. Klucz => czy wymagane.

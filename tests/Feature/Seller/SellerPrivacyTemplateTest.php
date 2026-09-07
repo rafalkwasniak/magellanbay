@@ -4,6 +4,7 @@ namespace Tests\Feature\Seller;
 
 use App\Models\Page;
 use App\Models\Shop;
+use App\Models\ShopEmployee;
 use App\Models\User;
 use App\Support\Mode;
 use App\Support\SellerPrivacy;
@@ -296,5 +297,63 @@ class SellerPrivacyTemplateTest extends TestCase
                 'email' => 'to-nie-jest-email',
             ])
             ->assertSessionHasErrors(['seller_name', 'address', 'email']);
+    }
+
+    /**
+     * Sklep prowadzony jednoosobowo NIE opowiada o personelu. To ta sama reguła
+     * co przy operatorze płatności: polityka ma opisywać rzeczywistość tego
+     * sklepu, a zdanie o osobach obsługujących zamówienia byłoby tu nieprawdą
+     * o cudzych danych.
+     */
+    public function test_solo_shop_says_nothing_about_staff(): void
+    {
+        $shop = Shop::factory()->create();
+
+        $this->assertStringNotContainsString('powierzyliśmy obsługę sklepu', $this->render($shop, $this->komplet()));
+    }
+
+    public function test_shop_with_staff_tells_the_customer(): void
+    {
+        $shop = Shop::factory()->create();
+        ShopEmployee::factory()->create(['shop_id' => $shop->getKey()]);
+
+        $html = $this->render($shop->fresh(), $this->komplet());
+
+        $this->assertStringContainsString('powierzyliśmy obsługę sklepu', $html);
+        $this->assertStringContainsString('Nie są odrębnymi odbiorcami', $html);
+    }
+
+    /**
+     * Zaproszenie bez odpowiedzi i dostęp odebrany nikomu niczego nie pokazują,
+     * więc polityka nie ma o nich mówić. Liczą się konta CZYNNE.
+     */
+    public function test_pending_and_revoked_staff_do_not_count(): void
+    {
+        $shop = Shop::factory()->create();
+        ShopEmployee::factory()->pending()->create(['shop_id' => $shop->getKey()]);
+        ShopEmployee::factory()->revoked()->create(['shop_id' => $shop->getKey()]);
+
+        $this->assertStringNotContainsString('powierzyliśmy obsługę sklepu', $this->render($shop->fresh(), $this->komplet()));
+    }
+
+    /**
+     * Osoby obsługujące sklep NIE są podmiotami przetwarzającymi — działają
+     * wewnątrz struktury administratora, na upoważnienie. Zdanie o nich musi
+     * stać POZA listą firm zewnętrznych, inaczej mówi klientowi co innego,
+     * niż jest naprawdę.
+     */
+    public function test_staff_sentence_stands_outside_the_processor_list(): void
+    {
+        $shop = Shop::factory()->create();
+        ShopEmployee::factory()->create(['shop_id' => $shop->getKey()]);
+
+        $html = $this->render($shop->fresh(), $this->komplet());
+
+        // PIERWSZY `</ul>` za nagłówkiem sekcji — ten zamyka listę podwykonawców.
+        // Ostatni w dokumencie należy do zupełnie innej sekcji („Twoje prawa").
+        $listaKoniec = mb_strpos($html, '</ul>', mb_strpos($html, 'Komu przekazujemy dane'));
+        $zdanie = mb_strpos($html, 'powierzyliśmy obsługę sklepu');
+
+        $this->assertGreaterThan($listaKoniec, $zdanie);
     }
 }

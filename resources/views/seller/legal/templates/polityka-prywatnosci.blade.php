@@ -58,6 +58,19 @@
         ->contains(fn ($m) => ! in_array($m->value, ['pickup'], true));
 
     $konta = true; // konta klientów są w sklepie zawsze dostępne
+
+    /*
+     * Osoby dopuszczone do obsługi sklepu — TA SAMA ZASADA co przy integracjach:
+     * mówimy wyłącznie o tym, co w sklepie realnie jest. Polityka twierdząca, że
+     * dane ogląda personel, w sklepie prowadzonym jednoosobowo byłaby nieprawdą
+     * o cudzych danych — dokładnie tym, czego ten szablon unika przy operatorze
+     * płatności. Liczą się konta CZYNNE: zaproszenie bez odpowiedzi i dostęp
+     * odebrany nikomu niczego nie pokazują.
+     */
+    $pracownicy = $shop->employees()
+        ->whereNotNull('accepted_at')
+        ->whereNull('revoked_at')
+        ->exists();
 @endphp
 <h2>1 / Kto odpowiada za Twoje dane</h2>
 <div>Administratorem Twoich danych osobowych jest {{ $sprzedawca }}@if ($nip !== ''), NIP {{ $nip }}@endif, z adresem: {{ $adres }} — prowadzący sklep internetowy „{{ $shop->name }}" pod adresem {{ $shop->host() }}.</div>
@@ -106,6 +119,15 @@
          i jednocześnie gospodarzem infrastruktury. Zdanie o Kramio byłoby
          wtedy wprost nieprawdziwe. --}}
     <div>Sklep działa na platformie Kramio. Jej operator przetwarza dane w naszym imieniu jako podmiot przetwarzający, na podstawie zawartej z nami umowy powierzenia.</div>
+@endif
+@if ($pracownicy)
+    {{-- ŚWIADOMIE POZA listą powyżej, a nie jako kolejny `li`. Tamta lista to
+         podmioty przetwarzające — firmy zewnętrzne działające na nasze
+         polecenie. Osoby obsługujące sklep to nie to samo: działają wewnątrz
+         naszej struktury, na upoważnienie, i nie są odrębnymi odbiorcami.
+         Wrzucenie ich między podwykonawców mówiłoby klientowi coś innego,
+         niż jest naprawdę. --}}
+    <div>Do Twoich danych mają dostęp także osoby, którym powierzyliśmy obsługę sklepu — na przykład przy kompletowaniu zamówień, wysyłce czy rozliczeniach. Każda z nich ma <strong>własne konto</strong> z dostępem ograniczonym do zakresu potrzebnego do jej zadań, działa na nasze upoważnienie i pod naszą odpowiedzialnością, oraz jest zobowiązana do zachowania poufności. <strong>Nie są odrębnymi odbiorcami Twoich danych.</strong></div>
 @endif
 <div>Dane mogą też trafić do organów państwowych, jeżeli zwrócą się o nie na podstawie przepisów prawa.</div>
 
