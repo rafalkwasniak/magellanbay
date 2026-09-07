@@ -35,6 +35,7 @@ use App\Http\Controllers\Seller\ContentReportController as SellerContentReportCo
 use App\Http\Controllers\Seller\CustomerController;
 use App\Http\Controllers\Seller\DashboardController as SellerDashboard;
 use App\Http\Controllers\Seller\DiscountCodeController;
+use App\Http\Controllers\Seller\EmployeeController;
 use App\Http\Controllers\Seller\IntegrationController;
 use App\Http\Controllers\Seller\LicensorController;
 use App\Http\Controllers\Seller\OptionContentController;
@@ -330,6 +331,22 @@ Route::middleware(['auth', 'role:seller,employee', 'ensure.consents'])
         // Analityka (Poziom 1: z danych, które już mamy; dla wszystkich pakietów).
         Route::get('/analityka', [AnalyticsController::class, 'index'])
             ->middleware('section:analytics')->name('analytics.index');
+
+        /*
+         * Pracownicy — TYLKO WLASCICIEL. Zarzadzanie ludzmi nie jest dzialem,
+         * ktory sprzedawca moze komus oddac: pracownik z kompletem uprawnien
+         * nadal nie zaprosi kolejnego ani nie odbierze dostepu sobie.
+         *
+         * Bez `saas`: konta pracownikow dziala tak samo w sklepie dedykowanym,
+         * gdzie panel sprzedawcy jest panelem klienta.
+         */
+        Route::middleware('role:seller')->prefix('pracownicy')->name('employees.')->group(function () {
+            Route::get('/', [EmployeeController::class, 'index'])->name('index');
+            Route::post('/', [EmployeeController::class, 'store'])->name('store');
+            Route::post('/{employee}', [EmployeeController::class, 'update'])->name('update');
+            Route::post('/{employee}/odbierz', [EmployeeController::class, 'revoke'])->name('revoke');
+            Route::post('/{employee}/przywroc', [EmployeeController::class, 'restore'])->name('restore');
+        });
 
         /*
          * TYLKO WLASCICIEL. Dane firmy, ustawienia sprzedazy i klucze integracji

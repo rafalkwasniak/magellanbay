@@ -88,6 +88,7 @@
                 ]]
                 : []),
             ['label' => 'Wygląd', 'route' => 'seller.appearance.edit', 'icon' => '🎨', 'section' => 'content'],
+            ['label' => 'Pracownicy', 'route' => 'seller.employees.index', 'icon' => '👤', 'owner' => true],
             ['label' => 'Ustawienia', 'route' => 'seller.settings.edit', 'icon' => '⚙️', 'owner' => true],
             ['label' => 'Integracje', 'route' => 'seller.integrations.edit', 'icon' => '🔌', 'owner' => true],
         ];
