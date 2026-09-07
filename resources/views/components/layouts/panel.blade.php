@@ -44,45 +44,68 @@
             ['label' => 'Ustawienia', 'route' => 'administrator.settings.index', 'active' => 'administrator.settings.*', 'icon' => '⚙️'],
         ] : [
             ['label' => 'Pulpit', 'route' => 'seller.dashboard', 'icon' => '🏠'],
-            ['label' => 'Mój sklep', 'route' => 'seller.shop.edit', 'icon' => '🛍️'],
+            ['label' => 'Mój sklep', 'route' => 'seller.shop.edit', 'icon' => '🛍️', 'owner' => true],
             // „Mój pakiet" tylko w Kramio — sklep dedykowany jest opłacony
             // jednorazowo i nie ma czego oglądać ani przedłużać. Trasa i tak
             // odpowiada wtedy 404 (middleware `saas`), ale odnośnik prowadzący
             // w pustkę wygląda jak usterka, a nie jak decyzja.
             ...(\App\Support\Mode::saas()
-                ? [['label' => 'Mój pakiet', 'route' => 'seller.package.show', 'icon' => '✨']]
+                ? [['label' => 'Mój pakiet', 'route' => 'seller.package.show', 'icon' => '✨', 'owner' => true]]
                 : []),
-            ['label' => 'Produkty', 'route' => 'seller.products.index', 'active' => 'seller.products.*', 'icon' => '🏷️'],
-            ['label' => 'Katalog', 'route' => 'seller.categories.home', 'active' => 'seller.categories.*', 'icon' => '🗂️'],
-            ['label' => 'Zamówienia', 'route' => 'seller.orders.index', 'active' => 'seller.orders.*', 'icon' => '📦', 'badge' => (int) ($user->currentShop()?->unseen_orders_count ?? 0)],
-            ['label' => 'Klienci', 'route' => 'seller.customers.index', 'active' => 'seller.customers.*', 'icon' => '👥'],
-            ['label' => 'Kody rabatowe', 'route' => 'seller.discounts.index', 'active' => 'seller.discounts.*', 'icon' => '🎟️'],
-            ['label' => 'Wiadomości', 'route' => 'seller.mailings.index', 'active' => 'seller.mailings.*', 'icon' => '📣'],
-            ['label' => 'Analityka', 'route' => 'seller.analytics.index', 'icon' => '📊'],
-            ['label' => 'Personalizacja', 'route' => 'seller.options.index', 'active' => 'seller.options.*', 'icon' => '✍️'],
-            ['label' => 'Partnerzy', 'route' => 'seller.licensors.index', 'active' => 'seller.licensors.*', 'icon' => '🤝'],
-            ['label' => 'Rozliczenia', 'route' => 'seller.settlements.index', 'active' => 'seller.settlements.*', 'icon' => '🧾'],
-            ['label' => 'Informacje', 'route' => 'seller.pages.index', 'active' => 'seller.pages.*', 'icon' => '📄'],
+            ['label' => 'Produkty', 'route' => 'seller.products.index', 'active' => 'seller.products.*', 'icon' => '🏷️', 'section' => 'products'],
+            ['label' => 'Katalog', 'route' => 'seller.categories.home', 'active' => 'seller.categories.*', 'icon' => '🗂️', 'section' => 'products'],
+            ['label' => 'Zamówienia', 'route' => 'seller.orders.index', 'active' => 'seller.orders.*', 'icon' => '📦', 'badge' => (int) ($user->currentShop()?->unseen_orders_count ?? 0), 'section' => 'orders'],
+            ['label' => 'Klienci', 'route' => 'seller.customers.index', 'active' => 'seller.customers.*', 'icon' => '👥', 'section' => 'customers'],
+            ['label' => 'Kody rabatowe', 'route' => 'seller.discounts.index', 'active' => 'seller.discounts.*', 'icon' => '🎟️', 'section' => 'marketing'],
+            ['label' => 'Wiadomości', 'route' => 'seller.mailings.index', 'active' => 'seller.mailings.*', 'icon' => '📣', 'section' => 'marketing'],
+            ['label' => 'Analityka', 'route' => 'seller.analytics.index', 'icon' => '📊', 'section' => 'analytics'],
+            // Personalizacja i Partnerzy chodzą przy PRODUKTACH, bo to tam się ich
+            // używa: opcje wpina się w produkt, licencjodawcę wybiera się przy
+            // jego zakładaniu. Rozliczenia to już pieniądze — zostają u właściciela.
+            ['label' => 'Personalizacja', 'route' => 'seller.options.index', 'active' => 'seller.options.*', 'icon' => '✍️', 'section' => 'products'],
+            ['label' => 'Partnerzy', 'route' => 'seller.licensors.index', 'active' => 'seller.licensors.*', 'icon' => '🤝', 'section' => 'products'],
+            ['label' => 'Rozliczenia', 'route' => 'seller.settlements.index', 'active' => 'seller.settlements.*', 'icon' => '🧾', 'owner' => true],
+            ['label' => 'Informacje', 'route' => 'seller.pages.index', 'active' => 'seller.pages.*', 'icon' => '📄', 'section' => 'content'],
             // Zgłoszenia treści bezprawnych trafiają do właściciela WYŁĄCZNIE
             // w sklepie dedykowanym — w Kramio rozpatruje je platforma, a trasy
             // są tam zamknięte middlewarem `dedicated`. Bez tego warunku menu
             // pokazywałoby sprzedawcom Kramio pozycję prowadzącą w 404.
+            //
+            // `owner`: rozpatrzenie zgłoszenia to obowiązek prawny prowadzącego
+            // sklep (DSA), a nie zadanie do rozdania razem z działem. Gdyby
+            // klient chciał inaczej, wystarczy zamienić na 'section' => 'content'.
             ...(\App\Support\Mode::dedicated()
                 ? [[
                     'label' => 'Zgłoszenia',
                     'route' => 'seller.reports.index',
                     'active' => 'seller.reports.*',
                     'icon' => '🚩',
+                    'owner' => true,
                     'badge' => (int) \App\Models\ContentReport::query()
-                        ->where('shop_id', $user->shop?->id)
+                        ->where('shop_id', $user->currentShop()?->id)
                         ->pending()
                         ->count(),
                 ]]
                 : []),
-            ['label' => 'Wygląd', 'route' => 'seller.appearance.edit', 'icon' => '🎨'],
-            ['label' => 'Ustawienia', 'route' => 'seller.settings.edit', 'icon' => '⚙️'],
-            ['label' => 'Integracje', 'route' => 'seller.integrations.edit', 'icon' => '🔌'],
+            ['label' => 'Wygląd', 'route' => 'seller.appearance.edit', 'icon' => '🎨', 'section' => 'content'],
+            ['label' => 'Ustawienia', 'route' => 'seller.settings.edit', 'icon' => '⚙️', 'owner' => true],
+            ['label' => 'Integracje', 'route' => 'seller.integrations.edit', 'icon' => '🔌', 'owner' => true],
         ];
+        // Menu filtruje sie DOKLADNIE tym, czym bramkuja sie trasy
+        // (`User::canAccess()`), bo pozycja prowadzaca w 403 wyglada jak awaria,
+        // a nie jak brak uprawnien. `owner` chowa rzeczy, ktorych sprzedawca nie
+        // oddaje razem z dzialem: pakiet, dane firmy, ustawienia, integracje.
+        // Komentarz PHP, NIE bladowy — jestesmy w srodku bloku @php.
+        $nav = array_values(array_filter($nav, function (array $item) use ($user): bool {
+            if (($item['owner'] ?? false) && $user->isEmployee()) {
+                return false;
+            }
+
+            $section = $item['section'] ?? null;
+
+            return $section === null || $user->canAccess(\App\Enums\PanelSection::from($section));
+        }));
+
         $initials = strtoupper(mb_substr($user->name ?? '?', 0, 1) . mb_substr($user->surname ?? '', 0, 1));
         $avatar = $user?->avatar_path ? \Illuminate\Support\Facades\Storage::disk('public')->url($user->avatar_path) : null;
     @endphp
