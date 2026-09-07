@@ -80,7 +80,7 @@ class ProductRequest extends FormRequest
      */
     public function rules(): array
     {
-        $shopId = $this->user()->shop->id;
+        $shopId = $this->user()->currentShop()->id;
 
         return [
             'name' => ['required', 'string', 'max:255'],
@@ -191,7 +191,7 @@ class ProductRequest extends FormRequest
      */
     private function checkCategories(Validator $validator): void
     {
-        $shop = $this->user()?->shop;
+        $shop = $this->user()?->currentShop();
 
         if ($shop === null) {
             return;

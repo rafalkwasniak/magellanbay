@@ -210,7 +210,7 @@ class PageController extends Controller
 
         return redirect()
             ->route('seller.pages.edit', $page)
-            ->with('privacy_wizard', SellerPrivacy::defaults($request->user()->shop, $page));
+            ->with('privacy_wizard', SellerPrivacy::defaults($request->user()->currentShop(), $page));
     }
 
     /**
@@ -232,7 +232,7 @@ class PageController extends Controller
         return redirect()
             ->route('seller.pages.edit', $page)
             ->withInput([
-                'content' => SellerPrivacy::render($request->user()->shop, $dane),
+                'content' => SellerPrivacy::render($request->user()->currentShop(), $dane),
                 'terms_template_version' => SellerPrivacy::VERSION,
             ])
             ->with('success', 'Wzór wstawiony do edytora. Przeczytaj go i zapisz — dopiero zapis publikuje politykę w Twoim sklepie.');

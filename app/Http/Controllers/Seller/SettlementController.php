@@ -24,7 +24,7 @@ class SettlementController extends Controller
 {
     public function index(Request $request, LicensorSettlement $settlement): Renderable
     {
-        $shop = $request->user()->shop;
+        $shop = $request->user()->currentShop();
         abort_if($shop === null, 404);
 
         [$from, $to] = $this->period($request);
@@ -42,7 +42,7 @@ class SettlementController extends Controller
 
     public function download(Request $request, LicensorSettlement $settlement): Response
     {
-        $shop = $request->user()->shop;
+        $shop = $request->user()->currentShop();
         abort_if($shop === null, 404);
 
         [$from, $to] = $this->period($request);

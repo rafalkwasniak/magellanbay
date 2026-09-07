@@ -39,7 +39,7 @@ class CategoryController extends Controller
 {
     public function index(Request $request, string $axis): Renderable|RedirectResponse
     {
-        $shop = $request->user()->shop;
+        $shop = $request->user()->currentShop();
         abort_if($shop === null, 404);
 
         $current = CatalogAxis::bySegment($axis);
@@ -62,7 +62,7 @@ class CategoryController extends Controller
      */
     public function save(Request $request, string $axis): RedirectResponse
     {
-        $shop = $request->user()->shop;
+        $shop = $request->user()->currentShop();
         abort_if($shop === null, 404);
 
         $current = CatalogAxis::bySegment($axis);
@@ -148,7 +148,7 @@ class CategoryController extends Controller
      */
     public function toggleSuspension(Request $request, string $axis, Category $category): RedirectResponse
     {
-        $shop = $request->user()->shop;
+        $shop = $request->user()->currentShop();
         abort_if($shop === null || $category->shop_id !== $shop->id, 404);
 
         $current = CatalogAxis::bySegment($axis);

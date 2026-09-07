@@ -86,7 +86,7 @@ class ProductController extends Controller
             // pusta grupa to pytanie bez odpowiedzi, a przy „obowiazkowa"
             // zablokowalaby zakup calkiem.
             'optionGroups' => $this->readyOptionGroups($request),
-            'licensors' => $request->user()->shop?->licensors()->active()->get() ?? collect(),
+            'licensors' => $request->user()->currentShop()?->licensors()->active()->get() ?? collect(),
             // Katalog: osie z configu + drzewa wezlow do zaznaczenia.
             'axes' => CatalogAxis::all(),
             'categoryRows' => $this->categoryRows($request),
@@ -131,7 +131,7 @@ class ProductController extends Controller
             // pusta grupa to pytanie bez odpowiedzi, a przy „obowiazkowa"
             // zablokowalaby zakup calkiem.
             'optionGroups' => $this->readyOptionGroups($request),
-            'licensors' => $request->user()->shop?->licensors()->active()->get() ?? collect(),
+            'licensors' => $request->user()->currentShop()?->licensors()->active()->get() ?? collect(),
             // Katalog: osie z configu + drzewa wezlow do zaznaczenia.
             'axes' => CatalogAxis::all(),
             'categoryRows' => $this->categoryRows($request),
@@ -219,7 +219,7 @@ class ProductController extends Controller
      */
     private function readyOptionGroups(Request $request): Collection
     {
-        $shop = $request->user()->shop;
+        $shop = $request->user()->currentShop();
 
         if ($shop === null) {
             return collect();
@@ -253,7 +253,7 @@ class ProductController extends Controller
      */
     private function categoryRows(Request $request): array
     {
-        $shop = $request->user()->shop;
+        $shop = $request->user()->currentShop();
 
         if ($shop === null) {
             return [];

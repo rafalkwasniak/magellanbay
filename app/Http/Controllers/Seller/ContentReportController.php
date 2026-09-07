@@ -37,7 +37,7 @@ class ContentReportController extends Controller
 
     public function index(Request $request): Renderable
     {
-        $shop = $request->user()->shop;
+        $shop = $request->user()->currentShop();
         abort_if($shop === null, 404);
 
         $status = $request->query('stan');
@@ -131,6 +131,6 @@ class ContentReportController extends Controller
      */
     private function authorizeReport(Request $request, ContentReport $report): void
     {
-        abort_unless($report->shop_id === $request->user()->shop?->id, 404);
+        abort_unless($report->shop_id === $request->user()->currentShop()?->id, 404);
     }
 }

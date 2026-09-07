@@ -25,7 +25,7 @@ class ContentReportDecisionRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->shop !== null;
+        return $this->user()?->currentShop() !== null;
     }
 
     /**

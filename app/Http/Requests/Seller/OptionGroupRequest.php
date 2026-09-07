@@ -20,7 +20,7 @@ class OptionGroupRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->shop !== null;
+        return $this->user()?->currentShop() !== null;
     }
 
     protected function prepareForValidation(): void
@@ -40,7 +40,7 @@ class OptionGroupRequest extends FormRequest
      */
     public function rules(): array
     {
-        $shopId = $this->user()->shop->id;
+        $shopId = $this->user()->currentShop()->id;
         $group = $this->route('optionGroup');
 
         return [

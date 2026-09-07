@@ -28,7 +28,7 @@ class OptionGroupController extends Controller
 {
     public function index(Request $request): Renderable
     {
-        $shop = $request->user()->shop;
+        $shop = $request->user()->currentShop();
         abort_if($shop === null, 404);
 
         return view('seller.options.index', [
@@ -41,7 +41,7 @@ class OptionGroupController extends Controller
 
     public function create(Request $request): Renderable
     {
-        $shop = $request->user()->shop;
+        $shop = $request->user()->currentShop();
         abort_if($shop === null, 404);
 
         return view('seller.options.form', [
@@ -54,7 +54,7 @@ class OptionGroupController extends Controller
 
     public function store(OptionGroupRequest $request): RedirectResponse
     {
-        $group = $request->user()->shop->optionGroups()->create($request->validated());
+        $group = $request->user()->currentShop()->optionGroups()->create($request->validated());
 
         /*
          * Po utworzeniu prowadzimy WPROST do zawartości grupy, a nie z powrotem
@@ -72,12 +72,12 @@ class OptionGroupController extends Controller
 
         return view('seller.options.form', [
             'group' => $optionGroup->load(['fields', 'choices.licensor']),
-            'others' => $request->user()->shop->optionGroups()->whereKeyNot($optionGroup->id)->get(),
+            'others' => $request->user()->currentShop()->optionGroups()->whereKeyNot($optionGroup->id)->get(),
             'kinds' => OptionGroupKind::cases(),
             // Do wyboru przy grafice — tylko partnerzy AKTYWNI. Wygaszony
             // zostaje na pozycjach, ktore juz go maja, ale nie da sie go
             // przypisac na nowo.
-            'licensors' => $request->user()->shop->licensors()->active()->get(),
+            'licensors' => $request->user()->currentShop()->licensors()->active()->get(),
         ]);
     }
 
@@ -112,6 +112,6 @@ class OptionGroupController extends Controller
      */
     private function authorizeGroup(Request $request, OptionGroup $group): void
     {
-        abort_unless($group->shop_id === $request->user()->shop?->id, 404);
+        abort_unless($group->shop_id === $request->user()->currentShop()?->id, 404);
     }
 }

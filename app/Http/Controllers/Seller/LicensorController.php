@@ -29,7 +29,7 @@ class LicensorController extends Controller
 {
     public function index(Request $request): Renderable
     {
-        $shop = $request->user()->shop;
+        $shop = $request->user()->currentShop();
         abort_if($shop === null, 404);
 
         return view('seller.licensors.index', [
@@ -42,14 +42,14 @@ class LicensorController extends Controller
 
     public function create(Request $request): Renderable
     {
-        abort_if($request->user()->shop === null, 404);
+        abort_if($request->user()->currentShop() === null, 404);
 
         return view('seller.licensors.form', ['licensor' => new Licensor(['is_active' => true])]);
     }
 
     public function store(LicensorRequest $request): RedirectResponse
     {
-        $shop = $request->user()->shop;
+        $shop = $request->user()->currentShop();
 
         /*
          * Slug liczymy RAZ, przy utworzeniu, i nie ruszamy go przy zmianie
@@ -144,6 +144,6 @@ class LicensorController extends Controller
      */
     private function authorizeLicensor(Request $request, Licensor $licensor): void
     {
-        abort_unless($licensor->shop_id === $request->user()->shop?->id, 404);
+        abort_unless($licensor->shop_id === $request->user()->currentShop()?->id, 404);
     }
 }

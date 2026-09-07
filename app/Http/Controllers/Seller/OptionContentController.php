@@ -104,7 +104,7 @@ class OptionContentController extends Controller
         $this->authorizeGroup($request, $optionGroup);
         abort_unless($optionGroup->isChoice(), 404);
 
-        $shopId = $request->user()->shop->id;
+        $shopId = $request->user()->currentShop()->id;
 
         /*
          * Kwoty normalizujemy PRZED walidacją, nie po.
@@ -224,6 +224,6 @@ class OptionContentController extends Controller
 
     private function authorizeGroup(Request $request, OptionGroup $group): void
     {
-        abort_unless($group->shop_id === $request->user()->shop?->id, 404);
+        abort_unless($group->shop_id === $request->user()->currentShop()?->id, 404);
     }
 }
