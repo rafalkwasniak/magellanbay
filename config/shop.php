@@ -232,6 +232,7 @@ return [
             'available' => true,
             'entitlements' => [
                 'max_products' => 24,
+                'max_employees' => 0,
                 'ai_weekly_limit' => 100,
                 'online_payments' => false,
                 'courier_shipping' => false,
@@ -249,6 +250,7 @@ return [
             'available' => true,
             'entitlements' => [
                 'max_products' => 72,
+                'max_employees' => 0,
                 'ai_weekly_limit' => 400,
                 'online_payments' => true,
                 'courier_shipping' => true,
@@ -266,6 +268,7 @@ return [
             'available' => true,
             'entitlements' => [
                 'max_products' => 240,
+                'max_employees' => 5,
                 'ai_weekly_limit' => 800,
                 'online_payments' => true,
                 'courier_shipping' => true,
@@ -303,6 +306,7 @@ return [
             'available' => false,
             'entitlements' => [
                 'max_products' => 1000000,
+                'max_employees' => 1000,
                 'ai_weekly_limit' => 100000,
                 'online_payments' => true,
                 'courier_shipping' => true,

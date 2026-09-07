@@ -469,6 +469,13 @@ Route::middleware(['auth', 'role:seller,employee', 'ensure.consents'])
             Route::post('/wiadomosci/{bulkMailing}/usun', [BulkMailingController::class, 'destroy'])->name('mailings.destroy');
         });
 
+        /*
+         * Personalizacja, Katalog i Partnerzy chodza przy PRODUKTACH, bo to tam
+         * sie ich uzywa: grupe opcji wpina sie w produkt, licencjodawce wybiera
+         * przy jego zakladaniu, a osie katalogu ukladaja produkty na wykazie.
+         * Osoba od produktow, ktora nie moze ich tknac, nie zrobi swojej roboty.
+         */
+        Route::middleware('section:products')->group(function () {
         // Grupy opcji — biblioteka personalizacji sklepu. Definiuje się je RAZ
         // i przypina do wielu produktów.
         Route::get('/personalizacja', [OptionGroupController::class, 'index'])->name('options.index');
@@ -509,12 +516,18 @@ Route::middleware(['auth', 'role:seller,employee', 'ensure.consents'])
         Route::post('/partnerzy/{licensor}', [LicensorController::class, 'update'])->name('licensors.update');
         Route::post('/partnerzy/{licensor}/przelacz', [LicensorController::class, 'toggle'])->name('licensors.toggle');
         Route::post('/partnerzy/{licensor}/usun', [LicensorController::class, 'destroy'])->name('licensors.destroy');
+        });
 
         // Rozliczenia z partnerami — komu i ile nalezy sie za dany miesiac.
         // Arkusz .xlsx generujemy sami (App\Support\Xlsx): projekt ma trzy
         // zaleznosci produkcyjne i nie doklada czwartej dla jednego raportu.
-        Route::get('/rozliczenia', [SettlementController::class, 'index'])->name('settlements.index');
-        Route::get('/rozliczenia/arkusz', [SettlementController::class, 'download'])->name('settlements.download');
+        //
+        // `role:seller`: raport „komu ile sie nalezy" to pieniadze i zobowiazania
+        // wobec partnerow. Nie jest dzialem do rozdania razem z obsluga sklepu.
+        Route::middleware('role:seller')->group(function () {
+            Route::get('/rozliczenia', [SettlementController::class, 'index'])->name('settlements.index');
+            Route::get('/rozliczenia/arkusz', [SettlementController::class, 'download'])->name('settlements.download');
+        });
 
         // Zgłoszenia treści bezprawnych — TYLKO w sklepie dedykowanym.
         //
@@ -522,7 +535,9 @@ Route::middleware(['auth', 'role:seller,employee', 'ensure.consents'])
         // kwalifikacja jako dostawcy hostingu (art. 6 DSA) — o cudzej treści
         // decyduje operator, a nie sprzedawca, którego ta treść dotyczy.
         // W sklepie dedykowanym podmiot jest jeden, więc konflikt nie istnieje.
-        Route::middleware('dedicated')->group(function (): void {
+        // `role:seller`: rozpatrzenie zgloszenia to obowiazek prawny prowadzacego
+        // sklep (DSA), a nie zadanie do rozdania razem z dzialem panelu.
+        Route::middleware(['dedicated', 'role:seller'])->group(function (): void {
             Route::get('/zgloszenia', [SellerContentReportController::class, 'index'])->name('reports.index');
             Route::get('/zgloszenia/{report}', [SellerContentReportController::class, 'show'])->name('reports.show');
             Route::post('/zgloszenia/{report}/rozstrzygnij', [SellerContentReportController::class, 'decide'])->name('reports.decide');
@@ -552,8 +567,10 @@ Route::middleware(['auth', 'role:seller,employee', 'ensure.consents'])
         // Trasy istnieją w obu trybach, bo strona systemowa „Polityka
         // prywatności" powstaje tylko w dedykowanym, a bez strony i tak nie ma
         // ich jak wywołać (`abort_unless($page->is_system)`).
-        Route::post('/informacje/{page}/wzor-polityki', [PageController::class, 'privacyWizard'])->name('pages.privacy');
-        Route::post('/informacje/{page}/wzor-polityki/wstaw', [PageController::class, 'insertPrivacy'])->name('pages.privacy.insert');
+        Route::middleware('section:content')->group(function () {
+            Route::post('/informacje/{page}/wzor-polityki', [PageController::class, 'privacyWizard'])->name('pages.privacy');
+            Route::post('/informacje/{page}/wzor-polityki/wstaw', [PageController::class, 'insertPrivacy'])->name('pages.privacy.insert');
+        });
 
         // Produkty (edycja/usuwanie przez POST — FOUNDATION sek. 5).
         Route::middleware('section:products')->group(function () {
