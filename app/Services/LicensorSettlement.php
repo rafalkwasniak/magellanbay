@@ -23,10 +23,15 @@ use Illuminate\Support\Collection;
  *    liczymy tutaj; dwie różne definicje sprzedaży w jednym panelu to pewny
  *    spór o to, która jest prawdziwa.
  *
- * 2. NIEZAPŁACONE JEST WYKAZANE OSOBNO. Zamówienie czeka na przelew, więc
- *    pieniędzy jeszcze nie ma — ale sprzedaż jest. Nie decydujemy za
- *    właściciela, czy płacić partnerowi z góry: pokazujemy kwotę i mówimy,
- *    ile z niej jeszcze nie wpłynęło.
+ * 2. NALEŻY SIĘ WYŁĄCZNIE ZA ZAMÓWIENIA ZAPŁACONE (ustalenie z klientem,
+ *    08.09.2026 — pytanie A4). Zamówienie czekające na przelew NIE WCHODZI do
+ *    kwoty; pokazujemy je obok, jako zapowiedź „to jeszcze dojdzie".
+ *
+ *    Wcześniej liczyliśmy odwrotnie — wchodziło wszystko poza anulowanym,
+ *    a niezapłacone było tylko wykazane osobno. Zmiana jest w tę stronę
+ *    świadomie: pomyłka polegająca na wypłaceniu partnerowi za zamówienie,
+ *    które nigdy nie zostało opłacone, kosztuje sprzedawcę gotówkę i wymaga
+ *    proszenia o zwrot. Pomyłka w drugą stronę czeka do następnego okresu.
  *
  * 3. ZWROT ODEJMUJE. Klient oddał magnes, umowa się cofnęła, licencja się nie
  *    należy. Liczymy ilość PO zwrotach (`effectiveQuantity`), a nie zamówioną.
@@ -51,6 +56,15 @@ class LicensorSettlement
     /**
      * Podsumowanie: jeden wiersz na partnera.
      *
+     * `amount` to kwota NALEŻNA — wyłącznie z zamówień zapłaconych. `unpaid`
+     * stoi obok jako zapowiedź: sprzedaż jest, pieniędzy jeszcze nie ma, więc
+     * przy następnym rozliczeniu ta kwota dojdzie. Sztuki i liczba zamówień
+     * liczą się tak samo jak kwota, bo opisują ten sam wiersz do wypłaty.
+     *
+     * Partner, który ma wyłącznie sprzedaż nieopłaconą, ZOSTAJE na liście
+     * z kwotą zero. Zniknięcie go z ekranu wyglądałoby jak brak sprzedaży,
+     * a sprzedaż była — tylko jeszcze nie zapłacona.
+     *
      * @return Collection<int, object{licensor_id: ?int, name: string, quantity: float, amount: float, unpaid: float, orders: int}>
      */
     public function summary(Shop $shop, Carbon $from, Carbon $to): Collection
@@ -59,14 +73,15 @@ class LicensorSettlement
             ->groupBy(fn (object $row): string => (string) ($row->licensor_id ?? 'x'.$row->name))
             ->map(function (Collection $group): object {
                 $first = $group->first();
+                $paid = $group->where('paid', true);
 
                 return (object) [
                     'licensor_id' => $first->licensor_id,
                     'name' => $first->name,
-                    'quantity' => round($group->sum('quantity'), 2),
-                    'amount' => round($group->sum('amount'), 2),
+                    'quantity' => round($paid->sum('quantity'), 2),
+                    'amount' => round($paid->sum('amount'), 2),
                     'unpaid' => round($group->where('paid', false)->sum('amount'), 2),
-                    'orders' => $group->pluck('order_id')->unique()->count(),
+                    'orders' => $paid->pluck('order_id')->unique()->count(),
                 ];
             })
             ->sortByDesc('amount')
@@ -148,7 +163,7 @@ class LicensorSettlement
     public function workbook(Shop $shop, Carbon $from, Carbon $to): string
     {
         $summary = [[
-            'Partner', 'Zamówień', 'Sztuk', 'Należne brutto (zł)', 'W tym niezapłacone (zł)',
+            'Partner', 'Zamówień', 'Sztuk', 'Należne brutto (zł)', 'Czeka na zapłatę (zł)',
         ]];
 
         foreach ($this->summary($shop, $from, $to) as $row) {

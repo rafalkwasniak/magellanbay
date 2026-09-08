@@ -146,10 +146,10 @@ class LicensorSettlementTest extends TestCase
     }
 
     /**
-     * Sprzedaż jest, pieniędzy jeszcze nie ma. Kwota wchodzi, ale musi być
-     * wykazana osobno — decyzja, czy płacić z góry, należy do właściciela.
+     * Należy się WYŁĄCZNIE za zamówienia zapłacone (ustalenie z klientem
+     * 08.09.2026). Sprzedaż czekająca na przelew stoi obok jako zapowiedź.
      */
-    public function test_unpaid_orders_count_but_are_shown_separately(): void
+    public function test_unpaid_orders_do_not_count_but_are_announced(): void
     {
         $this->sprzedaz(unitFee: 25, status: OrderStatus::Paid);
         $this->sprzedaz(unitFee: 10, status: OrderStatus::AwaitingPayment);
@@ -157,8 +157,26 @@ class LicensorSettlementTest extends TestCase
         [$from, $to] = $this->marzec();
         $summary = $this->rozliczenie()->summary($this->shop, $from, $to);
 
-        $this->assertSame(35.0, $summary[0]->amount);
+        $this->assertSame(25.0, $summary[0]->amount);
         $this->assertSame(10.0, $summary[0]->unpaid);
+    }
+
+    /**
+     * Partner z samą sprzedażą nieopłaconą ZOSTAJE na liście z kwotą zero.
+     * Zniknięcie wyglądałoby jak brak sprzedaży, a sprzedaż była.
+     */
+    public function test_a_partner_with_only_unpaid_sales_stays_with_nothing_due(): void
+    {
+        $this->sprzedaz(unitFee: 25, quantity: 2, status: OrderStatus::AwaitingPayment);
+
+        [$from, $to] = $this->marzec();
+        $summary = $this->rozliczenie()->summary($this->shop, $from, $to);
+
+        $this->assertCount(1, $summary);
+        $this->assertSame(0.0, $summary[0]->amount);
+        $this->assertSame(0.0, $summary[0]->quantity);
+        $this->assertSame(0, $summary[0]->orders);
+        $this->assertSame(50.0, $summary[0]->unpaid);
     }
 
     public function test_only_the_chosen_month_is_counted(): void
@@ -243,17 +261,62 @@ class LicensorSettlementTest extends TestCase
         $this->sprzedaz(unitFee: 25, quantity: 2);
 
         $this->actingAs($this->owner)
-            ->get(route('seller.settlements.index', ['miesiac' => '2026-03']))
+            ->get(route('seller.settlements.index', ['okres' => '2026-03']))
             ->assertOk()
             ->assertSee('Bieg Gdański')
             ->assertSee('50,00');
     }
 
-    public function test_a_broken_month_in_the_url_does_not_break_the_screen(): void
+    public function test_a_broken_period_in_the_url_does_not_break_the_screen(): void
     {
         $this->actingAs($this->owner)
-            ->get(route('seller.settlements.index', ['miesiac' => 'kiedys']))
+            ->get(route('seller.settlements.index', ['okres' => 'kiedys']))
             ->assertOk();
+    }
+
+    /**
+     * Klient rozlicza się po przekroczeniu umówionej kwoty albo na koniec roku,
+     * więc widok roczny odpowiada na pytanie, które przy takiej umowie pada
+     * naprawdę: „ile temu partnerowi uzbierało się w sumie".
+     */
+    public function test_the_yearly_period_covers_the_whole_year(): void
+    {
+        $this->sprzedaz(unitFee: 25, when: Carbon::parse('2026-03-15'));
+        $this->sprzedaz(unitFee: 30, when: Carbon::parse('2026-07-02'));
+        $this->sprzedaz(unitFee: 99, when: Carbon::parse('2025-12-31 23:59'));
+
+        $this->actingAs($this->owner)
+            ->get(route('seller.settlements.index', ['okres' => '2026']))
+            ->assertOk()
+            ->assertSee('Rok 2026')
+            ->assertSee('55,00')
+            ->assertDontSee('99,00');
+    }
+
+    public function test_the_everything_period_reaches_back_to_the_first_sale(): void
+    {
+        $this->sprzedaz(unitFee: 25, when: Carbon::parse('2024-05-10'));
+        $this->sprzedaz(unitFee: 30, when: Carbon::parse('2026-07-02'));
+
+        $this->actingAs($this->owner)
+            ->get(route('seller.settlements.index', ['okres' => 'wszystko']))
+            ->assertOk()
+            ->assertSee('55,00');
+    }
+
+    /**
+     * Umówiona zasada rozliczenia stoi przy kwocie — bo to przy niej zapada
+     * decyzja „płacę teraz czy czekam". Sklep jej nie wykonuje, ma przypomnieć.
+     */
+    public function test_the_partner_note_is_shown_next_to_the_amount(): void
+    {
+        $this->partner->update(['notes' => 'Rozliczenie po przekroczeniu 1000 zl']);
+        $this->sprzedaz(unitFee: 25);
+
+        $this->actingAs($this->owner)
+            ->get(route('seller.settlements.index', ['okres' => '2026-03']))
+            ->assertOk()
+            ->assertSee('Rozliczenie po przekroczeniu 1000 zl');
     }
 
     // --- Arkusz --------------------------------------------------------------
@@ -300,7 +363,7 @@ class LicensorSettlementTest extends TestCase
         $this->sprzedaz(unitFee: 25);
 
         $response = $this->actingAs($this->owner)
-            ->get(route('seller.settlements.download', ['miesiac' => '2026-03']))
+            ->get(route('seller.settlements.download', ['okres' => '2026-03']))
             ->assertOk();
 
         $this->assertSame(
@@ -310,6 +373,17 @@ class LicensorSettlementTest extends TestCase
         $this->assertStringContainsString('rozliczenie-2026-03.xlsx', (string) $response->headers->get('Content-Disposition'));
         // Sygnatura archiwum ZIP — plik nie jest pustką z właściwym nagłówkiem.
         $this->assertStringStartsWith('PK', $response->getContent());
+    }
+
+    public function test_the_yearly_workbook_is_named_after_the_year(): void
+    {
+        $this->sprzedaz(unitFee: 25);
+
+        $response = $this->actingAs($this->owner)
+            ->get(route('seller.settlements.download', ['okres' => '2026']))
+            ->assertOk();
+
+        $this->assertStringContainsString('rozliczenie-2026.xlsx', (string) $response->headers->get('Content-Disposition'));
     }
 
     /**

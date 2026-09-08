@@ -1,8 +1,13 @@
-{{-- ROZLICZENIA Z PARTNERAMI — komu i ile należy się za wybrany miesiąc.
+{{-- ROZLICZENIA Z PARTNERAMI — komu i ile należy się za wybrany okres.
 
-     Ekran jest po to, żeby wysłać partnerowi zestawienie i przelew. Dlatego
-     kwota „należne" stoi obok kwoty „w tym niezapłacone": to druga liczba
-     decyduje, czy właściciel płaci teraz, czy czeka na przelewy klientów. --}}
+     Ekran jest po to, żeby wysłać partnerowi zestawienie i przelew. Należy się
+     wyłącznie za zamówienia ZAPŁACONE; sprzedaż czekająca na przelew stoi obok
+     jako zapowiedź, żeby właściciel wiedział, ile jeszcze dojdzie.
+
+     Okres nie jest już tylko miesiącem: klient rozlicza się po przekroczeniu
+     umówionej kwoty albo na koniec roku, więc „Rok" i „Od początku" są tu
+     równie ważne jak marzec. Progów sklep nie pilnuje — zasadę trzyma notatka
+     przy partnerze, decyzję podejmuje właściciel. --}}
 <x-layouts.panel title="Rozliczenia">
     <x-slot:heading>Rozliczenia z partnerami</x-slot:heading>
 
@@ -12,23 +17,27 @@
             <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
                 <div class="flex flex-wrap items-center justify-between gap-3">
                     <div class="min-w-0">
-                        <h2 class="font-semibold text-stone-900">{{ $from->translatedFormat('LLLL Y') }}</h2>
+                        <h2 class="font-semibold text-stone-900">{{ $period['label'] }}</h2>
                         <p class="mt-1 text-sm text-stone-500">
-                            Zamówienia z tego miesiąca poza anulowanymi, po odjęciu zwrotów. Kwoty brutto.
+                            Zamówienia zapłacone z tego okresu, po odjęciu zwrotów. Kwoty brutto.
                         </p>
                     </div>
 
                     <div class="flex shrink-0 items-center gap-2">
                         <form method="GET" action="{{ route('seller.settlements.index') }}">
-                            <select name="miesiac" onchange="this.form.submit()"
+                            <select name="okres" onchange="this.form.submit()"
                                 class="rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">
-                                @foreach ($months as $option)
-                                    <option value="{{ $option['value'] }}" @selected($option['value'] === $month)>{{ $option['label'] }}</option>
+                                @foreach ($periods as $grupa => $opcje)
+                                    <optgroup label="{{ $grupa }}">
+                                        @foreach ($opcje as $option)
+                                            <option value="{{ $option['value'] }}" @selected($option['value'] === $period['value'])>{{ $option['label'] }}</option>
+                                        @endforeach
+                                    </optgroup>
                                 @endforeach
                             </select>
                         </form>
 
-                        <a href="{{ route('seller.settlements.download', ['miesiac' => $month]) }}"
+                        <a href="{{ route('seller.settlements.download', ['okres' => $period['value']]) }}"
                             class="shrink-0 rounded-2xl bg-gradient-to-br from-amber-500 to-rose-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-rose-500/20 transition hover:brightness-105">
                             Pobierz arkusz
                         </a>
@@ -38,9 +47,9 @@
                 @if ($summary->isEmpty())
                     <div class="mt-8 flex flex-col items-center justify-center rounded-2xl border border-dashed border-stone-300 px-6 py-12 text-center">
                         <span class="flex h-14 w-14 items-center justify-center rounded-2xl bg-stone-100 text-2xl">🧾</span>
-                        <p class="mt-4 font-medium text-stone-700">W tym miesiącu nic się nie należy</p>
+                        <p class="mt-4 font-medium text-stone-700">W tym okresie nic się nie należy</p>
                         <p class="mt-1 text-sm text-stone-500">
-                            Żadne sprzedane produkty nie miały opłaty licencyjnej — albo miesiąc jest jeszcze pusty.
+                            Żadne sprzedane produkty nie miały opłaty licencyjnej — albo okres jest jeszcze pusty.
                         </p>
                     </div>
                 @else
@@ -54,16 +63,21 @@
                                             {{ $row->orders }} {{ $row->orders === 1 ? 'zamówienie' : 'zamówień' }}
                                             · {{ rtrim(rtrim(number_format($row->quantity, 2, ',', ' '), '0'), ',') }} szt.
                                         </p>
+                                        {{-- Umówiona zasada rozliczenia stoi przy kwocie, bo to przy niej
+                                             zapada decyzja „płacę teraz czy czekam". --}}
+                                        @if ($row->licensor_id && ($notes[$row->licensor_id] ?? null))
+                                            <p class="mt-1.5 text-xs text-stone-400">{{ $notes[$row->licensor_id] }}</p>
+                                        @endif
                                     </div>
 
                                     <div class="shrink-0 text-right">
                                         <p class="text-lg font-bold text-stone-900">{{ \App\Support\Money::pln($row->amount) }}</p>
                                         @if ($row->unpaid > 0)
-                                            {{-- Sprzedaż jest, pieniędzy jeszcze nie ma. Nie decydujemy
-                                                 za właściciela, czy płacić partnerowi z góry — mówimy,
-                                                 ile z tej kwoty jeszcze nie wpłynęło. --}}
+                                            {{-- Sprzedaż jest, pieniędzy jeszcze nie ma — więc do kwoty
+                                                 NIE weszła. Mówimy o niej, żeby właściciel wiedział, ile
+                                                 dojdzie, gdy przelewy wpłyną. --}}
                                             <p class="mt-0.5 text-xs text-amber-700">
-                                                w tym {{ \App\Support\Money::pln($row->unpaid) }} z zamówień nieopłaconych
+                                                dojdzie {{ \App\Support\Money::pln($row->unpaid) }} po zapłacie
                                             </p>
                                         @endif
                                     </div>
@@ -79,7 +93,7 @@
                         <span class="text-right">
                             <span class="text-xl font-bold text-stone-900">{{ \App\Support\Money::pln($razem) }}</span>
                             @if ($nieoplacone > 0)
-                                <span class="mt-0.5 block text-xs text-amber-700">w tym {{ \App\Support\Money::pln($nieoplacone) }} jeszcze nieopłacone</span>
+                                <span class="mt-0.5 block text-xs text-amber-700">dojdzie {{ \App\Support\Money::pln($nieoplacone) }} po zapłacie</span>
                             @endif
                         </span>
                     </div>
@@ -153,7 +167,7 @@
                     </li>
                     <li class="flex gap-3">
                         <span class="mt-0.5 shrink-0 text-amber-500">⏳</span>
-                        <span>Zamówienia bez zapłaty <span class="font-medium text-stone-700">są w kwocie</span>, ale wykazane osobno — decyzja, czy płacić z góry, należy do Ciebie.</span>
+                        <span>Zamówienia bez zapłaty <span class="font-medium text-stone-700">nie wchodzą do kwoty</span> — stoją obok jako zapowiedź i dojdą, gdy pieniądze wpłyną.</span>
                     </li>
                     <li class="flex gap-3">
                         <span class="mt-0.5 shrink-0 text-amber-500">🏷️</span>
@@ -167,6 +181,24 @@
                 <p class="mt-3 text-sm text-stone-500">
                     Plik <span class="font-medium text-stone-700">.xlsx</span> z dwoma arkuszami: „Podsumowanie" do przelewu
                     i „Pozycje" do wysłania partnerowi, gdy zapyta, skąd ta kwota.
+                </p>
+            </div>
+
+            {{-- GRANICA. Sklep zna wyłącznie własną sprzedaż — magnesy sprzedane
+                 poza nim nigdy tu nie trafią. Gdyby sam pilnował progów i zamykał
+                 okresy, robiłby to na niepełnych liczbach i wyglądał na źródło
+                 prawdy. Mówimy wprost, gdzie się kończy. --}}
+            <div class="rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur">
+                <h2 class="font-semibold text-stone-900">Kiedy rozliczyć</h2>
+                <p class="mt-3 text-sm text-stone-500">
+                    To decyzja po Twojej stronie. Sklep pokazuje sprzedaż za dowolny okres —
+                    także <span class="font-medium text-stone-700">za cały rok</span> i
+                    <span class="font-medium text-stone-700">od początku</span> — ale nie pilnuje progów
+                    ani nie zamyka okresów. Zna tylko sprzedaż, która przez niego przeszła.
+                </p>
+                <p class="mt-3 text-sm text-stone-500">
+                    Umówioną zasadę wpisz w <span class="font-medium text-stone-700">notatkę przy partnerze</span> —
+                    pokaże się przy jego kwocie.
                 </p>
             </div>
         </aside>

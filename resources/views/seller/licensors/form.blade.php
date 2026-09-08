@@ -63,8 +63,13 @@
 
                 <div>
                     <label for="notes" class="block text-sm font-medium text-stone-700">Notatki</label>
-                    <p class="mt-0.5 text-xs text-stone-500">Widoczne tylko dla Ciebie — warunki, terminy rozliczeń, ustalenia z rozmowy.</p>
+                    <p class="mt-0.5 text-xs text-stone-500">
+                        Widoczne tylko dla Ciebie — warunki, terminy rozliczeń, ustalenia z rozmowy.
+                        Notatka <span class="font-medium text-stone-700">pokazuje się przy kwocie na ekranie rozliczeń</span>,
+                        więc to dobre miejsce na umówioną zasadę: „rozliczenie po przekroczeniu 1000 zł, faktura kwartalnie".
+                    </p>
                     <textarea id="notes" name="notes" rows="4"
+                        placeholder="np. rozliczenie po przekroczeniu 1000 zł, w innym razie na koniec roku"
                         class="mt-1.5 block w-full rounded-2xl border border-stone-200 bg-white/80 px-4 py-2.5 text-sm shadow-sm transition focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/15">{{ old('notes', $licensor->notes) }}</textarea>
                     @error('notes')
                         <p class="mt-1.5 text-sm text-rose-600">{{ $message }}</p>
