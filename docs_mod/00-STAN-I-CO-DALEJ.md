@@ -57,6 +57,23 @@ Personalizacja nadruku (formatki), grawerka rewersu, cena z czterech składnikó
 
 **Ważne przy pisaniu:** części generyczne (formatki, opcje z dopłatą, cena składana, koszyk per konfiguracja) projektować pod **kubek z imieniem**, nie pod magnes z logo maratonu. To one mają się kiedyś sprzedać kolejnym klientom. Kartoteka licencjodawców i raporty rozliczeniowe zostają bespoke.
 
+### Odpowiedzi klienta z 08.09.2026 — co z nich wdrożone
+
+Pytania: [08-pytania-do-klienta.html](08-pytania-do-klienta.html), odpowiedzi klienta i druga tura: [11-pytania-runda-2.html](11-pytania-runda-2.html).
+
+| Odpowiedź | Stan |
+|---|---|
+| Przykład 3 = 20 zł | potwierdza testy, bez zmian |
+| Logotyp awersu jest cechą produktu, nie wyborem kupującego | potwierdza `products.licensor_id`, bez zmian |
+| Arkusz produkcyjny: jedno zamówienie, bez danych kupującego, bez kolejki zbiorczej | **już tak działa** — sprawdzone w widoku |
+| Rozliczenie tylko za zamówienia **zapłacone** | **wdrożone** |
+| Kwoty brutto, pełna nazwa produktu | już tak było |
+| Rozliczenie po progu albo na koniec roku | **wdrożone jako okresy zbiorcze** (rok, od początku) + notatka przy partnerze. Progów sklep nie pilnuje — granica świadoma, opisana w `SettlementController` |
+
+**Czeka na odpowiedź klienta (druga tura):** czy zwrot lub reklamacja zabiera partnerowi naliczoną opłatę (dziś zabiera) · czy przypinać formatkę do całego rodzaju produktów · rząd wielkości katalogu · potwierdzenie reguły „liczy się wyższa".
+
+**Nieuzgodnione:** specyfikacja wymienia przy produkcie *nazwę skróconą i pełną*, a mamy jedną `name`. Nic nie blokuje, nikt się nie upomniał.
+
 ---
 
 ## Stan instalacji roboczej
@@ -75,11 +92,11 @@ Personalizacja nadruku (formatki), grawerka rewersu, cena z czterech składnikó
 
 Instalacja stoi na **tym samym serwerze co produkcja Kramio**, a to dokładnie sytuacja, przez którą kasowaliśmy katalog `shop.kwasniak.org` (patrz `CLAUDE.md`, nagłówek i sek. 6.5).
 
-- **Brak wpisu w cronie** — najważniejsze. Bez `schedule:run` nie wyjdzie ani jeden mail, nie ruszy kolejka, nie zapyta InPostu.
+- ~~**Brak wpisu w cronie**~~ — **NIEAKTUALNE.** Magellan ma własny wpis `schedule:run` (sprawdzone `crontab -l` 08.09.2026): kolejka chodzi, maile wychodzą, harmonogram działa. Stan crona sprawdzać poleceniem, nie tym plikiem.
 - **Klucze Paynow, Fakturowni i InPostu puste** — Fakturownia nie ma sandboxa, każde żądanie tworzy **realny dokument**.
 - **Osobny webhook Discorda** — alerty stąd nie zlewają się z Kramio.
 - `BACKUP_ENABLED=false`, `APP_ENV=staging`, `APP_DEBUG=false`.
-- Poczta wychodząca przez konto Kramio, ale maile i tak czekają w outboksie na crona, którego nie ma.
+- Poczta wychodząca idzie przez **własne konto Magellana** (`magellan@kwasniak.org`), nie przez konto Kramio. Wysyłka potwierdzona żywym mailem 08.09.2026 — outbox opróżnia się naprawdę.
 
 ---
 

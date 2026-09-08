@@ -82,11 +82,11 @@ Przy pisaniu Etapu 2: części generyczne (formatki, opcje z dopłatą, cena sk�
 
 Stoimy na tym samym serwerze co produkcja Kramio. To dokładnie sytuacja, przez którą 13.08 kasowaliśmy katalog `shop.kwasniak.org`: druga żywa kopia tej samej aplikacji, sięgająca na zewnątrz.
 
-- **Brak wpisu w cronie** — najważniejszy. Bez `schedule:run` nie wyjdzie ani jeden mail, nie ruszy kolejka, nie zapyta InPostu.
+- ~~**Brak wpisu w cronie**~~ — **TEN BEZPIECZNIK JUŻ NIE DZIAŁA.** Magellan ma własny wpis `schedule:run` (sprawdzone `crontab -l` 08.09.2026), więc kolejka chodzi, maile realnie wychodzą i harmonogram działa jak na produkcji. Stan crona sprawdzać **poleceniem, nie tym plikiem**.
 - **Klucze Paynow, Fakturowni i InPostu puste.** Fakturownia **nie ma sandboxa** — każde żądanie tworzy realny dokument.
 - **Osobny webhook Discorda** — alerty stąd nie mieszają się z alertami Kramio.
 - `BACKUP_ENABLED=false`, `APP_DEBUG=false`.
-- Poczta wychodząca przez konto Kramio, ale maile i tak czekają w outboksie na crona, którego nie ma.
+- Poczta wychodząca idzie przez **własne konto Magellana** (`magellan@kwasniak.org`, `host473413.hostido.net.pl:587`) — nie przez konto Kramio. Wysyłkę potwierdziliśmy żywym mailem 08.09.2026, więc **outbox opróżnia się naprawdę**.
 
 **Przed uruchomieniem czegokolwiek, co pisze do bazy albo strzela na zewnątrz — sprawdź, w którym katalogu jesteś.**
 
