@@ -14,6 +14,7 @@
 - [Build nie przechodzi = MÓW OD RAZU](build-fails-tell-rafal-immediately.md) — 1–2 próby; build robi Rafał.
 - [No co-author footer](no-coauthor-footer-in-commits.md) — NIGDY stopek generatora.
 - [Ton tekstów marketingowych](feedback-marketing-tone-kramio.md) — SPRZEDAŻ nie oferówka; PRODUKTY nie usługi.
+- [Pytania do klienta: NIGDY „czy A czy B"](feedback-client-questions-no-either-or.md) — klient odpisze „TAK". Założenie + prośba o korektę.
 
 ## Prawne
 - [DSA: Kramio = HOSTING](legal-dsa-hosting-classification.md) — decyzja 15.08. **Galeria sklepów zabiłaby argument nr 1.**
@@ -23,6 +24,7 @@
 - [ODŁOŻONE: dedykowany front Magellana](plan-magellan-custom-storefront-design.md) — przypuszczenie Rafała, **NA RAZIE NIC NIE ROBIMY**. Mechanizm nadpisywania widoków już jest.
 
 ## Otwarte / do decyzji
+- [Magellan MA crona od 08.09](magellan-cron-enabled.md) — **CLAUDE.md wciąż twierdzi, że nie ma.** Sprawdzaj `crontab -l`, nie dokumentację.
 - [Magellan Bay — osobny projekt](plan-magellan-bay-separate-project.md) — **oferta 6 000 zł wysłana 01.09, czekamy.** NIE część roadmapy Kramio.
 - [OTWARTE: limit 250 procesów](open-hosting-process-limit.md) — **w trakcie pracy testy FILTROWANE**, pełna suita raz przed commitem.
 - [KIERUNEK: NOWY SERWER](plan-dev-environment.md) — przeprowadzka planowana, termin nieustalony.
