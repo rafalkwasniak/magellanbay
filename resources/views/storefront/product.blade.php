@@ -43,6 +43,23 @@
                         @endforeach
                     </div>
                 @endif
+
+                {{-- Opis pod galerią, w tej samej kolumnie. Prawa kolumna niesie
+                     cenę, dostawę, katalog, licencję i tagi — jest długa, a pod
+                     zdjęciami zostawała pustka na jej wysokość. Węższa miara
+                     wychodzi prozie na dobre: wiersz na całą szerokość ekranu
+                     czyta się gorzej niż wiersz na trzech piątych.
+
+                     Nagłówek to nazwa produktu, nie etykieta „O produkcie":
+                     przy dużym zdjęciu opis i tak zaczyna się w okolicy zgięcia,
+                     więc nazwa zakotwicza czytelnika ponownie, a układ
+                     tytuł–linia–proza sam mówi, że to opis. --}}
+                @if (filled($product->description))
+                    <div class="mt-12">
+                        <h2 class="st-brand font-serif text-2xl font-normal sm:text-3xl">{{ $product->name }}</h2>
+                        <div class="st-prose st-border mt-6 border-t pt-6 opacity-90">{!! \App\Support\Prose::render($product->description ?? '') !!}</div>
+                    </div>
+                @endif
             </div>
 
             {{-- Zakup — węższa kolumna po prawej (2/5). Całość wyrównana do prawej
@@ -123,17 +140,6 @@
                 @endif
             </div>
         </div>
-
-        {{-- Opis na całą szerokość pod galerią i zakupem. Nagłówek to nazwa
-             produktu, nie etykieta „O produkcie": opis leży grubo pod pierwszym
-             ekranem, więc nazwa zakotwicza czytelnika ponownie (h1 dawno zjechał
-             mu z widoku), a układ tytuł–linia–proza sam mówi, że to opis. --}}
-        @if (filled($product->description))
-            <div class="mt-12">
-                <h2 class="st-brand font-serif text-2xl font-normal sm:text-3xl">{{ $product->name }}</h2>
-                <div class="st-prose st-border mt-6 border-t pt-6 opacity-90">{!! \App\Support\Prose::render($product->description ?? '') !!}</div>
-            </div>
-        @endif
     </div>
 
     {{-- Przełączanie zdjęcia głównego z miniatur (zero zależności). --}}

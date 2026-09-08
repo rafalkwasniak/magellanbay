@@ -93,7 +93,10 @@
                         @endforeach
 
                         @if (count($tagCloud))
-                            <x-storefront.tag-cloud :tags="$tagCloud" label="" :clearUrl="$hasFilters ? $clearUrl : null" />
+                            {{-- Nagłówek jak nad podziałami wyżej: chmura stoi tu jako
+                                 czwarta grupa filtrów, a bez podpisu czytała się jak
+                                 dalszy ciąg geografii. --}}
+                            <x-storefront.tag-cloud :tags="$tagCloud" label="" heading="Tagi" :clearUrl="$hasFilters ? $clearUrl : null" />
                         @elseif ($hasFilters)
                             <a href="{{ $clearUrl }}" class="mt-4 inline-block text-sm underline opacity-70">Wyczyść filtry</a>
                         @endif
