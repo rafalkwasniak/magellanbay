@@ -115,25 +115,35 @@ class LicensorSettlementTest extends TestCase
     }
 
     /**
-     * Klient oddał magnes, umowa się cofnęła — licencja się nie należy.
+     * Zwrot NIE odbiera partnerowi opłaty (ustalenie z klientem 28.09.2026):
+     * logotyp raz użyty na wyprodukowanym magnesie został użyty, a ryzyko
+     * odstąpienia bierze na siebie sklep, nie właściciel licencji.
      */
-    public function test_a_return_reduces_what_is_due(): void
+    public function test_a_return_does_not_reduce_what_is_due(): void
     {
         $this->sprzedaz(unitFee: 25, quantity: 3, returned: 1);
 
         [$from, $to] = $this->marzec();
         $summary = $this->rozliczenie()->summary($this->shop, $from, $to);
 
-        $this->assertSame(50.0, $summary[0]->amount);
+        $this->assertSame(75.0, $summary[0]->amount);
+        $this->assertSame(3.0, $summary[0]->quantity);
     }
 
-    public function test_a_fully_returned_item_disappears_from_the_settlement(): void
+    /**
+     * Nawet pozycja oddana w całości zostaje w rozliczeniu. Zniknięcie jej
+     * z ekranu byłoby dla partnera nieodróżnialne od „nic się nie sprzedało",
+     * a sprzedaż była i opłata się należy.
+     */
+    public function test_a_fully_returned_item_stays_in_the_settlement(): void
     {
         $this->sprzedaz(unitFee: 25, quantity: 2, returned: 2);
 
         [$from, $to] = $this->marzec();
+        $summary = $this->rozliczenie()->summary($this->shop, $from, $to);
 
-        $this->assertCount(0, $this->rozliczenie()->summary($this->shop, $from, $to));
+        $this->assertCount(1, $summary);
+        $this->assertSame(50.0, $summary[0]->amount);
     }
 
     public function test_cancelled_orders_do_not_count_at_all(): void

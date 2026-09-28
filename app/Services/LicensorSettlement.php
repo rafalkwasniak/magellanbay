@@ -33,8 +33,20 @@ use Illuminate\Support\Collection;
  *    które nigdy nie zostało opłacone, kosztuje sprzedawcę gotówkę i wymaga
  *    proszenia o zwrot. Pomyłka w drugą stronę czeka do następnego okresu.
  *
- * 3. ZWROT ODEJMUJE. Klient oddał magnes, umowa się cofnęła, licencja się nie
- *    należy. Liczymy ilość PO zwrotach (`effectiveQuantity`), a nie zamówioną.
+ * 3. ZWROT NIE ODEJMUJE (ustalenie z klientem, 28.09.2026). Opłata idzie za
+ *    PŁATNOŚCIĄ, nie za fizycznym magnesem: „opłata naliczona za płatność nie
+ *    podlega już anulacji i najwyżej to będzie moja strata, jak będę musiał
+ *    odstąpić". Liczymy więc ilość ZAMÓWIONĄ (`quantity`), nie tę po zwrotach.
+ *
+ *    Wcześniej było odwrotnie i to było nasze założenie, nie jego decyzja:
+ *    logotyp raz użyty na wyprodukowanym magnesie został użyty, a właściciel
+ *    licencji nie ma z tym nic wspólnego, że kupujący oddał towar. Ryzyko
+ *    odstąpienia bierze na siebie sklep.
+ *
+ *    Przypadek jest rzadki, bo sklep nie przyjmuje zwrotów (produkty
+ *    personalizowane, art. 38 pkt 3 u.p.k.) — odpala się dopiero wtedy, gdy
+ *    właściciel sam zdecyduje się odstąpienie przyjąć. Rzadko ≠ nigdy, a wtedy
+ *    liczby muszą zgadzać się z umową, nie z naszym domysłem.
  *
  * 4. OKRES BIERZEMY Z DATY ZAMÓWIENIA. Ta sama data, po której sprzedawca
  *    ogląda sprzedaż w analityce i po której partner rozpozna swój bieg.
@@ -115,8 +127,10 @@ class LicensorSettlement
                     return null;
                 }
 
-                // Ilość PO zwrotach: oddany magnes nie generuje opłaty.
-                $quantity = $item->effectiveQuantity();
+                // Ilość ZAMÓWIONA, nie ta po zwrotach: raz naliczona opłata się
+                // nie cofa (założenie 3 w nagłówku klasy). `quantity` jest
+                // migawką zakupu, więc zwrot jej nie rusza.
+                $quantity = (float) $item->quantity;
 
                 if ($quantity <= 0) {
                     return null;
