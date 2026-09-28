@@ -270,6 +270,60 @@ class Product extends Model
     }
 
     /**
+     * Co się stanie po skopiowaniu tego produktu — po jednym zdaniu na wiersz,
+     * do potwierdzenia w panelu.
+     *
+     * Kopiowanie nic nie psuje, a mimo to pytamy: ikony „Edytuj" i „Kopiuj"
+     * stoją obok siebie, a skutek pomyłki jest CICHY. Sprzedawca ląduje
+     * w edycji kopii, poprawia ją w przekonaniu, że poprawia oryginał, i kończy
+     * z dwoma produktami zamiast jednego — a że kopia wchodzi ukryta, sklep
+     * niczego nie zdradzi. Dlatego zdania mówią wprost: to jest DRUGI produkt,
+     * pod własnym adresem.
+     *
+     * @return list<string>
+     */
+    public function duplicationConsequences(): array
+    {
+        return [
+            'Powstanie drugi produkt — oryginał zostaje bez zmian.',
+            'Kopia bierze zdjęcia, opis, cenę, tagi, miejsce w katalogu, formatki i licencję.',
+            'Dostanie własny adres w sklepie i wejdzie ukryta; otworzymy ją od razu do edycji.',
+        ];
+    }
+
+    /**
+     * Co się stanie po usunięciu tego produktu — po jednym zdaniu na wiersz,
+     * do potwierdzenia w panelu.
+     *
+     * Zdania są dwa, bo `ProductController::destroy()` robi dwie różne rzeczy:
+     * produkt, który był zamawiany, zostaje ukryty (historia zamówień i
+     * dokumenty muszą go widzieć), a nigdy niezamawiany znika razem ze
+     * zdjęciami. Okienko przeglądarki nie umiało tego powiedzieć — stąd ta
+     * treść siedzi tutaj, a nie w widoku: jest jedna i daje się przetestować.
+     *
+     * Lista produktów dokłada `order_items_exists` jednym podzapytaniem
+     * (`withExists`), więc na liście nie ma pytania na kafelek; poza listą
+     * spadamy na zwykłe sprawdzenie.
+     *
+     * @return list<string>
+     */
+    public function deletionConsequences(): array
+    {
+        $ordered = $this->getAttribute('order_items_exists');
+        $ordered = $ordered === null ? $this->hasBeenOrdered() : (bool) $ordered;
+
+        return $ordered
+            ? [
+                'Produkt był zamawiany, więc zostanie ukryty, a nie skasowany — zamówienia i dokumenty muszą go dalej widzieć.',
+                'Zniknie z katalogu i ze sklepu.',
+            ]
+            : [
+                'Produkt nigdy nie był zamawiany, więc zniknie na zawsze, razem ze zdjęciami.',
+                'Tej operacji nie da się cofnąć.',
+            ];
+    }
+
+    /**
      * Trwałe usunięcie produktu wraz ze sprzątaniem — dla produktów, które NIGDY
      * nie były zamówione (bez wartości historycznej; typowo śmieci po testach).
      * Zdjęcia kasujemy przez Eloquent, by odpalił się hook ProductImage::deleting

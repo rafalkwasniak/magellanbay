@@ -45,7 +45,10 @@ class ProductController extends Controller
 
         $products = null;
         if ($shop !== null) {
-            $query = $shop->products()->with('images', 'priceHistory');
+            // `withExists`: kafelek mówi, CO zrobi usunięcie (ukrycie dla historii
+            // czy skasowanie ze zdjęciami), a to zależy od tego, czy produkt był
+            // kiedykolwiek zamówiony. Jednym podzapytaniem, nie pytaniem na kafelek.
+            $query = $shop->products()->with('images', 'priceHistory')->withExists('orderItems');
             $this->applyFilters($query, $filters);
 
             $sort = self::SORTS[$sortKey];

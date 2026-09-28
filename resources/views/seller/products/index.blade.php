@@ -62,7 +62,9 @@
                         @foreach ($products as $product)
                             @php($main = $product->mainImage())
                             @php($editUrl = route('seller.products.edit', ['product' => $product] + $listQuery))
-                            <div class="group flex flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white/80 shadow-sm transition hover:shadow-md">
+                            {{-- `relative`: do tego kafelka przypina się nakładka potwierdzenia
+                                 usunięcia (livewire:confirm-delete), która kryje go w całości. --}}
+                            <div class="group relative flex flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white/80 shadow-sm transition hover:shadow-md">
                                 {{-- Zdjęcie + status --}}
                                 <a href="{{ $editUrl }}" class="relative block aspect-square overflow-hidden bg-stone-50">
                                     @if ($main)
@@ -109,27 +111,31 @@
                                                 <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" />
                                             </svg>
                                         </a>
-                                        {{-- Kopia: wariant tego samego towaru bez przepisywania pól.
-                                             Bez potwierdzenia — kopia wchodzi ukryta, więc nic nie psuje. --}}
-                                        <form method="POST" action="{{ route('seller.products.duplicate', $product) }}">
-                                            @csrf
-                                            <button type="submit" title="Zrób kopię" aria-label="Zrób kopię produktu"
-                                                class="inline-flex items-center justify-center rounded-lg border border-stone-200 bg-white/70 p-1.5 text-stone-600 transition hover:bg-white hover:text-stone-900">
-                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
-                                                    <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                                                </svg>
-                                            </button>
-                                        </form>
-                                        <form method="POST" action="{{ route('seller.products.destroy', $product) }}" class="ml-auto"
-                                            onsubmit="return confirm('Usunąć produkt „{{ $product->name }}”?');">
-                                            @csrf
-                                            <button type="submit" title="Usuń" aria-label="Usuń produkt"
-                                                class="inline-flex items-center justify-center rounded-lg border border-rose-200 bg-rose-50 p-1.5 text-rose-700 transition hover:bg-rose-100">
-                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
-                                                    <path d="M3 6h18" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" />
-                                                </svg>
-                                            </button>
-                                        </form>
+                                        {{-- Kopia pyta, mimo że niczego nie psuje: stoi tuż obok „Edytuj",
+                                             a skutek pomyłki jest cichy — patrz Product::duplicationConsequences(). --}}
+                                        <livewire:confirm-action
+                                            :key="'kopia-'.$product->id"
+                                            :action="route('seller.products.duplicate', $product)"
+                                            :title="'Skopiować '.$product->name.'?'"
+                                            :lines="$product->duplicationConsequences()"
+                                            confirm-label="Tak, kopiuj"
+                                            label="Zrób kopię produktu"
+                                            text="Kopiuj"
+                                            icon="copy"
+                                            tone="amber" />
+
+                                        {{-- Usunięcie pyta w kafelku, a nie okienkiem przeglądarki: to są
+                                             DWIE różne operacje i sprzedawca ma wiedzieć, która go czeka.
+                                             `order_items_exists` dokłada lista jednym zapytaniem (withExists),
+                                             więc zdanie nie kosztuje pytania na każdy kafelek. --}}
+                                        <div class="ml-auto">
+                                            <livewire:confirm-action
+                                                :key="'usun-'.$product->id"
+                                                :action="route('seller.products.destroy', $product)"
+                                                :title="'Usunąć '.$product->name.'?'"
+                                                :lines="$product->deletionConsequences()"
+                                                label="Usuń produkt" />
+                                        </div>
                                         </div>
                                     </div>
                                 </div>
