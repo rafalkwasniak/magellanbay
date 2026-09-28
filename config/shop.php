@@ -83,6 +83,31 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Zwroty — domyślne ustawienie NOWEGO produktu
+    |--------------------------------------------------------------------------
+    |
+    | Czy formularz nowego produktu startuje z zaznaczonym „nie podlega zwrotowi
+    | w ciągu 14 dni" (art. 38 ustawy o prawach konsumenta). Dotyczy WYŁĄCZNIE
+    | pierwszego załadowania formularza — istniejący produkt pokazuje własną
+    | wartość, więc włączenie tego przełącznika nie zmienia warunków sprzedaży
+    | w niczym, co już jest w katalogu.
+    |
+    | Domyślnie FALSE, czyli jak w Kramio: zwrot przysługuje, a wyjątek
+    | sprzedawca zaznacza świadomie. Sklep, w którym każdy towar powstaje na
+    | indywidualne zamówienie, ustawia TRUE w `.env` i oszczędza sobie jednego
+    | kliknięcia przy każdym produkcie.
+    |
+    | UWAGA: to tylko podpowiedź formularza, nie zwolnienie z oceny. Wyłączenie
+    | dotyczy rzeczy wykonanej według specyfikacji konsumenta — towar katalogowy
+    | drukowany po zamówieniu nią nie jest, więc przy takich pozycjach box
+    | trzeba odznaczyć.
+    |
+    */
+
+    'product_withdrawal_excluded_default' => (bool) env('PRODUCT_WITHDRAWAL_EXCLUDED_DEFAULT', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Asystent AI („Popraw przez AI")
     |--------------------------------------------------------------------------
     |

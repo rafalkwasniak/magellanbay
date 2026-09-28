@@ -78,6 +78,51 @@ class ProductTest extends TestCase
             ->assertSee('value="weight" selected', false);
     }
 
+    /**
+     * Sklep, w którym każdy towar powstaje na indywidualne zamówienie, ustawia
+     * wyłączenie zwrotu raz w konfiguracji, zamiast klikać je przy każdym
+     * z tysiąca produktów.
+     */
+    public function test_new_product_form_can_default_to_withdrawal_excluded(): void
+    {
+        [$seller] = $this->sellerWithShop();
+        config(['shop.product_withdrawal_excluded_default' => true]);
+
+        $html = $this->actingAs($seller)->get(route('seller.products.create'))->assertOk()->getContent();
+
+        $this->assertMatchesRegularExpression('/name="withdrawal_excluded"[^>]*checked/', $html);
+    }
+
+    /**
+     * Bez ustawienia w `.env` formularz zachowuje się jak dotąd: zwrot
+     * przysługuje, a wyjątek sprzedawca zaznacza świadomie.
+     */
+    public function test_new_product_form_leaves_withdrawal_available_by_default(): void
+    {
+        [$seller] = $this->sellerWithShop();
+        config(['shop.product_withdrawal_excluded_default' => false]);
+
+        $html = $this->actingAs($seller)->get(route('seller.products.create'))->assertOk()->getContent();
+
+        $this->assertDoesNotMatchRegularExpression('/name="withdrawal_excluded"[^>]*checked/', $html);
+    }
+
+    /**
+     * Konfiguracja jest podpowiedzią dla NOWEGO produktu, nie zmianą warunków
+     * sprzedaży w katalogu, który już stoi: produkt zapisany ze zwrotem musi
+     * po włączeniu ustawienia nadal pokazywać zwrot.
+     */
+    public function test_existing_product_keeps_its_own_withdrawal_setting(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+        $product = Product::factory()->create(['shop_id' => $shop->id, 'withdrawal_excluded' => false]);
+        config(['shop.product_withdrawal_excluded_default' => true]);
+
+        $html = $this->actingAs($seller)->get(route('seller.products.edit', $product))->assertOk()->getContent();
+
+        $this->assertDoesNotMatchRegularExpression('/name="withdrawal_excluded"[^>]*checked/', $html);
+    }
+
     public function test_seller_can_create_weight_product_with_fractional_stock(): void
     {
         [$seller, $shop] = $this->sellerWithShop();

@@ -185,12 +185,15 @@
                         </div>
 
                         {{-- Wyłączenie prawa odstąpienia (art. 38 ustawy o prawach
-                             konsumenta). Domyślnie NIEZAZNACZONE — zwrot przysługuje,
-                             a wyjątek sprzedawca zaznacza świadomie. --}}
+                             konsumenta). Stan NOWEGO produktu bierzemy z konfiguracji
+                             sklepu (domyślnie niezaznaczone — zwrot przysługuje, a
+                             wyjątek sprzedawca zaznacza świadomie); ISTNIEJĄCY pokazuje
+                             własną wartość, żeby zmiana konfiguracji nie przestawiła
+                             warunków sprzedaży w katalogu, który już stoi. --}}
                         <div class="col-span-12">
                             <label class="inline-flex items-start gap-3 text-sm text-stone-600">
                                 <input type="checkbox" name="withdrawal_excluded" value="1" class="mt-0.5 shrink-0"
-                                    @checked(old('withdrawal_excluded', $product->withdrawal_excluded))>
+                                    @checked(old('withdrawal_excluded', $product->exists ? $product->withdrawal_excluded : config('shop.product_withdrawal_excluded_default')))>
                                 <span>Ten produkt nie podlega zwrotowi w ciągu 14 dni</span>
                             </label>
                             <p class="mt-1 text-xs text-stone-400">
