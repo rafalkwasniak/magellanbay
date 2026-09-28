@@ -109,6 +109,17 @@
                                                 <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z" />
                                             </svg>
                                         </a>
+                                        {{-- Kopia: wariant tego samego towaru bez przepisywania pól.
+                                             Bez potwierdzenia — kopia wchodzi ukryta, więc nic nie psuje. --}}
+                                        <form method="POST" action="{{ route('seller.products.duplicate', $product) }}">
+                                            @csrf
+                                            <button type="submit" title="Zrób kopię" aria-label="Zrób kopię produktu"
+                                                class="inline-flex items-center justify-center rounded-lg border border-stone-200 bg-white/70 p-1.5 text-stone-600 transition hover:bg-white hover:text-stone-900">
+                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4">
+                                                    <rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                                                </svg>
+                                            </button>
+                                        </form>
                                         <form method="POST" action="{{ route('seller.products.destroy', $product) }}" class="ml-auto"
                                             onsubmit="return confirm('Usunąć produkt „{{ $product->name }}”?');">
                                             @csrf
