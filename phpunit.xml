@@ -30,6 +30,15 @@
             patrz Tests\Feature\DedicatedModeTest.
         -->
         <env name="SHOP_MODE" value="saas"/>
+        <!--
+            Z tego samego powodu co `SHOP_MODE`: to są ustawienia KONKRETNEGO
+            wdrożenia, a suita ma opisywać stan wyjściowy. Bez wymuszenia test
+            „nowy produkt domyślnie podlega zwrotowi" sprawdzałby wartość akurat
+            wpisaną w `.env`, a test stronicowania przestałby mieć drugą stronę.
+            Zachowania zależne od tych ustawień testujemy jawnie, przez `config()`.
+        -->
+        <env name="PRODUCT_WITHDRAWAL_EXCLUDED_DEFAULT" value="false"/>
+        <env name="PRODUCTS_PER_PAGE" value="12"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>

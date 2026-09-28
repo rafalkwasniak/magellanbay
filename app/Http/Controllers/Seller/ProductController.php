@@ -50,7 +50,7 @@ class ProductController extends Controller
 
             $sort = self::SORTS[$sortKey];
             $products = $query->orderBy($sort['column'], $sort['direction'])
-                ->paginate(12)
+                ->paginate((int) config('shop.products_per_page'))
                 ->withQueryString();
         }
 

@@ -414,6 +414,24 @@ class ProductTest extends TestCase
         );
     }
 
+    /**
+     * Rozmiar strony jest ustawieniem wdrożenia, nie stałą w kodzie: sklep
+     * z katalogiem na tysiące pozycji podnosi go w `.env`, żeby lista dała się
+     * przeglądać. Test bierze własną, niską wartość — sprawdza REGUŁĘ, a nie
+     * liczbę akurat wpisaną w środowisku, w którym leci.
+     */
+    public function test_products_list_page_size_comes_from_configuration(): void
+    {
+        [$seller, $shop] = $this->sellerWithShop();
+        config()->set('shop.products_per_page', 3);
+        Product::factory()->count(5)->create(['shop_id' => $shop->id]);
+
+        $response = $this->actingAs($seller)->get(route('seller.products.index'))->assertOk();
+
+        $this->assertCount(3, $response->viewData('products'));
+        $this->assertSame(5, $response->viewData('products')->total());
+    }
+
     public function test_active_filter_resets_pagination_to_first_page(): void
     {
         [$seller, $shop] = $this->sellerWithShop();

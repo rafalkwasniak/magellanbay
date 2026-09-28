@@ -108,6 +108,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Lista produktów w panelu
+    |--------------------------------------------------------------------------
+    |
+    | Ile produktów na stronie listy w panelu sprzedawcy. Dwanaście jest dobre
+    | dla katalogu na kilkadziesiąt pozycji — przy tysiącu zamienia przeglądanie
+    | w wertowanie. Szukajka, filtry i sortowanie działają niezależnie od tej
+    | liczby; ona decyduje tylko o tym, ile widać naraz.
+    |
+    */
+
+    'products_per_page' => (int) env('PRODUCTS_PER_PAGE', 12),
+
+    /*
+    |--------------------------------------------------------------------------
     | Asystent AI („Popraw przez AI")
     |--------------------------------------------------------------------------
     |
