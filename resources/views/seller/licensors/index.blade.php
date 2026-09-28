@@ -30,7 +30,7 @@
                 @else
                     <div class="mt-6 space-y-2">
                         @foreach ($licensors as $licensor)
-                            <div class="rounded-2xl border border-stone-200 bg-white/80 px-4 py-3.5 shadow-sm transition hover:border-amber-300">
+                            <div class="relative rounded-2xl border border-stone-200 bg-white/80 px-4 py-3.5 shadow-sm transition hover:border-amber-300">
                                 <div class="flex items-start justify-between gap-4">
                                     {{-- Lewa: kto to jest i na jakiej podstawie --}}
                                     <div class="min-w-0">
@@ -89,12 +89,15 @@
                                          nie kasowany — inaczej rozliczenie sprzed roku
                                          zostaje bez adresata. --}}
                                     @if ($licensor->choices_count === 0 && $licensor->components_count === 0)
-                                        <form method="POST" action="{{ route('seller.licensors.destroy', $licensor) }}"
-                                            onsubmit="return confirm('Usunąć {{ $licensor->name }} z kartoteki?')">
-                                            @csrf
-                                            <button type="submit"
-                                                class="rounded-xl border border-stone-200 bg-white px-3 py-1.5 text-sm font-medium text-rose-600 transition hover:bg-rose-50">Usuń</button>
-                                        </form>
+                                        <livewire:confirm-action
+                                            :key="'usun-partnera-'.$licensor->id"
+                                            :action="route('seller.licensors.destroy', $licensor)"
+                                            :title="'Usunąć '.$licensor->name.' z kartoteki?'"
+                                            :lines="['Nie ma przypisanych grafik ani produktów, więc nic nie zostanie bez adresata.', 'Tej operacji nie da się cofnąć.']"
+                                            label="Usuń partnera"
+                                            text="Usuń"
+                                            icon="none"
+                                            trigger-class="rounded-xl border border-stone-200 bg-white px-3 py-1.5 text-sm font-medium text-rose-600 transition hover:bg-rose-50" />
                                     @endif
                                 </div>
                             </div>

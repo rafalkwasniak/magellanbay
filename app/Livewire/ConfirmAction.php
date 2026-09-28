@@ -50,8 +50,25 @@ class ConfirmAction extends Component
     /** Podpis widoczny przy ikonie; pusty = sama ikona. */
     public string $text = '';
 
-    /** Ikona przycisku: `trash` albo `copy`. */
+    /** Ikona przycisku: `trash`, `copy` albo `none` (sam podpis). */
     public string $icon = 'trash';
+
+    /**
+     * Klasy przycisku uruchamiającego. Puste = wbudowany przycisk-ikona.
+     *
+     * Ekrany panelu mają własny, ustalony wygląd przycisku „Usuń" (raz obwódka,
+     * raz sam tekst) i wymiana potwierdzenia nie jest powodem, żeby go zmieniać.
+     * Napisy przychodzą z widoków wołających, więc build Tailwinda je widzi.
+     */
+    public string $triggerClass = '';
+
+    /**
+     * `true` = pytanie rysuje się W WIERSZU, w miejscu przycisku, i rozpycha go
+     * na wysokość. Dla list, w których wiersz ma kilkadziesiąt pikseli — nakładka
+     * przykryłaby go treścią, która się tam nie mieści. Kafelki zostają przy
+     * nakładce, bo tam widać, CO się zaraz stanie.
+     */
+    public bool $inline = false;
 
     /**
      * Wydźwięk nakładki: `rose` dla tego, co niszczy, `amber` dla tego, co

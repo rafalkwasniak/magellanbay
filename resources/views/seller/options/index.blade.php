@@ -27,7 +27,7 @@
                 @else
                     <div class="mt-6 space-y-2">
                         @foreach ($groups as $group)
-                            <div class="rounded-2xl border border-stone-200 bg-white/80 px-4 py-3.5 shadow-sm transition hover:border-amber-300">
+                            <div class="relative rounded-2xl border border-stone-200 bg-white/80 px-4 py-3.5 shadow-sm transition hover:border-amber-300">
                                 <div class="flex items-start justify-between gap-4">
                                     <div class="min-w-0">
                                         <a href="{{ route('seller.options.edit', $group) }}"
@@ -77,12 +77,15 @@
                                     {{-- „Usuń" tylko tam, gdzie zadziała: grupa przypięta do
                                          produktów zabrałaby im personalizację bez ostrzeżenia. --}}
                                     @if ($group->products_count === 0)
-                                        <form method="POST" action="{{ route('seller.options.destroy', $group) }}"
-                                            onsubmit="return confirm('Usunąć grupę „{{ $group->name }}" razem z jej zawartością?')">
-                                            @csrf
-                                            <button type="submit"
-                                                class="rounded-xl border border-stone-200 bg-white px-3 py-1.5 text-sm font-medium text-rose-600 transition hover:bg-rose-50">Usuń</button>
-                                        </form>
+                                        <livewire:confirm-action
+                                            :key="'usun-grupe-'.$group->id"
+                                            :action="route('seller.options.destroy', $group)"
+                                            :title="'Usunąć grupę '.$group->name.'?'"
+                                            :lines="['Żaden produkt jej nie używa, więc nikomu nie zabierze personalizacji.', 'Zniknie razem z całą swoją zawartością i nie da się tego cofnąć.']"
+                                            label="Usuń grupę"
+                                            text="Usuń"
+                                            icon="none"
+                                            trigger-class="rounded-xl border border-stone-200 bg-white px-3 py-1.5 text-sm font-medium text-rose-600 transition hover:bg-rose-50" />
                                     @endif
                                 </div>
                             </div>
