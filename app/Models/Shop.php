@@ -1238,6 +1238,12 @@ class Shop extends Model
         return app(PhoneService::class)->format($this->contact_phone);
     }
 
+    /** Telefon kontaktowy do linku `tel:` („+48668196229"). */
+    public function contactPhoneHref(): ?string
+    {
+        return app(PhoneService::class)->href($this->contact_phone);
+    }
+
     /**
      * Adres siedziby w jednej linii: „Okrzei 73/5, 42-582 Rogoźnik". Null, gdy nie
      * ma z czego złożyć — dane firmowe są OPCJONALNE (wymagany jest tylko kontakt,
