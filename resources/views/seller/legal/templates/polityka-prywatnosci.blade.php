@@ -171,4 +171,4 @@
 
 <h2>10 / Zmiany polityki</h2>
 <div>Politykę możemy zmienić, gdy zmienią się przepisy, zakres naszej działalności albo lista firm, z których usług korzystamy. Nowa wersja obowiązuje od dnia opublikowania jej w sklepie. Zmiany istotne — a za takie uznajemy w szczególności nowego odbiorcę danych — zapowiadamy z wyprzedzeniem.</div>
-<div>Data ostatniej aktualizacji: [DATA_AKTUALIZACJI].</div>
+<div>Data ostatniej aktualizacji: {{ now()->format('d.m.Y') }}.</div>

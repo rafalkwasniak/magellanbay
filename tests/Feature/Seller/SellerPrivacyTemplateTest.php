@@ -55,6 +55,20 @@ class SellerPrivacyTemplateTest extends TestCase
     }
 
     /**
+     * Przy komplecie odpowiedzi w opublikowanej polityce nie zostaje ŻADNA luka.
+     * Wzór miał kiedyś datę aktualizacji zaszytą na stałe jako
+     * `[DATA_AKTUALIZACJI]` — wychodziła klientom sklepu nawet przy wypełnionym
+     * kreatorze. Data to dzień wstawienia wzoru, tak jak w regulaminie.
+     */
+    public function test_complete_answers_leave_no_gaps(): void
+    {
+        $html = $this->render(Shop::factory()->create(), $this->komplet());
+
+        $this->assertDoesNotMatchRegularExpression('/\[[A-Z_]{3,}\]/', $html);
+        $this->assertStringContainsString('Data ostatniej aktualizacji: '.now()->format('d.m.Y'), $html);
+    }
+
+    /**
      * Przy szkicu przygotowywanym ZA klienta (wdrożenie dedykowane, zanim poda
      * dane firmowe) luka musi rzucać się w oczy w kilkunastu tysiącach znaków.
      * Stąd wielkie litery w nawiasach kwadratowych — nie klamry, bo klamra to
