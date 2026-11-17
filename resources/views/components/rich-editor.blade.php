@@ -72,7 +72,8 @@
             <span class="whitespace-nowrap text-stone-500"><span data-rich-count data-for="{{ $name }}">0</span> / {{ $max }} znaków (z formatowaniem)</span>
         @endif
     </p>
-    @if ($aiField)
+    {{-- Bez klucza AI przycisk i licznik znikają — kliknięcie i tak nie miałoby szans. --}}
+    @if ($aiField && \App\Services\Ai\AiProfile::available(\App\Services\AiTextImprover::TASK))
         {{-- Wyrównanie DO PRAWEJ: szerokość bloku wyznacza dłuższy od przycisku
              licznik użyć, więc bez tego przycisk odklejałby się od prawej krawędzi
              i wyglądał na zgubiony w środku wiersza. --}}
